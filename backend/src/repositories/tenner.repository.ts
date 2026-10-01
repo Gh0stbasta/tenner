@@ -14,6 +14,11 @@ export interface TennerCriteria {
   readonly nextDueBefore?: string | undefined;
 }
 
+/** Fields that may change through an update, plus the new updatedAt timestamp (TICKET-011). */
+export type TennerUpdate = {
+  readonly [K in "title" | "category" | "estimatedMinutes" | "frequencyDays" | "assignedTo" | "active"]?: Tenner[K] | undefined;
+} & { readonly updatedAt: string };
+
 /**
  * Persistence contract for Tenners. Implementations translate storage failures into
  * PersistenceError and never validate input (that is the service's job).
@@ -24,7 +29,11 @@ export interface TennerRepository {
   list(tenantId: string, criteria?: TennerCriteria): Promise<Tenner[]>;
   /** Insert a new Tenner. Fails with ConflictError if the ID already exists. */
   save(tenner: Tenner): Promise<void>;
-  /** Replace an existing Tenner. Fails with NotFoundError if it does not exist. */
-  update(tenner: Tenner): Promise<void>;
+  /**
+   * Atomically set the given fields on an existing Tenner and return the updated Tenner.
+   * Other attributes (e.g. lastCompleted, nextDue) are untouched, so concurrent completions are not lost.
+   * Fails with NotFoundError if the Tenner does not exist.
+   */
+  update(tenantId: string, tennerId: string, changes: TennerUpdate): Promise<Tenner>;
   delete(tenantId: string, tennerId: string): Promise<void>;
 }

@@ -1,6 +1,6 @@
-import { PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it, vi } from "vitest";
-import { ConflictError, PersistenceError } from "../src/exceptions/index.js";
+import { ConflictError, NotFoundError, PersistenceError } from "../src/exceptions/index.js";
 import { DynamoDbTennerRepository } from "../src/repositories/index.js";
 import { tennerFixture } from "./mocks/index.js";
 
@@ -78,5 +78,43 @@ describe("DynamoDbTennerRepository.list", () => {
   it("maps failures to PersistenceError", async () => {
     const c = client(async () => Promise.reject(namedError("InternalServerError")));
     await expect(new DynamoDbTennerRepository(c, "t").list("default")).rejects.toBeInstanceOf(PersistenceError);
+  });
+});
+
+describe("DynamoDbTennerRepository.update", () => {
+  const changes = { title: "Vacuum Home Office", frequencyDays: 30, category: undefined, updatedAt: "2026-10-05T12:00:00Z" };
+
+  it("sets only the provided fields on an existing item and returns the new state", async () => {
+    const updated = { ...tennerFixture(), title: "Vacuum Home Office", frequencyDays: 30, updatedAt: "2026-10-05T12:00:00Z" };
+    const c = client(async () => ({ Attributes: updated }));
+    const result = await new DynamoDbTennerRepository(c, "tenner-tenners").update("default", "t-1", changes);
+
+    const command = c.send.mock.calls[0]?.[0] as UpdateCommand;
+    expect(command).toBeInstanceOf(UpdateCommand);
+    expect(command.input).toEqual({
+      TableName: "tenner-tenners",
+      Key: { tenantId: "default", tennerId: "t-1" },
+      UpdateExpression: "SET #title = :title, #frequencyDays = :frequencyDays, #updatedAt = :updatedAt",
+      ConditionExpression: "attribute_exists(tennerId)",
+      ExpressionAttributeNames: { "#title": "title", "#frequencyDays": "frequencyDays", "#updatedAt": "updatedAt" },
+      ExpressionAttributeValues: { ":title": "Vacuum Home Office", ":frequencyDays": 30, ":updatedAt": "2026-10-05T12:00:00Z" },
+      ReturnValues: "ALL_NEW",
+    });
+    expect(result).toEqual(updated);
+  });
+
+  it("maps a missing item to NotFoundError", async () => {
+    const c = client(async () => Promise.reject(namedError("ConditionalCheckFailedException")));
+    await expect(new DynamoDbTennerRepository(c, "t").update("default", "x", changes)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("maps other failures to PersistenceError", async () => {
+    const c = client(async () => Promise.reject(namedError("ThrottlingException")));
+    await expect(new DynamoDbTennerRepository(c, "t").update("default", "x", changes)).rejects.toBeInstanceOf(PersistenceError);
+  });
+
+  it("treats a response without attributes as a persistence failure", async () => {
+    const c = client(async () => ({}));
+    await expect(new DynamoDbTennerRepository(c, "t").update("default", "x", changes)).rejects.toBeInstanceOf(PersistenceError);
   });
 });

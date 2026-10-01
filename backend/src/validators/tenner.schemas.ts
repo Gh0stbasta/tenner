@@ -19,7 +19,9 @@ export const createTennerSchema = z.strictObject({
   assignedTo: userIdSchema,
 }) satisfies z.ZodType<CreateTennerRequest>;
 
+/** Partial update; protected fields (tenantId, tennerId, createdAt, lastCompleted, nextDue) are rejected as unknown keys. */
 export const updateTennerSchema = createTennerSchema
+  .extend({ active: z.boolean() })
   .partial()
   .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." }) satisfies z.ZodType<UpdateTennerRequest>;
 
@@ -39,3 +41,6 @@ export const listTennersQuerySchema = z.strictObject({
   sort: z.enum(TENNER_SORT_FIELDS).optional(),
   order: z.enum(["asc", "desc"]).optional(),
 }) satisfies z.ZodType<ListTennersRequest, Record<string, string | undefined>>;
+
+/** Path parameter {tennerId}: UUIDs today; alphanumerics and dashes, 1-64 characters. */
+export const tennerIdSchema = z.string().regex(/^[A-Za-z0-9-]{1,64}$/, "Invalid Tenner ID.");

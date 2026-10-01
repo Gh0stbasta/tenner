@@ -1,18 +1,19 @@
 /** DynamoDB implementation of the Tenner repository (table tenner-tenners). */
 
-import { PutCommand, QueryCommand, type QueryCommandOutput } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, QueryCommand, UpdateCommand, type QueryCommandOutput, type UpdateCommandOutput } from "@aws-sdk/lib-dynamodb";
 import type { DocumentSender } from "../../clients/dynamodb.js";
+import { PersistenceError } from "../../exceptions/index.js";
 import type { Tenner } from "../../models/index.js";
-import type { TennerCriteria, TennerRepository } from "../tenner.repository.js";
-import { toConflictOrPersistenceError, toPersistenceError } from "./errors.js";
+import type { TennerCriteria, TennerRepository, TennerUpdate } from "../tenner.repository.js";
+import { toConflictOrPersistenceError, toNotFoundOrPersistenceError, toPersistenceError } from "./errors.js";
 import { toTenner } from "./tenner.mapper.js";
 import { buildTennerQuery } from "./tenner.query.js";
 
 /**
  * Implements the repository methods needed so far. Further methods are added by the tickets
- * that need them (TICKET-011 update, TICKET-012 delete).
+ * that need them (TICKET-012 delete).
  */
-export class DynamoDbTennerRepository implements Pick<TennerRepository, "save" | "list"> {
+export class DynamoDbTennerRepository implements Pick<TennerRepository, "save" | "list" | "update"> {
   constructor(
     private readonly client: DocumentSender,
     private readonly tableName: string,
@@ -50,5 +51,32 @@ export class DynamoDbTennerRepository implements Pick<TennerRepository, "save" |
       throw toPersistenceError("list Tenners", error);
     }
     return tenners;
+  }
+
+  /** UpdateItem with SET for the given fields only; the item must exist. Returns the updated Tenner. */
+  async update(tenantId: string, tennerId: string, changes: TennerUpdate): Promise<Tenner> {
+    const entries = Object.entries(changes).filter(([, value]) => value !== undefined);
+    const names = Object.fromEntries(entries.map(([key]) => [`#${key}`, key]));
+    const values = Object.fromEntries(entries.map(([key, value]) => [`:${key}`, value]));
+    let attributes: Record<string, unknown> | undefined;
+    try {
+      const result = (await this.client.send(
+        new UpdateCommand({
+          TableName: this.tableName,
+          Key: { tenantId, tennerId },
+          UpdateExpression: `SET ${entries.map(([key]) => `#${key} = :${key}`).join(", ")}`,
+          ConditionExpression: "attribute_exists(tennerId)",
+          ExpressionAttributeNames: names,
+          ExpressionAttributeValues: values,
+          ReturnValues: "ALL_NEW",
+        }),
+      )) as UpdateCommandOutput;
+      attributes = result.Attributes;
+    } catch (error) {
+      throw toNotFoundOrPersistenceError("update Tenner", "Tenner not found.", error);
+    }
+    // ALL_NEW on an existing item always returns attributes; anything else is a storage contract violation.
+    if (!attributes) throw new PersistenceError("Failed to update Tenner.");
+    return toTenner(attributes);
   }
 }

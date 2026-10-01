@@ -107,6 +107,18 @@ The repository always issues a Query on the tenant partition, never a Scan, and 
 
 Remaining criteria are applied as a `FilterExpression`. Sorting happens in the service.
 
+### PUT /tenners/{tennerId}
+
+This is a partial update. Allowed fields: `title`, `category`, `estimatedMinutes`, `frequencyDays`, `assignedTo`
+and `active`. At least one field is required, and the same validation rules as on create apply.
+
+The protected fields `tenantId`, `tennerId`, `createdAt`, `lastCompleted` and `nextDue` are rejected with 400.
+`updatedAt` is refreshed. Changing `frequencyDays` does **not** change `nextDue` or `lastCompleted`.
+
+The repository uses one `UpdateItem` that sets only the provided fields plus `updatedAt`, with the condition
+`attribute_exists(tennerId)` (missing → 404) and `ReturnValues: ALL_NEW`. Attributes that were not sent, such as
+a `nextDue` written by a concurrent completion, are never overwritten.
+
 ## Errors and Responses
 
 | Error | HTTP | Code |
@@ -142,6 +154,7 @@ and a Tenner fixture.
 | `GET /health` | `200 {"status":"ok","application":"tenner","environment":"prod","database":"connected"}`. Returns `503` with `"status":"error"` and `database` `unreachable` or `misconfigured` |
 | `POST /tenners` | `201 { success: true, data: TennerResponse }` (TICKET-009). Returns `400 VALIDATION_ERROR` with `details`, `409 CONFLICT` if the ID exists, `500 PERSISTENCE_ERROR` |
 | `GET /tenners` | `200 { success: true, data: TennerResponse[] }` (TICKET-010). Returns `400 VALIDATION_ERROR` for invalid parameters |
+| `PUT /tenners/{tennerId}` | `200 { success: true, data: TennerResponse }` (TICKET-011). Returns `400 VALIDATION_ERROR` or `404 NOT_FOUND` |
 | unknown route | `404 NOT_FOUND` |
 
 ### POST /tenners

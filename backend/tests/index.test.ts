@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ConflictError, PersistenceError, ValidationError } from "../src/exceptions/index.js";
+import { ConflictError, NotFoundError, PersistenceError, ValidationError } from "../src/exceptions/index.js";
 import { correlationIdOf, createDependencies, handler, route, type Dependencies } from "../src/index.js";
 import { toTennerResponse } from "../src/dto/index.js";
 import { mockLogger, tennerFixture, testConfig } from "./mocks/index.js";
@@ -18,6 +18,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     probeDatabase: async () => true,
     createTenner: vi.fn(async () => tennerResponse),
     listTenners: vi.fn(async () => [tennerResponse]),
+    updateTenner: vi.fn(async () => tennerResponse),
     ...overrides,
   };
 }
@@ -128,6 +129,44 @@ describe("GET /tenners", () => {
     const response = await route(event("GET /tenners", {}, undefined, query), d);
     expect(response.statusCode).toBe(400);
     expect(d.listTenners).not.toHaveBeenCalled();
+  });
+});
+
+describe("PUT /tenners/{tennerId}", () => {
+  const put = (id: string | undefined, payload: unknown): APIGatewayProxyEventV2 =>
+    ({
+      routeKey: "PUT /tenners/{tennerId}",
+      headers: {},
+      body: JSON.stringify(payload),
+      pathParameters: id === undefined ? undefined : { tennerId: id },
+      requestContext: { requestId: "req-1" },
+    }) as unknown as APIGatewayProxyEventV2;
+
+  it("updates and returns 200", async () => {
+    const d = deps();
+    const response = await route(put("t-1", { frequencyDays: 30 }), d);
+    expect(response.statusCode).toBe(200);
+    expect(d.updateTenner).toHaveBeenCalledWith("default", "t-1", { frequencyDays: 30 });
+  });
+
+  it("returns 404 when the Tenner does not exist", async () => {
+    const d = deps({ updateTenner: vi.fn().mockRejectedValue(new NotFoundError("Tenner not found.")) });
+    const response = await route(put("missing", { title: "Vacuum Home Office" }), d);
+    expect(response.statusCode).toBe(404);
+    expect(body(response).error).toEqual({ code: "NOT_FOUND", message: "Tenner not found." });
+  });
+
+  it.each([
+    ["protected field nextDue", "t-1", { nextDue: "2026-12-01" }],
+    ["protected field tenantId", "t-1", { tenantId: "other" }],
+    ["empty body object", "t-1", {}],
+    ["invalid id", "bad id!", { title: "Valid title" }],
+    ["missing id", undefined, { title: "Valid title" }],
+  ])("rejects %s with 400", async (_name, id, payload) => {
+    const d = deps();
+    const response = await route(put(id, payload), d);
+    expect(response.statusCode).toBe(400);
+    expect(d.updateTenner).not.toHaveBeenCalled();
   });
 });
 

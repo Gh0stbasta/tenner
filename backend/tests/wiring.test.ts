@@ -1,0 +1,59 @@
+/** Verifies production wiring in createDependencies with a fake DynamoDB DocumentClient. */
+
+import { GetCommand, PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { tennerFixture, testConfig } from "./mocks/index.js";
+
+const send = vi.fn();
+
+vi.mock("../src/clients/dynamodb.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../src/clients/dynamodb.js")>();
+  return { ...original, getDocumentClient: () => ({ send }) };
+});
+
+const { createDependencies } = await import("../src/index.js");
+
+afterEach(() => {
+  send.mockReset();
+  vi.restoreAllMocks();
+});
+
+function deps() {
+  vi.spyOn(console, "info").mockImplementation(() => undefined);
+  return createDependencies(testConfig());
+}
+
+describe("createDependencies wiring", () => {
+  it("probes both configured tables", async () => {
+    send.mockResolvedValue({});
+    await expect(deps().probeDatabase({ tenners: "tenner-tenners", history: "tenner-history" })).resolves.toBe(true);
+    expect(send.mock.calls.every(([command]) => command instanceof GetCommand)).toBe(true);
+  });
+
+  it("creates Tenners in the configured tenners table", async () => {
+    send.mockResolvedValue({});
+    const created = await deps().createTenner("default", {
+      title: "Vacuum Office",
+      category: "HOUSEHOLD",
+      estimatedMinutes: 10,
+      frequencyDays: 14,
+      assignedTo: "STEFAN",
+    });
+    const command = send.mock.calls[0]?.[0] as PutCommand;
+    expect(command).toBeInstanceOf(PutCommand);
+    expect(command.input.TableName).toBe("tenner-tenners");
+    expect(command.input.Item?.tennerId).toBe(created.tennerId);
+  });
+
+  it("lists Tenners from the configured table", async () => {
+    send.mockResolvedValue({ Items: [tennerFixture()] });
+    await expect(deps().listTenners("default", {})).resolves.toHaveLength(1);
+    expect((send.mock.calls[0]?.[0] as QueryCommand).input.TableName).toBe("tenner-tenners");
+  });
+
+  it("updates Tenners in the configured table", async () => {
+    send.mockResolvedValue({ Attributes: tennerFixture({ title: "New title" }) });
+    await expect(deps().updateTenner("default", "t-1", { title: "New title" })).resolves.toMatchObject({ title: "New title" });
+    expect((send.mock.calls[0]?.[0] as UpdateCommand).input.TableName).toBe("tenner-tenners");
+  });
+});

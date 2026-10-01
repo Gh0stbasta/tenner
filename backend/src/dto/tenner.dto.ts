@@ -10,8 +10,15 @@ export interface CreateTennerRequest {
   readonly assignedTo: UserId;
 }
 
-/** Partial update; at least one field must be present (enforced by updateTennerSchema). */
-export type UpdateTennerRequest = { readonly [K in keyof CreateTennerRequest]?: CreateTennerRequest[K] | undefined };
+/**
+ * Partial update (TICKET-011): any of the create fields plus `active`; at least one field.
+ * tenantId, tennerId, createdAt, lastCompleted and nextDue are protected and rejected.
+ */
+export type UpdateTennerRequest = { readonly [K in keyof CreateTennerRequest]?: CreateTennerRequest[K] | undefined } & {
+  readonly active?: boolean | undefined;
+};
+
+export type UpdateTennerResponse = TennerResponse;
 
 /** Public representation of a Tenner. tenantId is internal and never exposed. */
 export interface TennerResponse {
