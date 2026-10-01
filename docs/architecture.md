@@ -1,0 +1,667 @@
+# Architecture Overview
+
+## Project
+
+**Tenner** is a lightweight serverless web application that helps individuals and families stay on top of recurring responsibilities through small, manageable tasks.
+
+The idea is simple:
+
+> If something can be improved in 10 minutes, do a Tenner.
+
+Instead of managing endless todo lists, Tenner focuses on recurring activities that often get neglected because they are not urgent enough to demand attention today.
+
+Examples:
+
+- Vacuum the office
+- Clean exterior window sills
+- Wash the car
+- Change bed sheets
+- Mobility workout
+- Zone 2 ride
+- Date night
+- Review finances
+
+A Tenner has a schedule and automatically becomes due again after it has been completed.
+
+The goal is not productivity.
+
+The goal is consistency.
+
+---
+
+# Vision
+
+Tenner should become a simple personal operating system for recurring responsibilities.
+
+Users should never need to ask:
+
+- What should I do next?
+- What have I forgotten?
+- What hasn't been done for months?
+
+Instead, Tenner should answer:
+
+- What is due today?
+- What is overdue?
+- What areas of life am I neglecting?
+- How consistent am I over time?
+
+The application should work equally well for:
+
+- Household management
+- Fitness
+- Family activities
+- Home ownership
+- Personal development
+- Administrative tasks
+
+---
+
+# Design Principles
+
+## Ten-Minute First
+
+Most Tenners should be small enough to complete in approximately ten minutes.
+
+Large projects should be split into smaller recurring activities.
+
+Examples:
+
+Instead of:
+
+```text
+Clean the entire house
+```
+
+Create:
+
+```text
+Vacuum office
+Clean front door
+Wipe exterior window sills
+Clean downstairs windows
+```
+
+---
+
+## Consistency Over Intensity
+
+The goal is not maximizing output.
+
+The goal is maintaining important responsibilities over long periods of time.
+
+---
+
+## Simplicity First
+
+Life is already complicated.
+
+The system should require almost no maintenance from its users.
+
+---
+
+## Serverless Only
+
+No permanently running infrastructure.
+
+Allowed:
+
+- API Gateway
+- Lambda
+- DynamoDB
+- S3
+- CloudFront
+- EventBridge
+- Cognito
+
+Not Allowed:
+
+- EC2
+- ECS
+- EKS
+- Self-managed databases
+
+---
+
+## Infrastructure as Code
+
+All infrastructure must be provisioned and managed using Terraform.
+
+Manual changes in AWS are not allowed.
+
+Terraform is the single source of truth.
+
+---
+
+## Cost Awareness
+
+Tenner should comfortably run inside AWS free tier or near-zero monthly cost.
+
+The architecture should remain affordable for personal use.
+
+---
+
+## Claude-Friendly Development
+
+The project is intentionally structured so that Claude Code can implement features through small, independent tickets.
+
+Every backlog item should:
+
+- have a single responsibility
+- be independently testable
+- include acceptance criteria
+- minimize dependencies on other tickets
+
+---
+
+# High-Level Architecture
+
+```text
+                   GitHub Repository
+                           │
+                           │
+                    GitHub Actions
+                           │
+                           ▼
+
+                      AWS Account
+
+           ┌────────────────────────────┐
+           │                            │
+           │         CloudFront         │
+           │               │            │
+           │               ▼            │
+           │              S3            │
+           │       React SPA Hosting    │
+           │                            │
+           └────────────────────────────┘
+                           │
+                           ▼
+
+                     API Gateway
+                           │
+                           ▼
+
+                     Lambda API
+                           │
+               ┌───────────┴───────────┐
+               │                       │
+               ▼                       ▼
+
+           DynamoDB              CloudWatch
+             Tasks                  Logs
+            History
+```
+
+---
+
+# Technology Stack
+
+## Frontend
+
+### Technologies
+
+- React
+- TypeScript
+- Vite
+- Material UI
+- TanStack Query
+
+### Responsibilities
+
+- Today Dashboard
+- Upcoming Tenners
+- Overdue Tenners
+- Task Management
+- Analytics
+- Settings
+
+---
+
+## Backend
+
+### Technologies
+
+- AWS Lambda
+- Node.js
+- TypeScript
+
+### Responsibilities
+
+- Task CRUD
+- Completion Processing
+- Due Date Calculation
+- Analytics Aggregation
+
+---
+
+## API Layer
+
+### Technology
+
+- API Gateway REST API
+
+### Initial Endpoints
+
+```text
+GET    /health
+
+GET    /tenners
+POST   /tenners
+
+GET    /tenners/{id}
+PUT    /tenners/{id}
+DELETE /tenners/{id}
+
+POST   /tenners/{id}/complete
+
+GET    /dashboard
+
+GET    /analytics
+```
+
+---
+
+# Domain Model
+
+## User
+
+Represents a household member.
+
+Examples:
+
+```text
+Stefan
+Julia
+```
+
+Version 1 will support manually configured users only.
+
+No registration process.
+
+No self-service onboarding.
+
+---
+
+## Tenner
+
+Represents a recurring responsibility.
+
+Examples:
+
+```text
+Vacuum Office
+Wash Car
+Mobility Training
+Long Zwift Ride
+Clean Front Door
+```
+
+Properties:
+
+```text
+Title
+Category
+Frequency
+Estimated Duration
+Assigned User
+Active Flag
+```
+
+---
+
+## Completion
+
+Represents an execution of a Tenner.
+
+Every completion creates a history entry.
+
+History entries are immutable.
+
+---
+
+# Database Design
+
+## DynamoDB
+
+Two-table approach.
+
+---
+
+## Table: Tenners
+
+Stores current state.
+
+Example:
+
+```json
+{
+  "tennerId": "tenner-001",
+  "title": "Vacuum Office",
+  "category": "household",
+  "frequencyDays": 14,
+  "estimatedMinutes": 10,
+  "assignedTo": "stefan",
+  "lastCompleted": "2026-10-01",
+  "nextDue": "2026-10-15",
+  "active": true
+}
+```
+
+---
+
+## Table: Completion History
+
+Stores all completion events.
+
+Example:
+
+```json
+{
+  "tennerId": "tenner-001",
+  "completedAt": "2026-10-01T18:20:00Z",
+  "completedBy": "stefan",
+  "actualMinutes": 12
+}
+```
+
+History is append-only.
+
+No updates.
+
+No deletes.
+
+---
+
+# Scheduling Model
+
+Version 1 intentionally keeps scheduling simple.
+
+Example:
+
+```text
+Last Completed:
+2026-10-01
+
+Frequency:
+14 Days
+
+Next Due:
+2026-10-15
+```
+
+Calculation:
+
+```text
+next_due =
+last_completed +
+frequency_days
+```
+
+Supported frequencies:
+
+```text
+Daily
+Weekly
+Every X Days
+Monthly
+Quarterly
+Yearly
+```
+
+No cron expressions.
+
+No advanced scheduling rules.
+
+---
+
+# Dashboard
+
+## Today
+
+Shows all Tenners due today.
+
+Example:
+
+```text
+Today's Tenners
+
+□ Vacuum Office
+□ Mobility Workout
+□ Clean Front Door
+
+Estimated Effort:
+30 Minutes
+```
+
+---
+
+## Upcoming
+
+Shows Tenners due within the next seven days.
+
+---
+
+## Overdue
+
+Shows Tenners that should already have been completed.
+
+---
+
+## Metrics
+
+Examples:
+
+```text
+Completed This Week
+Completed This Month
+
+Completion Rate
+
+Time Spent By Category
+
+Time Spent By User
+
+Most Neglected Tenners
+
+Longest Overdue Tenners
+```
+
+---
+
+# Security
+
+## MVP
+
+Authentication is intentionally simplified.
+
+Possible approaches:
+
+```text
+Single Shared Household Login
+```
+
+or
+
+```text
+Basic Cognito User Pool
+```
+
+Final decision deferred.
+
+Authentication must not delay MVP delivery.
+
+---
+
+## Future
+
+Potential migration:
+
+```text
+AWS Cognito
+```
+
+Features:
+
+- Multiple households
+- Individual accounts
+- MFA
+- Social Login
+
+---
+
+# Deployment
+
+## Frontend
+
+```text
+GitHub Actions
+        ↓
+Build
+        ↓
+S3
+        ↓
+CloudFront
+```
+
+---
+
+## Backend
+
+```text
+GitHub Actions
+        ↓
+Build Lambda
+        ↓
+Terraform Deploy
+        ↓
+API Gateway
+```
+
+---
+
+# CI/CD
+
+## Pull Requests
+
+Run:
+
+```text
+terraform fmt
+
+terraform validate
+
+npm lint
+
+npm test
+
+typescript build
+```
+
+---
+
+## Main Branch
+
+Run:
+
+```text
+frontend build
+
+backend build
+
+terraform plan
+
+terraform apply
+```
+
+---
+
+# Repository Structure
+
+```text
+tenner/
+
+├── .devcontainer/
+│
+├── .github/
+│   └── workflows/
+│
+├── docs/
+│   ├── architecture.md
+│   ├── roadmap.md
+│   └── decisions/
+│
+├── frontend/
+│
+├── backend/
+│
+├── terraform/
+│
+├── backlog/
+│
+├── CLAUDE.md
+│
+├── README.md
+│
+└── LICENSE
+```
+
+---
+
+# MVP Definition
+
+The MVP is complete when:
+
+- Tenners can be created
+- Tenners can be edited
+- Tenners can be assigned
+- Tenners support recurring schedules
+- Due dates are automatically calculated
+- Tenners can be marked as complete
+- Completion history is stored
+- Dashboard shows due and overdue Tenners
+- All infrastructure is deployed using Terraform
+- Deployments are automated using GitHub Actions
+
+---
+
+# Future Ideas
+
+Out of scope for MVP.
+
+## Notifications
+
+- Telegram
+- WhatsApp
+- Email
+- Push Notifications
+
+## Smart Scheduling
+
+Examples:
+
+- Prefer weekends
+- Avoid workdays
+- Family balance
+
+## Integrations
+
+- Garmin
+- Strava
+- Zwift
+
+## Mobile App
+
+Potential React Native client.
+
+## AI Assistant
+
+Examples:
+
+```text
+What should I spend 20 minutes on today?
+
+Which Tenners are most overdue?
+
+What habits have I neglected recently?
+```
