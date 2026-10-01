@@ -1,6 +1,7 @@
 /** API contracts for completions. */
 
 import type { Completion, UserId } from "../models/index.js";
+import type { TennerResponse } from "./tenner.dto.js";
 
 export interface CompleteTennerRequest {
   readonly completedBy: UserId;
@@ -16,6 +17,12 @@ export interface CompletionResponse {
   readonly completedBy: UserId;
   readonly completedAt: string;
   readonly actualMinutes: number;
+}
+
+/** POST /tenners/{tennerId}/complete response (TICKET-013). */
+export interface CompleteTennerResponse {
+  readonly tenner: TennerResponse;
+  readonly completion: CompletionResponse;
 }
 
 export function toCompletionResponse(completion: Completion): CompletionResponse {

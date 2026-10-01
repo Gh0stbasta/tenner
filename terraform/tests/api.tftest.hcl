@@ -67,7 +67,7 @@ run "http_api_routes_health" {
   }
 
   assert {
-    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners", "GET /tenners", "PUT /tenners/{tennerId}", "DELETE /tenners/{tennerId}"])
+    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners", "GET /tenners", "PUT /tenners/{tennerId}", "DELETE /tenners/{tennerId}", "POST /tenners/{tennerId}/complete"])
     error_message = "API routes must match the implemented endpoints."
   }
 

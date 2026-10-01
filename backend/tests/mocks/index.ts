@@ -31,11 +31,11 @@ export function mockLogger(): Mocked<Logger> {
 }
 
 export function mockTennerRepository(): Mocked<TennerRepository> {
-  return { getById: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn() };
+  return { getById: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn(), completeTenner: vi.fn() };
 }
 
 export function mockCompletionRepository(): Mocked<CompletionRepository> {
-  return { create: vi.fn(), getHistory: vi.fn(), getByTenner: vi.fn() };
+  return { getById: vi.fn(), create: vi.fn(), getHistory: vi.fn(), getByTenner: vi.fn() };
 }
 
 export function mockTennerService(): Mocked<TennerService> {

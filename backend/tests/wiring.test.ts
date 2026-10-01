@@ -1,6 +1,6 @@
 /** Verifies production wiring in createDependencies with a fake DynamoDB DocumentClient. */
 
-import { GetCommand, PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tennerFixture, testConfig } from "./mocks/index.js";
 
@@ -55,6 +55,13 @@ describe("createDependencies wiring", () => {
     send.mockResolvedValue({ Attributes: tennerFixture({ active: false, deletedAt: "2026-10-01T18:00:00Z" }) });
     await expect(deps().deleteTenner("default", "t-1")).resolves.toMatchObject({ response: { deleted: true } });
     expect((send.mock.calls[0]?.[0] as UpdateCommand).input.TableName).toBe("tenner-tenners");
+  });
+
+  it("completes Tenners with a transaction across both tables", async () => {
+    send.mockImplementation(async (command: unknown) => (command instanceof GetCommand ? { Item: tennerFixture() } : {}));
+    await expect(deps().completeTenner("default", "t-1", { completedBy: "STEFAN" })).resolves.toMatchObject({ replayed: false });
+    const transaction = send.mock.calls.map(([c]) => c).find((c) => c instanceof TransactWriteCommand) as TransactWriteCommand;
+    expect(transaction.input.TransactItems?.map((i) => i.Put?.TableName ?? i.Update?.TableName)).toEqual(["tenner-history", "tenner-tenners"]);
   });
 
   it("updates Tenners in the configured table", async () => {

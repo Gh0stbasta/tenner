@@ -44,3 +44,6 @@ export const listTennersQuerySchema = z.strictObject({
 
 /** Path parameter {tennerId}: UUIDs today; alphanumerics and dashes, 1-64 characters. */
 export const tennerIdSchema = z.string().regex(/^[A-Za-z0-9-]{1,64}$/, "Invalid Tenner ID.");
+
+/** Optional Idempotency-Key header: 1-128 printable characters without spaces. */
+export const idempotencyKeySchema = z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/, "Invalid Idempotency-Key header.");

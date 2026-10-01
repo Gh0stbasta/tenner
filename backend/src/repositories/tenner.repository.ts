@@ -1,4 +1,5 @@
 import type { Category, Tenner, UserId } from "../models/index.js";
+import type { CompletionRecord } from "./completion.repository.js";
 
 /**
  * Data-level selection criteria. All criteria are combined with AND; omitted criteria do not filter.
@@ -50,4 +51,11 @@ export interface TennerRepository {
    * Reports ALREADY_DELETED (without changes) for deleted Tenners; NotFoundError if missing.
    */
   delete(tenantId: string, tennerId: string, timestamp: string): Promise<SoftDeleteResult>;
+  /**
+   * Atomically append a completion to the history and update the Tenner's schedule (TICKET-013).
+   * `expected` is the Tenner state the update was computed from (optimistic locking).
+   * Errors: ConflictError CONCURRENT_MODIFICATION if the Tenner changed,
+   * ConflictError DUPLICATE_COMPLETION if the completion ID already exists, PersistenceError otherwise.
+   */
+  completeTenner(updated: Tenner, record: CompletionRecord, expected: Tenner): Promise<void>;
 }

@@ -883,3 +883,75 @@ Do not implement:
 - Frontend Integration
 
 These capabilities will be implemented in separate tickets if required.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `POST /tenners/{tennerId}/complete`: `src/handlers/complete-tenner.ts`, route in `src/index.ts` and `local.api_routes`
+- [x] DTOs: `CompleteTennerRequest`, `CompleteTennerResponse`, `CompletionResponse`
+- [x] `CompleteTennerService` (`completeTenner()`: load, check active, defaults, timestamp checks, next due, completion, atomic persistence, mapping)
+- [x] Repository `completeTenner(updated, record, expected)` with `TransactWriteItems` (no separate Put/Update calls)
+- [x] `DynamoDbCompletionRepository.getById` (idempotency lookup) and the history mapper (`completionId` ↔ `historyId`)
+- [x] IAM: unchanged. See the assumptions below.
+- [x] Unit tests and documentation (`backend/README.md`, `docs/architecture.md`)
+
+### Acceptance Criteria
+
+| Criterion | Status |
+|---|---|
+| Complete endpoint implemented | [x] |
+| Missing Tenners return 404 | [x] |
+| Inactive Tenners cannot be completed | [x] 409 `TENNER_INACTIVE` (also for soft-deleted ones) |
+| Completion history record created | [x] `tenantId`, `historyId` (UUID), `tennerId`, `completedBy`, `completedAt`, `actualMinutes` |
+| Tenner state updated | [x] `lastCompleted`, `nextDue`, `updatedAt` |
+| Next due date calculated from completion date | [x] early and overdue completions tested |
+| Actual minutes default to estimated minutes | [x] |
+| Completion and state update are atomic | [x] one `TransactWriteItems` |
+| Concurrent modifications return 409 | [x] `CONCURRENT_MODIFICATION` |
+| Optional idempotency is supported | [x] `Idempotency-Key`: replay, conflicting reuse → 409, concurrent duplicates |
+| IAM permissions follow least privilege | [x] no new actions needed |
+| Standard API responses are used | [x] |
+| Unit and integration tests pass | [x] 216 backend tests, 100% coverage. Integration was tested against a fake DynamoDB endpoint, see below |
+| Documentation is updated | [x] |
+
+All ticket test cases are covered:
+- successful completion, default and explicit actual minutes, default and explicit timestamp
+- future timestamp rejected, next due calculation, early and overdue completion
+- inactive and missing Tenner, invalid user, invalid minutes
+- transaction failure, concurrent modification, idempotent retry, repository failure
+
+### Validation Performed
+
+The bundle ran against a fake DynamoDB endpoint that returns real AWS error payloads:
+- **With idempotency key:** history `GetItem` (deterministic UUID v5), then Tenner `GetItem`, then one
+  `TransactWriteItems` (history put with condition, plus a Tenner update with optimistic lock) → 200, `nextDue` = +14 days.
+- **`TransactionCanceledException` `[None, ConditionalCheckFailed]`** → 409 `CONCURRENT_MODIFICATION`. This confirms
+  that the SDK delivers `CancellationReasons` as the mapping expects.
+- **Deleted Tenner** → 409 `TENNER_INACTIVE`.
+- **Missing Tenner** → 404.
+
+"Neither write persists on failure" is a property of `TransactWriteItems`. The tests show that both writes go out
+in exactly one transaction call.
+
+### Assumptions
+
+- **IAM:** the ticket asks for `dynamodb:TransactWriteItems`. DynamoDB authorizes transactions per item with the
+  item actions (`PutItem`, `UpdateItem`), which TICKET-007 already grants on both tables. I am not aware of a
+  separate IAM action called `TransactWriteItems`, so none was added.
+  **If the first live completion is denied by IAM, check this assumption first.**
+- **Optimistic locking:** besides `updatedAt` (second precision), the condition also checks `lastCompleted`,
+  `frequencyDays`, active and not deleted. Two changes within the same second are still detected.
+- **Clock skew:** `completedAt` up to 60 seconds in the future is accepted, because client clocks differ.
+  Anything later returns 400.
+- **Backdating:** `completedAt` earlier than the current `lastCompleted` returns 400. Otherwise `lastCompleted`
+  would move backwards. The ticket does not specify this case.
+- **Idempotency key scope:** the deterministic ID is based on tenant and key only, not on the Tenner, so reusing a key
+  for a different Tenner is detected (409 `IDEMPOTENCY_KEY_REUSED`). A replay returns the original completion and the
+  **current** Tenner state.
+- `requestHash` is also stored without an idempotency key. It is harmless and keeps the record uniform.
+- No CloudWatch alarms or dashboards (Out of Scope). The structured log events cover the metrics later (OBSERVABILITY-003).

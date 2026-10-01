@@ -1,10 +1,21 @@
 /** DynamoDB implementation of the Tenner repository (table tenner-tenners). */
 
-import { GetCommand, PutCommand, QueryCommand, UpdateCommand, type GetCommandOutput, type QueryCommandOutput, type UpdateCommandOutput } from "@aws-sdk/lib-dynamodb";
+import {
+  GetCommand,
+  PutCommand,
+  QueryCommand,
+  TransactWriteCommand,
+  UpdateCommand,
+  type GetCommandOutput,
+  type QueryCommandOutput,
+  type UpdateCommandOutput,
+} from "@aws-sdk/lib-dynamodb";
 import type { DocumentSender } from "../../clients/dynamodb.js";
 import { ConflictError, NotFoundError, PersistenceError } from "../../exceptions/index.js";
 import type { Tenner } from "../../models/index.js";
+import type { CompletionRecord } from "../completion.repository.js";
 import type { SoftDeleteResult, TennerCriteria, TennerRepository, TennerUpdate } from "../tenner.repository.js";
+import { toCompletionItem } from "./completion.mapper.js";
 import { isConditionalCheckFailed, toConflictOrPersistenceError, toNotFoundOrPersistenceError, toPersistenceError } from "./errors.js";
 import { toTenner } from "./tenner.mapper.js";
 import { buildTennerQuery, NOT_DELETED } from "./tenner.query.js";
@@ -13,9 +24,11 @@ import { buildTennerQuery, NOT_DELETED } from "./tenner.query.js";
  * DynamoDB Tenner repository. Deletes are soft deletes only; DeleteItem is never used (TICKET-012).
  */
 export class DynamoDbTennerRepository implements TennerRepository {
+  /** @param historyTableName tenner-history, written together with Tenners in completion transactions. */
   constructor(
     private readonly client: DocumentSender,
     private readonly tableName: string,
+    private readonly historyTableName: string,
   ) {}
 
   /** Insert a new Tenner. Never overwrites an existing item (ConflictError). */
@@ -116,4 +129,76 @@ export class DynamoDbTennerRepository implements TennerRepository {
     if (existing.deletedAt === null) throw new ConflictError("The Tenner was modified by another request.", "CONCURRENT_MODIFICATION");
     return { status: "ALREADY_DELETED", tenner: existing };
   }
+
+  /**
+   * One TransactWriteItems: [0] put history record (must not exist), [1] update Tenner schedule
+   * (must still match `expected`: updatedAt, lastCompleted, frequencyDays, active, not deleted).
+   */
+  async completeTenner(updated: Tenner, record: CompletionRecord, expected: Tenner): Promise<void> {
+    const lastCompletedCondition =
+      expected.lastCompleted === null ? "(attribute_not_exists(#lastCompleted) OR #lastCompleted = :null)" : "#lastCompleted = :expectedLastCompleted";
+    try {
+      await this.client.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Put: {
+                TableName: this.historyTableName,
+                Item: toCompletionItem(record),
+                ConditionExpression: "attribute_not_exists(historyId)",
+              },
+            },
+            {
+              Update: {
+                TableName: this.tableName,
+                Key: { tenantId: expected.tenantId, tennerId: expected.tennerId },
+                UpdateExpression: "SET #lastCompleted = :lastCompleted, #nextDue = :nextDue, #updatedAt = :updatedAt",
+                ConditionExpression: [
+                  "#updatedAt = :expectedUpdatedAt",
+                  "#frequencyDays = :expectedFrequencyDays",
+                  "#active = :true",
+                  NOT_DELETED,
+                  lastCompletedCondition,
+                ].join(" AND "),
+                ExpressionAttributeNames: {
+                  "#lastCompleted": "lastCompleted",
+                  "#nextDue": "nextDue",
+                  "#updatedAt": "updatedAt",
+                  "#frequencyDays": "frequencyDays",
+                  "#active": "active",
+                  "#deletedAt": "deletedAt",
+                },
+                ExpressionAttributeValues: {
+                  ":lastCompleted": updated.lastCompleted,
+                  ":nextDue": updated.nextDue,
+                  ":updatedAt": updated.updatedAt,
+                  ":expectedUpdatedAt": expected.updatedAt,
+                  ":expectedFrequencyDays": expected.frequencyDays,
+                  ":true": true,
+                  ":null": null,
+                  ...(expected.lastCompleted === null ? {} : { ":expectedLastCompleted": expected.lastCompleted }),
+                },
+              },
+            },
+          ],
+        }),
+      );
+    } catch (error) {
+      throw toTransactionError(error);
+    }
+  }
+}
+
+/** Map TransactionCanceledException reasons (by item index) to application errors. */
+function toTransactionError(error: unknown): ConflictError | PersistenceError {
+  if (error instanceof Error && error.name === "TransactionCanceledException") {
+    const reasons = (error as { CancellationReasons?: { Code?: string }[] }).CancellationReasons ?? [];
+    if (reasons[0]?.Code === "ConditionalCheckFailed") {
+      return new ConflictError("A completion with this ID already exists.", "DUPLICATE_COMPLETION");
+    }
+    if (reasons[1]?.Code === "ConditionalCheckFailed") {
+      return new ConflictError("The Tenner was modified by another request.", "CONCURRENT_MODIFICATION");
+    }
+  }
+  return toPersistenceError("complete Tenner", error);
 }

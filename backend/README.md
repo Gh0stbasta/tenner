@@ -135,6 +135,40 @@ Effects on other endpoints:
 
 `Tenner.deletedAt` (UTC timestamp or `null`) is part of the model and of `TennerResponse`.
 
+### POST /tenners/{tennerId}/complete
+
+```json
+{ "completedBy": "STEFAN", "actualMinutes": 12, "completedAt": "2026-10-01T18:30:00Z" }
+```
+
+| Field | Rule |
+|---|---|
+| `completedBy` | required, `STEFAN` or `JULIA` (may differ from `assignedTo`) |
+| `actualMinutes` | optional, 1–1440. Default: the Tenner's `estimatedMinutes` |
+| `completedAt` | optional UTC timestamp. Default: now. It must not be in the future (60 s clock-skew tolerance) or earlier than `lastCompleted` |
+
+**Recurrence (completion-based):** `nextDue = UTC date(completedAt) + frequencyDays` for early, on-time and overdue
+completions alike. `lastCompleted = completedAt` and `updatedAt = now`.
+
+**Atomicity:** a single `TransactWriteItems`:
+1. Put the history record into `tenner-history`, with `historyId` = `completionId` and the condition
+   `attribute_not_exists(historyId)`.
+2. Update the Tenner's `lastCompleted`, `nextDue` and `updatedAt`, on condition that the Tenner still matches
+   the loaded state: `updatedAt`, `lastCompleted`, `frequencyDays`, active and not deleted. Otherwise the result is
+   `409 CONCURRENT_MODIFICATION` and nothing is written.
+
+**Idempotency:** this is optional and uses the `Idempotency-Key` header (1–128 characters `[A-Za-z0-9._:-]`).
+- The completion ID becomes `uuidV5("<tenantId>:<key>")`. The key and a hash of the request are stored on the
+  history record.
+- A retry with the same key and the same request returns the original completion and the current Tenner
+  (no new record).
+- The same key with a different Tenner or a different body returns `409 IDEMPOTENCY_KEY_REUSED`.
+- Concurrent retries are resolved through the transaction's history condition.
+
+**Logs (structured, for later metrics):** "Tenner completion requested", then "Tenner completion succeeded"
+(`event: CompletionSucceeded`, `completionId`, `completedBy`, `actualMinutes`, `nextDue`, `replayed`, `durationMs`)
+or "Tenner completion failed" (`event: CompletionFailed` or `CompletionConflict`, `errorCode`, `durationMs`).
+
 ## Errors and Responses
 
 | Error | HTTP | Code |
@@ -172,6 +206,7 @@ and a Tenner fixture.
 | `GET /tenners` | `200 { success: true, data: TennerResponse[] }` (TICKET-010). Returns `400 VALIDATION_ERROR` for invalid parameters |
 | `PUT /tenners/{tennerId}` | `200 { success: true, data: TennerResponse }` (TICKET-011). Returns `400 VALIDATION_ERROR` or `404 NOT_FOUND` |
 | `DELETE /tenners/{tennerId}` | `200 { success: true, data: { tennerId, deleted: true } }` (TICKET-012, soft delete, idempotent). Returns `404 NOT_FOUND` |
+| `POST /tenners/{tennerId}/complete` | `200 { success: true, data: { tenner, completion } }` (TICKET-013). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | unknown route | `404 NOT_FOUND` |
 
 ### POST /tenners

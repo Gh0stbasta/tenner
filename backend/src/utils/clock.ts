@@ -17,3 +17,10 @@ export function toUtcTimestamp(date: Date): string {
 export function toUtcDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
+
+/** Add whole days to a calendar date (YYYY-MM-DD), timezone-independent. */
+export function addDays(date: string, days: number): string {
+  const result = new Date(`${date}T00:00:00Z`);
+  result.setUTCDate(result.getUTCDate() + days);
+  return toUtcDate(result);
+}

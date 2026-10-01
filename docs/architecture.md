@@ -1000,7 +1000,7 @@ index.ts (routing, correlation, error mapping)
 - **Enforcement:** ESLint fails if code outside `config.ts` reads `process.env`, or if handlers or services
   import the AWS SDK or `clients/`.
 - **Endpoints:** API routes are listed in `local.api_routes` (`terraform/locals.tf`). Each one is an explicit
-  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009), `GET /tenners` (TICKET-010), `PUT /tenners/{tennerId}` (TICKET-011), `DELETE /tenners/{tennerId}` (TICKET-012).
+  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009), `GET /tenners` (TICKET-010), `PUT /tenners/{tennerId}` (TICKET-011), `DELETE /tenners/{tennerId}` (TICKET-012), `POST /tenners/{tennerId}/complete` (TICKET-013).
 - **Read access:** lists always use a DynamoDB Query on the tenant partition, choosing `assignedTo-index` or
   `nextDue-index` when a filter allows it, and never a Scan. The `dynamodb:Scan` permission (TICKET-007) is unused.
 - **Write access:** creates are conditional puts (`attribute_not_exists`). Updates are conditional `UpdateItem`
@@ -1008,6 +1008,12 @@ index.ts (routing, correlation, error mapping)
 - **Deletion:** soft delete only (`active = false`, `deletedAt`). Records and history stay, so analytics keep
   their relationships. Deleted Tenners are excluded from lists and cannot be updated until they are restored.
   `DeleteItem` is never used by the code (TD-013).
+- **Completion workflow (TICKET-013):** completing a Tenner appends an immutable history record and moves the Tenner
+  into its next cycle (`nextDue = UTC date(completedAt) + frequencyDays`) in one `TransactWriteItems`. Optimistic
+  locking checks the loaded state (`updatedAt`, `lastCompleted`, `frequencyDays`, active and not deleted), and
+  a conflict returns `409 CONCURRENT_MODIFICATION`. The optional `Idempotency-Key` maps to a deterministic UUID v5
+  completion ID. Retries return the original result, and conflicting reuse returns 409. Transactions need no extra
+  IAM action, because DynamoDB authorizes them through `PutItem` and `UpdateItem`.
 - **Time and IDs:** services receive a `Clock` and an `IdGenerator` (`utils/clock.ts`), so tests are deterministic.
   Dates are UTC until SCHEDULING-008 (TD-005).
 

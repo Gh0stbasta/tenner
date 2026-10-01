@@ -7,13 +7,14 @@
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
 import { loadConfig, type AppConfig } from "./config.js";
 import { ApplicationError, NotFoundError } from "./exceptions/index.js";
+import { completeTennerHandler, type CompleteTenner } from "./handlers/complete-tenner.js";
 import { createTennerHandler, type CreateTenner } from "./handlers/create-tenner.js";
 import { deleteTennerHandler, type DeleteTenner } from "./handlers/delete-tenner.js";
 import { health, type DatabaseProbe } from "./handlers/health.js";
 import { listTennersHandler, type ListTenners } from "./handlers/list-tenners.js";
 import { updateTennerHandler, type UpdateTenner } from "./handlers/update-tenner.js";
-import { DynamoDbTennerRepository } from "./repositories/index.js";
-import { CreateTennerService, DeleteTennerService, ListTennersService, UpdateTennerService } from "./services/index.js";
+import { DynamoDbCompletionRepository, DynamoDbTennerRepository } from "./repositories/index.js";
+import { CompleteTennerService, CreateTennerService, DeleteTennerService, ListTennersService, UpdateTennerService } from "./services/index.js";
 import { systemClock, uuidGenerator } from "./utils/clock.js";
 import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
@@ -28,6 +29,7 @@ export interface Dependencies {
   readonly listTenners: ListTenners;
   readonly updateTenner: UpdateTenner;
   readonly deleteTenner: DeleteTenner;
+  readonly completeTenner: CompleteTenner;
 }
 
 /** Per-request context passed to route handlers. */
@@ -46,6 +48,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /tenners": ({ event, deps, logger }) => listTennersHandler(event, deps.config.tenantId, deps.listTenners, logger),
   "PUT /tenners/{tennerId}": ({ event, deps, logger }) => updateTennerHandler(event, deps.config.tenantId, deps.updateTenner, logger),
   "DELETE /tenners/{tennerId}": ({ event, deps, logger }) => deleteTennerHandler(event, deps.config.tenantId, deps.deleteTenner, logger),
+  "POST /tenners/{tennerId}/complete": ({ event, deps, logger }) => completeTennerHandler(event, deps.config.tenantId, deps.completeTenner, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -62,11 +65,14 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const notConfigured = async (): Promise<never> => {
     throw new ApplicationError("SERVICE_UNAVAILABLE", 503, "Service is not configured.");
   };
-  const tennerRepository = tables ? new DynamoDbTennerRepository(getDocumentClient(), tables.tenners) : undefined;
+  const tennerRepository = tables ? new DynamoDbTennerRepository(getDocumentClient(), tables.tenners, tables.history) : undefined;
+  const completionRepository = tables ? new DynamoDbCompletionRepository(getDocumentClient(), tables.history) : undefined;
   const createTennerService = tennerRepository ? new CreateTennerService(tennerRepository, systemClock, uuidGenerator) : undefined;
   const listTennersService = tennerRepository ? new ListTennersService(tennerRepository, systemClock) : undefined;
   const updateTennerService = tennerRepository ? new UpdateTennerService(tennerRepository, systemClock) : undefined;
   const deleteTennerService = tennerRepository ? new DeleteTennerService(tennerRepository, systemClock) : undefined;
+  const completeTennerService =
+    tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator) : undefined;
 
   return {
     config,
@@ -76,6 +82,9 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     listTenners: listTennersService ? (tenantId, request) => listTennersService.listTenners(tenantId, request) : notConfigured,
     updateTenner: updateTennerService ? (tenantId, id, request) => updateTennerService.updateTenner(tenantId, id, request) : notConfigured,
     deleteTenner: deleteTennerService ? (tenantId, id) => deleteTennerService.deleteTenner(tenantId, id) : notConfigured,
+    completeTenner: completeTennerService
+      ? (tenantId, id, request, key) => completeTennerService.completeTenner(tenantId, id, request, key)
+      : notConfigured,
   };
 }
 

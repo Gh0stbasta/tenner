@@ -19,6 +19,13 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     createTenner: vi.fn(async () => tennerResponse),
     listTenners: vi.fn(async () => [tennerResponse]),
     updateTenner: vi.fn(async () => tennerResponse),
+    completeTenner: vi.fn(async () => ({
+      response: {
+        tenner: tennerResponse,
+        completion: { completionId: "c-1", tennerId: "t-1", completedBy: "STEFAN" as const, completedAt: "2026-10-01T18:30:00Z", actualMinutes: 10 },
+      },
+      replayed: false,
+    })),
     deleteTenner: vi.fn(async () => ({ response: { tennerId: "t-1", deleted: true as const }, outcome: { status: "DELETED" as const, tenner: tennerFixture() } })),
     ...overrides,
   };
@@ -192,6 +199,41 @@ describe("DELETE /tenners/{tennerId}", () => {
     const d = deps();
     expect((await route(del("../etc"), d)).statusCode).toBe(400);
     expect(d.deleteTenner).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /tenners/{tennerId}/complete", () => {
+  const complete = (payload: unknown, headers: Record<string, string> = {}): APIGatewayProxyEventV2 =>
+    ({
+      routeKey: "POST /tenners/{tennerId}/complete",
+      headers,
+      body: JSON.stringify(payload),
+      pathParameters: { tennerId: "t-1" },
+      requestContext: { requestId: "req-1" },
+    }) as unknown as APIGatewayProxyEventV2;
+
+  it("completes and passes the idempotency key", async () => {
+    const d = deps();
+    const response = await route(complete({ completedBy: "STEFAN", actualMinutes: 12 }, { "idempotency-key": "abc-1" }), d);
+    expect(response.statusCode).toBe(200);
+    expect(d.completeTenner).toHaveBeenCalledWith("default", "t-1", { completedBy: "STEFAN", actualMinutes: 12 }, "abc-1");
+  });
+
+  it.each([
+    ["TENNER_INACTIVE", new ConflictError("Inactive Tenners cannot be completed.", "TENNER_INACTIVE"), 409],
+    ["CONCURRENT_MODIFICATION", new ConflictError("The Tenner was modified by another request.", "CONCURRENT_MODIFICATION"), 409],
+    ["NOT_FOUND", new NotFoundError("Tenner not found."), 404],
+  ])("maps %s", async (code, error, status) => {
+    const d = deps({ completeTenner: vi.fn().mockRejectedValue(error) });
+    const response = await route(complete({ completedBy: "STEFAN" }), d);
+    expect(response.statusCode).toBe(status);
+    expect(body(response).error?.code).toBe(code);
+  });
+
+  it("rejects an invalid idempotency key", async () => {
+    const d = deps();
+    expect((await route(complete({ completedBy: "STEFAN" }, { "idempotency-key": "has space" }), d)).statusCode).toBe(400);
+    expect(d.completeTenner).not.toHaveBeenCalled();
   });
 });
 

@@ -8,8 +8,19 @@ export interface HistoryQuery {
   readonly limit?: number;
 }
 
+/** A stored completion including idempotency metadata (TICKET-013). */
+export interface CompletionRecord {
+  readonly completion: Completion;
+  /** Client-provided Idempotency-Key, if any. */
+  readonly idempotencyKey?: string | undefined;
+  /** Hash of the original request, used to detect conflicting key reuse. */
+  readonly requestHash?: string | undefined;
+}
+
 /** Persistence contract for the immutable completion history. */
 export interface CompletionRepository {
+  /** A single history record by its ID (historyId), or undefined. */
+  getById(tenantId: string, completionId: string): Promise<CompletionRecord | undefined>;
   create(completion: Completion): Promise<void>;
   /** Household history, newest first. */
   getHistory(tenantId: string, query?: HistoryQuery): Promise<Completion[]>;
