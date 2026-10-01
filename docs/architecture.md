@@ -624,6 +624,48 @@ The MVP is complete when:
 - Deployments are automated using GitHub Actions
 
 ---
+# Deployment Strategy
+
+Tenner uses automated deployments through GitHub Actions.
+
+## Pull Requests
+
+Every pull request must execute:
+
+- Terraform Format Check
+- Terraform Validate
+- Terraform Plan
+- Frontend Build
+- Backend Build
+- Unit Tests
+
+Pull requests must never execute Terraform Apply.
+
+## Main Branch
+
+Every merge into main automatically deploys the application.
+
+Deployment steps:
+
+1. Assume AWS role using GitHub OIDC
+2. Execute Terraform Apply
+3. Deploy frontend assets to S3
+4. Invalidate CloudFront cache
+
+## Authentication
+
+GitHub Actions authenticates to AWS using OIDC.
+
+No AWS access keys are allowed.
+
+The IAM role used for deployments is:
+
+```text
+GithubActionsDeployRole
+```
+
+Terraform is the single source of truth for all infrastructure changes.
+---
 
 # Future Ideas
 
