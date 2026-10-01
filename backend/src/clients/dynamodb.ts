@@ -4,7 +4,7 @@
  */
 
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, type PutCommand } from "@aws-sdk/lib-dynamodb";
 import type { TableConfig } from "../config.js";
 
 /** Probe timeout. Well below the Lambda timeout so /health answers even if DynamoDB hangs. */
@@ -13,9 +13,12 @@ export const PROBE_TIMEOUT_MS = 2000;
 /** Key that never exists. Probes read it to prove access without touching real data. */
 export const PROBE_KEY = { tenantId: "__healthcheck__" } as const;
 
-/** Minimal client interface, so tests can provide a fake. */
+/** Commands used by the application. Extend when a repository needs a new command. */
+export type DocumentCommand = GetCommand | PutCommand;
+
+/** Minimal client interface (satisfied by DynamoDBDocumentClient), so tests can provide a fake. */
 export interface DocumentSender {
-  send(command: GetCommand, options?: { abortSignal?: AbortSignal }): Promise<unknown>;
+  send(command: DocumentCommand, options?: { abortSignal?: AbortSignal }): Promise<unknown>;
 }
 
 let sharedClient: DynamoDBDocumentClient | undefined;

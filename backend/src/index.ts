@@ -7,7 +7,11 @@
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
 import { loadConfig, type AppConfig } from "./config.js";
 import { ApplicationError, NotFoundError } from "./exceptions/index.js";
+import { createTennerHandler, type CreateTenner } from "./handlers/create-tenner.js";
 import { health, type DatabaseProbe } from "./handlers/health.js";
+import { DynamoDbTennerRepository } from "./repositories/index.js";
+import { CreateTennerService } from "./services/index.js";
+import { systemClock, uuidGenerator } from "./utils/clock.js";
 import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
 import { createLogger, errorFields, type Logger } from "./utils/logger.js";
@@ -17,6 +21,7 @@ export interface Dependencies {
   readonly config: AppConfig;
   readonly logger: Logger;
   readonly probeDatabase: DatabaseProbe;
+  readonly createTenner: CreateTenner;
 }
 
 /** Per-request context passed to route handlers. */
@@ -31,6 +36,7 @@ type RouteHandler = (ctx: RequestContext) => Promise<ApiResult>;
 
 const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /health": ({ deps, logger }) => health(deps.config, deps.probeDatabase, logger),
+  "POST /tenners": ({ event, deps, logger }) => createTennerHandler(event, deps.config.tenantId, deps.createTenner, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -43,10 +49,19 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     application: config.applicationName,
     tables: config.tables ?? "not configured",
   });
+  const tables = config.tables;
+  const notConfigured = async (): Promise<never> => {
+    throw new ApplicationError("SERVICE_UNAVAILABLE", 503, "Service is not configured.");
+  };
+  const createTennerService = tables
+    ? new CreateTennerService(new DynamoDbTennerRepository(getDocumentClient(), tables.tenners), systemClock, uuidGenerator)
+    : undefined;
+
   return {
     config,
     logger,
-    probeDatabase: (tables) => probeTables(getDocumentClient(), tables),
+    probeDatabase: (t) => probeTables(getDocumentClient(), t),
+    createTenner: createTennerService ? (tenantId, request) => createTennerService.createTenner(tenantId, request) : notConfigured,
   };
 }
 

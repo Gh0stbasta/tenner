@@ -294,3 +294,28 @@ Move backend values to a partial configuration file (`environments/prod/backend.
 ### Related Work
 
 TICKET-003, TICKET-021
+
+---
+
+## TD-012: Lambda bundle size grows with Zod
+
+### Description
+
+The minified `tenner-api` bundle is about 1 MB. Zod 4 (classic API) contributes about 460 kB and the AWS SDK about 550 kB.
+
+### Reason
+
+Zod is the recommended validation library (TICKET-008), and the SDK is bundled on purpose (TICKET-007).
+
+### Impact
+
+Cold starts parse more JavaScript, probably about 10–30 ms on 256 MB arm64. Warm requests are not affected.
+
+### Suggested Improvement
+
+Measure the cold start with OBSERVABILITY-003. If needed, switch to `zod/mini` (tree-shakeable, same schemas with
+a functional API), or use the runtime-provided AWS SDK.
+
+### Related Work
+
+TICKET-007, TICKET-008, TICKET-009, `backend/build.mjs`

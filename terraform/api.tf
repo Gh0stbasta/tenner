@@ -61,10 +61,18 @@ resource "aws_apigatewayv2_integration" "api" {
   payload_format_version = "2.0"
 }
 
-resource "aws_apigatewayv2_route" "health" {
+# Explicit routes only (no $default catch-all). Add new endpoints to local.api_routes.
+resource "aws_apigatewayv2_route" "api" {
+  for_each = toset(local.api_routes)
+
   api_id    = aws_apigatewayv2_api.api.id
-  route_key = "GET /health"
+  route_key = each.value
   target    = "integrations/${aws_apigatewayv2_integration.api.id}"
+}
+
+moved {
+  from = aws_apigatewayv2_route.health
+  to   = aws_apigatewayv2_route.api["GET /health"]
 }
 
 resource "aws_apigatewayv2_stage" "api" {

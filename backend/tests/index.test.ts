@@ -2,14 +2,23 @@ import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConflictError, PersistenceError, ValidationError } from "../src/exceptions/index.js";
 import { correlationIdOf, createDependencies, handler, route, type Dependencies } from "../src/index.js";
-import { mockLogger, testConfig } from "./mocks/index.js";
+import { toTennerResponse } from "../src/dto/index.js";
+import { mockLogger, tennerFixture, testConfig } from "./mocks/index.js";
 
-function event(routeKey: string, headers: Record<string, string> = {}): APIGatewayProxyEventV2 {
-  return { routeKey, headers, requestContext: { requestId: "req-1" } } as unknown as APIGatewayProxyEventV2;
+const tennerResponse = toTennerResponse(tennerFixture());
+
+function event(routeKey: string, headers: Record<string, string> = {}, body?: string): APIGatewayProxyEventV2 {
+  return { routeKey, headers, body, requestContext: { requestId: "req-1" } } as unknown as APIGatewayProxyEventV2;
 }
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
-  return { config: testConfig(), logger: mockLogger(), probeDatabase: async () => true, ...overrides };
+  return {
+    config: testConfig(),
+    logger: mockLogger(),
+    probeDatabase: async () => true,
+    createTenner: vi.fn(async () => tennerResponse),
+    ...overrides,
+  };
 }
 
 function body(response: { body?: string | undefined }): { success?: boolean; error?: { code: string; message: string; details?: unknown } } {
@@ -67,6 +76,34 @@ describe("route", () => {
     const response = await route(event("GET /health", { "x-correlation-id": "abc-123" }), d);
     expect(response.headers?.["x-correlation-id"]).toBe("abc-123");
     expect(d.logger.child).toHaveBeenCalledWith({ correlationId: "abc-123", routeKey: "GET /health" });
+  });
+});
+
+describe("POST /tenners", () => {
+  const valid = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14, assignedTo: "STEFAN" };
+
+  it("creates a Tenner for the configured tenant and returns 201", async () => {
+    const d = deps();
+    const response = await route(event("POST /tenners", {}, JSON.stringify(valid)), d);
+    expect(response.statusCode).toBe(201);
+    expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: tennerResponse });
+    expect(d.createTenner).toHaveBeenCalledWith("default", valid);
+  });
+
+  it("rejects invalid input with 400 before calling the service", async () => {
+    const d = deps();
+    const response = await route(event("POST /tenners", {}, JSON.stringify({ ...valid, frequencyDays: 0 })), d);
+    expect(response.statusCode).toBe(400);
+    expect(body(response).error?.code).toBe("VALIDATION_ERROR");
+    expect(d.createTenner).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 when the tables are not configured", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const response = await route(event("POST /tenners", {}, JSON.stringify(valid)), createDependencies(testConfig({ tables: undefined })));
+    expect(response.statusCode).toBe(503);
+    expect(body(response).error?.code).toBe("SERVICE_UNAVAILABLE");
   });
 });
 

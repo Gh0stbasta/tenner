@@ -999,6 +999,10 @@ index.ts (routing, correlation, error mapping)
   (`x-correlation-id` header or the API Gateway request ID, echoed in the response).
 - **Enforcement:** ESLint fails if code outside `config.ts` reads `process.env`, or if handlers or services
   import the AWS SDK or `clients/`.
+- **Endpoints:** API routes are listed in `local.api_routes` (`terraform/locals.tf`). Each one is an explicit
+  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009).
+- **Time and IDs:** services receive a `Clock` and an `IdGenerator` (`utils/clock.ts`), so tests are deterministic.
+  Dates are UTC until SCHEDULING-008 (TD-005).
 
 ---
 

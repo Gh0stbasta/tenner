@@ -116,7 +116,20 @@ and a Tenner fixture.
 | Route | Response |
 |---|---|
 | `GET /health` | `200 {"status":"ok","application":"tenner","environment":"prod","database":"connected"}`. Returns `503` with `"status":"error"` and `database` `unreachable` or `misconfigured` |
+| `POST /tenners` | `201 { success: true, data: TennerResponse }` (TICKET-009). Returns `400 VALIDATION_ERROR` with `details`, `409 CONFLICT` if the ID exists, `500 PERSISTENCE_ERROR` |
 | unknown route | `404 NOT_FOUND` |
+
+### POST /tenners
+
+Request (all fields required, unknown fields rejected):
+
+```json
+{ "title": "Vacuum Office", "category": "HOUSEHOLD", "estimatedMinutes": 10, "frequencyDays": 14, "assignedTo": "STEFAN" }
+```
+
+The service generates `tennerId` (UUID v4), `tenantId` (from configuration), `active = true`,
+`lastCompleted = null`, `nextDue` = today (UTC date) and `createdAt` = `updatedAt` = now (UTC, seconds precision).
+The repository writes with `attribute_not_exists(tennerId)`, so it never overwrites an existing item.
 
 ## Dependencies
 

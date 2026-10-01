@@ -67,8 +67,8 @@ run "http_api_routes_health" {
   }
 
   assert {
-    condition     = aws_apigatewayv2_route.health.route_key == "GET /health"
-    error_message = "GET /health route missing."
+    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners"])
+    error_message = "API routes must be GET /health and POST /tenners."
   }
 
   assert {

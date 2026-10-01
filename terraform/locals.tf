@@ -36,6 +36,12 @@ locals {
   api_memory_mb       = 256
   api_timeout_seconds = 10
 
+  # API routes served by the tenner-api Lambda.
+  api_routes = [
+    "GET /health",
+    "POST /tenners", # TICKET-009
+  ]
+
   # Lambda bundle built by `npm run build` in backend/ (dist/index.mjs).
   api_source_dir  = "${path.module}/../backend/dist"
   api_package_zip = "${path.module}/../.build/tenner-api.zip"
