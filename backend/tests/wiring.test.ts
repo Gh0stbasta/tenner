@@ -88,6 +88,12 @@ describe("createDependencies wiring", () => {
     expect((send.mock.calls[0]?.[0] as QueryCommand).input.IndexName).toBe("nextDue-index");
   });
 
+  it("reads a single Tenner with GetItem", async () => {
+    send.mockResolvedValue({ Item: tennerFixture() });
+    await expect(deps().getTenner("default", "t-1", {})).resolves.toMatchObject({ title: "Vacuum Office" });
+    expect(send.mock.calls[0]?.[0]).toBeInstanceOf(GetCommand);
+  });
+
   it("updates Tenners in the configured table", async () => {
     send.mockResolvedValue({ Attributes: tennerFixture({ title: "New title" }) });
     await expect(deps().updateTenner("default", "t-1", { title: "New title" })).resolves.toMatchObject({ title: "New title" });

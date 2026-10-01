@@ -8,3 +8,4 @@ export * from "./complete-tenner.service.js";
 export * from "./undo-completion.service.js";
 export * from "./restore-tenner.service.js";
 export * from "./dashboard.service.js";
+export * from "./get-tenner.service.js";

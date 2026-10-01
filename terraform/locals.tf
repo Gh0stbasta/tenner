@@ -47,6 +47,7 @@ locals {
     "POST /tenners/{tennerId}/undo-completion", # TICKET-014
     "POST /tenners/{tennerId}/restore",         # TICKET-015
     "GET /dashboard",                           # TICKET-016
+    "GET /tenners/{tennerId}",                  # TICKET-019
   ]
 
   # Lambda bundle built by `npm run build` in backend/ (dist/index.mjs).

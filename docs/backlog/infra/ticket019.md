@@ -260,3 +260,35 @@ Do not implement:
 - Completion history in the response (TICKET-020)
 - Frontend integration
 - Authentication
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `GET /tenners/{tennerId}`: `backend/src/handlers/get-tenner.ts`, route in `src/index.ts` and `local.api_routes`
+- [x] `GetTennerService.getTenner()` (`src/services/get-tenner.service.ts`). It reuses the existing `TennerResponse` DTO.
+- [x] Repository: `getById` (consistent `GetItem`, from TICKET-012) is reused
+- [x] Tests and documentation (`backend/README.md`, `docs/architecture.md`)
+
+### Acceptance Criteria
+
+| Criterion | Status |
+|---|---|
+| Endpoint implemented | [x] |
+| Missing Tenners return 404 | [x] |
+| Soft-deleted Tenners hidden by default | [x] 404 |
+| includeDeleted flag supported | [x] `?includeDeleted=true` (only `true`/`false` allowed) |
+| Tenant scoping enforced | [x] the key is always `tenantId` + `tennerId` |
+| GetItem used instead of Scan | [x] |
+| Standard responses used | [x] |
+| Tests passing | [x] existing, missing, soft-deleted with and without flag, invalid id, repository failure. 325 backend tests, 100% coverage |
+| Documentation updated | [x] |
+
+### Assumptions
+
+- Inactive but not deleted Tenners (deactivated via PUT) are returned normally. Only soft deletes are hidden.
+- The read is consistent (`ConsistentRead`), so a read directly after a write shows the new state.

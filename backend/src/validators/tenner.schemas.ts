@@ -72,3 +72,8 @@ export const dashboardQuerySchema = z.strictObject({
   category: categorySchema.optional(),
   date: isoDateSchema.optional(),
 }) satisfies z.ZodType<DashboardRequest, Record<string, string | undefined>>;
+
+/** Query string of GET /tenners/{tennerId} (TICKET-019). */
+export const getTennerQuerySchema = z.strictObject({
+  includeDeleted: booleanFlagSchema.optional(),
+});

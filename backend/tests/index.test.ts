@@ -37,6 +37,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       replayed: false,
     })),
     getDashboard: vi.fn(async () => emptyDashboard),
+    getTenner: vi.fn(async () => tennerResponse),
     restoreTenner: vi.fn(async () => ({ response: { tennerId: "t-1", active: true, deletedAt: null }, status: "RESTORED" as const, previousDeletedAt: "2026-10-01T18:00:00Z" })),
     undoCompletion: vi.fn(async () => ({
       response: {
@@ -324,6 +325,27 @@ describe("GET /dashboard", () => {
     expect(response.statusCode).toBe(400);
     expect(body(response).error).toMatchObject({ code: "VALIDATION_ERROR", message: "Invalid dashboard query." });
     expect(d.getDashboard).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /tenners/{tennerId}", () => {
+  const get = (id: string, query?: Record<string, string>): APIGatewayProxyEventV2 =>
+    ({ routeKey: "GET /tenners/{tennerId}", headers: {}, pathParameters: { tennerId: id }, queryStringParameters: query, requestContext: { requestId: "req-1" } }) as unknown as APIGatewayProxyEventV2;
+
+  it("returns the Tenner", async () => {
+    const d = deps();
+    const response = await route(get("t-1"), d);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: tennerResponse });
+    expect(d.getTenner).toHaveBeenCalledWith("default", "t-1", { includeDeleted: undefined });
+  });
+
+  it("passes includeDeleted and validates input", async () => {
+    const d = deps();
+    await route(get("t-1", { includeDeleted: "true" }), d);
+    expect(d.getTenner).toHaveBeenCalledWith("default", "t-1", { includeDeleted: true });
+    expect((await route(get("bad id"), d)).statusCode).toBe(400);
+    expect((await route(get("t-1", { includeDeleted: "yes" }), d)).statusCode).toBe(400);
   });
 });
 
