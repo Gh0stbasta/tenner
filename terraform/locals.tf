@@ -57,6 +57,13 @@ locals {
   tenners_table_name = "${local.name_prefix}-tenners"
   history_table_name = "${local.name_prefix}-history"
 
+  # Frontend hosting (TICKET-017).
+  frontend_bucket_name       = "${local.name_prefix}-frontend-${var.environment}"
+  frontend_distribution_name = "${local.name_prefix}-cloudfront"
+  # AWS managed CloudFront cache policies (global, stable IDs; avoids data-source lookups).
+  cache_policy_caching_optimized = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+  cache_policy_caching_disabled  = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+
   # Every taggable resource must end up with these tags (TICKET-001A).
   # Enforced in CI by scripts/check_tags.py against the Terraform plan.
   mandatory_tag_keys = concat(keys(local.common_tags), ["Name", "Purpose", "Description"])

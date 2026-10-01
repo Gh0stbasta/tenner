@@ -20,6 +20,8 @@ The repository contains:
 - tag enforcement on every plan (TICKET-001A, `scripts/check_tags.py`)
 - the API runtime (TICKET-005): Lambda `tenner-api` and HTTP API `tenner-api-gateway` with `GET /health` (code in [`backend/`](backend/README.md))
 - the DynamoDB persistence layer (TICKET-006): tables `tenner-tenners` and `tenner-history` with GSIs
+- the backend API (TICKET-008 to TICKET-016): CRUD, complete/undo/restore workflows and dashboard (see [`backend/README.md`](backend/README.md))
+- frontend hosting (TICKET-017): private S3 bucket `tenner-frontend-<env>` behind CloudFront with Origin Access Control; URL in the Terraform output `frontend_url`
 - the project documentation
 
 The frontend will be added by later backlog tickets.
@@ -66,6 +68,7 @@ For the managed resources so far:
 - Lambda
 - API Gateway (`apigateway:*` on `tenner-api-gateway`)
 - DynamoDB tables `tenner-tenners` and `tenner-history` (create, update, tag, PITR)
+- S3 bucket `tenner-frontend-<env>` (bucket configuration, policy) and CloudFront (distribution, origin access control, response headers policy)
 - CloudWatch Logs (`/tenner/*`)
 - IAM: create and manage `tenner-api-role` and its inline policy, plus `iam:PassRole` for that role to Lambda
 

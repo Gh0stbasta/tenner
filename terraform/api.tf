@@ -48,6 +48,15 @@ resource "aws_apigatewayv2_api" "api" {
   protocol_type = "HTTP"
   description   = "Public HTTP API for Tenner."
 
+  # Central CORS configuration (TICKET-017): only the frontend origin, no wildcard.
+  cors_configuration {
+    allow_origins  = ["https://${aws_cloudfront_distribution.frontend.domain_name}"]
+    allow_methods  = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers  = ["content-type", "idempotency-key", "x-correlation-id", "authorization"]
+    expose_headers = ["x-correlation-id"]
+    max_age        = 300
+  }
+
   tags = {
     Name        = local.api_gateway_name
     Purpose     = "Public API endpoint for Tenner."

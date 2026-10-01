@@ -72,3 +72,23 @@ output "api_lambda_role_arn" {
   description = "ARN of the Tenner API Lambda execution role."
   value       = aws_iam_role.api.arn
 }
+
+output "frontend_bucket_name" {
+  description = "S3 bucket holding the frontend build (deploy target)."
+  value       = aws_s3_bucket.frontend.bucket
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID (cache invalidation)."
+  value       = aws_cloudfront_distribution.frontend.id
+}
+
+output "cloudfront_domain_name" {
+  description = "CloudFront domain serving the frontend."
+  value       = aws_cloudfront_distribution.frontend.domain_name
+}
+
+output "frontend_url" {
+  description = "HTTPS URL of the Tenner frontend."
+  value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
+}

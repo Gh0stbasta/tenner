@@ -278,7 +278,7 @@ TICKET-003, `terraform/backend.tf`, `terraform/state-backend.tf`
 
 ---
 
-## TD-011: State bucket name duplicated as backend literals
+## TD-011: State bucket name duplicated as backend literals; global S3 names
 
 ### Description
 
@@ -292,7 +292,8 @@ Terraform backend blocks cannot use variables or locals. The ticket prescribes t
 ### Impact
 
 The names can drift apart if only one place is changed (a test guards the `locals.tf` side).
-If the global bucket name is taken, the bootstrap fails.
+If the global bucket name is taken, the bootstrap fails. The same risk applies to `tenner-frontend-<env>`
+(TICKET-017): if that name is taken, the first apply fails.
 
 ### Suggested Improvement
 

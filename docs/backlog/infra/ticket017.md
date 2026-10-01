@@ -290,3 +290,49 @@ Do not implement:
 - Multiple environments (TICKET-021)
 
 This ticket only provisions frontend hosting infrastructure.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `terraform/frontend-hosting.tf`:
+  - S3 bucket with versioning, SSE-S3, Block Public Access, BucketOwnerEnforced and a 30-day lifecycle for old versions
+  - Origin Access Control and a bucket policy (CloudFront plus `SourceArn` only, TLS only)
+  - response headers policy and the CloudFront distribution
+- [x] API Gateway CORS (`cors_configuration` in `terraform/api.tf`): only the CloudFront origin
+- [x] Outputs `frontend_bucket_name`, `cloudfront_distribution_id`, `cloudfront_domain_name`, `frontend_url`
+- [x] `terraform/tests/frontend_hosting.tftest.hcl`: 5 runs
+- [x] `docs/architecture.md` (Frontend Hosting, including cost), `README.md` (CI permissions), TD-011 extended
+
+### Acceptance Criteria
+
+| Criterion | Status |
+|---|---|
+| Private S3 bucket exists with public access blocked | [x] defined and tested |
+| CloudFront distribution serves the application over HTTPS | [x] `redirect-to-https`, TLS ≥ 1.2 (tested) |
+| S3 bucket is only accessible via OAC | [x] OAC (SigV4, always) and bucket policy with `AWS:SourceArn` (tested) |
+| SPA routes resolve to index.html | [x] 403/404 → `/index.html` with 200 (tested; mutation check fails without 404) |
+| Cache policies differ for index.html and hashed assets | [x] CachingDisabled vs. CachingOptimized for `/assets/*` (tested) |
+| Security headers are returned | [x] HSTS, nosniff, DENY, Referrer-Policy, CSP (tested) |
+| CORS allows only the CloudFront origin | [x] tested. Mutation check: `"*"` makes the test fail |
+| All resources carry mandatory tags | [x] offline plan: 40 resources, `check_tags.py` compliant |
+| Terraform outputs exist | [x] |
+| Documentation updated | [x] |
+
+Manual verification (`curl` against CloudFront, 403 on direct S3 access) is only possible after the first deploy.
+
+### Assumptions
+
+- **CSP `connect-src`:** `https://*.execute-api.<region>.amazonaws.com` instead of the exact API host. The exact host
+  would create a cycle (distribution → headers policy → API → CORS → distribution). TICKET-022 (custom domain) makes
+  it exact.
+- **Managed cache policies** are referenced by their fixed global IDs (constants in `locals.tf`), so `plan` needs no
+  extra API lookups.
+- **Default behavior:** "no-cache for index.html" is implemented as CloudFront `CachingDisabled` on the default
+  behavior. The browser `Cache-Control` headers come from the upload in TICKET-018.
+- The bucket is **not** `prevent_destroy`: it only holds rebuildable build artifacts, unlike state and tables.
+- `frontend/` does not exist yet (FRONTEND-001). Hosting works independently of it. The upload follows in TICKET-018.

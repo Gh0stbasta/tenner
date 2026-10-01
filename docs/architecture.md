@@ -877,7 +877,7 @@ Client → API Gateway HTTP API (tenner-api-gateway, stage prod)
 
 ## Not Yet Included
 
-Authentication (SECURITY-002), throttling (SECURITY-005), CORS (TICKET-017), alarms (OBSERVABILITY-002).
+Authentication (SECURITY-002), throttling (SECURITY-005), alarms (OBSERVABILITY-002). CORS was added with TICKET-017.
 
 ---
 
@@ -1027,6 +1027,32 @@ index.ts (routing, correlation, error mapping)
   (default `Europe/Berlin`, Terraform `var.application_timezone`), or the `date` parameter.
 - **Time and IDs:** services receive a `Clock` and an `IdGenerator` (`utils/clock.ts`), so tests are deterministic.
   Dates are UTC until SCHEDULING-008 (TD-005).
+
+---
+
+# Frontend Hosting
+
+Introduced by TICKET-017 (`terraform/frontend-hosting.tf`).
+
+```text
+Browser ──HTTPS──> CloudFront (tenner-cloudfront, PriceClass_100, HTTP/2+3, TLS ≥ 1.2)
+                      │  Origin Access Control (SigV4)
+                      ▼
+                   S3 tenner-frontend-<env> (private, versioned, SSE-S3, BucketOwnerEnforced)
+```
+
+| Topic | Implementation |
+|---|---|
+| Access | Block Public Access. The bucket policy allows `s3:GetObject` only to `cloudfront.amazonaws.com` with `AWS:SourceArn` = this distribution. Requests without TLS are denied |
+| SPA routing | 403/404 from S3 → `/index.html` with status 200 |
+| Caching | `/assets/*` (content-hashed) uses `Managed-CachingOptimized`. Everything else, including `index.html`, uses `Managed-CachingDisabled`, so new deployments are visible immediately |
+| Security headers | HSTS (1 year), `nosniff`, `X-Frame-Options: DENY`, `strict-origin-when-cross-origin`, CSP |
+| CSP | `connect-src 'self' https://*.execute-api.<region>.amazonaws.com`. A wildcard is needed because the exact API host would create a Terraform cycle; TICKET-022 narrows it |
+| CORS (central, on the HTTP API) | Origin only `https://<cloudfront-domain>`. Methods GET/POST/PUT/DELETE/OPTIONS. Headers `content-type`, `idempotency-key`, `x-correlation-id`, `authorization`. Exposes `x-correlation-id` |
+| Rollback | S3 versioning keeps previous objects for 30 days. Normal rollback is a revert on `main` |
+| Cost | under 1 USD/month at household traffic (CloudFront free tier 1 TB/month, S3 a few MB) |
+
+Outputs: `frontend_bucket_name`, `cloudfront_distribution_id`, `cloudfront_domain_name`, `frontend_url`.
 
 ---
 
