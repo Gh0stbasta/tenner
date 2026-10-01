@@ -667,6 +667,112 @@ GithubActionsDeployRole
 Terraform is the single source of truth for all infrastructure changes.
 ---
 
+# Terraform Standards
+
+Introduced by TICKET-002.
+
+## Layout
+
+```text
+terraform/
+├── versions.tf          Terraform and provider version constraints, backend placeholder
+├── providers.tf         AWS provider with default tags
+├── variables.tf         aws_region (default eu-central-1), environment (default prod)
+├── locals.tf            naming prefix, resource group name, common tags
+├── data.tf              shared data sources
+├── resource-groups.tf   tag-based AWS Resource Group "Tenner"
+├── outputs.tf           shared outputs
+├── tests/               offline `terraform test` suites (mocked provider)
+├── modules/             reusable modules (only when a pattern repeats)
+└── environments/prod/   environment-specific configuration (TICKET-003, TICKET-021)
+```
+
+## Versions
+
+| Component | Constraint | CI version |
+|---|---|---|
+| Terraform | `>= 1.10` | `1.16.4` (`TF_VERSION` in workflows) |
+| AWS provider | `~> 6.0` | pinned by `terraform/.terraform.lock.hcl` |
+
+The dependency lock file is committed. Provider upgrades happen through a deliberate lock file update.
+
+## Validation
+
+Every pull request runs `terraform fmt -check -recursive`, `terraform validate` and `terraform test`
+before AWS authentication. It then runs `terraform plan` with OIDC credentials.
+
+---
+
+# Tagging Standards
+
+Every resource carries these tags:
+
+| Tag | Value | Source |
+|---|---|---|
+| Application | `Tenner` | provider `default_tags` (`local.common_tags`) |
+| Project | `Tenner` | provider `default_tags` |
+| Owner | `Stefan Schmidpeter` | provider `default_tags` |
+| Environment | `var.environment` (`prod`) | provider `default_tags` |
+| CreatedBy | `GitHub Actions` | provider `default_tags` |
+| ManagedBy | `Terraform` | provider `default_tags` |
+| Repository | `Gh0stbasta/tenner` | provider `default_tags` |
+| Name | resource-specific | resource `tags` |
+| Purpose | resource-specific | resource `tags` |
+| Description | resource-specific | resource `tags` |
+
+Resources must not redefine the common tags. They only add `Name`, `Purpose` and `Description`.
+TICKET-001A extends this standard (for example with `CostCenter`).
+
+---
+
+# Naming Standards
+
+```text
+tenner-<resource>
+```
+
+Examples: `tenner-api`, `tenner-frontend`, `tenner-cloudfront`, `tenner-tenners`, `tenner-history`.
+
+- No random names.
+- No generated suffixes unless the resource type technically requires them,
+  for example globally unique S3 bucket names.
+- The prefix is centralized in `local.name_prefix`.
+
+---
+
+# Resource Groups
+
+The AWS Resource Group `Tenner` (`terraform/resource-groups.tf`) uses a `TAG_FILTERS_1_0` query:
+
+```text
+ResourceTypeFilters: AWS::AllSupported
+TagFilters:          Project = Tenner
+```
+
+Membership is purely tag-driven. Resources are never assigned manually.
+Because `Project` is a default tag, every Terraform-managed resource joins the group automatically.
+
+---
+
+# State Management
+
+- Until TICKET-003, Terraform uses local state. In CI, local state is discarded after each run.
+  Do not merge infrastructure to `main` before the remote backend exists: a second apply
+  would try to create existing resources again.
+- TICKET-003 adds an S3 backend (`tenner-terraform-state`, key `prod/terraform.tfstate`) with
+  locking, versioning and encryption, and migrates the local state.
+- State files are never committed (`.gitignore`).
+
+---
+
+# Deployment Standards
+
+- Infrastructure changes are applied only by `.github/workflows/deploy.yml` on `main`, using GitHub OIDC.
+- Pull requests only validate, test and plan. They never apply.
+- No manual changes in AWS. Terraform is the single source of truth.
+
+---
+
 # Future Ideas
 
 Out of scope for MVP.

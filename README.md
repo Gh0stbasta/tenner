@@ -12,8 +12,26 @@ recurring responsibilities through small, ten-minute tasks ("Tenners").
 
 ## Current State
 
-The repository contains the CI/CD workflows (TICKET-001) and the project documentation.
-Terraform, frontend and backend code will be added by later backlog tickets.
+The repository contains:
+
+- the CI/CD workflows (TICKET-001)
+- the Terraform foundation in `terraform/` (TICKET-002): provider, tagging, naming standards and the tag-based AWS Resource Group `Tenner`
+- the project documentation
+
+Frontend and backend code will be added by later backlog tickets.
+
+## Terraform (local)
+
+```bash
+cd terraform
+terraform fmt -check -recursive
+terraform init -backend=false
+terraform validate
+terraform test        # offline, mocked AWS provider
+```
+
+`terraform plan` and `apply` need AWS credentials. Infrastructure is applied only by the deploy workflow.
+Standards are documented in [`docs/architecture.md`](docs/architecture.md) (Terraform, tagging, naming).
 
 ---
 
@@ -26,7 +44,7 @@ access keys exist in GitHub or in this repository.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| [`pr.yml`](.github/workflows/pr.yml) | `pull_request` | Checks AWS identity, runs `terraform fmt -check`, `init`, `validate`, `plan`, then frontend and backend `npm ci`, `lint`, `test`, `build`. **Never applies.** |
+| [`pr.yml`](.github/workflows/pr.yml) | `pull_request` | Runs `terraform fmt -check`, `validate` and `test` offline. Then checks AWS identity and runs `terraform plan`. Runs frontend and backend `npm ci`, `lint`, `test`, `build`. **Never applies.** |
 | [`deploy.yml`](.github/workflows/deploy.yml) | push to `main` | Builds frontend and backend as a gate, checks AWS identity, then runs `terraform init` and `terraform apply`. |
 
 Settings:
@@ -34,7 +52,7 @@ Settings:
 | Setting | Value |
 |---|---|
 | AWS region | `eu-central-1` |
-| Terraform version | `1.9.8` (`TF_VERSION` in both workflows) |
+| Terraform version | `1.16.4` (`TF_VERSION` in both workflows) |
 | Node.js version | `22` (`NODE_VERSION` in both workflows) |
 | Terraform directory | `terraform/` |
 | Application directories | `frontend/`, `backend/` |

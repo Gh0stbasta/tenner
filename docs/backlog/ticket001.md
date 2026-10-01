@@ -274,7 +274,7 @@ Behavior on GitHub can only be verified by real workflow runs.
   because it runs `aws sts get-caller-identity` and `terraform plan`.
 - `docs/architecture.md` (authoritative) lists `npm lint` and `npm test` for pull requests, so
   `pr.yml` runs them with `--if-present` in addition to the builds this ticket requires.
-- Terraform `1.9.8` and Node.js `22` are pinned in the workflow `env` blocks.
+- Terraform `1.9.8` (raised to `1.16.4` by TICKET-002) and Node.js `22` are pinned in the workflow `env` blocks.
 
 ### Remaining Verification (requires GitHub/AWS)
 

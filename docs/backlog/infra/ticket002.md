@@ -317,3 +317,50 @@ Do not create:
 
 These will be implemented in later tickets.
 ``
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `terraform/providers.tf`, `versions.tf`, `variables.tf`, `locals.tf`, `outputs.tf`, `resource-groups.tf`, `data.tf`
+- [x] `terraform/modules/`, `terraform/environments/prod/` (README placeholders)
+- [x] `terraform/.terraform.lock.hcl` (AWS provider 6.67.0, hashes for linux/darwin/windows)
+- [x] `terraform/tests/foundation.tftest.hcl` (offline tests with a mocked provider)
+- [x] `.gitignore` (state files, `.terraform/`, Node artifacts)
+- [x] `docs/architecture.md`: Terraform, Tagging, Naming, Resource Groups, State Management, Deployment Standards
+- [x] `README.md` updated
+
+### Acceptance Criteria
+
+- [x] Terraform project structure exists
+- [x] AWS provider configured (`eu-central-1` via `var.aws_region`)
+- [x] Default tags configured (`default_tags = local.common_tags`)
+- [x] Common tags implemented
+- [x] AWS Resource Group defined (tag-based, `Project = Tenner`). Created in AWS on the first deploy to `main`.
+- [x] Naming convention documented
+- [x] Tagging convention documented
+- [x] `terraform fmt -check -recursive` passes
+- [x] `terraform validate` passes
+- [x] `terraform test`: 4 tests pass (tags, resource group query, variable validation). A mutated tag value makes them fail.
+
+### Assumptions
+
+- `required_version = ">= 1.10"` (from this ticket) is incompatible with the `1.9.8` pinned by TICKET-001.
+  CI now uses Terraform `1.16.4` (the latest release when this ticket was implemented).
+- The common tags come from provider `default_tags`. `Name`, `Purpose` and `Description` are set per resource,
+  because they cannot be shared.
+- `aws_region` and `environment` are variables with defaults `eu-central-1` and `prod`, to avoid a hardcoded region.
+- The PR workflow now runs the offline checks (`fmt`, `validate`, `test`) before AWS authentication,
+  so they give feedback even when OIDC fails.
+- No account ID is output, to keep it out of CI logs.
+
+### Not Yet Verified
+
+- [ ] `terraform plan` on GitHub. This is blocked until `GithubActionsDeployRole` trusts the
+  `pull_request` subject (see PR #1).
+- [ ] Resource Group deployed. This happens on merge to `main`. **Merge only after TICKET-003 (remote state).**
+  Without a remote backend, CI state is discarded, and the next apply fails because `Tenner` already exists.
