@@ -12,6 +12,15 @@ export interface TennerCriteria {
   readonly nextDueOnOrBefore?: string | undefined;
   /** Exclusive upper bound for nextDue (YYYY-MM-DD). */
   readonly nextDueBefore?: string | undefined;
+  /** Include soft-deleted Tenners. Default: false (deleted Tenners are excluded). */
+  readonly includeDeleted?: boolean | undefined;
+}
+
+/** Outcome of a soft delete (TICKET-012). */
+export interface SoftDeleteResult {
+  readonly status: "DELETED" | "ALREADY_DELETED";
+  /** State after the operation. */
+  readonly tenner: Tenner;
 }
 
 /** Fields that may change through an update, plus the new updatedAt timestamp (TICKET-011). */
@@ -24,6 +33,7 @@ export type TennerUpdate = {
  * PersistenceError and never validate input (that is the service's job).
  */
 export interface TennerRepository {
+  /** The Tenner (including soft-deleted ones) or undefined. */
   getById(tenantId: string, tennerId: string): Promise<Tenner | undefined>;
   /** All matching Tenners (unordered; all result pages). */
   list(tenantId: string, criteria?: TennerCriteria): Promise<Tenner[]>;
@@ -32,8 +42,12 @@ export interface TennerRepository {
   /**
    * Atomically set the given fields on an existing Tenner and return the updated Tenner.
    * Other attributes (e.g. lastCompleted, nextDue) are untouched, so concurrent completions are not lost.
-   * Fails with NotFoundError if the Tenner does not exist.
+   * Fails with NotFoundError if the Tenner does not exist or is soft-deleted.
    */
   update(tenantId: string, tennerId: string, changes: TennerUpdate): Promise<Tenner>;
-  delete(tenantId: string, tennerId: string): Promise<void>;
+  /**
+   * Soft delete: set active = false, deletedAt and updatedAt to the given timestamp. Never removes the item.
+   * Reports ALREADY_DELETED (without changes) for deleted Tenners; NotFoundError if missing.
+   */
+  delete(tenantId: string, tennerId: string, timestamp: string): Promise<SoftDeleteResult>;
 }

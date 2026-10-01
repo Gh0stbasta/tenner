@@ -319,3 +319,29 @@ a functional API), or use the runtime-provided AWS SDK.
 ### Related Work
 
 TICKET-007, TICKET-008, TICKET-009, `backend/build.mjs`
+
+---
+
+## TD-013: Lambda role grants unused DynamoDB actions
+
+### Description
+
+`tenner-api-role-dynamodb` allows `dynamodb:DeleteItem` and `dynamodb:Scan`. The code uses neither:
+deletes are soft deletes (TICKET-012), and lists always use Query (TICKET-010).
+
+### Reason
+
+TICKET-007 prescribes this action list.
+
+### Impact
+
+If the function were compromised, an attacker could physically delete items or scan whole tables.
+That is more than the application needs (least privilege).
+
+### Suggested Improvement
+
+Remove `DeleteItem` and `Scan` from the policy and update the IAM test. Add `TransactWriteItems` with TICKET-013.
+
+### Related Work
+
+TICKET-007, TICKET-010, TICKET-012, `terraform/iam.tf`

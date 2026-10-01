@@ -495,3 +495,55 @@ Do not implement:
 - Restore Endpoint
 
 Restore functionality will be implemented in a future ticket if required.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `DELETE /tenners/{tennerId}`: handler `src/handlers/delete-tenner.ts`, route in `src/index.ts` and `local.api_routes`
+- [x] `DeleteTennerResponse` (`{ tennerId, deleted: true }`)
+- [x] `DeleteTennerService.deleteTenner()` (soft delete rules, idempotency)
+- [x] Repository `delete()` (conditional `UpdateItem`, never `DeleteItem`) and `getById()` (consistent read)
+- [x] Model extension: `Tenner.deletedAt: string | null` (default `null` on create, also in `TennerResponse`)
+- [x] List compatibility: deleted Tenners are always excluded. The `includeDeleted` criterion is prepared for TICKET-015.
+- [x] Tests and documentation
+
+### Acceptance Criteria (Ticket Testing Requirements)
+
+- [x] Successful delete → 200 `{ tennerId, deleted: true }`
+- [x] Delete a missing Tenner → 404 `NOT_FOUND`
+- [x] Delete an already deleted Tenner → 200, unchanged (original `deletedAt` kept)
+- [x] Repository failure → `PersistenceError` (500)
+- [x] Active flag update (`active = false`)
+- [x] `deletedAt` and `updatedAt` populated (same timestamp)
+- [x] No physical deletion. The code contains no `DeleteItem`/`DeleteCommand` (checked with grep).
+- [x] Completion history is untouched (the history table is not accessed)
+- [x] Logging: "Tenner deleted" / "Tenner already deleted" with `tennerId`, `category`, `assignedTo`
+
+Backend: 165 tests, 100% coverage. Terraform: 20 tests.
+
+### Validation Performed
+
+The bundle ran against a fake DynamoDB endpoint that returns real `ConditionalCheckFailedException` responses:
+- normal delete → 200
+- already deleted → 200 (`UpdateItem` fails its condition, then `GetItem` shows `deletedAt`)
+- missing → 404
+- `PUT` on a deleted Tenner → 404
+
+This also confirms that the SDK error name is mapped correctly.
+
+### Assumptions
+
+- **Repository signature:** `delete(tenantId, tennerId)` from TICKET-008 became `delete(tenantId, tennerId, timestamp)`
+  and returns `{ status: DELETED | ALREADY_DELETED, tenner }`. The service owns the time source, and the outcome is
+  needed for idempotent handling and logging.
+- **Atomicity:** "load, set, persist" is done as one conditional `UpdateItem`. The follow-up `GetItem` only runs
+  when the condition fails, to tell "missing" from "already deleted". If a restore happens between the two calls,
+  the result is `409 CONCURRENT_MODIFICATION`.
+- **Deleted Tenners on other endpoints:** `GET /tenners` excludes them (also with `active=false`), and `PUT` answers 404.
+  Otherwise `PUT {active: true}` would partially "undelete" a Tenner and bypass the restore workflow (TICKET-015).
+- The IAM role still allows `DeleteItem` (required by TICKET-007), although it is unused (TD-013).

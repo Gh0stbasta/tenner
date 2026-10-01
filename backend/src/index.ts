@@ -8,11 +8,12 @@ import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
 import { loadConfig, type AppConfig } from "./config.js";
 import { ApplicationError, NotFoundError } from "./exceptions/index.js";
 import { createTennerHandler, type CreateTenner } from "./handlers/create-tenner.js";
+import { deleteTennerHandler, type DeleteTenner } from "./handlers/delete-tenner.js";
 import { health, type DatabaseProbe } from "./handlers/health.js";
 import { listTennersHandler, type ListTenners } from "./handlers/list-tenners.js";
 import { updateTennerHandler, type UpdateTenner } from "./handlers/update-tenner.js";
 import { DynamoDbTennerRepository } from "./repositories/index.js";
-import { CreateTennerService, ListTennersService, UpdateTennerService } from "./services/index.js";
+import { CreateTennerService, DeleteTennerService, ListTennersService, UpdateTennerService } from "./services/index.js";
 import { systemClock, uuidGenerator } from "./utils/clock.js";
 import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
@@ -26,6 +27,7 @@ export interface Dependencies {
   readonly createTenner: CreateTenner;
   readonly listTenners: ListTenners;
   readonly updateTenner: UpdateTenner;
+  readonly deleteTenner: DeleteTenner;
 }
 
 /** Per-request context passed to route handlers. */
@@ -43,6 +45,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "POST /tenners": ({ event, deps, logger }) => createTennerHandler(event, deps.config.tenantId, deps.createTenner, logger),
   "GET /tenners": ({ event, deps, logger }) => listTennersHandler(event, deps.config.tenantId, deps.listTenners, logger),
   "PUT /tenners/{tennerId}": ({ event, deps, logger }) => updateTennerHandler(event, deps.config.tenantId, deps.updateTenner, logger),
+  "DELETE /tenners/{tennerId}": ({ event, deps, logger }) => deleteTennerHandler(event, deps.config.tenantId, deps.deleteTenner, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -63,6 +66,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const createTennerService = tennerRepository ? new CreateTennerService(tennerRepository, systemClock, uuidGenerator) : undefined;
   const listTennersService = tennerRepository ? new ListTennersService(tennerRepository, systemClock) : undefined;
   const updateTennerService = tennerRepository ? new UpdateTennerService(tennerRepository, systemClock) : undefined;
+  const deleteTennerService = tennerRepository ? new DeleteTennerService(tennerRepository, systemClock) : undefined;
 
   return {
     config,
@@ -71,6 +75,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     createTenner: createTennerService ? (tenantId, request) => createTennerService.createTenner(tenantId, request) : notConfigured,
     listTenners: listTennersService ? (tenantId, request) => listTennersService.listTenners(tenantId, request) : notConfigured,
     updateTenner: updateTennerService ? (tenantId, id, request) => updateTennerService.updateTenner(tenantId, id, request) : notConfigured,
+    deleteTenner: deleteTennerService ? (tenantId, id) => deleteTennerService.deleteTenner(tenantId, id) : notConfigured,
   };
 }
 

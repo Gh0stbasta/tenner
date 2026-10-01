@@ -1,4 +1,4 @@
-import { PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it, vi } from "vitest";
 import { ConflictError, NotFoundError, PersistenceError } from "../src/exceptions/index.js";
 import { DynamoDbTennerRepository } from "../src/repositories/index.js";
@@ -95,15 +95,15 @@ describe("DynamoDbTennerRepository.update", () => {
       TableName: "tenner-tenners",
       Key: { tenantId: "default", tennerId: "t-1" },
       UpdateExpression: "SET #title = :title, #frequencyDays = :frequencyDays, #updatedAt = :updatedAt",
-      ConditionExpression: "attribute_exists(tennerId)",
-      ExpressionAttributeNames: { "#title": "title", "#frequencyDays": "frequencyDays", "#updatedAt": "updatedAt" },
-      ExpressionAttributeValues: { ":title": "Vacuum Home Office", ":frequencyDays": 30, ":updatedAt": "2026-10-05T12:00:00Z" },
+      ConditionExpression: "attribute_exists(tennerId) AND (attribute_not_exists(#deletedAt) OR #deletedAt = :null)",
+      ExpressionAttributeNames: { "#title": "title", "#frequencyDays": "frequencyDays", "#updatedAt": "updatedAt", "#deletedAt": "deletedAt" },
+      ExpressionAttributeValues: { ":title": "Vacuum Home Office", ":frequencyDays": 30, ":updatedAt": "2026-10-05T12:00:00Z", ":null": null },
       ReturnValues: "ALL_NEW",
     });
     expect(result).toEqual(updated);
   });
 
-  it("maps a missing item to NotFoundError", async () => {
+  it("maps a missing or soft-deleted item to NotFoundError", async () => {
     const c = client(async () => Promise.reject(namedError("ConditionalCheckFailedException")));
     await expect(new DynamoDbTennerRepository(c, "t").update("default", "x", changes)).rejects.toBeInstanceOf(NotFoundError);
   });
@@ -116,5 +116,73 @@ describe("DynamoDbTennerRepository.update", () => {
   it("treats a response without attributes as a persistence failure", async () => {
     const c = client(async () => ({}));
     await expect(new DynamoDbTennerRepository(c, "t").update("default", "x", changes)).rejects.toBeInstanceOf(PersistenceError);
+  });
+});
+
+describe("DynamoDbTennerRepository.getById", () => {
+  it("reads consistently and maps the item", async () => {
+    const c = client(async () => ({ Item: tennerFixture() }));
+    await expect(new DynamoDbTennerRepository(c, "tenner-tenners").getById("default", "t-1")).resolves.toEqual(tennerFixture());
+    expect((c.send.mock.calls[0]?.[0] as GetCommand).input).toEqual({
+      TableName: "tenner-tenners",
+      Key: { tenantId: "default", tennerId: "t-1" },
+      ConsistentRead: true,
+    });
+  });
+
+  it("returns undefined when missing and PersistenceError on failure", async () => {
+    await expect(new DynamoDbTennerRepository(client(async () => ({})), "t").getById("default", "x")).resolves.toBeUndefined();
+    const failing = client(async () => Promise.reject(namedError("InternalServerError")));
+    await expect(new DynamoDbTennerRepository(failing, "t").getById("default", "x")).rejects.toBeInstanceOf(PersistenceError);
+  });
+});
+
+describe("DynamoDbTennerRepository.delete (soft delete)", () => {
+  const TS = "2026-10-01T18:00:00Z";
+  const deleted = tennerFixture({ active: false, deletedAt: TS, updatedAt: TS });
+
+  it("sets active=false, deletedAt and updatedAt with an UpdateItem (never DeleteItem)", async () => {
+    const c = client(async () => ({ Attributes: deleted }));
+    const result = await new DynamoDbTennerRepository(c, "tenner-tenners").delete("default", "t-1", TS);
+
+    expect(result).toEqual({ status: "DELETED", tenner: deleted });
+    const command = c.send.mock.calls[0]?.[0] as UpdateCommand;
+    expect(command).toBeInstanceOf(UpdateCommand);
+    expect(command.input).toEqual({
+      TableName: "tenner-tenners",
+      Key: { tenantId: "default", tennerId: "t-1" },
+      UpdateExpression: "SET #active = :false, #deletedAt = :timestamp, #updatedAt = :timestamp",
+      ConditionExpression: "attribute_exists(tennerId) AND (attribute_not_exists(#deletedAt) OR #deletedAt = :null)",
+      ExpressionAttributeNames: { "#active": "active", "#deletedAt": "deletedAt", "#updatedAt": "updatedAt" },
+      ExpressionAttributeValues: { ":false": false, ":timestamp": TS, ":null": null },
+      ReturnValues: "ALL_NEW",
+    });
+  });
+
+  it("reports ALREADY_DELETED without changes for deleted Tenners", async () => {
+    const earlier = tennerFixture({ active: false, deletedAt: "2026-09-01T00:00:00Z" });
+    const responses: (() => Promise<unknown>)[] = [async () => Promise.reject(namedError("ConditionalCheckFailedException")), async () => ({ Item: earlier })];
+    const c = client(async () => responses.shift()?.());
+    await expect(new DynamoDbTennerRepository(c, "t").delete("default", "t-1", TS)).resolves.toEqual({ status: "ALREADY_DELETED", tenner: earlier });
+    expect(c.send).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws NotFoundError for missing Tenners", async () => {
+    const responses: (() => Promise<unknown>)[] = [async () => Promise.reject(namedError("ConditionalCheckFailedException")), async () => ({})];
+    const c = client(async () => responses.shift()?.());
+    await expect(new DynamoDbTennerRepository(c, "t").delete("default", "x", TS)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("throws CONCURRENT_MODIFICATION if the item was restored between the two calls", async () => {
+    const responses: (() => Promise<unknown>)[] = [async () => Promise.reject(namedError("ConditionalCheckFailedException")), async () => ({ Item: tennerFixture() })];
+    const c = client(async () => responses.shift()?.());
+    await expect(new DynamoDbTennerRepository(c, "t").delete("default", "x", TS)).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION", statusCode: 409 });
+  });
+
+  it("maps other failures and empty responses to PersistenceError", async () => {
+    const failing = client(async () => Promise.reject(namedError("ThrottlingException")));
+    await expect(new DynamoDbTennerRepository(failing, "t").delete("default", "x", TS)).rejects.toBeInstanceOf(PersistenceError);
+    const empty = client(async () => ({}));
+    await expect(new DynamoDbTennerRepository(empty, "t").delete("default", "x", TS)).rejects.toBeInstanceOf(PersistenceError);
   });
 });

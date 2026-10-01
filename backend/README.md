@@ -119,6 +119,22 @@ The repository uses one `UpdateItem` that sets only the provided fields plus `up
 `attribute_exists(tennerId)` (missing → 404) and `ReturnValues: ALL_NEW`. Attributes that were not sent, such as
 a `nextDue` written by a concurrent completion, are never overwritten.
 
+### DELETE /tenners/{tennerId}
+
+This is a **soft delete only**. The item and its completion history stay in DynamoDB, and `DeleteItem` is never used.
+
+| State | Result |
+|---|---|
+| exists, not deleted | `active = false`, `deletedAt = updatedAt = now` (one conditional `UpdateItem`) → 200 |
+| already deleted | unchanged (original `deletedAt` kept) → 200 (idempotent) |
+| missing | 404 `NOT_FOUND` |
+
+Effects on other endpoints:
+- `GET /tenners` always excludes deleted Tenners. The repository has an `includeDeleted` criterion for TICKET-015.
+- `PUT` on a deleted Tenner returns 404. Use the restore endpoint (TICKET-015) instead.
+
+`Tenner.deletedAt` (UTC timestamp or `null`) is part of the model and of `TennerResponse`.
+
 ## Errors and Responses
 
 | Error | HTTP | Code |
@@ -155,6 +171,7 @@ and a Tenner fixture.
 | `POST /tenners` | `201 { success: true, data: TennerResponse }` (TICKET-009). Returns `400 VALIDATION_ERROR` with `details`, `409 CONFLICT` if the ID exists, `500 PERSISTENCE_ERROR` |
 | `GET /tenners` | `200 { success: true, data: TennerResponse[] }` (TICKET-010). Returns `400 VALIDATION_ERROR` for invalid parameters |
 | `PUT /tenners/{tennerId}` | `200 { success: true, data: TennerResponse }` (TICKET-011). Returns `400 VALIDATION_ERROR` or `404 NOT_FOUND` |
+| `DELETE /tenners/{tennerId}` | `200 { success: true, data: { tennerId, deleted: true } }` (TICKET-012, soft delete, idempotent). Returns `404 NOT_FOUND` |
 | unknown route | `404 NOT_FOUND` |
 
 ### POST /tenners

@@ -12,6 +12,9 @@ import type { TennerCriteria } from "../tenner.repository.js";
 export const INDEX_NEXT_DUE = "nextDue-index";
 export const INDEX_ASSIGNED_TO = "assignedTo-index";
 
+/** Condition matching items that are not soft-deleted (deletedAt missing or null). */
+export const NOT_DELETED = "(attribute_not_exists(#deletedAt) OR #deletedAt = :null)";
+
 type Condition = { readonly name: string; readonly op: "=" | "<=" | "<"; readonly value: unknown };
 
 export function buildTennerQuery(tableName: string, tenantId: string, criteria: TennerCriteria = {}): QueryCommandInput {
@@ -42,7 +45,13 @@ export function buildTennerQuery(tableName: string, tenantId: string, criteria: 
   };
 
   const keyConditionExpression = ["#tenantId = :tenantId", ...(keyCondition ? [expr(keyCondition)] : [])].join(" AND ");
-  const filterExpression = filters.map(expr).join(" AND ");
+  const filterParts = filters.map(expr);
+  if (!criteria.includeDeleted) {
+    names["#deletedAt"] = "deletedAt";
+    values[":null"] = null;
+    filterParts.push(NOT_DELETED);
+  }
+  const filterExpression = filterParts.join(" AND ");
 
   return {
     TableName: tableName,

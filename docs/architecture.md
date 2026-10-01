@@ -1000,11 +1000,14 @@ index.ts (routing, correlation, error mapping)
 - **Enforcement:** ESLint fails if code outside `config.ts` reads `process.env`, or if handlers or services
   import the AWS SDK or `clients/`.
 - **Endpoints:** API routes are listed in `local.api_routes` (`terraform/locals.tf`). Each one is an explicit
-  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009), `GET /tenners` (TICKET-010), `PUT /tenners/{tennerId}` (TICKET-011).
+  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009), `GET /tenners` (TICKET-010), `PUT /tenners/{tennerId}` (TICKET-011), `DELETE /tenners/{tennerId}` (TICKET-012).
 - **Read access:** lists always use a DynamoDB Query on the tenant partition, choosing `assignedTo-index` or
   `nextDue-index` when a filter allows it, and never a Scan. The `dynamodb:Scan` permission (TICKET-007) is unused.
 - **Write access:** creates are conditional puts (`attribute_not_exists`). Updates are conditional `UpdateItem`
   calls that set only the changed attributes (`attribute_exists`), so they cannot cause lost updates on other fields.
+- **Deletion:** soft delete only (`active = false`, `deletedAt`). Records and history stay, so analytics keep
+  their relationships. Deleted Tenners are excluded from lists and cannot be updated until they are restored.
+  `DeleteItem` is never used by the code (TD-013).
 - **Time and IDs:** services receive a `Clock` and an `IdGenerator` (`utils/clock.ts`), so tests are deterministic.
   Dates are UTC until SCHEDULING-008 (TD-005).
 

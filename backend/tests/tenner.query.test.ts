@@ -2,19 +2,24 @@ import { describe, expect, it } from "vitest";
 import { buildTennerQuery } from "../src/repositories/dynamodb/tenner.query.js";
 
 describe("buildTennerQuery", () => {
-  it("queries the tenant partition of the base table without criteria (never a scan)", () => {
+  it("queries the tenant partition of the base table and excludes deleted Tenners by default (never a scan)", () => {
     expect(buildTennerQuery("tenner-tenners", "default")).toEqual({
       TableName: "tenner-tenners",
       KeyConditionExpression: "#tenantId = :tenantId",
-      ExpressionAttributeNames: { "#tenantId": "tenantId" },
-      ExpressionAttributeValues: { ":tenantId": "default" },
+      FilterExpression: "(attribute_not_exists(#deletedAt) OR #deletedAt = :null)",
+      ExpressionAttributeNames: { "#tenantId": "tenantId", "#deletedAt": "deletedAt" },
+      ExpressionAttributeValues: { ":tenantId": "default", ":null": null },
     });
+  });
+
+  it("includes deleted Tenners on request", () => {
+    expect(buildTennerQuery("t", "default", { includeDeleted: true })).not.toHaveProperty("FilterExpression");
   });
 
   it("filters active and category on the base table", () => {
     expect(buildTennerQuery("t", "default", { active: true, category: "HOME" })).toMatchObject({
       KeyConditionExpression: "#tenantId = :tenantId",
-      FilterExpression: "#category = :category AND #active = :active",
+      FilterExpression: "#category = :category AND #active = :active AND (attribute_not_exists(#deletedAt) OR #deletedAt = :null)",
       ExpressionAttributeValues: { ":tenantId": "default", ":category": "HOME", ":active": true },
     });
   });
@@ -24,7 +29,7 @@ describe("buildTennerQuery", () => {
     expect(input).toMatchObject({
       IndexName: "assignedTo-index",
       KeyConditionExpression: "#tenantId = :tenantId AND #assignedTo = :assignedTo",
-      FilterExpression: "#nextDue <= :nextDue AND #active = :active",
+      FilterExpression: "#nextDue <= :nextDue AND #active = :active AND (attribute_not_exists(#deletedAt) OR #deletedAt = :null)",
     });
   });
 
@@ -33,7 +38,7 @@ describe("buildTennerQuery", () => {
       IndexName: "nextDue-index",
       KeyConditionExpression: "#tenantId = :tenantId AND #nextDue <= :nextDue",
     });
-    const overdue = buildTennerQuery("t", "default", { nextDueBefore: "2026-10-10", nextDueOnOrBefore: "2026-10-10" });
+    const overdue = buildTennerQuery("t", "default", { nextDueBefore: "2026-10-10", nextDueOnOrBefore: "2026-10-10", includeDeleted: true });
     expect(overdue).toMatchObject({ IndexName: "nextDue-index", KeyConditionExpression: "#tenantId = :tenantId AND #nextDue < :nextDue" });
     expect(overdue).not.toHaveProperty("FilterExpression");
   });

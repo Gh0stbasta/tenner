@@ -31,6 +31,7 @@ export class CreateTennerService {
       lastCompleted: null,
       nextDue: toUtcDate(now),
       active: true,
+      deletedAt: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     };

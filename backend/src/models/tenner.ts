@@ -14,6 +14,8 @@ export interface Tenner {
   /** Calendar date (YYYY-MM-DD) when the Tenner is due next. */
   readonly nextDue: string;
   readonly active: boolean;
+  /** ISO 8601 UTC timestamp of the soft delete, or null if not deleted (TICKET-012). */
+  readonly deletedAt: string | null;
   /** ISO 8601 UTC timestamp. */
   readonly createdAt: string;
   /** ISO 8601 UTC timestamp. */

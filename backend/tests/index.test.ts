@@ -19,6 +19,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     createTenner: vi.fn(async () => tennerResponse),
     listTenners: vi.fn(async () => [tennerResponse]),
     updateTenner: vi.fn(async () => tennerResponse),
+    deleteTenner: vi.fn(async () => ({ response: { tennerId: "t-1", deleted: true as const }, outcome: { status: "DELETED" as const, tenner: tennerFixture() } })),
     ...overrides,
   };
 }
@@ -167,6 +168,30 @@ describe("PUT /tenners/{tennerId}", () => {
     const response = await route(put(id, payload), d);
     expect(response.statusCode).toBe(400);
     expect(d.updateTenner).not.toHaveBeenCalled();
+  });
+});
+
+describe("DELETE /tenners/{tennerId}", () => {
+  const del = (id: string): APIGatewayProxyEventV2 =>
+    ({ routeKey: "DELETE /tenners/{tennerId}", headers: {}, pathParameters: { tennerId: id }, requestContext: { requestId: "req-1" } }) as unknown as APIGatewayProxyEventV2;
+
+  it("soft deletes and returns 200 { tennerId, deleted: true }", async () => {
+    const d = deps();
+    const response = await route(del("t-1"), d);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: { tennerId: "t-1", deleted: true } });
+    expect(d.deleteTenner).toHaveBeenCalledWith("default", "t-1");
+  });
+
+  it("returns 404 for missing Tenners", async () => {
+    const d = deps({ deleteTenner: vi.fn().mockRejectedValue(new NotFoundError("Tenner not found.")) });
+    expect((await route(del("missing"), d)).statusCode).toBe(404);
+  });
+
+  it("rejects invalid ids", async () => {
+    const d = deps();
+    expect((await route(del("../etc"), d)).statusCode).toBe(400);
+    expect(d.deleteTenner).not.toHaveBeenCalled();
   });
 });
 

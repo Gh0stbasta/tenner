@@ -51,6 +51,12 @@ describe("createDependencies wiring", () => {
     expect((send.mock.calls[0]?.[0] as QueryCommand).input.TableName).toBe("tenner-tenners");
   });
 
+  it("soft deletes Tenners in the configured table", async () => {
+    send.mockResolvedValue({ Attributes: tennerFixture({ active: false, deletedAt: "2026-10-01T18:00:00Z" }) });
+    await expect(deps().deleteTenner("default", "t-1")).resolves.toMatchObject({ response: { deleted: true } });
+    expect((send.mock.calls[0]?.[0] as UpdateCommand).input.TableName).toBe("tenner-tenners");
+  });
+
   it("updates Tenners in the configured table", async () => {
     send.mockResolvedValue({ Attributes: tennerFixture({ title: "New title" }) });
     await expect(deps().updateTenner("default", "t-1", { title: "New title" })).resolves.toMatchObject({ title: "New title" });

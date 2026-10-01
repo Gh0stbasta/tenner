@@ -16,6 +16,7 @@ export function toTenner(item: TennerItem): Tenner {
     lastCompleted: typeof item.lastCompleted === "string" ? item.lastCompleted : null,
     nextDue: String(item.nextDue),
     active: item.active === true,
+    deletedAt: typeof item.deletedAt === "string" ? item.deletedAt : null,
     createdAt: String(item.createdAt),
     updatedAt: String(item.updatedAt),
   };

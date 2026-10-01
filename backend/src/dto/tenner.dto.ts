@@ -31,8 +31,15 @@ export interface TennerResponse {
   readonly lastCompleted: string | null;
   readonly nextDue: string;
   readonly active: boolean;
+  readonly deletedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+/** DELETE /tenners/{tennerId} response (TICKET-012). */
+export interface DeleteTennerResponse {
+  readonly tennerId: string;
+  readonly deleted: true;
 }
 
 export function toTennerResponse(tenner: Tenner): TennerResponse {
@@ -46,6 +53,7 @@ export function toTennerResponse(tenner: Tenner): TennerResponse {
     lastCompleted: tenner.lastCompleted,
     nextDue: tenner.nextDue,
     active: tenner.active,
+    deletedAt: tenner.deletedAt,
     createdAt: tenner.createdAt,
     updatedAt: tenner.updatedAt,
   };
