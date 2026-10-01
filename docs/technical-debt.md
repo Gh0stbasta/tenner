@@ -1,0 +1,187 @@
+# Technical Debt
+
+## TD-001: Duplicate ticket file for TICKET-003
+
+### Description
+
+`docs/backlog/infra/ticket004.md` is an exact copy of `infra/ticket003.md`
+(both are "TICKET-003: Create Remote Terraform State Backend"). No real TICKET-004 exists.
+
+### Reason
+
+Most likely a copy/paste mistake when the infrastructure tickets were created.
+
+### Impact
+
+The numbering is confusing, and someone may "implement" the remote state backend twice.
+It is unclear whether a TICKET-004 (possibly frontend hosting) was planned and lost.
+
+### Suggested Improvement
+
+Delete `infra/ticket004.md`, or replace it with the intended TICKET-004. Frontend hosting
+is now covered by TICKET-017 and TICKET-018. META-001 forbids changing existing tickets,
+so this needs an explicit decision by the owner.
+
+### Related Work
+
+META-001, TICKET-003, TICKET-017
+
+---
+
+## TD-002: Inconsistent backlog layout and naming conventions
+
+### Description
+
+- TICKET-001 (CI/CD) is in `docs/backlog/ticket001.md`, while `infra/ticket001.md` holds TICKET-001A.
+- Backend tickets (TICKET-008 to 016) are in `infra/`, not in a `backend/` folder.
+- META-001 refers to `backlog/infrastructure/` and `backlog/backend/`, which do not exist.
+- `CLAUDE.md` asks for tickets at `backlog/YYYYMMDD-XX-short-title.md`, but the repository uses
+  `docs/backlog/<domain>/ticketNNN.md` with domain prefixes.
+
+### Reason
+
+The conventions grew over time and were never consolidated.
+
+### Impact
+
+Tickets are harder to find, and automated agents may create tickets in the wrong place or format.
+
+### Suggested Improvement
+
+Pick one convention (recommended: the existing `docs/backlog/<domain>/ticketNNN.md` documented
+in `docs/backlog/README.md`), update `CLAUDE.md` to match, and optionally move TICKET-001 into `infra/`
+and backend tickets into `backend/` in a dedicated housekeeping change.
+
+### Related Work
+
+META-001, `docs/backlog/README.md`, `CLAUDE.md`
+
+---
+
+## TD-003: No authentication while the application is publicly reachable
+
+### Description
+
+All existing tickets exclude authentication. Once TICKET-017 hosts the frontend publicly,
+the API can be reached without credentials.
+
+### Reason
+
+`architecture.md` deferred the authentication decision so it would not delay the MVP.
+
+### Impact
+
+Anyone who discovers the API URL can read, change or delete household data.
+This is a high security risk.
+
+### Suggested Improvement
+
+Implement SECURITY-001 to SECURITY-004 before or together with TICKET-017/018.
+
+### Related Work
+
+SECURITY-001, SECURITY-002, SECURITY-003, SECURITY-004, TICKET-017
+
+---
+
+## TD-004: Allowed-services list does not cover planned capabilities
+
+### Description
+
+`architecture.md` allows only API Gateway, Lambda, DynamoDB, S3, CloudFront, EventBridge and Cognito.
+Planned work needs SSM/Secrets Manager, SES, SNS, Route53/ACM, X-Ray, CloudTrail and an LLM provider.
+
+### Reason
+
+The list was written for the MVP scope.
+
+### Impact
+
+Each affected ticket must first go through an architecture decision, or the architecture
+document will be silently violated.
+
+### Suggested Improvement
+
+Create ADRs in `docs/decisions/` as each ticket requires them (see `docs/roadmap.md`, section 3).
+Consider turning the list into "serverless, pay-per-use managed services, subject to ADR".
+
+### Related Work
+
+SECURITY-006, NOTIFICATION-005, OBSERVABILITY-002, TICKET-022, OBSERVABILITY-004, SECURITY-012, AI-001
+
+---
+
+## TD-005: Due dates are calculated in UTC instead of household local time
+
+### Description
+
+TICKET-013 calculates `nextDue` from the UTC completion timestamp. For `Europe/Berlin`,
+a completion shortly after local midnight is assigned to the previous day.
+
+### Reason
+
+The MVP simplified the date handling.
+
+### Impact
+
+Due dates can be off by one day, and "today" on the dashboard switches at 01:00 or 02:00 local time.
+
+### Suggested Improvement
+
+SCHEDULING-008: timezone-aware due-date calculation.
+
+### Related Work
+
+TICKET-013, TICKET-014, TICKET-016, SCHEDULING-008
+
+---
+
+## TD-006: Referenced documentation does not exist
+
+### Description
+
+`architecture.md` lists `README.md`, `docs/roadmap.md` and `docs/decisions/` in the repository
+structure. `README.md` and `docs/decisions/` do not exist. `docs/roadmap.md` was created by META-001.
+
+### Reason
+
+The repository currently holds planning documents only.
+
+### Impact
+
+New contributors and agents have no entry point at the repository root.
+
+### Suggested Improvement
+
+Create `README.md` together with the first implementation ticket (TICKET-001 already requires
+README updates). Create `docs/decisions/` with the first ADR (SECURITY-001).
+
+### Related Work
+
+TICKET-001, SECURITY-001
+
+---
+
+## TD-007: Several tickets mark the user list and categories as hardcoded
+
+### Description
+
+The tickets hardcode household users (`STEFAN`, `JULIA`) and categories in backend validation
+and frontend dropdowns.
+
+### Reason
+
+This was enough for the MVP.
+
+### Impact
+
+Adding a household member or a category requires code changes in several places.
+
+### Suggested Improvement
+
+Keep each list in one central constant until HOUSEHOLD-ADMIN-001 and HOUSEHOLD-ADMIN-002 move
+them into managed data.
+
+### Related Work
+
+TICKET-008, TICKET-013, FRONTEND-008, HOUSEHOLD-ADMIN-001, HOUSEHOLD-ADMIN-002
