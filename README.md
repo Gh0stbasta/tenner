@@ -69,6 +69,10 @@ For the managed resources so far:
 - API Gateway (`apigateway:*` on `tenner-api-gateway`)
 - DynamoDB tables `tenner-tenners` and `tenner-history` (create, update, tag, PITR)
 - S3 bucket `tenner-frontend-<env>` (bucket configuration, policy) and CloudFront (distribution, origin access control, response headers policy)
+- Frontend publishing (TICKET-018):
+  - `s3:ListBucket` on `arn:aws:s3:::tenner-frontend-<env>`
+  - `s3:PutObject` and `s3:DeleteObject` on `arn:aws:s3:::tenner-frontend-<env>/*`
+  - `cloudfront:CreateInvalidation` on the distribution ARN
 - CloudWatch Logs (`/tenner/*`)
 - IAM: create and manage `tenner-api-role` and its inline policy, plus `iam:PassRole` for that role to Lambda
 
@@ -97,7 +101,7 @@ access keys exist in GitHub or in this repository.
 | Workflow | Trigger | What it does |
 |---|---|---|
 | [`pr.yml`](.github/workflows/pr.yml) | `pull_request` | Runs `terraform fmt -check`, `validate` and `test` offline. Then checks AWS identity, builds the Lambda bundle, runs `terraform plan` and enforces mandatory tags on the plan. Runs frontend and backend `npm ci`, `lint`, `test`, `build`. **Never applies.** |
-| [`deploy.yml`](.github/workflows/deploy.yml) | push to `main` | Builds frontend and backend as a gate, checks AWS identity, then runs `terraform init` and `plan`, enforces mandatory tags, applies the checked plan, then calls `GET /health` on the deployed API. |
+| [`deploy.yml`](.github/workflows/deploy.yml) | push to `main` | Builds frontend and backend as a gate, checks AWS identity, then runs `terraform init` and `plan`, enforces mandatory tags, applies the checked plan, calls `GET /health` on the deployed API, then builds the frontend against that API and publishes it to S3/CloudFront (`scripts/deploy-frontend.sh`). |
 
 Settings:
 
@@ -142,10 +146,25 @@ If the PR subject is not trusted, `pr.yml` fails at "Configure AWS credentials".
    step prints the assumed `GithubActionsDeployRole` session.
 2. Merge to `main`. Check that **Deploy** passes and shows the same identity.
 
+### Frontend Publishing
+
+`scripts/deploy-frontend.sh <dist-dir> <bucket> <distribution-id>` runs in `deploy.yml` after a successful apply
+and health check. The build gets `VITE_API_BASE_URL` from the Terraform output `api_endpoint`.
+
+| Step | Files | `Cache-Control` |
+|---|---|---|
+| 1 | `assets/*` (content-hashed) | `public, max-age=31536000, immutable`. Old assets are kept |
+| 2 | everything else, including `index.html` (`--delete`, excluding `assets/`) | `no-cache` |
+| 3 | CloudFront invalidation of `/index.html` and `/` only, which stays within the free monthly invalidation quota | — |
+
+A failed build stops the job before anything is uploaded.
+
 ### Rollback
 
 - **Workflow or application changes:** revert the commit on `main`. The deploy workflow then
-  re-applies the previous state.
+  re-applies the previous state and republishes the previous frontend.
+- **Frontend only (emergency):** the bucket is versioned and keeps previous object versions for 30 days.
+  Restore the previous `index.html` version in S3, then invalidate `/index.html`.
 - **Infrastructure changes:** reverting the Terraform code and letting `deploy.yml` apply it
   is the only supported way. Manual changes in AWS are not allowed (see `docs/architecture.md`).
 

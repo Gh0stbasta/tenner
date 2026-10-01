@@ -1,5 +1,6 @@
-# Main branch deployment (TICKET-001).
-# Builds frontend/backend as a gate, then applies Terraform using GitHub OIDC.
+# Main branch deployment (TICKET-001, TICKET-018).
+# Builds frontend/backend as a gate, applies Terraform using GitHub OIDC, verifies /health,
+# then builds the frontend against the deployed API and publishes it to S3/CloudFront.
 # Steps for terraform/, frontend/ and backend/ are skipped until those directories exist.
 name: Deploy
 
@@ -121,6 +122,32 @@ jobs:
             exit 0
           fi
           curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors "${endpoint%/}/health"
+
+      # Frontend deployment (TICKET-018): build against the deployed API, then publish.
+      - name: Setup Node.js (frontend)
+        if: hashFiles('terraform/**/*.tf') != '' && hashFiles('frontend/package.json') != ''
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build frontend for this environment
+        if: hashFiles('terraform/**/*.tf') != '' && hashFiles('frontend/package.json') != ''
+        run: |
+          VITE_API_BASE_URL="$(terraform -chdir="$TF_DIR" output -raw api_endpoint)"
+          export VITE_API_BASE_URL
+          npm ci --prefix frontend
+          npm run build --prefix frontend
+
+      - name: Publish frontend to S3 and invalidate CloudFront
+        if: hashFiles('terraform/**/*.tf') != '' && hashFiles('frontend/package.json') != ''
+        run: |
+          scripts/deploy-frontend.sh frontend/dist \
+            "$(terraform -chdir="$TF_DIR" output -raw frontend_bucket_name)" \
+            "$(terraform -chdir="$TF_DIR" output -raw cloudfront_distribution_id)"
+
+      - name: Report skipped frontend deployment
+        if: hashFiles('frontend/package.json') == ''
+        run: echo "::notice::No frontend/package.json yet - frontend deployment skipped."
 
       - name: Report skipped Terraform steps
         if: hashFiles('terraform/**/*.tf') == ''

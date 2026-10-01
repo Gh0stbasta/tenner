@@ -229,3 +229,49 @@ Do not implement:
 - Multiple environments
 - Blue/green deployments
 - Post-deployment smoke tests (OPERATIONS-006)
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `.github/workflows/deploy.yml`: after apply and health check, it builds the frontend with
+  `VITE_API_BASE_URL` = `terraform output api_endpoint`, then publishes. Skipped while `frontend/package.json` is missing.
+- [x] `scripts/deploy-frontend.sh`: asset upload (immutable), then index and other files (no-cache, `--delete`),
+  then CloudFront invalidation
+- [x] `README.md`: deployment, rollback, required IAM permissions
+- [x] IAM policy for `GithubActionsDeployRole`: documented. The role is managed outside this repository (TICKET-001).
+
+### Acceptance Criteria
+
+| Criterion | Status |
+|---|---|
+| Merge to main builds the frontend | [x] (once `frontend/` exists) |
+| Assets are uploaded to the frontend bucket | [x] script tested with a fake `aws` CLI |
+| index.html is served with no-cache | [x] `--cache-control no-cache` |
+| Hashed assets are served with immutable caching | [x] `public, max-age=31536000, immutable` |
+| CloudFront invalidation is executed for index.html only | [x] `/index.html` and `/` (the root path also serves index.html) |
+| API base URL is injected from Terraform outputs | [x] `VITE_API_BASE_URL` |
+| Deployment uses OIDC only | [x] same job as Terraform apply, no keys |
+| IAM permissions follow least privilege | [x] documented: ListBucket, Put/DeleteObject on the bucket, CreateInvalidation on the distribution |
+| Rollback procedure documented | [x] README: revert on `main`, or restore an S3 version for emergencies |
+
+### Validation Performed
+
+- `actionlint` passes for both workflows. `shellcheck` passes for `scripts/*.sh`.
+- `deploy-frontend.sh` with a fake `aws` CLI: the order and arguments of the three calls are correct.
+  The error paths (missing `index.html` → exit 1, wrong arguments → exit 2) work.
+- A real pipeline run needs `frontend/` (FRONTEND-001) and AWS access.
+
+### Assumptions
+
+- **No `--delete` for `assets/`:** old hashed assets are kept, so browser tabs still running the previous release
+  can lazy-load their chunks. Otherwise the SPA fallback would return `index.html` instead of the JavaScript.
+  Growth is minimal at household scale. `index.html` and other files are synced with `--delete`.
+- **Order:** assets first, then `index.html`, so a new `index.html` never references missing files.
+- **Build location:** the frontend is built again in the Terraform job, after apply. This is needed for the API URL.
+  The `build` job remains as an early gate.
+- The output directory is `frontend/dist` (Vite default, FRONTEND-001).
