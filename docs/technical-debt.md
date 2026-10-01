@@ -222,8 +222,8 @@ TICKET-001, SECURITY-008, `.github/workflows/pr.yml`
 
 ### Description
 
-The workflows use `actions/checkout@v4`, `actions/setup-node@v4`, `hashicorp/setup-terraform@v3`
-and `aws-actions/configure-aws-credentials@v4` by major version tag.
+The workflows use `actions/checkout@v7`, `actions/setup-node@v7`, `hashicorp/setup-terraform@v4`
+and `aws-actions/configure-aws-credentials@v6` by major version tag.
 
 ### Reason
 
