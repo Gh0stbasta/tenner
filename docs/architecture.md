@@ -881,6 +881,39 @@ Authentication (SECURITY-002), throttling (SECURITY-005), CORS (TICKET-017), ala
 
 ---
 
+# Persistence Layer
+
+Introduced by TICKET-006 (`terraform/dynamodb.tf`).
+
+| Table | Primary key | GSIs | Purpose |
+|---|---|---|---|
+| `tenner-tenners` | `tenantId` (PK), `tennerId` (SK) | `nextDue-index` (`tenantId`, `nextDue`), `assignedTo-index` (`tenantId`, `assignedTo`) | Current state of Tenners |
+| `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`) | Immutable completion history |
+
+Both tables use:
+- `PAY_PER_REQUEST` billing
+- SSE with the AWS managed KMS key (`aws/dynamodb`)
+- point-in-time recovery (35 days)
+- deletion protection and Terraform `prevent_destroy`
+- GSI projection `ALL`. Items are small and household data volume is low, so this keeps queries simple
+  without extra reads.
+
+## Multi-Tenancy Readiness
+
+Every key starts with `tenantId` (currently `default`). More households can be added without redesigning
+the tables (FUTURE-001). Tenant isolation is enforced in code until FUTURE-002.
+
+## Cost
+
+On-demand billing with household volume stays within cents per month. PITR adds a small storage-based
+charge per GB, which is negligible at this size.
+
+## Not Yet Included
+
+Lambda data access (TICKET-007), the per-Tenner history index (TICKET-020), seed data.
+
+---
+
 # Future Ideas
 
 Out of scope for MVP.

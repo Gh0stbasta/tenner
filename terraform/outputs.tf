@@ -47,3 +47,23 @@ output "api_lambda_function_name" {
   description = "Name of the Tenner API Lambda function."
   value       = aws_lambda_function.api.function_name
 }
+
+output "tenners_table_name" {
+  description = "Name of the tenner-tenners DynamoDB table."
+  value       = aws_dynamodb_table.tenners.name
+}
+
+output "tenners_table_arn" {
+  description = "ARN of the tenner-tenners DynamoDB table."
+  value       = aws_dynamodb_table.tenners.arn
+}
+
+output "history_table_name" {
+  description = "Name of the tenner-history DynamoDB table."
+  value       = aws_dynamodb_table.history.name
+}
+
+output "history_table_arn" {
+  description = "ARN of the tenner-history DynamoDB table."
+  value       = aws_dynamodb_table.history.arn
+}

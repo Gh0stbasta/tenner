@@ -40,6 +40,10 @@ locals {
   api_source_dir  = "${path.module}/../backend/dist"
   api_package_zip = "${path.module}/../.build/tenner-api.zip"
 
+  # Persistence layer (TICKET-006).
+  tenners_table_name = "${local.name_prefix}-tenners"
+  history_table_name = "${local.name_prefix}-history"
+
   # Every taggable resource must end up with these tags (TICKET-001A).
   # Enforced in CI by scripts/check_tags.py against the Terraform plan.
   mandatory_tag_keys = concat(keys(local.common_tags), ["Name", "Purpose", "Description"])
