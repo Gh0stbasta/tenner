@@ -40,6 +40,7 @@ locals {
   api_routes = [
     "GET /health",
     "POST /tenners", # TICKET-009
+    "GET /tenners",  # TICKET-010
   ]
 
   # Lambda bundle built by `npm run build` in backend/ (dist/index.mjs).

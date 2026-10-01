@@ -67,8 +67,8 @@ run "http_api_routes_health" {
   }
 
   assert {
-    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners"])
-    error_message = "API routes must be GET /health and POST /tenners."
+    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners", "GET /tenners"])
+    error_message = "API routes must match the implemented endpoints."
   }
 
   assert {

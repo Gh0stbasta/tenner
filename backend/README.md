@@ -83,6 +83,30 @@ Zod schemas are in `src/validators/`. The limits are centralized in `LIMITS`:
 Unknown fields are rejected (`strictObject`). An update must contain at least one field.
 `validate()` throws a `ValidationError` with per-field `details`.
 
+### GET /tenners
+
+| Parameter | Values | Meaning |
+|---|---|---|
+| `assignedTo` | `STEFAN`, `JULIA` | assigned user |
+| `category` | category values | category |
+| `active` | `true` (default), `false` | active or inactive Tenners |
+| `due` | `true`, `false` | `true`: `nextDue <= today` (UTC). `false` does not filter |
+| `overdue` | `true`, `false` | `true`: `nextDue < today` (wins over `due`). `false` does not filter |
+| `sort` | `nextDue` (default), `title`, `createdAt`, `updatedAt` | sort field (ties broken by title, then ID) |
+| `order` | `asc` (default), `desc` | sort direction |
+
+Unknown parameters are rejected. There is no pagination (the household volume is small).
+
+The repository always issues a Query on the tenant partition, never a Scan, and reads all result pages:
+
+| Criteria | Query target |
+|---|---|
+| `assignedTo` given | `assignedTo-index` |
+| `due` or `overdue` | `nextDue-index` |
+| neither | base table |
+
+Remaining criteria are applied as a `FilterExpression`. Sorting happens in the service.
+
 ## Errors and Responses
 
 | Error | HTTP | Code |
@@ -117,6 +141,7 @@ and a Tenner fixture.
 |---|---|
 | `GET /health` | `200 {"status":"ok","application":"tenner","environment":"prod","database":"connected"}`. Returns `503` with `"status":"error"` and `database` `unreachable` or `misconfigured` |
 | `POST /tenners` | `201 { success: true, data: TennerResponse }` (TICKET-009). Returns `400 VALIDATION_ERROR` with `details`, `409 CONFLICT` if the ID exists, `500 PERSISTENCE_ERROR` |
+| `GET /tenners` | `200 { success: true, data: TennerResponse[] }` (TICKET-010). Returns `400 VALIDATION_ERROR` for invalid parameters |
 | unknown route | `404 NOT_FOUND` |
 
 ### POST /tenners

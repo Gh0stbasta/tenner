@@ -1,7 +1,8 @@
 import { z } from "zod";
-import type { CompleteTennerRequest, CreateTennerRequest, UpdateTennerRequest } from "../dto/index.js";
+import { TENNER_SORT_FIELDS, type CompleteTennerRequest, type CreateTennerRequest, type ListTennersRequest, type UpdateTennerRequest } from "../dto/index.js";
 import {
   actualMinutesSchema,
+  booleanFlagSchema,
   categorySchema,
   estimatedMinutesSchema,
   frequencyDaysSchema,
@@ -27,3 +28,14 @@ export const completeTennerSchema = z.strictObject({
   actualMinutes: actualMinutesSchema.optional(),
   completedAt: utcTimestampSchema.optional(),
 }) satisfies z.ZodType<CompleteTennerRequest>;
+
+/** Query string of GET /tenners. Unknown parameters are rejected. */
+export const listTennersQuerySchema = z.strictObject({
+  assignedTo: userIdSchema.optional(),
+  category: categorySchema.optional(),
+  active: booleanFlagSchema.optional(),
+  due: booleanFlagSchema.optional(),
+  overdue: booleanFlagSchema.optional(),
+  sort: z.enum(TENNER_SORT_FIELDS).optional(),
+  order: z.enum(["asc", "desc"]).optional(),
+}) satisfies z.ZodType<ListTennersRequest, Record<string, string | undefined>>;

@@ -26,3 +26,6 @@ export const utcTimestampSchema = z.iso.datetime({ offset: false });
 
 /** Calendar date YYYY-MM-DD (validated as a real date). */
 export const isoDateSchema = z.iso.date();
+
+/** Query-string boolean: exactly "true" or "false". */
+export const booleanFlagSchema = z.enum(["true", "false"]).transform((value) => value === "true");

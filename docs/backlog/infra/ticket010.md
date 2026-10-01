@@ -524,3 +524,52 @@ Do not implement:
 - Pagination
 
 Pagination will be introduced only when justified by actual usage.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `GET /tenners`: handler `src/handlers/list-tenners.ts`, route in `src/index.ts` and `local.api_routes`
+- [x] `ListTennersRequest`, `ListTennersResponse` (`src/dto/list-tenners.dto.ts`), `listTennersQuerySchema`
+- [x] `ListTennersService` (defaults, due/overdue calculation, sorting)
+- [x] Repository `list()` with query builder (`tenner.query.ts`), pagination and mapper (`tenner.mapper.ts`)
+- [x] Tests and documentation
+
+### Acceptance Criteria
+
+| Criterion | Status |
+|---|---|
+| GET /tenners implemented | [x] |
+| Filtering works | [x] `assignedTo`, `category`, `active`, `due`, `overdue` |
+| Sorting works | [x] `nextDue`/`title`/`createdAt`/`updatedAt`, `asc`/`desc`, deterministic tie-breaking |
+| Due filter works | [x] `nextDue <= today` |
+| Overdue filter works | [x] `nextDue < today` |
+| User filter works | [x] via `assignedTo-index` |
+| Category filter works | [x] FilterExpression |
+| Validation enforced | [x] invalid user, category, sort, order and boolean flags, plus unknown parameters → 400 |
+| Standard API response returned | [x] `{ success: true, data: [...] }`, empty list → `data: []` |
+| Tests passing | [x] 122 tests. All ticket cases are covered (all, due, overdue, by user, by category, invalid sort, invalid user, empty, repository failure) |
+
+### Validation Performed
+
+- `npm run lint`, `npm run build` and `npm test` pass. New modules are 100% covered.
+- Bundle against a fake DynamoDB endpoint: 4 requests were checked.
+  - No filter: Query on the base table with `active` filter.
+  - User and due: `assignedTo-index`.
+  - Overdue and category: `nextDue-index`.
+  - Invalid `sort`: 400.
+  - No Scan was issued.
+
+### Assumptions
+
+- `due=false` and `overdue=false` mean "no filter", not "not due". `active=false` lists only inactive Tenners.
+- If both `due` and `overdue` are true, `overdue` wins (stricter).
+- Default sort is `nextDue asc` (the ticket specifies none). Ties are broken by title, then ID.
+- "Today" is the UTC date (TD-005).
+- No pagination, as stated in Out of Scope. The repository reads all DynamoDB pages internally.
+- Responses contain the full `TennerResponse` (a superset of the example), without `tenantId` or storage metadata.
+- Sorting happens in the service, which owns the "Sorting Rules". The repository only filters.

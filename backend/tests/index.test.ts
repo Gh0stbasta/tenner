@@ -7,8 +7,8 @@ import { mockLogger, tennerFixture, testConfig } from "./mocks/index.js";
 
 const tennerResponse = toTennerResponse(tennerFixture());
 
-function event(routeKey: string, headers: Record<string, string> = {}, body?: string): APIGatewayProxyEventV2 {
-  return { routeKey, headers, body, requestContext: { requestId: "req-1" } } as unknown as APIGatewayProxyEventV2;
+function event(routeKey: string, headers: Record<string, string> = {}, body?: string, query?: Record<string, string>): APIGatewayProxyEventV2 {
+  return { routeKey, headers, body, queryStringParameters: query, requestContext: { requestId: "req-1" } } as unknown as APIGatewayProxyEventV2;
 }
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
@@ -17,6 +17,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     logger: mockLogger(),
     probeDatabase: async () => true,
     createTenner: vi.fn(async () => tennerResponse),
+    listTenners: vi.fn(async () => [tennerResponse]),
     ...overrides,
   };
 }
@@ -104,6 +105,29 @@ describe("POST /tenners", () => {
     const response = await route(event("POST /tenners", {}, JSON.stringify(valid)), createDependencies(testConfig({ tables: undefined })));
     expect(response.statusCode).toBe(503);
     expect(body(response).error?.code).toBe("SERVICE_UNAVAILABLE");
+  });
+});
+
+describe("GET /tenners", () => {
+  it("lists Tenners with parsed filters", async () => {
+    const d = deps();
+    const response = await route(event("GET /tenners", {}, undefined, { assignedTo: "JULIA", due: "true", sort: "title" }), d);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: [tennerResponse] });
+    expect(d.listTenners).toHaveBeenCalledWith("default", { assignedTo: "JULIA", due: true, sort: "title" });
+  });
+
+  it("lists without query parameters", async () => {
+    const d = deps();
+    await route(event("GET /tenners"), d);
+    expect(d.listTenners).toHaveBeenCalledWith("default", {});
+  });
+
+  it.each([{ sort: "priority" }, { assignedTo: "BOB" }, { active: "yes" }, { order: "up" }, { unknown: "1" }])("rejects %j with 400", async (query) => {
+    const d = deps();
+    const response = await route(event("GET /tenners", {}, undefined, query), d);
+    expect(response.statusCode).toBe(400);
+    expect(d.listTenners).not.toHaveBeenCalled();
   });
 });
 

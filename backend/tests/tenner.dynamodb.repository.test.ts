@@ -1,4 +1,4 @@
-import { PutCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it, vi } from "vitest";
 import { ConflictError, PersistenceError } from "../src/exceptions/index.js";
 import { DynamoDbTennerRepository } from "../src/repositories/index.js";
@@ -43,5 +43,40 @@ describe("DynamoDbTennerRepository.save", () => {
   it("maps non-Error rejections to PersistenceError", async () => {
     const repository = new DynamoDbTennerRepository(client(async () => Promise.reject("boom")), "t");
     await expect(repository.save(tennerFixture())).rejects.toBeInstanceOf(PersistenceError);
+  });
+});
+
+describe("DynamoDbTennerRepository.list", () => {
+  const item = { ...tennerFixture(), someStorageMetadata: "x" };
+
+  it("follows pagination and maps items to domain objects", async () => {
+    const pages = [{ Items: [item], LastEvaluatedKey: { tenantId: "default", tennerId: "a" } }, { Items: [item] }];
+    const c = client(async () => pages.shift());
+    const result = await new DynamoDbTennerRepository(c, "tenner-tenners").list("default", { active: true });
+
+    expect(result).toEqual([tennerFixture(), tennerFixture()]);
+    const [first, second] = c.send.mock.calls.map(([command]) => (command as QueryCommand).input);
+    expect(first).toMatchObject({ TableName: "tenner-tenners", KeyConditionExpression: "#tenantId = :tenantId" });
+    expect(first).not.toHaveProperty("ExclusiveStartKey");
+    expect(second?.ExclusiveStartKey).toEqual({ tenantId: "default", tennerId: "a" });
+  });
+
+  it("returns an empty list when nothing matches", async () => {
+    const c = client(async () => ({}));
+    await expect(new DynamoDbTennerRepository(c, "t").list("default")).resolves.toEqual([]);
+  });
+
+  it("maps a missing lastCompleted to null and non-true active to false", async () => {
+    const item: Record<string, unknown> = { ...tennerFixture(), active: "yes" };
+    delete item.lastCompleted;
+    const c = client(async () => ({ Items: [item] }));
+    const [tenner] = await new DynamoDbTennerRepository(c, "t").list("default");
+    expect(tenner?.lastCompleted).toBeNull();
+    expect(tenner?.active).toBe(false);
+  });
+
+  it("maps failures to PersistenceError", async () => {
+    const c = client(async () => Promise.reject(namedError("InternalServerError")));
+    await expect(new DynamoDbTennerRepository(c, "t").list("default")).rejects.toBeInstanceOf(PersistenceError);
   });
 });
