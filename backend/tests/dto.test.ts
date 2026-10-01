@@ -18,6 +18,9 @@ describe("dto mappers", () => {
       completedBy: "JULIA",
       completedAt: "2026-10-01T18:30:00Z",
       actualMinutes: 12,
+      revertedAt: null,
+      revertedBy: null,
+      revertReason: null,
     });
     expect(response).toEqual({ completionId: "c1", tennerId: "t1", completedBy: "JULIA", completedAt: "2026-10-01T18:30:00Z", actualMinutes: 12 });
   });

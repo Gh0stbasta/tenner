@@ -26,6 +26,22 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       },
       replayed: false,
     })),
+    undoCompletion: vi.fn(async () => ({
+      response: {
+        tenner: tennerResponse,
+        revertedCompletion: {
+          completionId: "c-1",
+          completedBy: "STEFAN" as const,
+          completedAt: "2026-10-01T18:30:00Z",
+          actualMinutes: 10,
+          revertedAt: "2026-10-01T19:00:00Z",
+          revertedBy: "JULIA" as const,
+          revertReason: null,
+        },
+      },
+      restoredPrevious: false,
+      replayed: false,
+    })),
     deleteTenner: vi.fn(async () => ({ response: { tennerId: "t-1", deleted: true as const }, outcome: { status: "DELETED" as const, tenner: tennerFixture() } })),
     ...overrides,
   };
@@ -234,6 +250,31 @@ describe("POST /tenners/{tennerId}/complete", () => {
     const d = deps();
     expect((await route(complete({ completedBy: "STEFAN" }, { "idempotency-key": "has space" }), d)).statusCode).toBe(400);
     expect(d.completeTenner).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /tenners/{tennerId}/undo-completion", () => {
+  const undo = (payload: unknown, headers: Record<string, string> = {}): APIGatewayProxyEventV2 =>
+    ({
+      routeKey: "POST /tenners/{tennerId}/undo-completion",
+      headers,
+      body: JSON.stringify(payload),
+      pathParameters: { tennerId: "t-1" },
+      requestContext: { requestId: "req-1" },
+    }) as unknown as APIGatewayProxyEventV2;
+
+  it("undoes and passes the trimmed reason and idempotency key", async () => {
+    const d = deps();
+    const response = await route(undo({ revertedBy: "JULIA", reason: "  Completed by mistake " }, { "idempotency-key": "u-1" }), d);
+    expect(response.statusCode).toBe(200);
+    expect(d.undoCompletion).toHaveBeenCalledWith("default", "t-1", { revertedBy: "JULIA", reason: "Completed by mistake" }, "u-1");
+  });
+
+  it("maps NO_COMPLETION_TO_UNDO to 409", async () => {
+    const d = deps({ undoCompletion: vi.fn().mockRejectedValue(new ConflictError("No active completion is available to undo.", "NO_COMPLETION_TO_UNDO")) });
+    const response = await route(undo({ revertedBy: "STEFAN" }), d);
+    expect(response.statusCode).toBe(409);
+    expect(body(response).error).toEqual({ code: "NO_COMPLETION_TO_UNDO", message: "No active completion is available to undo." });
   });
 });
 

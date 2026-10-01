@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { TENNER_SORT_FIELDS, type CompleteTennerRequest, type CreateTennerRequest, type ListTennersRequest, type UpdateTennerRequest } from "../dto/index.js";
+import {
+  TENNER_SORT_FIELDS,
+  type CompleteTennerRequest,
+  type CreateTennerRequest,
+  type ListTennersRequest,
+  type UndoCompletionRequest,
+  type UpdateTennerRequest,
+} from "../dto/index.js";
 import {
   actualMinutesSchema,
   booleanFlagSchema,
@@ -47,3 +54,9 @@ export const tennerIdSchema = z.string().regex(/^[A-Za-z0-9-]{1,64}$/, "Invalid 
 
 /** Optional Idempotency-Key header: 1-128 printable characters without spaces. */
 export const idempotencyKeySchema = z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/, "Invalid Idempotency-Key header.");
+
+/** Undo request (TICKET-014): reason is trimmed; whitespace-only and > 250 characters are rejected. */
+export const undoCompletionSchema = z.strictObject({
+  revertedBy: userIdSchema,
+  reason: z.string().trim().min(1, "Reason must not be blank.").max(250).optional(),
+}) satisfies z.ZodType<UndoCompletionRequest>;

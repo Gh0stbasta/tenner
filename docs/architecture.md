@@ -888,7 +888,7 @@ Introduced by TICKET-006 (`terraform/dynamodb.tf`).
 | Table | Primary key | GSIs | Purpose |
 |---|---|---|---|
 | `tenner-tenners` | `tenantId` (PK), `tennerId` (SK) | `nextDue-index` (`tenantId`, `nextDue`), `assignedTo-index` (`tenantId`, `assignedTo`) | Current state of Tenners |
-| `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`) | Immutable completion history |
+| `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`), `tennerId-completedAt-index` (`tenantTennerId`, `completedAt`, TICKET-014) | Immutable completion history |
 
 Both tables use:
 - `PAY_PER_REQUEST` billing
@@ -1000,7 +1000,7 @@ index.ts (routing, correlation, error mapping)
 - **Enforcement:** ESLint fails if code outside `config.ts` reads `process.env`, or if handlers or services
   import the AWS SDK or `clients/`.
 - **Endpoints:** API routes are listed in `local.api_routes` (`terraform/locals.tf`). Each one is an explicit
-  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009), `GET /tenners` (TICKET-010), `PUT /tenners/{tennerId}` (TICKET-011), `DELETE /tenners/{tennerId}` (TICKET-012), `POST /tenners/{tennerId}/complete` (TICKET-013).
+  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009), `GET /tenners` (TICKET-010), `PUT /tenners/{tennerId}` (TICKET-011), `DELETE /tenners/{tennerId}` (TICKET-012), `POST /tenners/{tennerId}/complete` (TICKET-013), `POST /tenners/{tennerId}/undo-completion` (TICKET-014).
 - **Read access:** lists always use a DynamoDB Query on the tenant partition, choosing `assignedTo-index` or
   `nextDue-index` when a filter allows it, and never a Scan. The `dynamodb:Scan` permission (TICKET-007) is unused.
 - **Write access:** creates are conditional puts (`attribute_not_exists`). Updates are conditional `UpdateItem`
@@ -1014,6 +1014,12 @@ index.ts (routing, correlation, error mapping)
   a conflict returns `409 CONCURRENT_MODIFICATION`. The optional `Idempotency-Key` maps to a deterministic UUID v5
   completion ID. Retries return the original result, and conflicting reuse returns 409. Transactions need no extra
   IAM action, because DynamoDB authorizes them through `PutItem` and `UpdateItem`.
+- **Undo workflow (TICKET-014):** completions are never deleted. Undo marks the latest non-reverted completion
+  (`revertedAt`, `revertedBy`, `revertReason`) and restores the Tenner from the previous active completion, using the
+  current `frequencyDays`. If no previous completion exists, `lastCompleted` becomes `null` and `nextDue` the
+  `createdAt` date. Both writes happen in one `TransactWriteItems`, with conditions on "not yet reverted" and the
+  loaded Tenner state. History per Tenner is read through the GSI `tennerId-completedAt-index`
+  (`tenantTennerId = "<tenant>#<tenner>"`, newest first, no Scan).
 - **Time and IDs:** services receive a `Clock` and an `IdGenerator` (`utils/clock.ts`), so tests are deterministic.
   Dates are UTC until SCHEDULING-008 (TD-005).
 

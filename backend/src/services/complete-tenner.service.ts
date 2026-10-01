@@ -51,6 +51,9 @@ export class CompleteTennerService {
       completedBy: request.completedBy,
       completedAt,
       actualMinutes: request.actualMinutes ?? tenner.estimatedMinutes,
+      revertedAt: null,
+      revertedBy: null,
+      revertReason: null,
     };
     const updated: Tenner = {
       ...tenner,

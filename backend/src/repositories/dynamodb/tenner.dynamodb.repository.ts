@@ -135,8 +135,6 @@ export class DynamoDbTennerRepository implements TennerRepository {
    * (must still match `expected`: updatedAt, lastCompleted, frequencyDays, active, not deleted).
    */
   async completeTenner(updated: Tenner, record: CompletionRecord, expected: Tenner): Promise<void> {
-    const lastCompletedCondition =
-      expected.lastCompleted === null ? "(attribute_not_exists(#lastCompleted) OR #lastCompleted = :null)" : "#lastCompleted = :expectedLastCompleted";
     try {
       await this.client.send(
         new TransactWriteCommand({
@@ -148,57 +146,106 @@ export class DynamoDbTennerRepository implements TennerRepository {
                 ConditionExpression: "attribute_not_exists(historyId)",
               },
             },
-            {
-              Update: {
-                TableName: this.tableName,
-                Key: { tenantId: expected.tenantId, tennerId: expected.tennerId },
-                UpdateExpression: "SET #lastCompleted = :lastCompleted, #nextDue = :nextDue, #updatedAt = :updatedAt",
-                ConditionExpression: [
-                  "#updatedAt = :expectedUpdatedAt",
-                  "#frequencyDays = :expectedFrequencyDays",
-                  "#active = :true",
-                  NOT_DELETED,
-                  lastCompletedCondition,
-                ].join(" AND "),
-                ExpressionAttributeNames: {
-                  "#lastCompleted": "lastCompleted",
-                  "#nextDue": "nextDue",
-                  "#updatedAt": "updatedAt",
-                  "#frequencyDays": "frequencyDays",
-                  "#active": "active",
-                  "#deletedAt": "deletedAt",
-                },
-                ExpressionAttributeValues: {
-                  ":lastCompleted": updated.lastCompleted,
-                  ":nextDue": updated.nextDue,
-                  ":updatedAt": updated.updatedAt,
-                  ":expectedUpdatedAt": expected.updatedAt,
-                  ":expectedFrequencyDays": expected.frequencyDays,
-                  ":true": true,
-                  ":null": null,
-                  ...(expected.lastCompleted === null ? {} : { ":expectedLastCompleted": expected.lastCompleted }),
-                },
-              },
-            },
+            { Update: this.scheduleUpdate(updated, expected) },
           ],
         }),
       );
     } catch (error) {
-      throw toTransactionError(error);
+      throw toTransactionError(error, "complete Tenner", [
+        ["DUPLICATE_COMPLETION", "A completion with this ID already exists."],
+        ["CONCURRENT_MODIFICATION", "The Tenner was modified by another request."],
+      ]);
     }
+  }
+
+  /**
+   * One TransactWriteItems: [0] mark the completion reverted (must exist and not be reverted yet),
+   * [1] restore the Tenner schedule (must still match `expected`).
+   */
+  async undoCompletion(restored: Tenner, reverted: CompletionRecord, expected: Tenner): Promise<void> {
+    const { completion } = reverted;
+    try {
+      await this.client.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Update: {
+                TableName: this.historyTableName,
+                Key: { tenantId: completion.tenantId, historyId: completion.completionId },
+                UpdateExpression:
+                  "SET #revertedAt = :revertedAt, #revertedBy = :revertedBy, #revertReason = :revertReason, #revertIdempotencyKey = :revertKey, #revertRequestHash = :revertHash",
+                ConditionExpression: "attribute_exists(historyId) AND (attribute_not_exists(#revertedAt) OR #revertedAt = :null)",
+                ExpressionAttributeNames: {
+                  "#revertedAt": "revertedAt",
+                  "#revertedBy": "revertedBy",
+                  "#revertReason": "revertReason",
+                  "#revertIdempotencyKey": "revertIdempotencyKey",
+                  "#revertRequestHash": "revertRequestHash",
+                },
+                ExpressionAttributeValues: {
+                  ":revertedAt": completion.revertedAt,
+                  ":revertedBy": completion.revertedBy,
+                  ":revertReason": completion.revertReason,
+                  ":revertKey": reverted.revertIdempotencyKey ?? null,
+                  ":revertHash": reverted.revertRequestHash ?? null,
+                  ":null": null,
+                },
+              },
+            },
+            { Update: this.scheduleUpdate(restored, expected) },
+          ],
+        }),
+      );
+    } catch (error) {
+      throw toTransactionError(error, "undo completion", [
+        ["CONCURRENT_MODIFICATION", "The Tenner or completion was modified by another request."],
+        ["CONCURRENT_MODIFICATION", "The Tenner or completion was modified by another request."],
+      ]);
+    }
+  }
+
+  /** Update of lastCompleted/nextDue/updatedAt, locked on the loaded Tenner state. */
+  private scheduleUpdate(updated: Tenner, expected: Tenner) {
+    const lastCompletedCondition =
+      expected.lastCompleted === null ? "(attribute_not_exists(#lastCompleted) OR #lastCompleted = :null)" : "#lastCompleted = :expectedLastCompleted";
+    return {
+      TableName: this.tableName,
+      Key: { tenantId: expected.tenantId, tennerId: expected.tennerId },
+      UpdateExpression: "SET #lastCompleted = :lastCompleted, #nextDue = :nextDue, #updatedAt = :updatedAt",
+      ConditionExpression: ["#updatedAt = :expectedUpdatedAt", "#frequencyDays = :expectedFrequencyDays", "#active = :true", NOT_DELETED, lastCompletedCondition].join(" AND "),
+      ExpressionAttributeNames: {
+        "#lastCompleted": "lastCompleted",
+        "#nextDue": "nextDue",
+        "#updatedAt": "updatedAt",
+        "#frequencyDays": "frequencyDays",
+        "#active": "active",
+        "#deletedAt": "deletedAt",
+      },
+      ExpressionAttributeValues: {
+        ":lastCompleted": updated.lastCompleted,
+        ":nextDue": updated.nextDue,
+        ":updatedAt": updated.updatedAt,
+        ":expectedUpdatedAt": expected.updatedAt,
+        ":expectedFrequencyDays": expected.frequencyDays,
+        ":true": true,
+        ":null": null,
+        ...(expected.lastCompleted === null ? {} : { ":expectedLastCompleted": expected.lastCompleted }),
+      },
+    };
   }
 }
 
-/** Map TransactionCanceledException reasons (by item index) to application errors. */
-function toTransactionError(error: unknown): ConflictError | PersistenceError {
+
+/**
+ * Map TransactionCanceledException to application errors. `conflicts[i]` is the [code, message] used when
+ * transaction item i failed its condition.
+ */
+function toTransactionError(error: unknown, operation: string, conflicts: readonly (readonly [string, string])[]): ConflictError | PersistenceError {
   if (error instanceof Error && error.name === "TransactionCanceledException") {
     const reasons = (error as { CancellationReasons?: { Code?: string }[] }).CancellationReasons ?? [];
-    if (reasons[0]?.Code === "ConditionalCheckFailed") {
-      return new ConflictError("A completion with this ID already exists.", "DUPLICATE_COMPLETION");
-    }
-    if (reasons[1]?.Code === "ConditionalCheckFailed") {
-      return new ConflictError("The Tenner was modified by another request.", "CONCURRENT_MODIFICATION");
-    }
+    const index = reasons.findIndex((reason) => reason.Code === "ConditionalCheckFailed");
+    const conflict = conflicts[index];
+    if (conflict) return new ConflictError(conflict[1], conflict[0]);
   }
-  return toPersistenceError("complete Tenner", error);
+  return toPersistenceError(operation, error);
 }

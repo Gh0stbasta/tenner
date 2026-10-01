@@ -64,6 +64,17 @@ describe("createDependencies wiring", () => {
     expect(transaction.input.TransactItems?.map((i) => i.Put?.TableName ?? i.Update?.TableName)).toEqual(["tenner-history", "tenner-tenners"]);
   });
 
+  it("undoes completions with a transaction across both tables", async () => {
+    send.mockImplementation(async (command: unknown) => {
+      if (command instanceof GetCommand) return { Item: tennerFixture({ lastCompleted: "2026-10-01T10:00:00Z" }) };
+      if (command instanceof QueryCommand) return { Items: [{ tenantId: "default", historyId: "c-1", tennerId: "t-1", completedBy: "STEFAN", completedAt: "2026-10-01T10:00:00Z", actualMinutes: 10 }] };
+      return {};
+    });
+    await expect(deps().undoCompletion("default", "t-1", { revertedBy: "STEFAN" })).resolves.toMatchObject({ restoredPrevious: false });
+    const transaction = send.mock.calls.map(([c]) => c).find((c) => c instanceof TransactWriteCommand) as TransactWriteCommand;
+    expect(transaction.input.TransactItems?.map((i) => i.Update?.TableName)).toEqual(["tenner-history", "tenner-tenners"]);
+  });
+
   it("updates Tenners in the configured table", async () => {
     send.mockResolvedValue({ Attributes: tennerFixture({ title: "New title" }) });
     await expect(deps().updateTenner("default", "t-1", { title: "New title" })).resolves.toMatchObject({ title: "New title" });

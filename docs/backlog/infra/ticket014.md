@@ -959,3 +959,58 @@ Do not implement:
 - Frontend Integration
 
 These capabilities may be delivered in separate tickets if required.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `POST /tenners/{tennerId}/undo-completion`: `src/handlers/undo-completion.ts`, route in `src/index.ts` and `local.api_routes`
+- [x] DTOs: `UndoCompletionRequest`, `UndoCompletionResponse`, `RevertedCompletionResponse`. Schema: `undoCompletionSchema`
+- [x] `UndoCompletionService.undoLatestCompletion()` and `restoreSchedule()`
+- [x] Repository:
+  - `getLatestActiveCompletions(tenantId, tennerId, limit)` and `findByRevertIdempotencyKey(...)` (history GSI)
+  - `undoCompletion(restored, reverted, expected)` (`TransactWriteItems`)
+- [x] Completion model: `revertedAt`, `revertedBy`, `revertReason` (default `null`). New completions also store `tenantTennerId`.
+- [x] Terraform: GSI `tennerId-completedAt-index` on `tenner-history` (`tenantTennerId`, `completedAt`), plus a test
+- [x] IAM: no change needed. `Query` on `<history-arn>/index/*` and `UpdateItem` on both tables are already granted.
+- [x] Documentation (`backend/README.md`, `docs/architecture.md`)
+
+### Acceptance Criteria (Testing Requirements)
+
+- [x] Successful undo
+- [x] Previous completion restored (`lastCompleted` = previous `completedAt`, `nextDue` = its date + current `frequencyDays`, may be in the past)
+- [x] First completion reverted (`lastCompleted = null`, `nextDue` = `createdAt` date, fallback today)
+- [x] No active completion → 409 `NO_COMPLETION_TO_UNDO`
+- [x] Inactive or deleted Tenner → 409 `TENNER_INACTIVE`
+- [x] Missing Tenner → 404
+- [x] Invalid reverted user, reason too long (251), whitespace-only reason → 400 (250 characters accepted)
+- [x] Completion already reverted and concurrent completion modification (transaction item 0) → 409 `CONCURRENT_MODIFICATION`
+- [x] Concurrent Tenner modification (item 1) → 409 `CONCURRENT_MODIFICATION`
+- [x] Atomic transaction failure → `PersistenceError`
+- [x] Idempotent retry (replay without another revert), conflicting key reuse → 409, concurrent duplicates
+- [x] Repository failure
+- [x] Logging and metric events (`UndoSucceeded`, `UndoNoCompletion`, `UndoConflict`, `UndoFailed`, `durationMs`)
+
+Backend: 254 tests, 100% coverage. Terraform: 20 tests.
+
+**Integration checks** (bundle against a fake DynamoDB endpoint with real AWS error payloads):
+- Undo runs as: idempotency `Query` (GSI), Tenner `GetItem`, active completions `Query` (GSI, newest first,
+  filtered), then **one** `TransactWriteItems`. Response 200 with the previous completion restored
+  (`lastCompleted` 2026-09-01T18:00:00Z, `nextDue` 2026-09-15).
+- A cancelled transaction gives 409 `CONCURRENT_MODIFICATION`. A deleted Tenner gives 409 `TENNER_INACTIVE`.
+- No history record is deleted. The workflow only issues `UpdateItem` on history, which the tests assert.
+
+### Assumptions
+
+- **GSI key:** composite `tenantTennerId = "<tenantId>#<tennerId>"` (the multi-tenant variant the ticket suggests).
+  No production data exists yet, so **no backfill** is needed. Completions written by TICKET-013 code before this
+  change were never deployed.
+- **Revert idempotency scope:** a key is only looked up within the Tenner's history. The same key on a different
+  Tenner is treated as a new request. Detecting that would need a lookup across all history.
+- **Response:** `revertedCompletion` also contains `completedBy` and `actualMinutes`, a superset of the example.
+- **Equal timestamps:** two completions with the same `completedAt` (second precision) have no defined order in
+  the GSI. This is practically irrelevant.

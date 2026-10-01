@@ -19,6 +19,40 @@ export interface CompletionResponse {
   readonly actualMinutes: number;
 }
 
+export interface UndoCompletionRequest {
+  readonly revertedBy: UserId;
+  /** Optional, trimmed, 1 - 250 characters. */
+  readonly reason?: string | undefined;
+}
+
+export interface RevertedCompletionResponse {
+  readonly completionId: string;
+  readonly completedBy: UserId;
+  readonly completedAt: string;
+  readonly actualMinutes: number;
+  readonly revertedAt: string;
+  readonly revertedBy: UserId;
+  readonly revertReason: string | null;
+}
+
+/** POST /tenners/{tennerId}/undo-completion response (TICKET-014). */
+export interface UndoCompletionResponse {
+  readonly tenner: TennerResponse;
+  readonly revertedCompletion: RevertedCompletionResponse;
+}
+
+export function toRevertedCompletionResponse(completion: Completion): RevertedCompletionResponse {
+  return {
+    completionId: completion.completionId,
+    completedBy: completion.completedBy,
+    completedAt: completion.completedAt,
+    actualMinutes: completion.actualMinutes,
+    revertedAt: completion.revertedAt ?? "",
+    revertedBy: completion.revertedBy ?? completion.completedBy,
+    revertReason: completion.revertReason,
+  };
+}
+
 /** POST /tenners/{tennerId}/complete response (TICKET-013). */
 export interface CompleteTennerResponse {
   readonly tenner: TennerResponse;

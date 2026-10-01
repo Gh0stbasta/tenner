@@ -2,7 +2,7 @@
 
 import { vi, type Mocked } from "vitest";
 import type { AppConfig } from "../../src/config.js";
-import type { Tenner } from "../../src/models/index.js";
+import type { Completion, Tenner } from "../../src/models/index.js";
 import type { CompletionRepository, TennerRepository } from "../../src/repositories/index.js";
 import type { AnalyticsService, TennerService } from "../../src/services/index.js";
 import type { Logger } from "../../src/utils/logger.js";
@@ -31,11 +31,11 @@ export function mockLogger(): Mocked<Logger> {
 }
 
 export function mockTennerRepository(): Mocked<TennerRepository> {
-  return { getById: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn(), completeTenner: vi.fn() };
+  return { getById: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn(), completeTenner: vi.fn(), undoCompletion: vi.fn() };
 }
 
 export function mockCompletionRepository(): Mocked<CompletionRepository> {
-  return { getById: vi.fn(), create: vi.fn(), getHistory: vi.fn(), getByTenner: vi.fn() };
+  return { getById: vi.fn(), getLatestActiveCompletions: vi.fn(), findByRevertIdempotencyKey: vi.fn(), create: vi.fn(), getHistory: vi.fn(), getByTenner: vi.fn() };
 }
 
 export function mockTennerService(): Mocked<TennerService> {
@@ -44,6 +44,21 @@ export function mockTennerService(): Mocked<TennerService> {
 
 export function mockAnalyticsService(): Mocked<AnalyticsService> {
   return { getDashboard: vi.fn(), getCompletionMetrics: vi.fn() };
+}
+
+export function completionFixture(overrides: Partial<Completion> = {}): Completion {
+  return {
+    tenantId: "default",
+    completionId: "completion-002",
+    tennerId: "tenner-001",
+    completedBy: "STEFAN",
+    completedAt: "2026-10-01T18:30:00Z",
+    actualMinutes: 12,
+    revertedAt: null,
+    revertedBy: null,
+    revertReason: null,
+    ...overrides,
+  };
 }
 
 export function tennerFixture(overrides: Partial<Tenner> = {}): Tenner {

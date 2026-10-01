@@ -5,3 +5,4 @@ export * from "./list-tenners.service.js";
 export * from "./update-tenner.service.js";
 export * from "./delete-tenner.service.js";
 export * from "./complete-tenner.service.js";
+export * from "./undo-completion.service.js";

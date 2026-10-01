@@ -102,11 +102,34 @@ resource "aws_dynamodb_table" "history" {
     type = "S"
   }
 
+  # "<tenantId>#<tennerId>" (TICKET-014).
+  attribute {
+    name = "tenantTennerId"
+    type = "S"
+  }
+
   # Reporting and analytics: Query tenantId by completedAt range.
   global_secondary_index {
     name = "completedAt-index"
     key_schema {
       attribute_name = "tenantId"
+      key_type       = "HASH"
+    }
+
+    key_schema {
+      attribute_name = "completedAt"
+      key_type       = "RANGE"
+    }
+
+    projection_type = "ALL"
+  }
+
+  # History of one Tenner, newest first (undo, detail views): Query tenantTennerId, ScanIndexForward = false.
+  global_secondary_index {
+    name = "tennerId-completedAt-index"
+
+    key_schema {
+      attribute_name = "tenantTennerId"
       key_type       = "HASH"
     }
 

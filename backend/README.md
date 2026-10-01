@@ -169,6 +169,47 @@ completions alike. `lastCompleted = completedAt` and `updatedAt = now`.
 (`event: CompletionSucceeded`, `completionId`, `completedBy`, `actualMinutes`, `nextDue`, `replayed`, `durationMs`)
 or "Tenner completion failed" (`event: CompletionFailed` or `CompletionConflict`, `errorCode`, `durationMs`).
 
+### POST /tenners/{tennerId}/undo-completion
+
+```json
+{ "revertedBy": "STEFAN", "reason": "Completed by mistake" }
+```
+
+`revertedBy` is required. `reason` is optional, trimmed, 1–250 characters, and whitespace-only is rejected.
+
+**Reverted completion model:** completions are never deleted. Undo sets `revertedAt`, `revertedBy` and
+`revertReason`, which are `null` for new completions. The original fields stay unchanged.
+
+**Selection:** only the latest **non-reverted** completion can be undone. It is found with the GSI
+`tennerId-completedAt-index` (partition `tenantTennerId = "<tenantId>#<tennerId>"`, sort `completedAt`, read
+newest first). A filter skips reverted completions, and pages are read until enough matches are found.
+There is no Scan. If no active completion exists, the result is `409 NO_COMPLETION_TO_UNDO`.
+
+**State restoration** always uses the Tenner's **current** `frequencyDays`:
+
+| Case | `lastCompleted` | `nextDue` |
+|---|---|---|
+| A previous active completion exists | its `completedAt` | UTC date(`completedAt`) + `frequencyDays` (may be in the past) |
+| The first completion was reverted | `null` | `createdAt` date (fallback: today) |
+
+`updatedAt` is set to now in both cases.
+
+**Atomicity and concurrency:** a single `TransactWriteItems`:
+1. Mark the completion as reverted. Condition: it exists and is not reverted yet.
+2. Restore the Tenner. Condition: it still matches the loaded `updatedAt`, `lastCompleted`, `frequencyDays`,
+   is active and not deleted.
+
+If either condition fails, the result is `409 CONCURRENT_MODIFICATION` and nothing is written.
+
+**Idempotency:** the optional `Idempotency-Key` is stored on the reverted record as `revertIdempotencyKey`, together
+with `revertRequestHash`. A retry finds it in the Tenner's history (via the same GSI) and returns the original
+result without reverting another completion. Reusing the key with a different request returns
+`409 IDEMPOTENCY_KEY_REUSED`. Undo keys are scoped to the Tenner.
+
+**Logs:** "Undo completion requested", then "Undo completion succeeded" (`UndoSucceeded`, `completionId`,
+`revertedBy`, `restoredPrevious`, `restoredNextDue`, `durationMs`) or "Undo completion failed"
+(`UndoNoCompletion` / `UndoConflict` / `UndoFailed`, `errorCode`, `durationMs`).
+
 ## Errors and Responses
 
 | Error | HTTP | Code |
@@ -207,6 +248,7 @@ and a Tenner fixture.
 | `PUT /tenners/{tennerId}` | `200 { success: true, data: TennerResponse }` (TICKET-011). Returns `400 VALIDATION_ERROR` or `404 NOT_FOUND` |
 | `DELETE /tenners/{tennerId}` | `200 { success: true, data: { tennerId, deleted: true } }` (TICKET-012, soft delete, idempotent). Returns `404 NOT_FOUND` |
 | `POST /tenners/{tennerId}/complete` | `200 { success: true, data: { tenner, completion } }` (TICKET-013). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
+| `POST /tenners/{tennerId}/undo-completion` | `200 { success: true, data: { tenner, revertedCompletion } }` (TICKET-014). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `NO_COMPLETION_TO_UNDO`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | unknown route | `404 NOT_FOUND` |
 
 ### POST /tenners

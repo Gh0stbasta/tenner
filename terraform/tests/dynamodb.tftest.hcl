@@ -66,8 +66,9 @@ run "required_indexes_exist" {
     condition = {
       for i in aws_dynamodb_table.history.global_secondary_index : i.name => [for k in i.key_schema : "${k.key_type}:${k.attribute_name}"]
       } == {
-      "completedAt-index" = ["HASH:tenantId", "RANGE:completedAt"]
+      "completedAt-index"          = ["HASH:tenantId", "RANGE:completedAt"]
+      "tennerId-completedAt-index" = ["HASH:tenantTennerId", "RANGE:completedAt"]
     }
-    error_message = "tenner-history must have completedAt-index."
+    error_message = "tenner-history must have completedAt-index and tennerId-completedAt-index."
   }
 }

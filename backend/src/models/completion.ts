@@ -9,4 +9,8 @@ export interface Completion {
   /** ISO 8601 UTC timestamp. */
   readonly completedAt: string;
   readonly actualMinutes: number;
+  /** Set when the completion was undone (TICKET-014); null otherwise. Records are never deleted. */
+  readonly revertedAt: string | null;
+  readonly revertedBy: UserId | null;
+  readonly revertReason: string | null;
 }

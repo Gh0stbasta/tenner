@@ -58,4 +58,10 @@ export interface TennerRepository {
    * ConflictError DUPLICATE_COMPLETION if the completion ID already exists, PersistenceError otherwise.
    */
   completeTenner(updated: Tenner, record: CompletionRecord, expected: Tenner): Promise<void>;
+  /**
+   * Atomically mark a completion as reverted and restore the Tenner schedule (TICKET-014).
+   * `reverted` carries the revert metadata; `expected` is the loaded Tenner (optimistic locking).
+   * Errors: ConflictError CONCURRENT_MODIFICATION if the Tenner changed or the completion was already reverted.
+   */
+  undoCompletion(restored: Tenner, reverted: CompletionRecord, expected: Tenner): Promise<void>;
 }

@@ -36,6 +36,9 @@ describe("CompleteTennerService", () => {
       completedBy: "STEFAN",
       completedAt: "2026-10-01T18:30:00Z",
       actualMinutes: 12,
+      revertedAt: null,
+      revertedBy: null,
+      revertReason: null,
     });
     expect(record?.idempotencyKey).toBeUndefined();
     expect(response.completion.completionId).toBe(NEW_ID);
