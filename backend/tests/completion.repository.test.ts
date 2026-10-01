@@ -1,4 +1,4 @@
-import { GetCommand, QueryCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { type BatchGetCommand, GetCommand, QueryCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it, vi } from "vitest";
 import { ConflictError, PersistenceError } from "../src/exceptions/index.js";
 import { DynamoDbCompletionRepository, DynamoDbTennerRepository } from "../src/repositories/index.js";
@@ -231,5 +231,101 @@ describe("DynamoDbTennerRepository.undoCompletion", () => {
   it("maps other failures to PersistenceError", async () => {
     const c = client(async () => Promise.reject(new Error("boom")));
     await expect(new DynamoDbTennerRepository(c, "a", "b").undoCompletion(restored, reverted, current)).rejects.toBeInstanceOf(PersistenceError);
+  });
+});
+
+describe("DynamoDbCompletionRepository history pages", () => {
+  const item = (id: string, at: string, extra: Record<string, unknown> = {}) => ({ tenantId: "default", historyId: id, tennerId: "t-1", tenantTennerId: "default#t-1", completedBy: "STEFAN", completedAt: at, actualMinutes: 10, revertedAt: null, ...extra });
+
+  it("queries completedAt-index newest first with date range and filters", async () => {
+    const c = client(async () => ({ Items: [item("c-1", "2026-09-15T10:00:00Z")] }));
+    const page = await new DynamoDbCompletionRepository(c, "tenner-history").getHistory("default", { limit: 20, from: "2026-09-01T00:00:00Z", to: "2026-09-30T23:59:59Z", completedBy: "STEFAN" });
+
+    expect(page).toEqual({ items: [expect.objectContaining({ completionId: "c-1" })] });
+    expect((c.send.mock.calls[0]?.[0] as QueryCommand).input).toEqual({
+      TableName: "tenner-history",
+      IndexName: "completedAt-index",
+      KeyConditionExpression: "#pk = :pk AND #completedAt BETWEEN :from AND :to",
+      FilterExpression: "(attribute_not_exists(#revertedAt) OR #revertedAt = :null) AND #completedBy = :completedBy",
+      ExpressionAttributeNames: { "#pk": "tenantId", "#completedAt": "completedAt", "#revertedAt": "revertedAt", "#completedBy": "completedBy" },
+      ExpressionAttributeValues: { ":pk": "default", ":from": "2026-09-01T00:00:00Z", ":to": "2026-09-30T23:59:59Z", ":null": null, ":completedBy": "STEFAN" },
+      ScanIndexForward: false,
+      Limit: 25,
+    });
+  });
+
+  it("uses open bounds for a one-sided range and no filter with includeReverted", async () => {
+    const c = client(async () => ({ Items: [] }));
+    await new DynamoDbCompletionRepository(c, "h").getHistory("default", { limit: 50, from: "2026-09-01T00:00:00Z", includeReverted: true });
+    const input = (c.send.mock.calls[0]?.[0] as QueryCommand).input;
+    expect(input.ExpressionAttributeValues).toMatchObject({ ":from": "2026-09-01T00:00:00Z", ":to": "9999" });
+    expect(input).not.toHaveProperty("FilterExpression");
+    expect(input.Limit).toBe(50);
+  });
+
+  it("cuts the page at the limit and returns the key of the last returned item", async () => {
+    const c = client(async () => ({ Items: [item("c-3", "2026-10-03T00:00:00Z"), item("c-2", "2026-10-02T00:00:00Z"), item("c-1", "2026-10-01T00:00:00Z")], LastEvaluatedKey: { x: "y" } }));
+    const page = await new DynamoDbCompletionRepository(c, "h").getHistory("default", { limit: 2, startKey: { tenantId: "default", historyId: "c-9", completedAt: "z" } });
+    expect(page.items.map((i) => i.completionId)).toEqual(["c-3", "c-2"]);
+    expect(page.lastKey).toEqual({ tenantId: "default", historyId: "c-2", completedAt: "2026-10-02T00:00:00Z" });
+    expect((c.send.mock.calls[0]?.[0] as QueryCommand).input.ExclusiveStartKey).toEqual({ tenantId: "default", historyId: "c-9", completedAt: "z" });
+  });
+
+  it("returns no key when the index is exhausted exactly at the limit", async () => {
+    const c = client(async () => ({ Items: [item("c-2", "2026-10-02T00:00:00Z"), item("c-1", "2026-10-01T00:00:00Z")] }));
+    expect((await new DynamoDbCompletionRepository(c, "h").getHistory("default", { limit: 2 })).lastKey).toBeUndefined();
+  });
+
+  it("keeps paging through filtered pages and stops after the page budget", async () => {
+    const c = client(async () => ({ Items: [], LastEvaluatedKey: { tenantId: "default", historyId: "c-x", completedAt: "x" } }));
+    const page = await new DynamoDbCompletionRepository(c, "h").getHistory("default", { limit: 5 });
+    expect(c.send).toHaveBeenCalledTimes(20);
+    expect(page.items).toEqual([]);
+    expect(page.lastKey).toEqual({ tenantId: "default", historyId: "c-x", completedAt: "x" });
+  });
+
+  it("queries the per-Tenner index and returns its key shape", async () => {
+    const c = client(async () => ({ Items: [item("c-2", "2026-10-02T00:00:00Z"), item("c-1", "2026-10-01T00:00:00Z")], LastEvaluatedKey: { k: "v" } }));
+    const page = await new DynamoDbCompletionRepository(c, "h").getByTenner("default", "t-1", { limit: 1 });
+    expect((c.send.mock.calls[0]?.[0] as QueryCommand).input).toMatchObject({ IndexName: "tennerId-completedAt-index", ExpressionAttributeValues: { ":pk": "default#t-1" } });
+    expect(page.lastKey).toEqual({ tenantId: "default", historyId: "c-2", tenantTennerId: "default#t-1", completedAt: "2026-10-02T00:00:00Z" });
+  });
+
+  it("maps failures to PersistenceError", async () => {
+    const c = client(async () => Promise.reject(new Error("x")));
+    await expect(new DynamoDbCompletionRepository(c, "h").getHistory("default", { limit: 1 })).rejects.toBeInstanceOf(PersistenceError);
+  });
+});
+
+describe("DynamoDbTennerRepository.getTitles", () => {
+  it("batch-reads titles in chunks of 100 and retries unprocessed keys", async () => {
+    const ids = Array.from({ length: 101 }, (_, i) => `t-${i}`);
+    const calls: unknown[] = [];
+    const c = client(async (command) => {
+      const input = (command as BatchGetCommand).input;
+      calls.push(input);
+      const keys = input.RequestItems?.["tenner-tenners"]?.Keys ?? [];
+      if (calls.length === 1) {
+        return { Responses: { "tenner-tenners": keys.slice(0, 99).map((k) => ({ tennerId: k.tennerId, title: `T ${String(k.tennerId)}` })) }, UnprocessedKeys: { "tenner-tenners": { Keys: keys.slice(99) } } };
+      }
+      return { Responses: { "tenner-tenners": keys.map((k) => ({ tennerId: k.tennerId, title: `T ${String(k.tennerId)}` })) } };
+    });
+    const titles = await new DynamoDbTennerRepository(c, "tenner-tenners", "h").getTitles("default", [...ids, "t-0"]);
+    expect(titles.size).toBe(101);
+    expect(titles.get("t-100")).toBe("T t-100");
+    expect(calls).toHaveLength(3);
+    expect((calls[0] as BatchGetCommand["input"]).RequestItems?.["tenner-tenners"]).toMatchObject({ ProjectionExpression: "#tennerId, #title" });
+  });
+
+  it("fails when keys remain unprocessed after retries", async () => {
+    const c = client(async (command) => ({ UnprocessedKeys: { "tenner-tenners": { Keys: (command as BatchGetCommand).input.RequestItems?.["tenner-tenners"]?.Keys } } }));
+    await expect(new DynamoDbTennerRepository(c, "tenner-tenners", "h").getTitles("default", ["t-1"])).rejects.toBeInstanceOf(PersistenceError);
+    expect(c.send).toHaveBeenCalledTimes(4);
+  });
+
+  it("returns an empty map for no ids", async () => {
+    const c = client(async () => ({}));
+    await expect(new DynamoDbTennerRepository(c, "a", "h").getTitles("default", [])).resolves.toEqual(new Map());
+    expect(c.send).not.toHaveBeenCalled();
   });
 });

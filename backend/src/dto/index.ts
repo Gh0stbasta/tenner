@@ -5,3 +5,4 @@ export * from "./health.dto.js";
 export * from "./tenner.dto.js";
 export * from "./list-tenners.dto.js";
 export * from "./dashboard.dto.js";
+export * from "./history.dto.js";

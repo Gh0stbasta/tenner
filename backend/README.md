@@ -262,6 +262,36 @@ There is no Scan and no query per section or per Tenner.
 **Logs:** "Dashboard requested" (`DashboardServed`, `referenceDate`, filters, counts, `totalActionableMinutes`,
 `durationMs`) or "Dashboard failed" (`DashboardFailed`, `errorCode`, `durationMs`).
 
+### Completion History (read-only)
+
+`GET /history` returns household history, newest first:
+
+| Parameter | Values |
+|---|---|
+| `from`, `to` | `YYYY-MM-DD`, inclusive UTC days (`from <= to`) |
+| `completedBy` | `STEFAN`, `JULIA` |
+| `limit` | 1–100, default 20 |
+| `cursor` | the `nextCursor` value of the previous page |
+| `includeUndone` | `true` includes reverted completions (default `false`) |
+
+`GET /tenners/{tennerId}/history` returns the history of one Tenner, newest first. It accepts `limit`, `cursor`
+and `includeUndone`. It also works for deleted Tenners and returns 404 if the Tenner never existed.
+
+Each item contains `completionId`, `tennerId`, `tennerTitle` (`null` if the Tenner record no longer exists),
+`completedBy`, `completedAt`, `actualMinutes` and `revertedAt`.
+
+**Access pattern:**
+- Queries only, no Scan: `completedAt-index` for the household, `tennerId-completedAt-index` per Tenner.
+- The date range is part of the key condition (`BETWEEN`). `completedBy` and undone completions are filter
+  expressions.
+- Because filters apply after DynamoDB's `Limit`, the repository pages until `limit` matches are found
+  (at most 20 DynamoDB pages per request).
+- Titles come from one `BatchGetItem` per 100 Tenners, projecting `tennerId` and `title` only. Unprocessed keys are
+  retried up to 3 times.
+
+**Cursor:** base64url JSON with the tenant and the key of the last returned item. A cursor for another tenant,
+or a tampered cursor, returns 400.
+
 ## Errors and Responses
 
 | Error | HTTP | Code |
@@ -304,6 +334,8 @@ and a Tenner fixture.
 | `POST /tenners/{tennerId}/undo-completion` | `200 { success: true, data: { tenner, revertedCompletion } }` (TICKET-014). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `NO_COMPLETION_TO_UNDO`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | `POST /tenners/{tennerId}/restore` | `200 { success: true, data: { tennerId, active, deletedAt } }` (TICKET-015, idempotent). Returns `400`, `404`, or `409` with `TENNER_NOT_DELETED` or `CONCURRENT_MODIFICATION` |
 | `GET /dashboard` | `200 { success: true, data: DashboardResponse }` (TICKET-016). Returns `400 VALIDATION_ERROR` "Invalid dashboard query." |
+| `GET /history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `400` for invalid filters or cursor |
+| `GET /tenners/{tennerId}/history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `404` for an unknown Tenner |
 | unknown route | `404 NOT_FOUND` |
 
 ### POST /tenners

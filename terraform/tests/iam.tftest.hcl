@@ -82,6 +82,20 @@ run "dynamodb_policy_is_scoped_to_tenner_tables" {
   }
 }
 
+run "batch_get_is_limited_to_the_tenner_table" {
+  command = plan
+
+  assert {
+    condition     = data.aws_iam_policy_document.api_dynamodb.statement[1].actions == toset(["dynamodb:BatchGetItem"])
+    error_message = "Second statement must only allow BatchGetItem."
+  }
+
+  assert {
+    condition     = data.aws_iam_policy_document.api_dynamodb.statement[1].resources == toset(["arn:aws:dynamodb:eu-central-1:000000000000:table/tenner-tenners"])
+    error_message = "BatchGetItem must be limited to the Tenner table."
+  }
+}
+
 run "logging_policy_is_scoped_to_api_log_group" {
   command = plan
 

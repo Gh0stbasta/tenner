@@ -34,6 +34,8 @@ export type TennerUpdate = {
  * PersistenceError and never validate input (that is the service's job).
  */
 export interface TennerRepository {
+  /** Titles of the given Tenners (including deleted ones); missing IDs are absent from the map (TICKET-020). */
+  getTitles(tenantId: string, tennerIds: readonly string[]): Promise<Map<string, string>>;
   /** The Tenner (including soft-deleted ones) or undefined. */
   getById(tenantId: string, tennerId: string): Promise<Tenner | undefined>;
   /**

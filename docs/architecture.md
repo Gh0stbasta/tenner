@@ -944,6 +944,7 @@ The `tenner-api-role` has two inline policies:
 |---|---|---|
 | `tenner-api-role-logging` | `logs:CreateLogStream`, `logs:PutLogEvents` | `/tenner/api` log streams |
 | `tenner-api-role-dynamodb` | `GetItem`, `PutItem`, `UpdateItem`, `DeleteItem`, `Query`, `Scan` | the two table ARNs and their `/index/*` |
+| `tenner-api-role-dynamodb` (statement 2, TICKET-020) | `BatchGetItem` | `tenner-tenners` only (title lookup for history pages) |
 
 - No wildcard actions, and no wildcard resources beyond each table's own indexes.
 - Terraform tests check both policies, and a mutation check showed that wildcards make the tests fail.
@@ -1000,7 +1001,7 @@ index.ts (routing, correlation, error mapping)
 - **Enforcement:** ESLint fails if code outside `config.ts` reads `process.env`, or if handlers or services
   import the AWS SDK or `clients/`.
 - **Endpoints:** API routes are listed in `local.api_routes` (`terraform/locals.tf`). Each one is an explicit
-  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009), `GET /tenners` (TICKET-010), `PUT /tenners/{tennerId}` (TICKET-011), `DELETE /tenners/{tennerId}` (TICKET-012), `POST /tenners/{tennerId}/complete` (TICKET-013), `POST /tenners/{tennerId}/undo-completion` (TICKET-014), `POST /tenners/{tennerId}/restore` (TICKET-015), `GET /dashboard` (TICKET-016), `GET /tenners/{tennerId}` (TICKET-019).
+  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009), `GET /tenners` (TICKET-010), `PUT /tenners/{tennerId}` (TICKET-011), `DELETE /tenners/{tennerId}` (TICKET-012), `POST /tenners/{tennerId}/complete` (TICKET-013), `POST /tenners/{tennerId}/undo-completion` (TICKET-014), `POST /tenners/{tennerId}/restore` (TICKET-015), `GET /dashboard` (TICKET-016), `GET /tenners/{tennerId}` (TICKET-019), `GET /history` and `GET /tenners/{tennerId}/history` (TICKET-020).
 - **Read access:** lists always use a DynamoDB Query on the tenant partition, choosing `assignedTo-index` or
   `nextDue-index` when a filter allows it, and never a Scan. The `dynamodb:Scan` permission (TICKET-007) is unused.
 - **Write access:** creates are conditional puts (`attribute_not_exists`). Updates are conditional `UpdateItem`

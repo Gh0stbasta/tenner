@@ -8,8 +8,8 @@ describe("test mocks", () => {
     await expect(repository.getById("default", "t1")).resolves.toMatchObject({ title: "Vacuum Office" });
 
     const completions = mockCompletionRepository();
-    completions.getHistory.mockResolvedValue([]);
-    await expect(completions.getHistory("default")).resolves.toEqual([]);
+    completions.getHistory.mockResolvedValue({ items: [] });
+    await expect(completions.getHistory("default", { limit: 20 })).resolves.toEqual({ items: [] });
 
     const service = mockTennerService();
     service.listDueTenners.mockResolvedValue([]);

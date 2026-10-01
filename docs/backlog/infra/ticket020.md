@@ -275,3 +275,60 @@ Do not implement:
 - Analytics aggregations (ANALYTICS domain)
 - Export (DATA-001)
 - Frontend integration (FRONTEND-009)
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `GET /history` and `GET /tenners/{tennerId}/history`: `backend/src/handlers/history.ts`, routes in `src/index.ts` and `local.api_routes`
+- [x] DTOs (`HistoryRequest`, `TennerHistoryRequest`, `HistoryItemResponse`, `HistoryResponse`), schemas, `HistoryService`
+- [x] Repositories:
+  - `CompletionRepository.getHistory` and `getByTenner`, returning pages with `lastKey`
+  - `TennerRepository.getTitles` (`BatchGetItem`)
+- [x] Opaque cursors with tenant binding (`src/utils/cursor.ts`)
+- [x] GSI: `tennerId-completedAt-index` (`tenantTennerId`, `completedAt`) **already exists from TICKET-014**.
+  New completions write `tenantTennerId`, so no new index and no backfill are needed.
+- [x] IAM: `dynamodb:BatchGetItem` on `tenner-tenners` only (statement 2), plus a Terraform test
+- [x] Tests and documentation
+
+### Acceptance Criteria
+
+| Criterion | Status |
+|---|---|
+| Household history endpoint implemented | [x] |
+| Per-Tenner history endpoint implemented | [x] (404 for unknown Tenners) |
+| Results ordered newest first | [x] `ScanIndexForward: false` |
+| Pagination works with opaque cursors | [x] round trip tested. The cursor points at the last *returned* item, so pages cut short by filters are correct |
+| Undone completions excluded by default | [x] `includeUndone=true` includes them |
+| No Scan operations used | [x] Queries on GSIs only |
+| New GSI provisioned via Terraform | [x] exists since TICKET-014 |
+| Backfill script is idempotent | [x] not needed. No completions without `tenantTennerId` exist, because none were deployed before TICKET-014 |
+| IAM follows least privilege | [x] `BatchGetItem` only on the Tenner table (tested). `Query` on history indexes was already granted |
+| Tests passing | [x] 362 backend tests (100% coverage), 27 Terraform tests |
+| Documentation updated | [x] |
+
+Covered test cases:
+- household ordering, date range, user filter, per-Tenner history
+- cursor round trip, invalid cursor, foreign-tenant cursor
+- undone exclusion, limit boundaries (0, 101, non-numeric), missing Tenner title
+
+### Validation Performed
+
+Bundle against a fake DynamoDB endpoint:
+- **First page:** the `completedAt-index` Query (filters `revertedAt` and `completedBy`) plus one `BatchGetItem`
+  returns titles, with `null` for the missing Tenner, and a cursor.
+- **Second page:** the cursor turns into a correct `ExclusiveStartKey`.
+
+### Assumptions
+
+- **Date range in UTC:** `from`/`to` are UTC days (`T00:00:00Z` to `T23:59:59Z`), consistent with how
+  `completedAt` is stored (TD-005).
+- **Page budget:** at most 20 DynamoDB pages per request. If heavy filtering stops the scan early, the response
+  contains fewer items and a `nextCursor`.
+- **`revertedAt`** is included in each item, so undone entries are recognizable with `includeUndone=true`.
+- **`CompletionRepository.create()`** from TICKET-008 was removed. Completions are only written transactionally
+  together with the Tenner (TICKET-013/014), so a standalone `create` would be a trap.

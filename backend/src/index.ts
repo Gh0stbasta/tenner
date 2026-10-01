@@ -13,6 +13,7 @@ import { dashboardHandler, type GetDashboard } from "./handlers/dashboard.js";
 import { deleteTennerHandler, type DeleteTenner } from "./handlers/delete-tenner.js";
 import { getTennerHandler, type GetTenner } from "./handlers/get-tenner.js";
 import { health, type DatabaseProbe } from "./handlers/health.js";
+import { historyHandler, tennerHistoryHandler, type GetHistory, type GetTennerHistory } from "./handlers/history.js";
 import { listTennersHandler, type ListTenners } from "./handlers/list-tenners.js";
 import { restoreTennerHandler, type RestoreTenner } from "./handlers/restore-tenner.js";
 import { undoCompletionHandler, type UndoCompletion } from "./handlers/undo-completion.js";
@@ -24,6 +25,7 @@ import {
   DashboardService,
   DeleteTennerService,
   GetTennerService,
+  HistoryService,
   ListTennersService,
   RestoreTennerService,
   UndoCompletionService,
@@ -48,6 +50,8 @@ export interface Dependencies {
   readonly restoreTenner: RestoreTenner;
   readonly getDashboard: GetDashboard;
   readonly getTenner: GetTenner;
+  readonly getHistory: GetHistory;
+  readonly getTennerHistory: GetTennerHistory;
 }
 
 /** Per-request context passed to route handlers. */
@@ -65,6 +69,8 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "POST /tenners": ({ event, deps, logger }) => createTennerHandler(event, deps.config.tenantId, deps.createTenner, logger),
   "GET /tenners": ({ event, deps, logger }) => listTennersHandler(event, deps.config.tenantId, deps.listTenners, logger),
   "GET /tenners/{tennerId}": ({ event, deps, logger }) => getTennerHandler(event, deps.config.tenantId, deps.getTenner, logger),
+  "GET /history": ({ event, deps, logger }) => historyHandler(event, deps.config.tenantId, deps.getHistory, logger),
+  "GET /tenners/{tennerId}/history": ({ event, deps, logger }) => tennerHistoryHandler(event, deps.config.tenantId, deps.getTennerHistory, logger),
   "PUT /tenners/{tennerId}": ({ event, deps, logger }) => updateTennerHandler(event, deps.config.tenantId, deps.updateTenner, logger),
   "DELETE /tenners/{tennerId}": ({ event, deps, logger }) => deleteTennerHandler(event, deps.config.tenantId, deps.deleteTenner, logger),
   "POST /tenners/{tennerId}/complete": ({ event, deps, logger }) => completeTennerHandler(event, deps.config.tenantId, deps.completeTenner, logger),
@@ -93,6 +99,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const createTennerService = tennerRepository ? new CreateTennerService(tennerRepository, systemClock, uuidGenerator) : undefined;
   const listTennersService = tennerRepository ? new ListTennersService(tennerRepository, systemClock) : undefined;
   const getTennerService = tennerRepository ? new GetTennerService(tennerRepository) : undefined;
+  const historyService = tennerRepository && completionRepository ? new HistoryService(completionRepository, tennerRepository) : undefined;
   const updateTennerService = tennerRepository ? new UpdateTennerService(tennerRepository, systemClock) : undefined;
   const deleteTennerService = tennerRepository ? new DeleteTennerService(tennerRepository, systemClock) : undefined;
   const restoreTennerService = tennerRepository ? new RestoreTennerService(tennerRepository, systemClock) : undefined;
@@ -110,6 +117,8 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     updateTenner: updateTennerService ? (tenantId, id, request) => updateTennerService.updateTenner(tenantId, id, request) : notConfigured,
     deleteTenner: deleteTennerService ? (tenantId, id) => deleteTennerService.deleteTenner(tenantId, id) : notConfigured,
     restoreTenner: restoreTennerService ? (tenantId, id) => restoreTennerService.restoreTenner(tenantId, id) : notConfigured,
+    getHistory: historyService ? (tenantId, request) => historyService.getHistory(tenantId, request) : notConfigured,
+    getTennerHistory: historyService ? (tenantId, id, request) => historyService.getTennerHistory(tenantId, id, request) : notConfigured,
     getTenner: getTennerService ? (tenantId, id, options) => getTennerService.getTenner(tenantId, id, options) : notConfigured,
     getDashboard: dashboardService ? (tenantId, request) => dashboardService.getDashboard(tenantId, request) : notConfigured,
     completeTenner: completeTennerService

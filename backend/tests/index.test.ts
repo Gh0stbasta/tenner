@@ -38,6 +38,8 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     })),
     getDashboard: vi.fn(async () => emptyDashboard),
     getTenner: vi.fn(async () => tennerResponse),
+    getHistory: vi.fn(async () => ({ items: [], nextCursor: null })),
+    getTennerHistory: vi.fn(async () => ({ items: [], nextCursor: null })),
     restoreTenner: vi.fn(async () => ({ response: { tennerId: "t-1", active: true, deletedAt: null }, status: "RESTORED" as const, previousDeletedAt: "2026-10-01T18:00:00Z" })),
     undoCompletion: vi.fn(async () => ({
       response: {
@@ -346,6 +348,29 @@ describe("GET /tenners/{tennerId}", () => {
     expect(d.getTenner).toHaveBeenCalledWith("default", "t-1", { includeDeleted: true });
     expect((await route(get("bad id"), d)).statusCode).toBe(400);
     expect((await route(get("t-1", { includeDeleted: "yes" }), d)).statusCode).toBe(400);
+  });
+});
+
+describe("history routes", () => {
+  it("GET /history parses filters", async () => {
+    const d = deps();
+    const response = await route(event("GET /history", {}, undefined, { from: "2026-09-01", to: "2026-09-30", completedBy: "JULIA", limit: "50", includeUndone: "true" }), d);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: { items: [], nextCursor: null } });
+    expect(d.getHistory).toHaveBeenCalledWith("default", { from: "2026-09-01", to: "2026-09-30", completedBy: "JULIA", limit: 50, includeUndone: true });
+  });
+
+  it.each([{ limit: "0" }, { limit: "101" }, { limit: "ten" }, { from: "2026-10-02", to: "2026-10-01" }, { cursor: "not base64!" }, { completedBy: "BOB" }, { foo: "1" }])("GET /history rejects %j", async (query) => {
+    const d = deps();
+    expect((await route(event("GET /history", {}, undefined, query), d)).statusCode).toBe(400);
+    expect(d.getHistory).not.toHaveBeenCalled();
+  });
+
+  it("GET /tenners/{tennerId}/history passes id and paging", async () => {
+    const d = deps();
+    const ev = { routeKey: "GET /tenners/{tennerId}/history", headers: {}, pathParameters: { tennerId: "t-1" }, queryStringParameters: { limit: "5" }, requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2;
+    expect((await route(ev, d)).statusCode).toBe(200);
+    expect(d.getTennerHistory).toHaveBeenCalledWith("default", "t-1", { limit: 5 });
   });
 });
 

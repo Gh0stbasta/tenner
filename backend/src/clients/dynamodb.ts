@@ -4,7 +4,15 @@
  */
 
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, type PutCommand, type QueryCommand, type TransactWriteCommand, type UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  GetCommand,
+  type BatchGetCommand,
+  type PutCommand,
+  type QueryCommand,
+  type TransactWriteCommand,
+  type UpdateCommand,
+} from "@aws-sdk/lib-dynamodb";
 import type { TableConfig } from "../config.js";
 
 /** Probe timeout. Well below the Lambda timeout so /health answers even if DynamoDB hangs. */
@@ -14,7 +22,7 @@ export const PROBE_TIMEOUT_MS = 2000;
 export const PROBE_KEY = { tenantId: "__healthcheck__" } as const;
 
 /** Commands used by the application. Extend when a repository needs a new command. */
-export type DocumentCommand = GetCommand | PutCommand | QueryCommand | UpdateCommand | TransactWriteCommand;
+export type DocumentCommand = GetCommand | PutCommand | QueryCommand | UpdateCommand | TransactWriteCommand | BatchGetCommand;
 
 /** Minimal client interface (satisfied by DynamoDBDocumentClient), so tests can provide a fake. */
 export interface DocumentSender {

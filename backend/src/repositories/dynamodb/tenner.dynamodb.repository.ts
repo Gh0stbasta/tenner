@@ -1,11 +1,13 @@
 /** DynamoDB implementation of the Tenner repository (table tenner-tenners). */
 
 import {
+  BatchGetCommand,
   GetCommand,
   PutCommand,
   QueryCommand,
   TransactWriteCommand,
   UpdateCommand,
+  type BatchGetCommandOutput,
   type GetCommandOutput,
   type QueryCommandOutput,
   type UpdateCommandOutput,
@@ -96,6 +98,32 @@ export class DynamoDbTennerRepository implements TennerRepository {
     // ALL_NEW on an existing item always returns attributes; anything else is a storage contract violation.
     if (!attributes) throw new PersistenceError("Failed to update Tenner.");
     return toTenner(attributes);
+  }
+
+  /** BatchGetItem (100 keys per request, unprocessed keys retried up to 3 times), titles only. */
+  async getTitles(tenantId: string, tennerIds: readonly string[]): Promise<Map<string, string>> {
+    const titles = new Map<string, string>();
+    const unique = [...new Set(tennerIds)];
+    try {
+      for (let i = 0; i < unique.length; i += 100) {
+        let keys: Record<string, unknown>[] | undefined = unique.slice(i, i + 100).map((tennerId) => ({ tenantId, tennerId }));
+        for (let attempt = 0; keys?.length && attempt < 4; attempt++) {
+          const result = (await this.client.send(
+            new BatchGetCommand({
+              RequestItems: {
+                [this.tableName]: { Keys: keys, ProjectionExpression: "#tennerId, #title", ExpressionAttributeNames: { "#tennerId": "tennerId", "#title": "title" } },
+              },
+            }),
+          )) as BatchGetCommandOutput;
+          for (const item of result.Responses?.[this.tableName] ?? []) titles.set(String(item.tennerId), String(item.title));
+          keys = result.UnprocessedKeys?.[this.tableName]?.Keys;
+        }
+        if (keys?.length) throw new Error("Unprocessed keys remained after retries.");
+      }
+    } catch (error) {
+      throw toPersistenceError("load Tenner titles", error);
+    }
+    return titles;
   }
 
   async getById(tenantId: string, tennerId: string): Promise<Tenner | undefined> {

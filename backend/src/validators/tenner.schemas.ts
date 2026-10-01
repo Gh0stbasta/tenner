@@ -3,6 +3,8 @@ import {
   TENNER_SORT_FIELDS,
   type CompleteTennerRequest,
   type DashboardRequest,
+  type HistoryRequest,
+  type TennerHistoryRequest,
   type CreateTennerRequest,
   type ListTennersRequest,
   type RestoreTennerRequest,
@@ -77,3 +79,35 @@ export const dashboardQuerySchema = z.strictObject({
 export const getTennerQuerySchema = z.strictObject({
   includeDeleted: booleanFlagSchema.optional(),
 });
+
+/** Page size as query-string number: integer 1 - 100. */
+const limitSchema = z
+  .string()
+  .regex(/^\d{1,3}$/, "Must be an integer.")
+  .transform(Number)
+  .pipe(z.number().int().min(1).max(100));
+
+/** Opaque pagination cursor (base64url). */
+const cursorSchema = z.string().regex(/^[A-Za-z0-9_-]{1,2048}$/, "Invalid cursor.");
+
+/** Query string of GET /history (TICKET-020). */
+export const historyQuerySchema = z
+  .strictObject({
+    from: isoDateSchema.optional(),
+    to: isoDateSchema.optional(),
+    completedBy: userIdSchema.optional(),
+    limit: limitSchema.optional(),
+    cursor: cursorSchema.optional(),
+    includeUndone: booleanFlagSchema.optional(),
+  })
+  .refine((q) => q.from === undefined || q.to === undefined || q.from <= q.to, { message: "from must not be after to.", path: ["from"] }) satisfies z.ZodType<
+  HistoryRequest,
+  Record<string, string | undefined>
+>;
+
+/** Query string of GET /tenners/{tennerId}/history (TICKET-020). */
+export const tennerHistoryQuerySchema = z.strictObject({
+  limit: limitSchema.optional(),
+  cursor: cursorSchema.optional(),
+  includeUndone: booleanFlagSchema.optional(),
+}) satisfies z.ZodType<TennerHistoryRequest, Record<string, string | undefined>>;

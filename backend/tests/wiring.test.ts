@@ -94,6 +94,17 @@ describe("createDependencies wiring", () => {
     expect(send.mock.calls[0]?.[0]).toBeInstanceOf(GetCommand);
   });
 
+  it("reads history with titles", async () => {
+    send.mockImplementation(async (command: unknown) =>
+      command instanceof QueryCommand
+        ? { Items: [{ tenantId: "default", historyId: "c-1", tennerId: "t-1", completedBy: "STEFAN", completedAt: "2026-10-01T10:00:00Z", actualMinutes: 10 }] }
+        : { Responses: { "tenner-tenners": [{ tennerId: "t-1", title: "Vacuum Office" }] } },
+    );
+    await expect(deps().getHistory("default", {})).resolves.toMatchObject({ items: [{ tennerTitle: "Vacuum Office" }], nextCursor: null });
+    send.mockImplementation(async (command: unknown) => (command instanceof GetCommand ? { Item: tennerFixture() } : { Items: [] }));
+    await expect(deps().getTennerHistory("default", "t-1", {})).resolves.toEqual({ items: [], nextCursor: null });
+  });
+
   it("updates Tenners in the configured table", async () => {
     send.mockResolvedValue({ Attributes: tennerFixture({ title: "New title" }) });
     await expect(deps().updateTenner("default", "t-1", { title: "New title" })).resolves.toMatchObject({ title: "New title" });

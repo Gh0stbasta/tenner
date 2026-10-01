@@ -58,6 +58,13 @@ data "aws_iam_policy_document" "api_dynamodb" {
       "${aws_dynamodb_table.history.arn}/index/*",
     ]
   }
+
+  # Title lookup for history pages (TICKET-020): batch reads on the Tenner table only.
+  statement {
+    sid       = "TennerTitleLookup"
+    actions   = ["dynamodb:BatchGetItem"]
+    resources = [aws_dynamodb_table.tenners.arn]
+  }
 }
 
 resource "aws_iam_role_policy" "api_dynamodb" {
