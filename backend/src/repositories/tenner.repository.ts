@@ -64,4 +64,10 @@ export interface TennerRepository {
    * Errors: ConflictError CONCURRENT_MODIFICATION if the Tenner changed or the completion was already reverted.
    */
   undoCompletion(restored: Tenner, reverted: CompletionRecord, expected: Tenner): Promise<void>;
+  /**
+   * Undo a soft delete (TICKET-015): active = true, deletedAt = null, updatedAt = timestamp.
+   * Schedule fields are untouched. Optimistic lock on `expectedUpdatedAt`;
+   * ConflictError CONCURRENT_MODIFICATION if the Tenner changed or does not exist.
+   */
+  restore(tenantId: string, tennerId: string, expectedUpdatedAt: string, timestamp: string): Promise<Tenner>;
 }

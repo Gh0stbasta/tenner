@@ -6,3 +6,4 @@ export * from "./update-tenner.service.js";
 export * from "./delete-tenner.service.js";
 export * from "./complete-tenner.service.js";
 export * from "./undo-completion.service.js";
+export * from "./restore-tenner.service.js";

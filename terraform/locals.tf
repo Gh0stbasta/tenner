@@ -45,6 +45,7 @@ locals {
     "DELETE /tenners/{tennerId}",               # TICKET-012 (soft delete)
     "POST /tenners/{tennerId}/complete",        # TICKET-013
     "POST /tenners/{tennerId}/undo-completion", # TICKET-014
+    "POST /tenners/{tennerId}/restore",         # TICKET-015
   ]
 
   # Lambda bundle built by `npm run build` in backend/ (dist/index.mjs).

@@ -31,7 +31,7 @@ export function mockLogger(): Mocked<Logger> {
 }
 
 export function mockTennerRepository(): Mocked<TennerRepository> {
-  return { getById: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn(), completeTenner: vi.fn(), undoCompletion: vi.fn() };
+  return { getById: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn(), completeTenner: vi.fn(), undoCompletion: vi.fn(), restore: vi.fn() };
 }
 
 export function mockCompletionRepository(): Mocked<CompletionRepository> {

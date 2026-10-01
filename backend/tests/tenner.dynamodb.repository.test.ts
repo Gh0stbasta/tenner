@@ -186,3 +186,36 @@ describe("DynamoDbTennerRepository.delete (soft delete)", () => {
     await expect(new DynamoDbTennerRepository(empty, "t", "tenner-history").delete("default", "x", TS)).rejects.toBeInstanceOf(PersistenceError);
   });
 });
+
+describe("DynamoDbTennerRepository.restore", () => {
+  const TS = "2026-10-02T09:00:00Z";
+
+  it("sets active, clears deletedAt and refreshes updatedAt, locked on updatedAt; schedule untouched", async () => {
+    const restoredItem = tennerFixture({ updatedAt: TS });
+    const c = client(async () => ({ Attributes: restoredItem }));
+    const result = await new DynamoDbTennerRepository(c, "tenner-tenners", "tenner-history").restore("default", "t-1", "2026-10-01T18:00:00Z", TS);
+
+    expect(result).toEqual(restoredItem);
+    const command = c.send.mock.calls[0]?.[0] as UpdateCommand;
+    expect(command.input).toEqual({
+      TableName: "tenner-tenners",
+      Key: { tenantId: "default", tennerId: "t-1" },
+      UpdateExpression: "SET #active = :true, #deletedAt = :null, #updatedAt = :timestamp",
+      ConditionExpression: "attribute_exists(tennerId) AND #updatedAt = :expectedUpdatedAt",
+      ExpressionAttributeNames: { "#active": "active", "#deletedAt": "deletedAt", "#updatedAt": "updatedAt" },
+      ExpressionAttributeValues: { ":true": true, ":null": null, ":timestamp": TS, ":expectedUpdatedAt": "2026-10-01T18:00:00Z" },
+      ReturnValues: "ALL_NEW",
+    });
+    expect(command.input.UpdateExpression).not.toMatch(/nextDue|lastCompleted/);
+  });
+
+  it("maps a failed lock to CONCURRENT_MODIFICATION", async () => {
+    const c = client(async () => Promise.reject(namedError("ConditionalCheckFailedException")));
+    await expect(new DynamoDbTennerRepository(c, "t", "h").restore("default", "t-1", "x", TS)).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION", statusCode: 409 });
+  });
+
+  it("maps other failures and empty responses to PersistenceError", async () => {
+    await expect(new DynamoDbTennerRepository(client(async () => Promise.reject(namedError("ThrottlingException"))), "t", "h").restore("default", "t-1", "x", TS)).rejects.toBeInstanceOf(PersistenceError);
+    await expect(new DynamoDbTennerRepository(client(async () => ({})), "t", "h").restore("default", "t-1", "x", TS)).rejects.toBeInstanceOf(PersistenceError);
+  });
+});

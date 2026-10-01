@@ -42,6 +42,18 @@ export interface DeleteTennerResponse {
   readonly deleted: true;
 }
 
+/** POST /tenners/{tennerId}/restore (TICKET-015). */
+export interface RestoreTennerRequest {
+  /** Used for audit logging. */
+  readonly restoredBy: UserId;
+}
+
+export interface RestoreTennerResponse {
+  readonly tennerId: string;
+  readonly active: boolean;
+  readonly deletedAt: string | null;
+}
+
 export function toTennerResponse(tenner: Tenner): TennerResponse {
   return {
     tennerId: tenner.tennerId,

@@ -26,6 +26,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       },
       replayed: false,
     })),
+    restoreTenner: vi.fn(async () => ({ response: { tennerId: "t-1", active: true, deletedAt: null }, status: "RESTORED" as const, previousDeletedAt: "2026-10-01T18:00:00Z" })),
     undoCompletion: vi.fn(async () => ({
       response: {
         tenner: tennerResponse,
@@ -275,6 +276,25 @@ describe("POST /tenners/{tennerId}/undo-completion", () => {
     const response = await route(undo({ revertedBy: "STEFAN" }), d);
     expect(response.statusCode).toBe(409);
     expect(body(response).error).toEqual({ code: "NO_COMPLETION_TO_UNDO", message: "No active completion is available to undo." });
+  });
+});
+
+describe("POST /tenners/{tennerId}/restore", () => {
+  const restore = (payload: unknown): APIGatewayProxyEventV2 =>
+    ({ routeKey: "POST /tenners/{tennerId}/restore", headers: {}, body: JSON.stringify(payload), pathParameters: { tennerId: "t-1" }, requestContext: { requestId: "req-1" } }) as unknown as APIGatewayProxyEventV2;
+
+  it("restores and returns { tennerId, active, deletedAt }", async () => {
+    const d = deps();
+    const response = await route(restore({ restoredBy: "JULIA" }), d);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: { tennerId: "t-1", active: true, deletedAt: null } });
+    expect(d.restoreTenner).toHaveBeenCalledWith("default", "t-1");
+  });
+
+  it("requires restoredBy", async () => {
+    const d = deps();
+    expect((await route(restore({}), d)).statusCode).toBe(400);
+    expect(d.restoreTenner).not.toHaveBeenCalled();
   });
 });
 

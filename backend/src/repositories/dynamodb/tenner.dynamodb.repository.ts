@@ -204,6 +204,28 @@ export class DynamoDbTennerRepository implements TennerRepository {
     }
   }
 
+  async restore(tenantId: string, tennerId: string, expectedUpdatedAt: string, timestamp: string): Promise<Tenner> {
+    let attributes: Record<string, unknown> | undefined;
+    try {
+      const result = (await this.client.send(
+        new UpdateCommand({
+          TableName: this.tableName,
+          Key: { tenantId, tennerId },
+          UpdateExpression: "SET #active = :true, #deletedAt = :null, #updatedAt = :timestamp",
+          ConditionExpression: "attribute_exists(tennerId) AND #updatedAt = :expectedUpdatedAt",
+          ExpressionAttributeNames: { "#active": "active", "#deletedAt": "deletedAt", "#updatedAt": "updatedAt" },
+          ExpressionAttributeValues: { ":true": true, ":null": null, ":timestamp": timestamp, ":expectedUpdatedAt": expectedUpdatedAt },
+          ReturnValues: "ALL_NEW",
+        }),
+      )) as UpdateCommandOutput;
+      attributes = result.Attributes;
+    } catch (error) {
+      throw toConflictOrPersistenceError("restore Tenner", "The Tenner was modified by another request.", error, "CONCURRENT_MODIFICATION");
+    }
+    if (!attributes) throw new PersistenceError("Failed to restore Tenner.");
+    return toTenner(attributes);
+  }
+
   /** Update of lastCompleted/nextDue/updatedAt, locked on the loaded Tenner state. */
   private scheduleUpdate(updated: Tenner, expected: Tenner) {
     const lastCompletedCondition =

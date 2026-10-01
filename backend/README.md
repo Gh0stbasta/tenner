@@ -210,6 +210,25 @@ result without reverting another completion. Reusing the key with a different re
 `revertedBy`, `restoredPrevious`, `restoredNextDue`, `durationMs`) or "Undo completion failed"
 (`UndoNoCompletion` / `UndoConflict` / `UndoFailed`, `errorCode`, `durationMs`).
 
+### POST /tenners/{tennerId}/restore
+
+```json
+{ "restoredBy": "STEFAN" }
+```
+
+`restoredBy` is required and used for audit logging only.
+
+| State | Result |
+|---|---|
+| deleted (`deletedAt` set) | one `UpdateItem`: `active = true`, `deletedAt = null`, `updatedAt = now`, condition `updatedAt` = loaded value → 200 |
+| already active | no write → 200 (idempotent) |
+| inactive but not deleted (deactivated via PUT) | 409 `TENNER_NOT_DELETED` (reactivate with `PUT {"active": true}`) |
+| missing | 404 |
+| lock conflict | 409 `CONCURRENT_MODIFICATION`, unless a parallel restore already succeeded (→ 200) |
+
+`lastCompleted` and `nextDue` are never changed. A past `nextDue` simply makes the Tenner overdue again.
+`tenner-history` is not touched.
+
 ## Errors and Responses
 
 | Error | HTTP | Code |
@@ -249,6 +268,7 @@ and a Tenner fixture.
 | `DELETE /tenners/{tennerId}` | `200 { success: true, data: { tennerId, deleted: true } }` (TICKET-012, soft delete, idempotent). Returns `404 NOT_FOUND` |
 | `POST /tenners/{tennerId}/complete` | `200 { success: true, data: { tenner, completion } }` (TICKET-013). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | `POST /tenners/{tennerId}/undo-completion` | `200 { success: true, data: { tenner, revertedCompletion } }` (TICKET-014). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `NO_COMPLETION_TO_UNDO`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
+| `POST /tenners/{tennerId}/restore` | `200 { success: true, data: { tennerId, active, deletedAt } }` (TICKET-015, idempotent). Returns `400`, `404`, or `409` with `TENNER_NOT_DELETED` or `CONCURRENT_MODIFICATION` |
 | unknown route | `404 NOT_FOUND` |
 
 ### POST /tenners

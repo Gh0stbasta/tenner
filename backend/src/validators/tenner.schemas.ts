@@ -4,6 +4,7 @@ import {
   type CompleteTennerRequest,
   type CreateTennerRequest,
   type ListTennersRequest,
+  type RestoreTennerRequest,
   type UndoCompletionRequest,
   type UpdateTennerRequest,
 } from "../dto/index.js";
@@ -60,3 +61,5 @@ export const undoCompletionSchema = z.strictObject({
   revertedBy: userIdSchema,
   reason: z.string().trim().min(1, "Reason must not be blank.").max(250).optional(),
 }) satisfies z.ZodType<UndoCompletionRequest>;
+
+export const restoreTennerSchema = z.strictObject({ restoredBy: userIdSchema }) satisfies z.ZodType<RestoreTennerRequest>;

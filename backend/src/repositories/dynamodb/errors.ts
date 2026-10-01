@@ -11,8 +11,8 @@ export function toPersistenceError(operation: string, error: unknown): Persisten
   return new PersistenceError(`Failed to ${operation}.`, { cause: error });
 }
 
-export function toConflictOrPersistenceError(operation: string, conflictMessage: string, error: unknown): ConflictError | PersistenceError {
-  return isConditionalCheckFailed(error) ? new ConflictError(conflictMessage) : toPersistenceError(operation, error);
+export function toConflictOrPersistenceError(operation: string, conflictMessage: string, error: unknown, conflictCode?: string): ConflictError | PersistenceError {
+  return isConditionalCheckFailed(error) ? new ConflictError(conflictMessage, conflictCode) : toPersistenceError(operation, error);
 }
 
 export function toNotFoundOrPersistenceError(operation: string, notFoundMessage: string, error: unknown): NotFoundError | PersistenceError {

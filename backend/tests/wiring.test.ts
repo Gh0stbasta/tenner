@@ -75,6 +75,13 @@ describe("createDependencies wiring", () => {
     expect(transaction.input.TransactItems?.map((i) => i.Update?.TableName)).toEqual(["tenner-history", "tenner-tenners"]);
   });
 
+  it("restores Tenners in the configured table", async () => {
+    send.mockImplementation(async (command: unknown) =>
+      command instanceof GetCommand ? { Item: tennerFixture({ active: false, deletedAt: "2026-10-01T00:00:00Z" }) } : { Attributes: tennerFixture() },
+    );
+    await expect(deps().restoreTenner("default", "t-1")).resolves.toMatchObject({ status: "RESTORED" });
+  });
+
   it("updates Tenners in the configured table", async () => {
     send.mockResolvedValue({ Attributes: tennerFixture({ title: "New title" }) });
     await expect(deps().updateTenner("default", "t-1", { title: "New title" })).resolves.toMatchObject({ title: "New title" });
