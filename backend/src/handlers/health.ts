@@ -1,23 +1,15 @@
 /** GET /health: runtime, configuration and DynamoDB connectivity check. */
 
-import type { APIGatewayProxyStructuredResultV2 } from "aws-lambda";
 import type { AppConfig, TableConfig } from "../config.js";
-import { jsonResponse } from "../http.js";
+import type { DatabaseStatus, HealthResponse } from "../dto/index.js";
+import type { ApiResult } from "../types/api.js";
+import { jsonResponse } from "../utils/http.js";
 import type { Logger } from "../utils/logger.js";
-
-export type DatabaseStatus = "connected" | "unreachable" | "misconfigured";
-
-export interface HealthResponse {
-  status: "ok" | "error";
-  application: string;
-  environment: string;
-  database: DatabaseStatus;
-}
 
 /** Returns true if all tables are reachable. */
 export type DatabaseProbe = (tables: TableConfig) => Promise<boolean>;
 
-export async function health(config: AppConfig, probe: DatabaseProbe, logger: Logger): Promise<APIGatewayProxyStructuredResultV2> {
+export async function health(config: AppConfig, probe: DatabaseProbe, logger: Logger): Promise<ApiResult> {
   const database = await databaseStatus(config, probe);
   const healthy = database === "connected";
   if (!healthy) {

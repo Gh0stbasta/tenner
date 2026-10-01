@@ -7,6 +7,7 @@ describe("loadConfig", () => {
   it("uses defaults when variables are missing", () => {
     expect(loadConfig({})).toEqual({
       environment: "prod",
+      tenantId: "default",
       logLevel: "INFO",
       applicationName: "Tenner",
       tables: undefined,
@@ -16,6 +17,7 @@ describe("loadConfig", () => {
   it("reads provided variables", () => {
     expect(loadConfig({ ENVIRONMENT: "dev", LOG_LEVEL: "debug", APPLICATION_NAME: "Tenner", ...TABLES })).toEqual({
       environment: "dev",
+      tenantId: "default",
       logLevel: "DEBUG",
       applicationName: "Tenner",
       tables: { tenners: "tenner-tenners", history: "tenner-history" },

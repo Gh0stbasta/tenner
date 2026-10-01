@@ -1,0 +1,20 @@
+import { describe, expect, it } from "vitest";
+import { mockAnalyticsService, mockCompletionRepository, mockTennerRepository, mockTennerService, tennerFixture } from "./mocks/index.js";
+
+describe("test mocks", () => {
+  it("provide typed repository and service doubles", async () => {
+    const repository = mockTennerRepository();
+    repository.getById.mockResolvedValue(tennerFixture());
+    await expect(repository.getById("default", "t1")).resolves.toMatchObject({ title: "Vacuum Office" });
+
+    const completions = mockCompletionRepository();
+    completions.getHistory.mockResolvedValue([]);
+    await expect(completions.getHistory("default")).resolves.toEqual([]);
+
+    const service = mockTennerService();
+    service.listDueTenners.mockResolvedValue([]);
+    await expect(service.listDueTenners("default", "2026-10-01")).resolves.toEqual([]);
+
+    expect(Object.keys(mockAnalyticsService())).toEqual(["getDashboard", "getCompletionMetrics"]);
+  });
+});

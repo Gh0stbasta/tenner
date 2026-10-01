@@ -974,6 +974,34 @@ the environment, application name and table names. It never logs credentials, to
 
 ---
 
+# Backend Architecture
+
+Introduced by TICKET-008. Details are in [`backend/README.md`](../backend/README.md).
+
+```text
+index.ts (routing, correlation, error mapping)
+  → handlers/ (HTTP, validation)
+  → services/ (business rules, interfaces)
+  → repositories/ (persistence interfaces)
+  → clients/ (AWS SDK)
+```
+
+- **Domain models:** `Tenner`, `Completion`, `User`. The enumerations `Category` and `UserId` are the single
+  source of allowed values.
+- **Validation:** Zod schemas with centralized limits. `validate()` raises `ValidationError` with field details.
+- **Errors:** an `ApplicationError` hierarchy (`ValidationError` 400, `UnauthorizedError` 401, `NotFoundError` 404,
+  `ConflictError` 409, `PersistenceError` 500). Errors are mapped centrally to `{ success: false, error: { code, message } }`.
+  Unknown errors become `500 INTERNAL_ERROR` without internal details.
+- **Responses:** `{ success: true, data }` for business endpoints. `/health` keeps its operational format.
+- **Configuration:** `src/config.ts` is the only reader of `process.env`. The tenant defaults to `default`
+  until SECURITY-004.
+- **Logging:** JSON lines, level filtering, and a child logger per request with `correlationId`
+  (`x-correlation-id` header or the API Gateway request ID, echoed in the response).
+- **Enforcement:** ESLint fails if code outside `config.ts` reads `process.env`, or if handlers or services
+  import the AWS SDK or `clients/`.
+
+---
+
 # Future Ideas
 
 Out of scope for MVP.

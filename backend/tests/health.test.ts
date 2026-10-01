@@ -1,18 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import type { AppConfig } from "../src/config.js";
 import { health } from "../src/handlers/health.js";
-import type { Logger } from "../src/utils/logger.js";
+import { mockLogger, testConfig } from "./mocks/index.js";
 
-const config: AppConfig = {
-  environment: "prod",
-  logLevel: "INFO",
-  applicationName: "Tenner",
-  tables: { tenners: "tenner-tenners", history: "tenner-history" },
-};
-
-function logger(): Logger {
-  return { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-}
+const config = testConfig();
+const logger = mockLogger;
 
 describe("health", () => {
   it("returns 200 and connected when the database is reachable", async () => {

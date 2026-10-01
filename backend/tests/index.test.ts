@@ -1,26 +1,19 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AppConfig } from "../src/config.js";
-import { createDependencies, handler, route, type Dependencies } from "../src/index.js";
+import { ConflictError, PersistenceError, ValidationError } from "../src/exceptions/index.js";
+import { correlationIdOf, createDependencies, handler, route, type Dependencies } from "../src/index.js";
+import { mockLogger, testConfig } from "./mocks/index.js";
 
-const config: AppConfig = {
-  environment: "prod",
-  logLevel: "INFO",
-  applicationName: "Tenner",
-  tables: { tenners: "tenner-tenners", history: "tenner-history" },
-};
-
-function event(routeKey: string): APIGatewayProxyEventV2 {
-  return { routeKey, requestContext: { requestId: "req-1" } } as unknown as APIGatewayProxyEventV2;
+function event(routeKey: string, headers: Record<string, string> = {}): APIGatewayProxyEventV2 {
+  return { routeKey, headers, requestContext: { requestId: "req-1" } } as unknown as APIGatewayProxyEventV2;
 }
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
-  return {
-    config,
-    logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-    probeDatabase: async () => true,
-    ...overrides,
-  };
+  return { config: testConfig(), logger: mockLogger(), probeDatabase: async () => true, ...overrides };
+}
+
+function body(response: { body?: string | undefined }): { success?: boolean; error?: { code: string; message: string; details?: unknown } } {
+  return JSON.parse(response.body ?? "") as never;
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -32,15 +25,15 @@ describe("route", () => {
     expect(JSON.parse(response.body ?? "").database).toBe("connected");
   });
 
-  it("returns 404 for unknown routes", async () => {
+  it("returns 404 NOT_FOUND for unknown routes and logs a warning", async () => {
     const d = deps();
     const response = await route(event("POST /health"), d);
     expect(response.statusCode).toBe(404);
-    expect(JSON.parse(response.body ?? "").error.code).toBe("NOT_FOUND");
-    expect(d.logger.warn).toHaveBeenCalledOnce();
+    expect(body(response)).toEqual({ success: false, error: { code: "NOT_FOUND", message: "Route not found." } });
+    expect(d.logger.warn).toHaveBeenCalledWith("Request rejected", { statusCode: 404, errorCode: "NOT_FOUND" });
   });
 
-  it("returns 500 without internal details when a handler throws", async () => {
+  it("returns 500 without internal details for unexpected errors", async () => {
     const d = deps({
       probeDatabase: async () => {
         throw new Error("secret detail");
@@ -48,15 +41,50 @@ describe("route", () => {
     });
     const response = await route(event("GET /health"), d);
     expect(response.statusCode).toBe(500);
+    expect(body(response).error).toEqual({ code: "INTERNAL_ERROR", message: "Internal server error." });
     expect(response.body).not.toContain("secret detail");
     expect(d.logger.error).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [new ValidationError("Validation failed.", [{ field: "title", message: "Too short" }]), 400, "VALIDATION_ERROR"],
+    [new ConflictError("Inactive Tenners cannot be completed.", "TENNER_INACTIVE"), 409, "TENNER_INACTIVE"],
+    [new PersistenceError("A storage error occurred.", { cause: new Error("ddb down") }), 500, "PERSISTENCE_ERROR"],
+  ])("maps %s to its status and code", async (error, status, code) => {
+    const d = deps({
+      probeDatabase: async () => {
+        throw error;
+      },
+    });
+    const response = await route(event("GET /health"), d);
+    expect(response.statusCode).toBe(status);
+    expect(body(response).error?.code).toBe(code);
+    expect(response.body).not.toContain("ddb down");
+  });
+
+  it("returns the correlation id header and binds it to the request logger", async () => {
+    const d = deps();
+    const response = await route(event("GET /health", { "x-correlation-id": "abc-123" }), d);
+    expect(response.headers?.["x-correlation-id"]).toBe("abc-123");
+    expect(d.logger.child).toHaveBeenCalledWith({ correlationId: "abc-123", routeKey: "GET /health" });
+  });
+});
+
+describe("correlationIdOf", () => {
+  it("falls back to the request id for missing or unsafe headers", () => {
+    expect(correlationIdOf(event("GET /health"))).toBe("req-1");
+    expect(correlationIdOf(event("GET /health", { "x-correlation-id": "bad value\n" }))).toBe("req-1");
+  });
+
+  it("uses 'unknown' when no request id exists", () => {
+    expect(correlationIdOf({ routeKey: "GET /health" } as unknown as APIGatewayProxyEventV2)).toBe("unknown");
   });
 });
 
 describe("createDependencies", () => {
   it("logs the startup configuration without secrets", () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
-    createDependencies(config);
+    createDependencies(testConfig());
     expect(JSON.parse(info.mock.calls[0]?.[0] as string)).toEqual({
       level: "INFO",
       message: "Tenner API starting",

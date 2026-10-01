@@ -1,49 +1,125 @@
 # Tenner Backend
 
 TypeScript code for the `tenner-api` Lambda function (Node.js 22, arm64), behind an
-API Gateway HTTP API.
+API Gateway HTTP API. Data is stored in DynamoDB (`tenner-tenners`, `tenner-history`).
 
 ## Commands
 
 ```bash
 npm ci
-npm run lint        # ESLint (typescript-eslint strict)
+npm run lint        # ESLint (typescript-eslint strict and architecture rules)
 npm test            # Vitest with coverage (threshold 80%)
-npm run build       # type check + esbuild bundle → dist/index.mjs
+npm run build       # type check + esbuild bundle → dist/index.mjs (minified)
 ```
-
-Runtime dependencies: `@aws-sdk/client-dynamodb` and `@aws-sdk/lib-dynamodb`. They are bundled, not taken from the Lambda runtime.
 
 Terraform zips `dist/` (`data.archive_file.api`), so `npm run build` must run before
 `terraform plan`. The workflows do this automatically.
 
-## Structure
+## Architecture
 
 ```text
-backend/
-├── src/
-│   ├── index.ts           Lambda entry point; routes by API Gateway route key
-│   ├── config.ts          environment variables (ENVIRONMENT, LOG_LEVEL, APPLICATION_NAME,
-│   │                      TENNERS_TABLE, HISTORY_TABLE)
-│   ├── http.ts            JSON response helper
-│   ├── clients/
-│   │   └── dynamodb.ts    shared DocumentClient, table connectivity probe
-│   ├── utils/
-│   │   └── logger.ts      structured JSON logger
-│   └── handlers/
-│       └── health.ts      GET /health (runtime, configuration, DynamoDB)
-├── tests/                 Vitest tests
-├── build.mjs              esbuild bundling
-└── eslint.config.js, tsconfig.json, vitest.config.ts
+API Gateway event
+      ↓
+index.ts            routing by route key, correlation id, error → HTTP mapping
+      ↓
+handlers/           parse and validate input (validators/), call a service, shape the response (dto/)
+      ↓
+services/           business rules; depend on repository interfaces only
+      ↓
+repositories/       persistence contracts (interfaces); DynamoDB implementations translate errors
+      ↓
+clients/            infrastructure clients (shared DynamoDB DocumentClient)
 ```
 
-TICKET-008 extends this into the full layered structure (services, repositories, validators, …).
+### Layer Responsibilities
+
+| Layer | Folder | Responsibility | Must not |
+|---|---|---|---|
+| Entry point | `src/index.ts` | route, create request logger, map errors to responses | contain business logic |
+| Handlers | `src/handlers/` | HTTP concerns: parse body, validate, call service, build response | access DynamoDB or the AWS SDK (enforced by ESLint) |
+| Services | `src/services/` | business rules and workflows | access DynamoDB or the AWS SDK (enforced by ESLint) |
+| Repositories | `src/repositories/` | read and write domain objects, translate storage errors to `PersistenceError` | validate input |
+| Clients | `src/clients/` | AWS SDK clients | know about domain rules |
+| Models | `src/models/` | domain types and enumerations | depend on other layers |
+| DTOs | `src/dto/` | API request and response contracts, mappers, response envelope | expose `tenantId` |
+| Validators | `src/validators/` | Zod schemas and `validate()`, the only validation entry point | — |
+| Exceptions | `src/exceptions/` | `ApplicationError` hierarchy | — |
+| Config | `src/config.ts` | the **only** place that reads `process.env` (enforced by ESLint) | — |
+| Utils | `src/utils/` | logger, HTTP helpers | — |
+
+### Dependency Flow
+
+`index → handlers → services (interfaces) → repositories (interfaces) → clients`.
+
+Everything may use `models`, `dto`, `exceptions` and `utils`. Wiring happens in `index.ts`
+(`createDependencies`), so tests can swap any dependency.
+
+## Domain Model
+
+| Model | Fields |
+|---|---|
+| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `active`, `createdAt`, `updatedAt` |
+| `Completion` | `tenantId`, `completionId` (stored as `historyId`), `tennerId`, `completedBy`, `completedAt`, `actualMinutes` |
+| `User` | `userId`, `displayName`, `active` |
+
+| Enumeration | Values |
+|---|---|
+| `Category` | `HOUSEHOLD`, `FITNESS`, `FAMILY`, `HOME`, `PERSONAL`, `FINANCE` |
+| `UserId` | `STEFAN`, `JULIA` (hardcoded until HOUSEHOLD-ADMIN-001, see TD-007) |
+
+## Validation
+
+Zod schemas are in `src/validators/`. The limits are centralized in `LIMITS`:
+
+| Field | Rule |
+|---|---|
+| `title` | trimmed, 3–100 characters |
+| `estimatedMinutes` | integer, 1–480 |
+| `frequencyDays` | integer, 1–3650 |
+| `actualMinutes` | integer, 1–1440 |
+| `completedAt` | ISO 8601 UTC timestamp (`Z`, no offset) |
+| `category`, `assignedTo`, `completedBy` | enumeration values |
+
+Unknown fields are rejected (`strictObject`). An update must contain at least one field.
+`validate()` throws a `ValidationError` with per-field `details`.
+
+## Errors and Responses
+
+| Error | HTTP | Code |
+|---|---|---|
+| `ValidationError` | 400 | `VALIDATION_ERROR` (with `details`) |
+| `UnauthorizedError` | 401 | `UNAUTHORIZED` |
+| `NotFoundError` | 404 | `NOT_FOUND` |
+| `ConflictError` | 409 | `CONFLICT`, or a specific code such as `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
+| `PersistenceError` | 500 | `PERSISTENCE_ERROR` (generic message; the cause is only logged) |
+| anything else | 500 | `INTERNAL_ERROR` (no internal details) |
+
+```json
+{ "success": true, "data": { } }
+{ "success": false, "error": { "code": "VALIDATION_ERROR", "message": "Validation failed.", "details": [ ] } }
+```
+
+## Logging
+
+`src/utils/logger.ts` writes JSON lines with level filtering (`LOG_LEVEL`). Every request gets a child
+logger bound to a `correlationId`. The ID comes from the `x-correlation-id` header if it is safe, otherwise
+from the API Gateway request ID. The ID is also returned in the response header.
+Errors are logged with name, message and code only.
+
+## Testing
+
+Tests use Vitest. Shared test doubles are in `tests/mocks/`: config, logger, repository and service mocks,
+and a Tenner fixture.
 
 ## Endpoints
 
 | Route | Response |
 |---|---|
 | `GET /health` | `200 {"status":"ok","application":"tenner","environment":"prod","database":"connected"}`. Returns `503` with `"status":"error"` and `database` `unreachable` or `misconfigured` |
-| anything else reaching the function | `404 {"success":false,"error":{"code":"NOT_FOUND",…}}` |
+| unknown route | `404 NOT_FOUND` |
 
-Unhandled errors return `500` with a generic message. Details are logged, never returned.
+## Dependencies
+
+- Runtime: `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb` and `zod`. All are bundled and pinned.
+- The logger is a small built-in module instead of `pino`. It has no dependency and covers JSON output,
+  levels and correlation.
