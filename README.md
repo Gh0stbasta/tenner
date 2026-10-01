@@ -17,9 +17,11 @@ The repository contains:
 - the CI/CD workflows (TICKET-001)
 - the Terraform foundation in `terraform/` (TICKET-002): provider, tagging, naming standards and the tag-based AWS Resource Group `Tenner`
 - the remote Terraform state backend (TICKET-003): S3 bucket `tenner-terraform-state` and lock table `tenner-terraform-locks`
+- tag enforcement on every plan (TICKET-001A, `scripts/check_tags.py`)
+- the API runtime (TICKET-005): Lambda `tenner-api` and HTTP API `tenner-api-gateway` with `GET /health` (code in [`backend/`](backend/README.md))
 - the project documentation
 
-Frontend and backend code will be added by later backlog tickets.
+The frontend will be added by later backlog tickets.
 
 ## Terraform (local)
 
@@ -55,7 +57,17 @@ globally available. If it is taken, change it in `terraform/locals.tf` **and** `
 
 ### CI Permissions
 
-Besides permissions for the managed resources, `GithubActionsDeployRole` needs:
+Besides permissions for the managed resources, `GithubActionsDeployRole` needs the following.
+
+For the managed resources so far:
+- Resource Groups
+- S3 and DynamoDB (state resources)
+- Lambda
+- API Gateway (`apigateway:*` on `tenner-api-gateway`)
+- CloudWatch Logs (`/tenner/*`)
+- IAM: create and manage `tenner-api-role` and its inline policy, plus `iam:PassRole` for that role to Lambda
+
+For the state backend:
 
 - `s3:ListBucket` on `arn:aws:s3:::tenner-terraform-state`
 - `s3:GetObject`, `s3:PutObject` and `s3:DeleteObject` on `arn:aws:s3:::tenner-terraform-state/prod/*`
@@ -79,8 +91,8 @@ access keys exist in GitHub or in this repository.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| [`pr.yml`](.github/workflows/pr.yml) | `pull_request` | Runs `terraform fmt -check`, `validate` and `test` offline. Then checks AWS identity, runs `terraform plan` and enforces mandatory tags on the plan. Runs frontend and backend `npm ci`, `lint`, `test`, `build`. **Never applies.** |
-| [`deploy.yml`](.github/workflows/deploy.yml) | push to `main` | Builds frontend and backend as a gate, checks AWS identity, then runs `terraform init` and `plan`, enforces mandatory tags, and applies the checked plan. |
+| [`pr.yml`](.github/workflows/pr.yml) | `pull_request` | Runs `terraform fmt -check`, `validate` and `test` offline. Then checks AWS identity, builds the Lambda bundle, runs `terraform plan` and enforces mandatory tags on the plan. Runs frontend and backend `npm ci`, `lint`, `test`, `build`. **Never applies.** |
+| [`deploy.yml`](.github/workflows/deploy.yml) | push to `main` | Builds frontend and backend as a gate, checks AWS identity, then runs `terraform init` and `plan`, enforces mandatory tags, applies the checked plan, then calls `GET /health` on the deployed API. |
 
 Settings:
 

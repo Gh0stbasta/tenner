@@ -845,6 +845,42 @@ Without `--apply` the script only plans. If the bucket already exists, it refuse
 
 ---
 
+# API Runtime
+
+Introduced by TICKET-005.
+
+```text
+Client → API Gateway HTTP API (tenner-api-gateway, stage prod)
+       → Lambda tenner-api (Node.js 22, arm64, 256 MB, 10 s)
+       → CloudWatch Logs (/tenner/api, JSON)
+```
+
+| Resource | Name | Notes |
+|---|---|---|
+| Lambda | `tenner-api` | handler `index.handler`, bundle `backend/dist/index.mjs`, env `ENVIRONMENT`, `LOG_LEVEL`, `APPLICATION_NAME` |
+| Execution role | `tenner-api-role` | `logs:CreateLogStream` and `logs:PutLogEvents` on `/tenner/api` only |
+| HTTP API | `tenner-api-gateway` | route `GET /health`, Lambda proxy integration, payload format 2.0 |
+| Stage | `prod` (`var.environment`) | auto deploy, JSON access logs to `/tenner/api/access` |
+| Log groups | `/tenner/api`, `/tenner/api/access` | retention `var.log_retention_days` (default 30) |
+
+## Decisions
+
+- **HTTP API instead of REST API:** lower cost and latency, and simpler. No REST-only features are needed.
+- **One Lambda function for all routes:** routes are registered explicitly per route key, with no `$default`
+  catch-all. The function routes internally by `routeKey`.
+- **Custom log group:** Lambda logs go to `/tenner/api` through `logging_config` instead of
+  `/aws/lambda/tenner-api`. The group is Terraform-managed, with retention and tags.
+- **Packaging:** esbuild bundles the code into one ESM file. Terraform zips it with `archive_file`, and
+  `source_code_hash` triggers a redeploy when the code changes. The AWS SDK v3 is provided by the runtime
+  and is not bundled.
+- **Invoke permission:** limited to this API (`execution_arn/*/*`).
+
+## Not Yet Included
+
+Authentication (SECURITY-002), throttling (SECURITY-005), CORS (TICKET-017), alarms (OBSERVABILITY-002).
+
+---
+
 # Future Ideas
 
 Out of scope for MVP.

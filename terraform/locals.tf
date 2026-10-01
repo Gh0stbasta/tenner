@@ -25,6 +25,21 @@ locals {
     CostCenter  = var.cost_center
   }
 
+  # API runtime (TICKET-005).
+  api_function_name   = "${local.name_prefix}-api"
+  api_role_name       = "${local.name_prefix}-api-role"
+  api_gateway_name    = "${local.name_prefix}-api-gateway"
+  api_log_group_name  = "/${local.name_prefix}/api"
+  api_access_log_name = "/${local.name_prefix}/api/access"
+  api_runtime         = "nodejs22.x"
+  api_architecture    = "arm64"
+  api_memory_mb       = 256
+  api_timeout_seconds = 10
+
+  # Lambda bundle built by `npm run build` in backend/ (dist/index.mjs).
+  api_source_dir  = "${path.module}/../backend/dist"
+  api_package_zip = "${path.module}/../.build/tenner-api.zip"
+
   # Every taggable resource must end up with these tags (TICKET-001A).
   # Enforced in CI by scripts/check_tags.py against the Terraform plan.
   mandatory_tag_keys = concat(keys(local.common_tags), ["Name", "Purpose", "Description"])

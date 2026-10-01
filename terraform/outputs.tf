@@ -27,3 +27,23 @@ output "mandatory_tag_keys" {
   description = "Tag keys every taggable resource must carry. Read by scripts/check_tags.py."
   value       = local.mandatory_tag_keys
 }
+
+output "api_endpoint" {
+  description = "Base URL of the Tenner API stage (append /health)."
+  value       = aws_apigatewayv2_stage.api.invoke_url
+}
+
+output "api_gateway_id" {
+  description = "ID of the Tenner HTTP API."
+  value       = aws_apigatewayv2_api.api.id
+}
+
+output "api_lambda_function_arn" {
+  description = "ARN of the Tenner API Lambda function."
+  value       = aws_lambda_function.api.arn
+}
+
+output "api_lambda_function_name" {
+  description = "Name of the Tenner API Lambda function."
+  value       = aws_lambda_function.api.function_name
+}

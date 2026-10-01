@@ -1,5 +1,14 @@
 # Offline tests for the remote state infrastructure (TICKET-003).
 
+mock_provider "archive" {
+  mock_data "archive_file" {
+    defaults = {
+      output_path         = "tenner-api.zip"
+      output_base64sha256 = "bW9jaw=="
+    }
+  }
+}
+
 mock_provider "aws" {
   mock_data "aws_region" {
     defaults = {

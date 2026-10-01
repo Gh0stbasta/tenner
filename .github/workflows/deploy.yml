@@ -85,6 +85,19 @@ jobs:
         if: hashFiles('terraform/**/*.tf') != ''
         run: terraform -chdir="$TF_DIR" init -input=false
 
+      - name: Setup Node.js (Lambda bundle)
+        if: hashFiles('terraform/**/*.tf') != '' && hashFiles('backend/package.json') != ''
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build Lambda bundle
+        if: hashFiles('terraform/**/*.tf') != '' && hashFiles('backend/package.json') != ''
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+
       - name: Terraform plan
         if: hashFiles('terraform/**/*.tf') != ''
         run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m -out=tfplan
@@ -98,6 +111,16 @@ jobs:
       - name: Terraform apply
         if: hashFiles('terraform/**/*.tf') != ''
         run: terraform -chdir="$TF_DIR" apply -input=false -lock-timeout=5m tfplan
+
+      - name: Verify health endpoint
+        if: hashFiles('terraform/**/*.tf') != ''
+        run: |
+          endpoint="$(terraform -chdir="$TF_DIR" output -raw api_endpoint 2>/dev/null || true)"
+          if [ -z "$endpoint" ]; then
+            echo "::notice::No api_endpoint output - health check skipped."
+            exit 0
+          fi
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors "${endpoint%/}/health"
 
       - name: Report skipped Terraform steps
         if: hashFiles('terraform/**/*.tf') == ''

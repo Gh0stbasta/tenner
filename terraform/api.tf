@@ -1,0 +1,105 @@
+# API runtime: Lambda + API Gateway HTTP API (TICKET-005).
+# The Lambda bundle must be built first: `npm ci && npm run build` in backend/.
+
+data "archive_file" "api" {
+  type        = "zip"
+  source_dir  = local.api_source_dir
+  output_path = local.api_package_zip
+}
+
+resource "aws_lambda_function" "api" {
+  function_name    = local.api_function_name
+  role             = aws_iam_role.api.arn
+  runtime          = local.api_runtime
+  architectures    = [local.api_architecture]
+  handler          = "index.handler"
+  memory_size      = local.api_memory_mb
+  timeout          = local.api_timeout_seconds
+  filename         = data.archive_file.api.output_path
+  source_code_hash = data.archive_file.api.output_base64sha256
+
+  environment {
+    variables = {
+      ENVIRONMENT      = var.environment
+      LOG_LEVEL        = var.api_log_level
+      APPLICATION_NAME = local.common_tags.Application
+    }
+  }
+
+  logging_config {
+    log_format = "JSON"
+    log_group  = aws_cloudwatch_log_group.api.name
+  }
+
+  tags = {
+    Name        = local.api_function_name
+    Purpose     = "Tenner backend API runtime."
+    Description = "Processes all Tenner API requests."
+  }
+
+  depends_on = [aws_iam_role_policy.api_logging]
+}
+
+resource "aws_apigatewayv2_api" "api" {
+  name          = local.api_gateway_name
+  protocol_type = "HTTP"
+  description   = "Public HTTP API for Tenner."
+
+  tags = {
+    Name        = local.api_gateway_name
+    Purpose     = "Public API endpoint for Tenner."
+    Description = "Routes HTTP requests to backend services."
+  }
+}
+
+resource "aws_apigatewayv2_integration" "api" {
+  api_id                 = aws_apigatewayv2_api.api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.api.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "health" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "GET /health"
+  target    = "integrations/${aws_apigatewayv2_integration.api.id}"
+}
+
+resource "aws_apigatewayv2_stage" "api" {
+  api_id      = aws_apigatewayv2_api.api.id
+  name        = var.environment
+  auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_access.arn
+    format = jsonencode({
+      requestId          = "$context.requestId"
+      requestTime        = "$context.requestTime"
+      httpMethod         = "$context.httpMethod"
+      routeKey           = "$context.routeKey"
+      path               = "$context.path"
+      status             = "$context.status"
+      responseLength     = "$context.responseLength"
+      integrationLatency = "$context.integrationLatency"
+      latency            = "$context.responseLatency"
+      sourceIp           = "$context.identity.sourceIp"
+      userAgent          = "$context.identity.userAgent"
+      integrationError   = "$context.integrationErrorMessage"
+    })
+  }
+
+  tags = {
+    Name        = "${local.api_gateway_name}-${var.environment}"
+    Purpose     = "API deployment stage."
+    Description = "Auto-deployed ${var.environment} stage of the Tenner HTTP API."
+  }
+}
+
+# Allow only this API to invoke the function.
+resource "aws_lambda_permission" "api_gateway" {
+  statement_id  = "AllowInvokeFromTennerHttpApi"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
+}

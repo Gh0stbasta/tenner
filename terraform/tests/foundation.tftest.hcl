@@ -1,10 +1,25 @@
 # Offline tests for the Terraform foundation (TICKET-002).
 # The mocked provider needs no AWS credentials: run with `terraform test`.
 
+mock_provider "archive" {
+  mock_data "archive_file" {
+    defaults = {
+      output_path         = "tenner-api.zip"
+      output_base64sha256 = "bW9jaw=="
+    }
+  }
+}
+
 mock_provider "aws" {
   mock_data "aws_region" {
     defaults = {
       region = "eu-central-1"
+    }
+  }
+
+  mock_data "aws_iam_policy_document" {
+    defaults = {
+      json = "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
     }
   }
 }

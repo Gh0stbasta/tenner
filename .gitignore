@@ -29,3 +29,6 @@ coverage/
 # Python
 __pycache__/
 *.pyc
+
+# Build output
+.build/
