@@ -22,5 +22,10 @@ locals {
     CreatedBy   = "GitHub Actions"
     ManagedBy   = "Terraform"
     Repository  = "Gh0stbasta/tenner"
+    CostCenter  = var.cost_center
   }
+
+  # Every taggable resource must end up with these tags (TICKET-001A).
+  # Enforced in CI by scripts/check_tags.py against the Terraform plan.
+  mandatory_tag_keys = concat(keys(local.common_tags), ["Name", "Purpose", "Description"])
 }

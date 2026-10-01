@@ -22,3 +22,8 @@ output "state_lock_table_name" {
   description = "DynamoDB table used for Terraform state locking."
   value       = aws_dynamodb_table.terraform_locks.name
 }
+
+output "mandatory_tag_keys" {
+  description = "Tag keys every taggable resource must carry. Read by scripts/check_tags.py."
+  value       = local.mandatory_tag_keys
+}

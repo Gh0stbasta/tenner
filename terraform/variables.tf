@@ -19,3 +19,14 @@ variable "environment" {
     error_message = "environment must be one of: prod, dev."
   }
 }
+
+variable "cost_center" {
+  description = "Value of the CostCenter tag, used for AWS cost allocation."
+  type        = string
+  default     = "Tenner"
+
+  validation {
+    condition     = length(trimspace(var.cost_center)) > 0
+    error_message = "cost_center must not be empty."
+  }
+}

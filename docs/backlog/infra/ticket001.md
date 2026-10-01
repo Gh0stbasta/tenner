@@ -144,3 +144,42 @@ tags = merge(
 - All Terraform resources support tags
 - Terraform validation succeeds
 - Tagging documented in architecture.md
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01. It builds on TICKET-002, which already created the Resource Group and common tags.
+
+### Changes
+
+- [x] `CostCenter` tag added to `local.common_tags` (`var.cost_center`, default `Tenner`)
+- [x] `local.mandatory_tag_keys`: the single list of all 11 mandatory keys, exposed as output `mandatory_tag_keys`
+- [x] `scripts/check_tags.py` enforces the mandatory tags on the saved Terraform plan. It runs in `pr.yml` and in `deploy.yml` (before apply).
+- [x] `deploy.yml` now applies the checked plan file (`plan -out=tfplan` → check → `apply tfplan`)
+- [x] Tests:
+  - `scripts/tests/test_check_tags.py`: 11 unit tests
+  - 2 new Terraform tests: tag list, `cost_center` validation
+- [x] `docs/architecture.md`: tagging enforcement, `default_tags` decision, cost allocation note
+
+### Acceptance Criteria
+
+- [x] Resource Group exists in code (`Tenner`, tag-based, TICKET-002). Deployed on the first apply after the TICKET-003 bootstrap.
+- [x] Common tagging strategy exists (`default_tags` plus per-resource Name/Purpose/Description)
+- [x] All Terraform resources support tags. Every taggable resource in the plan carries all 11 tags, verified with a real offline plan.
+- [x] Terraform validation succeeds (`fmt`, `validate`; `test` passes 9 tests)
+- [x] Tagging documented in `architecture.md`
+
+### Validation Performed
+
+- Generated a real plan offline (scratch copy, fake credentials, local backend) and ran `check_tags.py` on it:
+  9 resources planned, and all taggable ones are compliant (exit 0).
+- Removed the `Purpose` tag from the resource group in the scratch copy: the checker reported
+  `aws_resourcegroups_group.tenner: Purpose` and exited with 1.
+
+### Assumptions
+
+- No `CostCenter` value is defined in this ticket. It defaults to `Tenner` and is configurable with `var.cost_center`.
+- `default_tags` is used instead of `merge(local.common_tags, …)` on every resource. The result is the same,
+  with less repetition. Documented as a decision in `architecture.md`.
+- Activating cost allocation tags in the Billing console is a manual, account-level step (OPERATIONS-001).

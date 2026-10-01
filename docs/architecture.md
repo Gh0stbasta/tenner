@@ -716,12 +716,39 @@ Every resource carries these tags:
 | CreatedBy | `GitHub Actions` | provider `default_tags` |
 | ManagedBy | `Terraform` | provider `default_tags` |
 | Repository | `Gh0stbasta/tenner` | provider `default_tags` |
+| CostCenter | `var.cost_center` (`Tenner`) | provider `default_tags` |
 | Name | resource-specific | resource `tags` |
 | Purpose | resource-specific | resource `tags` |
 | Description | resource-specific | resource `tags` |
 
 Resources must not redefine the common tags. They only add `Name`, `Purpose` and `Description`.
-TICKET-001A extends this standard (for example with `CostCenter`).
+
+## Enforcement (TICKET-001A)
+
+No resource may be deployed without the mandatory tags:
+
+1. `local.mandatory_tag_keys` (`terraform/locals.tf`) is the single list of required keys.
+   It is exposed as the output `mandatory_tag_keys`.
+2. Both workflows save the plan (`-out=tfplan`) and run `scripts/check_tags.py` on its JSON form.
+   Any taggable managed resource whose `tags_all` lacks a key, or has an empty value, fails the workflow
+   before `terraform apply`.
+3. `deploy.yml` applies exactly the checked plan file.
+
+Resource types without tags (for example `aws_s3_bucket_versioning`) are skipped automatically.
+
+## Decision: `default_tags` instead of `merge()`
+
+TICKET-001A shows `tags = merge(local.common_tags, {...})` on every resource. Tenner uses
+provider `default_tags = local.common_tags` instead, plus per-resource `Name`/`Purpose`/`Description`.
+
+- **Effect:** the same (`tags_all` contains all keys).
+- **Benefits:** less repetition, and a forgotten `merge()` cannot drop the common tags.
+- **Trade-off:** the few resource types that ignore provider default tags must be caught by the plan check.
+
+## Cost Allocation
+
+AWS cost allocation by tag only works after the tags are activated as cost allocation tags in the
+Billing console (account-level, manual). Activate `Project` and `CostCenter`. This is tracked in OPERATIONS-001.
 
 ---
 

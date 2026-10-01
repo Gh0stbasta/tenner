@@ -21,8 +21,17 @@ run "common_tags_contain_mandatory_values" {
       CreatedBy   = "GitHub Actions"
       ManagedBy   = "Terraform"
       Repository  = "Gh0stbasta/tenner"
+      CostCenter  = "Tenner"
     }
     error_message = "common_tags do not match the mandatory tag standard."
+  }
+
+  assert {
+    condition = toset(local.mandatory_tag_keys) == toset([
+      "Name", "Application", "Project", "Owner", "Environment", "CreatedBy",
+      "Purpose", "Description", "ManagedBy", "Repository", "CostCenter",
+    ])
+    error_message = "mandatory_tag_keys must match the TICKET-001A tag list."
   }
 }
 
@@ -61,6 +70,16 @@ run "environment_is_validated" {
   }
 
   expect_failures = [var.environment]
+}
+
+run "cost_center_must_not_be_empty" {
+  command = plan
+
+  variables {
+    cost_center = " "
+  }
+
+  expect_failures = [var.cost_center]
 }
 
 run "region_is_validated" {

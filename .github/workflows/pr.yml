@@ -35,6 +35,7 @@ jobs:
         uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false # keep `terraform show -json` output clean
 
       # Offline checks first: they give feedback even if AWS authentication fails.
       - name: Terraform fmt check
@@ -53,6 +54,10 @@ jobs:
         if: hashFiles('terraform/**/*.tf') != ''
         run: terraform -chdir="$TF_DIR" test
 
+      - name: Tag checker unit tests
+        if: hashFiles('terraform/**/*.tf') != ''
+        run: python3 -m unittest discover -s scripts/tests
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -69,7 +74,13 @@ jobs:
 
       - name: Terraform plan
         if: hashFiles('terraform/**/*.tf') != ''
-        run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m
+        run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m -out=tfplan
+
+      - name: Enforce mandatory tags
+        if: hashFiles('terraform/**/*.tf') != ''
+        run: |
+          terraform -chdir="$TF_DIR" show -json tfplan > plan.json
+          python3 scripts/check_tags.py plan.json
 
       - name: Report skipped Terraform steps
         if: hashFiles('terraform/**/*.tf') == ''

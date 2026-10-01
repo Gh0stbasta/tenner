@@ -29,6 +29,8 @@ terraform fmt -check -recursive
 terraform init -backend=false
 terraform validate
 terraform test        # offline, mocked AWS provider
+cd ..
+python3 -m unittest discover -s scripts/tests   # tag checker tests
 ```
 
 `terraform plan` and `apply` need AWS credentials. Infrastructure is applied only by the deploy workflow.
@@ -77,8 +79,8 @@ access keys exist in GitHub or in this repository.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| [`pr.yml`](.github/workflows/pr.yml) | `pull_request` | Runs `terraform fmt -check`, `validate` and `test` offline. Then checks AWS identity and runs `terraform plan`. Runs frontend and backend `npm ci`, `lint`, `test`, `build`. **Never applies.** |
-| [`deploy.yml`](.github/workflows/deploy.yml) | push to `main` | Builds frontend and backend as a gate, checks AWS identity, then runs `terraform init` and `terraform apply`. |
+| [`pr.yml`](.github/workflows/pr.yml) | `pull_request` | Runs `terraform fmt -check`, `validate` and `test` offline. Then checks AWS identity, runs `terraform plan` and enforces mandatory tags on the plan. Runs frontend and backend `npm ci`, `lint`, `test`, `build`. **Never applies.** |
+| [`deploy.yml`](.github/workflows/deploy.yml) | push to `main` | Builds frontend and backend as a gate, checks AWS identity, then runs `terraform init` and `plan`, enforces mandatory tags, and applies the checked plan. |
 
 Settings:
 
