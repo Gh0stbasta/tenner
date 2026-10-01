@@ -141,7 +141,7 @@ TICKET-013, TICKET-014, TICKET-016, SCHEDULING-008
 ### Description
 
 `architecture.md` lists `README.md`, `docs/roadmap.md` and `docs/decisions/` in the repository
-structure. `README.md` and `docs/decisions/` do not exist. `docs/roadmap.md` was created by META-001.
+structure. `docs/decisions/` does not exist. `docs/roadmap.md` was created by META-001, and `README.md` by TICKET-001.
 
 ### Reason
 
@@ -185,3 +185,58 @@ them into managed data.
 ### Related Work
 
 TICKET-008, TICKET-013, FRONTEND-008, HOUSEHOLD-ADMIN-001, HOUSEHOLD-ADMIN-002
+
+---
+
+## TD-008: Pull request plan runs with the deploy role
+
+### Description
+
+`pr.yml` assumes `GithubActionsDeployRole` to run `aws sts get-caller-identity` and `terraform plan`.
+Code in a pull request branch therefore runs with the same AWS permissions as a deployment.
+
+### Reason
+
+TICKET-001 requires a Terraform plan and an identity check in pull requests, and only
+one role exists.
+
+### Impact
+
+Anyone who can push a branch and open a PR can run arbitrary code with deploy permissions,
+without review or merge. In a single-owner repository the risk is low. It grows with every
+collaborator.
+
+### Suggested Improvement
+
+Create a separate read-only plan role (for example `GithubActionsPlanRole`) trusted only for the
+`pull_request` subject. Keep `GithubActionsDeployRole` trusted only for `refs/heads/main` or a
+protected GitHub environment. Part of SECURITY-008.
+
+### Related Work
+
+TICKET-001, SECURITY-008, `.github/workflows/pr.yml`
+
+---
+
+## TD-009: GitHub Actions referenced by tag, not commit SHA
+
+### Description
+
+The workflows use `actions/checkout@v4`, `actions/setup-node@v4`, `hashicorp/setup-terraform@v3`
+and `aws-actions/configure-aws-credentials@v4` by major version tag.
+
+### Reason
+
+Tags are readable, and no Dependabot setup exists yet to keep SHA pins updated.
+
+### Impact
+
+If a tag is moved maliciously, untrusted code could run in a job that holds AWS credentials.
+
+### Suggested Improvement
+
+Pin all actions to full commit SHAs and let Dependabot update them (SECURITY-007, SECURITY-008).
+
+### Related Work
+
+TICKET-001, SECURITY-007, SECURITY-008

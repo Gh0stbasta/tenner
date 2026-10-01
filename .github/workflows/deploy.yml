@@ -1,0 +1,93 @@
+# Main branch deployment (TICKET-001).
+# Builds frontend/backend as a gate, then applies Terraform using GitHub OIDC.
+# Steps for terraform/, frontend/ and backend/ are skipped until those directories exist.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false # never interrupt a running terraform apply
+
+env:
+  AWS_REGION: eu-central-1
+  TF_VERSION: 1.9.8
+  TF_DIR: terraform
+  NODE_VERSION: "22"
+
+jobs:
+  build:
+    name: Build ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [frontend, backend]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Report skipped build
+        if: hashFiles(format('{0}/package.json', matrix.project)) == ''
+        working-directory: .
+        run: echo "::notice::No ${{ matrix.project }}/package.json yet - build skipped."
+
+      - name: Setup Node.js
+        if: hashFiles(format('{0}/package.json', matrix.project)) != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        if: hashFiles(format('{0}/package.json', matrix.project)) != ''
+        run: npm ci
+
+      - name: Build
+        if: hashFiles(format('{0}/package.json', matrix.project)) != ''
+        run: npm run build
+
+  terraform:
+    name: Terraform Apply
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for GitHub OIDC
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: tenner-deploy-${{ github.run_id }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Setup Terraform
+        if: hashFiles('terraform/**/*.tf') != ''
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform init
+        if: hashFiles('terraform/**/*.tf') != ''
+        run: terraform -chdir="$TF_DIR" init -input=false
+
+      - name: Terraform apply
+        if: hashFiles('terraform/**/*.tf') != ''
+        run: terraform -chdir="$TF_DIR" apply -input=false -auto-approve -lock-timeout=5m
+
+      - name: Report skipped Terraform steps
+        if: hashFiles('terraform/**/*.tf') == ''
+        run: echo "::notice::No Terraform configuration in $TF_DIR/ yet - Terraform steps skipped."
