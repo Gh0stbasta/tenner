@@ -10,6 +10,7 @@ describe("loadConfig", () => {
       tenantId: "default",
       logLevel: "INFO",
       applicationName: "Tenner",
+      timezone: "Europe/Berlin",
       tables: undefined,
     });
   });
@@ -20,8 +21,14 @@ describe("loadConfig", () => {
       tenantId: "default",
       logLevel: "DEBUG",
       applicationName: "Tenner",
+      timezone: "Europe/Berlin",
       tables: { tenners: "tenner-tenners", history: "tenner-history" },
     });
+  });
+
+  it("reads a valid APPLICATION_TIMEZONE and falls back to Europe/Berlin for invalid values", () => {
+    expect(loadConfig({ APPLICATION_TIMEZONE: "America/New_York" }).timezone).toBe("America/New_York");
+    expect(loadConfig({ APPLICATION_TIMEZONE: "Mars/Olympus" }).timezone).toBe("Europe/Berlin");
   });
 
   it("falls back to INFO for unknown log levels", () => {

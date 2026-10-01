@@ -52,3 +52,14 @@ variable "api_log_level" {
     error_message = "api_log_level must be one of DEBUG, INFO, WARN, ERROR."
   }
 }
+
+variable "application_timezone" {
+  description = "IANA timezone for calendar-date decisions in the API (e.g. dashboard reference date)."
+  type        = string
+  default     = "Europe/Berlin"
+
+  validation {
+    condition     = can(regex("^[A-Za-z]+(/[A-Za-z0-9_+-]+)+$", var.application_timezone)) || var.application_timezone == "UTC"
+    error_message = "application_timezone must be an IANA timezone such as Europe/Berlin."
+  }
+}

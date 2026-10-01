@@ -20,11 +20,12 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      ENVIRONMENT      = var.environment
-      LOG_LEVEL        = var.api_log_level
-      APPLICATION_NAME = local.common_tags.Application
-      TENNERS_TABLE    = aws_dynamodb_table.tenners.name
-      HISTORY_TABLE    = aws_dynamodb_table.history.name
+      ENVIRONMENT          = var.environment
+      LOG_LEVEL            = var.api_log_level
+      APPLICATION_NAME     = local.common_tags.Application
+      TENNERS_TABLE        = aws_dynamodb_table.tenners.name
+      HISTORY_TABLE        = aws_dynamodb_table.history.name
+      APPLICATION_TIMEZONE = var.application_timezone
     }
   }
 

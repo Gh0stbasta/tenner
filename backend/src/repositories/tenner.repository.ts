@@ -36,6 +36,11 @@ export type TennerUpdate = {
 export interface TennerRepository {
   /** The Tenner (including soft-deleted ones) or undefined. */
   getById(tenantId: string, tennerId: string): Promise<Tenner | undefined>;
+  /**
+   * Dashboard candidates (TICKET-016): active, non-deleted Tenners with nextDue <= endDate, via nextDue-index.
+   * No classification or summaries.
+   */
+  getDashboardCandidates(tenantId: string, endDate: string): Promise<Tenner[]>;
   /** All matching Tenners (unordered; all result pages). */
   list(tenantId: string, criteria?: TennerCriteria): Promise<Tenner[]>;
   /** Insert a new Tenner. Fails with ConflictError if the ID already exists. */

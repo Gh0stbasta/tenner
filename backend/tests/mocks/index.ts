@@ -13,6 +13,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     tenantId: "default",
     logLevel: "INFO",
     applicationName: "Tenner",
+    timezone: "Europe/Berlin",
     tables: { tenners: "tenner-tenners", history: "tenner-history" },
     ...overrides,
   };
@@ -31,7 +32,7 @@ export function mockLogger(): Mocked<Logger> {
 }
 
 export function mockTennerRepository(): Mocked<TennerRepository> {
-  return { getById: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn(), completeTenner: vi.fn(), undoCompletion: vi.fn(), restore: vi.fn() };
+  return { getById: vi.fn(), getDashboardCandidates: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn(), completeTenner: vi.fn(), undoCompletion: vi.fn(), restore: vi.fn() };
 }
 
 export function mockCompletionRepository(): Mocked<CompletionRepository> {

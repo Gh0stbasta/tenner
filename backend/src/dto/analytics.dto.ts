@@ -1,18 +1,7 @@
 /**
- * Initial analytics contracts used by the AnalyticsService interface.
- * TICKET-016 (dashboard) and the ANALYTICS domain finalize the fields.
+ * Analytics contracts used by the AnalyticsService interface. The dashboard contracts live in
+ * dashboard.dto.ts (TICKET-016); completion metrics are finalized by the ANALYTICS domain.
  */
-
-import type { TennerResponse } from "./tenner.dto.js";
-
-export interface DashboardResponse {
-  /** Calendar date (YYYY-MM-DD) the dashboard was computed for. */
-  readonly date: string;
-  readonly dueToday: readonly TennerResponse[];
-  readonly overdue: readonly TennerResponse[];
-  readonly upcoming: readonly TennerResponse[];
-  readonly estimatedMinutesToday: number;
-}
 
 export interface CompletionMetrics {
   readonly from: string;

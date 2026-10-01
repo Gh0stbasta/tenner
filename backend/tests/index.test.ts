@@ -6,6 +6,16 @@ import { toTennerResponse } from "../src/dto/index.js";
 import { mockLogger, tennerFixture, testConfig } from "./mocks/index.js";
 
 const tennerResponse = toTennerResponse(tennerFixture());
+const emptyDashboard = {
+  referenceDate: "2026-10-01",
+  timezone: "Europe/Berlin",
+  summary: { dueTodayCount: 0, overdueCount: 0, upcomingCount: 0, dueTodayMinutes: 0, overdueMinutes: 0, upcomingMinutes: 0, totalActionableCount: 0, totalActionableMinutes: 0 },
+  dueToday: [],
+  overdue: [],
+  upcoming: [],
+  byUser: {},
+  byCategory: {},
+};
 
 function event(routeKey: string, headers: Record<string, string> = {}, body?: string, query?: Record<string, string>): APIGatewayProxyEventV2 {
   return { routeKey, headers, body, queryStringParameters: query, requestContext: { requestId: "req-1" } } as unknown as APIGatewayProxyEventV2;
@@ -26,6 +36,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       },
       replayed: false,
     })),
+    getDashboard: vi.fn(async () => emptyDashboard),
     restoreTenner: vi.fn(async () => ({ response: { tennerId: "t-1", active: true, deletedAt: null }, status: "RESTORED" as const, previousDeletedAt: "2026-10-01T18:00:00Z" })),
     undoCompletion: vi.fn(async () => ({
       response: {
@@ -298,6 +309,24 @@ describe("POST /tenners/{tennerId}/restore", () => {
   });
 });
 
+describe("GET /dashboard", () => {
+  it("routes with parsed filters and returns the standard contract", async () => {
+    const d = deps();
+    const response = await route(event("GET /dashboard", {}, undefined, { assignedTo: "STEFAN", category: "HOUSEHOLD", date: "2026-10-01" }), d);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: emptyDashboard });
+    expect(d.getDashboard).toHaveBeenCalledWith("default", { assignedTo: "STEFAN", category: "HOUSEHOLD", date: "2026-10-01" });
+  });
+
+  it.each([{ assignedTo: "BOB" }, { category: "GARDEN" }, { date: "01.10.2026" }, { date: "2026-02-30" }])("rejects %j with 400 Invalid dashboard query.", async (query) => {
+    const d = deps();
+    const response = await route(event("GET /dashboard", {}, undefined, query), d);
+    expect(response.statusCode).toBe(400);
+    expect(body(response).error).toMatchObject({ code: "VALIDATION_ERROR", message: "Invalid dashboard query." });
+    expect(d.getDashboard).not.toHaveBeenCalled();
+  });
+});
+
 describe("correlationIdOf", () => {
   it("falls back to the request id for missing or unsafe headers", () => {
     expect(correlationIdOf(event("GET /health"))).toBe("req-1");
@@ -318,6 +347,7 @@ describe("createDependencies", () => {
       message: "Tenner API starting",
       environment: "prod",
       application: "Tenner",
+      timezone: "Europe/Berlin",
       tables: { tenners: "tenner-tenners", history: "tenner-history" },
     });
   });

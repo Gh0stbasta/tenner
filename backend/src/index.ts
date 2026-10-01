@@ -9,6 +9,7 @@ import { loadConfig, type AppConfig } from "./config.js";
 import { ApplicationError, NotFoundError } from "./exceptions/index.js";
 import { completeTennerHandler, type CompleteTenner } from "./handlers/complete-tenner.js";
 import { createTennerHandler, type CreateTenner } from "./handlers/create-tenner.js";
+import { dashboardHandler, type GetDashboard } from "./handlers/dashboard.js";
 import { deleteTennerHandler, type DeleteTenner } from "./handlers/delete-tenner.js";
 import { health, type DatabaseProbe } from "./handlers/health.js";
 import { listTennersHandler, type ListTenners } from "./handlers/list-tenners.js";
@@ -19,6 +20,7 @@ import { DynamoDbCompletionRepository, DynamoDbTennerRepository } from "./reposi
 import {
   CompleteTennerService,
   CreateTennerService,
+  DashboardService,
   DeleteTennerService,
   ListTennersService,
   RestoreTennerService,
@@ -42,6 +44,7 @@ export interface Dependencies {
   readonly completeTenner: CompleteTenner;
   readonly undoCompletion: UndoCompletion;
   readonly restoreTenner: RestoreTenner;
+  readonly getDashboard: GetDashboard;
 }
 
 /** Per-request context passed to route handlers. */
@@ -63,6 +66,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "POST /tenners/{tennerId}/complete": ({ event, deps, logger }) => completeTennerHandler(event, deps.config.tenantId, deps.completeTenner, logger),
   "POST /tenners/{tennerId}/undo-completion": ({ event, deps, logger }) => undoCompletionHandler(event, deps.config.tenantId, deps.undoCompletion, logger),
   "POST /tenners/{tennerId}/restore": ({ event, deps, logger }) => restoreTennerHandler(event, deps.config.tenantId, deps.restoreTenner, logger),
+  "GET /dashboard": ({ event, deps, logger }) => dashboardHandler(event, deps.config.tenantId, deps.getDashboard, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -73,6 +77,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   logger.info("Tenner API starting", {
     environment: config.environment,
     application: config.applicationName,
+    timezone: config.timezone,
     tables: config.tables ?? "not configured",
   });
   const tables = config.tables;
@@ -86,6 +91,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const updateTennerService = tennerRepository ? new UpdateTennerService(tennerRepository, systemClock) : undefined;
   const deleteTennerService = tennerRepository ? new DeleteTennerService(tennerRepository, systemClock) : undefined;
   const restoreTennerService = tennerRepository ? new RestoreTennerService(tennerRepository, systemClock) : undefined;
+  const dashboardService = tennerRepository ? new DashboardService(tennerRepository, systemClock, config.timezone) : undefined;
   const completeTennerService =
     tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator) : undefined;
   const undoCompletionService = tennerRepository && completionRepository ? new UndoCompletionService(tennerRepository, completionRepository, systemClock) : undefined;
@@ -99,6 +105,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     updateTenner: updateTennerService ? (tenantId, id, request) => updateTennerService.updateTenner(tenantId, id, request) : notConfigured,
     deleteTenner: deleteTennerService ? (tenantId, id) => deleteTennerService.deleteTenner(tenantId, id) : notConfigured,
     restoreTenner: restoreTennerService ? (tenantId, id) => restoreTennerService.restoreTenner(tenantId, id) : notConfigured,
+    getDashboard: dashboardService ? (tenantId, request) => dashboardService.getDashboard(tenantId, request) : notConfigured,
     completeTenner: completeTennerService
       ? (tenantId, id, request, key) => completeTennerService.completeTenner(tenantId, id, request, key)
       : notConfigured,

@@ -1,6 +1,6 @@
-import type { CompletionMetrics, DashboardResponse } from "../dto/index.js";
+import type { CompletionMetrics, DashboardRequest, DashboardResponse } from "../dto/index.js";
 
 export interface AnalyticsService {
-  getDashboard(tenantId: string, date: string): Promise<DashboardResponse>;
+  getDashboard(tenantId: string, request: DashboardRequest): Promise<DashboardResponse>;
   getCompletionMetrics(tenantId: string, from: string, to: string): Promise<CompletionMetrics>;
 }

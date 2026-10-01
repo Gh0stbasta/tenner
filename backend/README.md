@@ -229,6 +229,39 @@ result without reverting another completion. Reusing the key with a different re
 `lastCompleted` and `nextDue` are never changed. A past `nextDue` simply makes the Tenner overdue again.
 `tenner-history` is not touched.
 
+### GET /dashboard
+
+This is the dashboard read model: one request, one DynamoDB Query.
+
+| Parameter | Values |
+|---|---|
+| `assignedTo` | `STEFAN`, `JULIA`. Filters all sections |
+| `category` | category values. Filters all sections |
+| `date` | `YYYY-MM-DD`, a real calendar date (`2026-02-30` → 400). Default: today in `APPLICATION_TIMEZONE`. Future dates are allowed |
+
+**Application timezone:** `APPLICATION_TIMEZONE` (default `Europe/Berlin`, invalid values fall back to the default).
+The reference date is computed with `Intl`, independent of the Lambda runtime timezone.
+
+**Classification** (`nextDue` as `YYYY-MM-DD`; inactive and deleted Tenners excluded):
+
+| Section | Rule | Sort |
+|---|---|---|
+| `dueToday` | `nextDue = referenceDate` | `estimatedMinutes` asc, `title` asc |
+| `overdue` | `nextDue < referenceDate`, with `overdueDays` | `nextDue` asc (longest overdue first), `title` asc |
+| `upcoming` | `referenceDate < nextDue <= referenceDate + 7`, with `daysUntilDue` | `nextDue` asc, `estimatedMinutes` asc, `title` asc |
+
+**Summary:** count and minutes per section. **Actionable** means due today plus overdue; upcoming is informational
+and not part of `totalActionableCount` or `totalActionableMinutes`. `byUser` and `byCategory` contain actionable
+Tenners only, and groups without any are omitted.
+
+**DynamoDB access:** one Query on `nextDue-index` (`tenantId`, `nextDue <= referenceDate + 7`). The `active = true`
+and not-deleted conditions are a `FilterExpression`. The filtered items still cost read capacity, which is
+negligible at household volume. The user and category filters and the classification run in the service.
+There is no Scan and no query per section or per Tenner.
+
+**Logs:** "Dashboard requested" (`DashboardServed`, `referenceDate`, filters, counts, `totalActionableMinutes`,
+`durationMs`) or "Dashboard failed" (`DashboardFailed`, `errorCode`, `durationMs`).
+
 ## Errors and Responses
 
 | Error | HTTP | Code |
@@ -269,6 +302,7 @@ and a Tenner fixture.
 | `POST /tenners/{tennerId}/complete` | `200 { success: true, data: { tenner, completion } }` (TICKET-013). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | `POST /tenners/{tennerId}/undo-completion` | `200 { success: true, data: { tenner, revertedCompletion } }` (TICKET-014). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `NO_COMPLETION_TO_UNDO`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | `POST /tenners/{tennerId}/restore` | `200 { success: true, data: { tennerId, active, deletedAt } }` (TICKET-015, idempotent). Returns `400`, `404`, or `409` with `TENNER_NOT_DELETED` or `CONCURRENT_MODIFICATION` |
+| `GET /dashboard` | `200 { success: true, data: DashboardResponse }` (TICKET-016). Returns `400 VALIDATION_ERROR` "Invalid dashboard query." |
 | unknown route | `404 NOT_FOUND` |
 
 ### POST /tenners

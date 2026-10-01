@@ -43,11 +43,12 @@ run "lambda_matches_runtime_requirements" {
 
   assert {
     condition = aws_lambda_function.api.environment[0].variables == tomap({
-      ENVIRONMENT      = "prod"
-      LOG_LEVEL        = "INFO"
-      APPLICATION_NAME = "Tenner"
-      TENNERS_TABLE    = "tenner-tenners"
-      HISTORY_TABLE    = "tenner-history"
+      ENVIRONMENT          = "prod"
+      LOG_LEVEL            = "INFO"
+      APPLICATION_NAME     = "Tenner"
+      TENNERS_TABLE        = "tenner-tenners"
+      HISTORY_TABLE        = "tenner-history"
+      APPLICATION_TIMEZONE = "Europe/Berlin"
     })
     error_message = "Lambda environment variables do not match the specification."
   }
@@ -67,7 +68,7 @@ run "http_api_routes_health" {
   }
 
   assert {
-    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners", "GET /tenners", "PUT /tenners/{tennerId}", "DELETE /tenners/{tennerId}", "POST /tenners/{tennerId}/complete", "POST /tenners/{tennerId}/undo-completion", "POST /tenners/{tennerId}/restore"])
+    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners", "GET /tenners", "PUT /tenners/{tennerId}", "DELETE /tenners/{tennerId}", "POST /tenners/{tennerId}/complete", "POST /tenners/{tennerId}/undo-completion", "POST /tenners/{tennerId}/restore", "GET /dashboard"])
     error_message = "API routes must match the implemented endpoints."
   }
 
@@ -107,6 +108,16 @@ run "log_retention_is_configurable" {
     condition     = aws_cloudwatch_log_group.api.retention_in_days == 14
     error_message = "log_retention_days must control log retention."
   }
+}
+
+run "invalid_timezone_rejected" {
+  command = plan
+
+  variables {
+    application_timezone = "berlin"
+  }
+
+  expect_failures = [var.application_timezone]
 }
 
 run "invalid_log_retention_rejected" {

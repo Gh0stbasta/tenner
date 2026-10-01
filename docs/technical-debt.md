@@ -126,9 +126,17 @@ The MVP simplified the date handling.
 
 Due dates can be off by one day, and "today" on the dashboard switches at 01:00 or 02:00 local time.
 
+Since TICKET-016, `GET /dashboard` determines "today" in `APPLICATION_TIMEZONE` (Europe/Berlin). Other parts
+still use UTC dates:
+- `nextDue` calculation on create, complete and undo
+- `due`/`overdue` in `GET /tenners`
+
+Between 00:00 and 02:00 Berlin time, the dashboard and the list can therefore disagree about "today".
+
 ### Suggested Improvement
 
-SCHEDULING-008: timezone-aware due-date calculation.
+SCHEDULING-008: compute all calendar dates (creation, completion, list filters) in `APPLICATION_TIMEZONE`.
+The configuration and `utils/timezone.ts` already exist.
 
 ### Related Work
 

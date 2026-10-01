@@ -46,6 +46,11 @@ export class DynamoDbTennerRepository implements TennerRepository {
     }
   }
 
+  /** One Query on nextDue-index (nextDue <= endDate) filtered to active, non-deleted Tenners. */
+  async getDashboardCandidates(tenantId: string, endDate: string): Promise<Tenner[]> {
+    return this.list(tenantId, { nextDueOnOrBefore: endDate, active: true });
+  }
+
   /** Query all matching Tenners of a tenant, following pagination. */
   async list(tenantId: string, criteria: TennerCriteria = {}): Promise<Tenner[]> {
     const input = buildTennerQuery(this.tableName, tenantId, criteria);

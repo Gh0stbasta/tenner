@@ -82,6 +82,12 @@ describe("createDependencies wiring", () => {
     await expect(deps().restoreTenner("default", "t-1")).resolves.toMatchObject({ status: "RESTORED" });
   });
 
+  it("serves the dashboard from one nextDue-index query", async () => {
+    send.mockResolvedValue({ Items: [tennerFixture({ nextDue: "2026-10-01" })] });
+    await expect(deps().getDashboard("default", { date: "2026-10-01" })).resolves.toMatchObject({ summary: { dueTodayCount: 1 } });
+    expect((send.mock.calls[0]?.[0] as QueryCommand).input.IndexName).toBe("nextDue-index");
+  });
+
   it("updates Tenners in the configured table", async () => {
     send.mockResolvedValue({ Attributes: tennerFixture({ title: "New title" }) });
     await expect(deps().updateTenner("default", "t-1", { title: "New title" })).resolves.toMatchObject({ title: "New title" });

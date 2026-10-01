@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   TENNER_SORT_FIELDS,
   type CompleteTennerRequest,
+  type DashboardRequest,
   type CreateTennerRequest,
   type ListTennersRequest,
   type RestoreTennerRequest,
@@ -13,6 +14,7 @@ import {
   booleanFlagSchema,
   categorySchema,
   estimatedMinutesSchema,
+  isoDateSchema,
   frequencyDaysSchema,
   titleSchema,
   userIdSchema,
@@ -63,3 +65,10 @@ export const undoCompletionSchema = z.strictObject({
 }) satisfies z.ZodType<UndoCompletionRequest>;
 
 export const restoreTennerSchema = z.strictObject({ restoredBy: userIdSchema }) satisfies z.ZodType<RestoreTennerRequest>;
+
+/** Query string of GET /dashboard (TICKET-016). Dates must be real calendar dates (2026-02-30 is rejected). */
+export const dashboardQuerySchema = z.strictObject({
+  assignedTo: userIdSchema.optional(),
+  category: categorySchema.optional(),
+  date: isoDateSchema.optional(),
+}) satisfies z.ZodType<DashboardRequest, Record<string, string | undefined>>;

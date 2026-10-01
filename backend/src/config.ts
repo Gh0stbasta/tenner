@@ -3,6 +3,8 @@
  * an AppConfig.
  */
 
+import { DEFAULT_TIMEZONE, isValidTimeZone } from "./utils/timezone.js";
+
 export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
 
 export interface TableConfig {
@@ -16,6 +18,8 @@ export interface AppConfig {
   readonly tenantId: string;
   readonly logLevel: LogLevel;
   readonly applicationName: string;
+  /** IANA timezone for calendar-date decisions such as the dashboard reference date (TICKET-016). */
+  readonly timezone: string;
   /** DynamoDB table names. Undefined when TENNERS_TABLE or HISTORY_TABLE is missing. */
   readonly tables: TableConfig | undefined;
 }
@@ -44,6 +48,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     tenantId: DEFAULTS.tenantId,
     logLevel: LOG_LEVELS.includes(logLevel as LogLevel) ? (logLevel as LogLevel) : DEFAULTS.logLevel,
     applicationName: readTrimmed(env.APPLICATION_NAME) ?? DEFAULTS.applicationName,
+    timezone: resolveTimeZone(readTrimmed(env.APPLICATION_TIMEZONE)),
     tables: tenners && history ? { tenners, history } : undefined,
   };
+}
+
+/** APPLICATION_TIMEZONE if it is a valid IANA zone, otherwise Europe/Berlin. */
+function resolveTimeZone(value: string | undefined): string {
+  return value !== undefined && isValidTimeZone(value) ? value : DEFAULT_TIMEZONE;
 }

@@ -1000,7 +1000,7 @@ index.ts (routing, correlation, error mapping)
 - **Enforcement:** ESLint fails if code outside `config.ts` reads `process.env`, or if handlers or services
   import the AWS SDK or `clients/`.
 - **Endpoints:** API routes are listed in `local.api_routes` (`terraform/locals.tf`). Each one is an explicit
-  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009), `GET /tenners` (TICKET-010), `PUT /tenners/{tennerId}` (TICKET-011), `DELETE /tenners/{tennerId}` (TICKET-012), `POST /tenners/{tennerId}/complete` (TICKET-013), `POST /tenners/{tennerId}/undo-completion` (TICKET-014), `POST /tenners/{tennerId}/restore` (TICKET-015).
+  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009), `GET /tenners` (TICKET-010), `PUT /tenners/{tennerId}` (TICKET-011), `DELETE /tenners/{tennerId}` (TICKET-012), `POST /tenners/{tennerId}/complete` (TICKET-013), `POST /tenners/{tennerId}/undo-completion` (TICKET-014), `POST /tenners/{tennerId}/restore` (TICKET-015), `GET /dashboard` (TICKET-016).
 - **Read access:** lists always use a DynamoDB Query on the tenant partition, choosing `assignedTo-index` or
   `nextDue-index` when a filter allows it, and never a Scan. The `dynamodb:Scan` permission (TICKET-007) is unused.
 - **Write access:** creates are conditional puts (`attribute_not_exists`). Updates are conditional `UpdateItem`
@@ -1021,6 +1021,10 @@ index.ts (routing, correlation, error mapping)
   `createdAt` date. Both writes happen in one `TransactWriteItems`, with conditions on "not yet reverted" and the
   loaded Tenner state. History per Tenner is read through the GSI `tennerId-completedAt-index`
   (`tenantTennerId = "<tenant>#<tenner>"`, newest first, no Scan).
+- **Dashboard read model (TICKET-016):** `GET /dashboard` returns due today, overdue, upcoming (next 7 days),
+  a summary and actionable workload per user and category in one response. It is backed by one `nextDue-index`
+  Query (`nextDue <= reference + 7`, active and not deleted). The reference date is "today" in `APPLICATION_TIMEZONE`
+  (default `Europe/Berlin`, Terraform `var.application_timezone`), or the `date` parameter.
 - **Time and IDs:** services receive a `Clock` and an `IdGenerator` (`utils/clock.ts`), so tests are deterministic.
   Dates are UTC until SCHEDULING-008 (TD-005).
 

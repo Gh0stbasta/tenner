@@ -219,3 +219,17 @@ describe("DynamoDbTennerRepository.restore", () => {
     await expect(new DynamoDbTennerRepository(client(async () => ({})), "t", "h").restore("default", "t-1", "x", TS)).rejects.toBeInstanceOf(PersistenceError);
   });
 });
+
+describe("DynamoDbTennerRepository.getDashboardCandidates", () => {
+  it("queries nextDue-index once with nextDue <= endDate, active and not deleted", async () => {
+    const c = client(async () => ({ Items: [tennerFixture()] }));
+    await expect(new DynamoDbTennerRepository(c, "tenner-tenners", "tenner-history").getDashboardCandidates("default", "2026-10-08")).resolves.toHaveLength(1);
+    expect(c.send).toHaveBeenCalledOnce();
+    expect((c.send.mock.calls[0]?.[0] as QueryCommand).input).toMatchObject({
+      IndexName: "nextDue-index",
+      KeyConditionExpression: "#tenantId = :tenantId AND #nextDue <= :nextDue",
+      FilterExpression: "#active = :active AND (attribute_not_exists(#deletedAt) OR #deletedAt = :null)",
+      ExpressionAttributeValues: { ":tenantId": "default", ":nextDue": "2026-10-08", ":active": true, ":null": null },
+    });
+  });
+});
