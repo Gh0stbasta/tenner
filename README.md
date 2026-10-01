@@ -16,6 +16,7 @@ The repository contains:
 
 - the CI/CD workflows (TICKET-001)
 - the Terraform foundation in `terraform/` (TICKET-002): provider, tagging, naming standards and the tag-based AWS Resource Group `Tenner`
+- the remote Terraform state backend (TICKET-003): S3 bucket `tenner-terraform-state` and lock table `tenner-terraform-locks`
 - the project documentation
 
 Frontend and backend code will be added by later backlog tickets.
@@ -31,6 +32,38 @@ terraform test        # offline, mocked AWS provider
 ```
 
 `terraform plan` and `apply` need AWS credentials. Infrastructure is applied only by the deploy workflow.
+
+## Terraform State
+
+State lives in S3 (`s3://tenner-terraform-state/prod/terraform.tfstate`) with locking.
+Details are in [`docs/architecture.md`](docs/architecture.md), section "State Management".
+
+### One-Time Bootstrap (required before the first deployment)
+
+The state bucket must exist before CI can run `terraform init`. Run this once, locally, with
+administrator credentials for the AWS account:
+
+```bash
+scripts/bootstrap-state.sh            # dry run: shows the plan
+scripts/bootstrap-state.sh --apply    # creates bucket and lock table, migrates state
+```
+
+Requirements: `terraform` (>= 1.10) and `aws` CLI. The bucket name `tenner-terraform-state` must be
+globally available. If it is taken, change it in `terraform/locals.tf` **and** `terraform/backend.tf`.
+
+### CI Permissions
+
+Besides permissions for the managed resources, `GithubActionsDeployRole` needs:
+
+- `s3:ListBucket` on `arn:aws:s3:::tenner-terraform-state`
+- `s3:GetObject`, `s3:PutObject` and `s3:DeleteObject` on `arn:aws:s3:::tenner-terraform-state/prod/*`
+  (the state file and its `.tflock` file)
+- `dynamodb:GetItem`, `PutItem` and `DeleteItem` on the `tenner-terraform-locks` table
+
+### Recovery
+
+- Restore a previous version of `prod/terraform.tfstate` (bucket versioning).
+- Use `terraform force-unlock <LOCK_ID>` only when no apply is running.
 Standards are documented in [`docs/architecture.md`](docs/architecture.md) (Terraform, tagging, naming).
 
 ---

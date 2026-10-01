@@ -240,3 +240,57 @@ Pin all actions to full commit SHAs and let Dependabot update them (SECURITY-007
 ### Related Work
 
 TICKET-001, SECURITY-007, SECURITY-008
+
+---
+
+## TD-010: Two lock mechanisms for Terraform state
+
+### Description
+
+`backend.tf` enables both S3 native locking (`use_lockfile = true`) and DynamoDB locking (`dynamodb_table`).
+
+### Reason
+
+TICKET-003 requires a DynamoDB lock table. Since Terraform 1.10, S3 native locking is available,
+and DynamoDB locking is deprecated.
+
+### Impact
+
+There is an extra resource to operate, and newer Terraform versions print deprecation warnings.
+A future Terraform version may remove `dynamodb_table`.
+
+### Suggested Improvement
+
+Once S3 locking has worked in CI for a while, remove `dynamodb_table` from `backend.tf`. Then remove
+the `tenner-terraform-locks` table: remove `prevent_destroy` and deletion protection first, with explicit approval.
+
+### Related Work
+
+TICKET-003, `terraform/backend.tf`, `terraform/state-backend.tf`
+
+---
+
+## TD-011: State bucket name duplicated as backend literals
+
+### Description
+
+The state bucket and lock table names appear in `locals.tf` and, as literals, in `backend.tf`.
+The bucket name `tenner-terraform-state` has no account-specific suffix.
+
+### Reason
+
+Terraform backend blocks cannot use variables or locals. The ticket prescribes the name without a suffix.
+
+### Impact
+
+The names can drift apart if only one place is changed (a test guards the `locals.tf` side).
+If the global bucket name is taken, the bootstrap fails.
+
+### Suggested Improvement
+
+Move backend values to a partial configuration file (`environments/prod/backend.hcl`, passed with
+`-backend-config`) when environments are introduced (TICKET-021). Add an account-specific suffix if required.
+
+### Related Work
+
+TICKET-003, TICKET-021

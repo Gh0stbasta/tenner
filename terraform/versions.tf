@@ -8,7 +8,5 @@ terraform {
     }
   }
 
-  # Remote state backend placeholder.
-  # TICKET-003 adds the S3 backend (terraform/backend.tf) and migrates local state.
-  # Until then Terraform uses local state. Strategy: docs/architecture.md, "State Management".
+  # The remote state backend is configured in backend.tf (TICKET-003).
 }

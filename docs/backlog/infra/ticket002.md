@@ -362,5 +362,5 @@ Implemented: 2026-10-01.
 
 - [ ] `terraform plan` on GitHub. This is blocked until `GithubActionsDeployRole` trusts the
   `pull_request` subject (see PR #1).
-- [ ] Resource Group deployed. This happens on merge to `main`. **Merge only after TICKET-003 (remote state).**
+- [ ] Resource Group deployed. This happens on merge to `main`. **Merge only after the TICKET-003 bootstrap.**
   Without a remote backend, CI state is discarded, and the next apply fails because `Tenner` already exists.

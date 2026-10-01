@@ -309,3 +309,60 @@ Do not create:
 
 This ticket only establishes state management infrastructure.
 ``
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01. **The bootstrap in AWS is still pending (manual step, see below).**
+
+### Deliverables
+
+- [x] `terraform/state-backend.tf`: state bucket (versioning, SSE-S3, public access block, ownership controls, TLS-only policy, lifecycle) and lock table (`LockID`, PAY_PER_REQUEST, SSE, deletion protection), both with `prevent_destroy`
+- [x] `terraform/backend.tf`: S3 backend `tenner-terraform-state`, key `prod/terraform.tfstate`, `dynamodb_table` and `use_lockfile`
+- [x] `scripts/bootstrap-state.sh`: bootstrap with dry-run default
+- [x] `terraform/tests/state_backend.tftest.hcl`: 4 offline tests
+- [x] `docs/architecture.md` (State Management: strategy, bootstrap, recovery) and `README.md` updated
+
+### Acceptance Criteria
+
+| Criterion | Status |
+|---|---|
+| State bucket created | [x] defined. Created by the bootstrap (pending) |
+| Versioning enabled | [x] defined and tested |
+| Encryption enabled | [x] defined and tested |
+| Public access blocked | [x] defined and tested |
+| Lock table created | [x] defined. Created by the bootstrap (pending) |
+| Terraform backend configured | [x] `backend.tf` |
+| State successfully migrated | [ ] pending: run `scripts/bootstrap-state.sh --apply` |
+| Resource Group membership confirmed | [x] via the `Project = Tenner` default tag. [ ] Check in the console after the bootstrap |
+| All governance tags applied | [x] default tags plus Name/Purpose/Description (tested) |
+| Terraform validate succeeds | [x] |
+
+### Validation Performed
+
+- `terraform fmt -check -recursive`, `terraform validate` and `terraform test` pass: 8 tests
+  (4 foundation, 4 state backend).
+- `shellcheck` passes for the bootstrap script.
+- The local-backend override mechanism of the script was verified offline:
+  `init -reconfigure` with `backend_override.tf` uses the local backend.
+- Not possible from this environment: creating the resources and migrating state (no AWS credentials).
+
+### Assumptions
+
+- The bootstrap is a manual, one-time step by the account owner with administrator credentials.
+  It must not run in CI, because the deploy role should not create its own state bucket.
+- Locking: the ticket requires the DynamoDB table. Terraform >= 1.10 recommends `use_lockfile`.
+  Both are enabled (TD-010).
+- The bucket name `tenner-terraform-state` is taken from the ticket. S3 names are global, so it may
+  already be taken. In that case change `locals.tf` and `backend.tf` (TD-011).
+- Region and names in `backend.tf` are literals, because Terraform does not allow variables in backend blocks.
+
+### Required Before Merging PR #1
+
+1. Update the trust policy of `GithubActionsDeployRole` (PR subject).
+2. Run `scripts/bootstrap-state.sh --apply` locally.
+3. Grant `GithubActionsDeployRole` access to the state bucket and lock table (see README "CI Permissions").
+4. Re-run the PR workflow: `terraform init` and `plan` must succeed against the remote state.
+
+Until step 2 is done, `terraform init` in CI fails because the bucket does not exist.

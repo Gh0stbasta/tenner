@@ -756,11 +756,56 @@ Because `Project` is a default tag, every Terraform-managed resource joins the g
 
 # State Management
 
-- Until TICKET-003, Terraform uses local state. In CI, local state is discarded after each run.
-  Do not merge infrastructure to `main` before the remote backend exists: a second apply
-  would try to create existing resources again.
-- TICKET-003 adds an S3 backend (`tenner-terraform-state`, key `prod/terraform.tfstate`) with
-  locking, versioning and encryption, and migrates the local state.
+Introduced by TICKET-003.
+
+## Backend
+
+| Item | Value |
+|---|---|
+| Backend | S3 (`terraform/backend.tf`) |
+| Bucket | `tenner-terraform-state` |
+| State key | `prod/terraform.tfstate` |
+| Locking | S3 lock file (`use_lockfile`) and DynamoDB table `tenner-terraform-locks` |
+| Encryption | SSE-S3 (AES256) on the bucket, `encrypt = true` in the backend |
+
+The state bucket and lock table are defined in the same root configuration
+(`terraform/state-backend.tf`). They are protected with `prevent_destroy`, and the table also
+with deletion protection. Backend blocks cannot use variables, so `backend.tf` repeats the
+names as literals. A test and a comment keep them in sync with `locals.tf`.
+
+## Bucket Protection
+
+- Versioning is enabled, and all public access is blocked.
+- ACLs are disabled (`BucketOwnerEnforced`). A bucket policy denies requests without TLS.
+- Lifecycle rules:
+  - The current state version never expires.
+  - Previous versions are kept for 90 days, and the 10 newest are always kept.
+  - Incomplete multipart uploads are aborted after 7 days.
+
+## Locking Decision
+
+TICKET-003 requires a DynamoDB lock table. Terraform 1.10+ supports native S3 locking (`use_lockfile`),
+and DynamoDB-based locking is deprecated. Both are enabled during the transition.
+The table can be removed once S3 locking is proven (TD-010).
+
+## Bootstrap
+
+`scripts/bootstrap-state.sh` runs once per AWS account, with administrator credentials:
+
+```text
+1. Temporary local backend (git-ignored backend_override.tf)
+2. terraform apply -target=<state bucket and lock table resources>
+3. Remove override, terraform init -migrate-state (local → S3)
+4. terraform state list (verify), delete local state files
+```
+
+Without `--apply` the script only plans. If the bucket already exists, it refuses to run.
+
+## Recovery
+
+- **Corrupted or wrong state:** restore a previous object version of `prod/terraform.tfstate`
+  in the S3 console or with `aws s3api`, for example by copying the previous version over the current one.
+- **Stuck lock:** after making sure no apply is running, use `terraform force-unlock <LOCK_ID>`.
 - State files are never committed (`.gitignore`).
 
 ---
