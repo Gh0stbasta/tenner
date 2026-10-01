@@ -23,6 +23,8 @@ resource "aws_lambda_function" "api" {
       ENVIRONMENT      = var.environment
       LOG_LEVEL        = var.api_log_level
       APPLICATION_NAME = local.common_tags.Application
+      TENNERS_TABLE    = aws_dynamodb_table.tenners.name
+      HISTORY_TABLE    = aws_dynamodb_table.history.name
     }
   }
 
@@ -37,7 +39,7 @@ resource "aws_lambda_function" "api" {
     Description = "Processes all Tenner API requests."
   }
 
-  depends_on = [aws_iam_role_policy.api_logging]
+  depends_on = [aws_iam_role_policy.api_logging, aws_iam_role_policy.api_dynamodb]
 }
 
 resource "aws_apigatewayv2_api" "api" {

@@ -1,16 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.js";
 
+const TABLES = { TENNERS_TABLE: "tenner-tenners", HISTORY_TABLE: "tenner-history" };
+
 describe("loadConfig", () => {
   it("uses defaults when variables are missing", () => {
-    expect(loadConfig({})).toEqual({ environment: "prod", logLevel: "INFO", applicationName: "Tenner" });
+    expect(loadConfig({})).toEqual({
+      environment: "prod",
+      logLevel: "INFO",
+      applicationName: "Tenner",
+      tables: undefined,
+    });
   });
 
   it("reads provided variables", () => {
-    expect(loadConfig({ ENVIRONMENT: "dev", LOG_LEVEL: "debug", APPLICATION_NAME: "Tenner" })).toEqual({
+    expect(loadConfig({ ENVIRONMENT: "dev", LOG_LEVEL: "debug", APPLICATION_NAME: "Tenner", ...TABLES })).toEqual({
       environment: "dev",
       logLevel: "DEBUG",
       applicationName: "Tenner",
+      tables: { tenners: "tenner-tenners", history: "tenner-history" },
     });
   });
 
@@ -23,5 +31,10 @@ describe("loadConfig", () => {
       environment: "prod",
       applicationName: "Tenner",
     });
+  });
+
+  it("requires both table names", () => {
+    expect(loadConfig({ TENNERS_TABLE: "tenner-tenners" }).tables).toBeUndefined();
+    expect(loadConfig({ TENNERS_TABLE: "tenner-tenners", HISTORY_TABLE: " " }).tables).toBeUndefined();
   });
 });

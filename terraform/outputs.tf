@@ -67,3 +67,8 @@ output "history_table_arn" {
   description = "ARN of the tenner-history DynamoDB table."
   value       = aws_dynamodb_table.history.arn
 }
+
+output "api_lambda_role_arn" {
+  description = "ARN of the Tenner API Lambda execution role."
+  value       = aws_iam_role.api.arn
+}

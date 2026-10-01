@@ -1,5 +1,5 @@
-# Lambda execution role for the API (TICKET-005).
-# Least privilege: only write logs to the API log group. No DynamoDB, no S3.
+# Lambda execution role for the API (TICKET-005, TICKET-007).
+# Least privilege: write logs to the API log group and access the two Tenner tables. No S3.
 
 data "aws_iam_policy_document" "api_assume_role" {
   statement {
@@ -35,4 +35,32 @@ resource "aws_iam_role_policy" "api_logging" {
   name   = "${local.api_role_name}-logging"
   role   = aws_iam_role.api.id
   policy = data.aws_iam_policy_document.api_logging.json
+}
+
+# Data access to the Tenner tables and their indexes only (TICKET-007).
+# Action list as specified by the ticket. TICKET-013 adds TransactWriteItems when needed.
+data "aws_iam_policy_document" "api_dynamodb" {
+  statement {
+    sid = "TennerTableAccess"
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+    resources = [
+      aws_dynamodb_table.tenners.arn,
+      "${aws_dynamodb_table.tenners.arn}/index/*",
+      aws_dynamodb_table.history.arn,
+      "${aws_dynamodb_table.history.arn}/index/*",
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "api_dynamodb" {
+  name   = "${local.api_role_name}-dynamodb"
+  role   = aws_iam_role.api.id
+  policy = data.aws_iam_policy_document.api_dynamodb.json
 }

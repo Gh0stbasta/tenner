@@ -439,3 +439,49 @@ Do not implement:
 - Frontend Integration
 
 This ticket only establishes the connection between Lambda and DynamoDB.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `terraform/api.tf`: `TENNERS_TABLE` and `HISTORY_TABLE` passed to Lambda from the table resources
+- [x] `terraform/iam.tf`: policy `tenner-api-role-dynamodb` (6 actions, the two tables and their indexes)
+- [x] `terraform/outputs.tf`: `api_lambda_role_arn`. The table ARNs already exist from TICKET-006.
+- [x] `backend/src/clients/dynamodb.ts`: shared DocumentClient and `probeTables` (GetItem probe, timeout)
+- [x] `backend/src/handlers/health.ts`: DynamoDB connectivity and configuration check
+- [x] `backend/src/utils/logger.ts`: structured logger. The startup log contains environment, application and tables.
+- [x] `terraform/tests/iam.tftest.hcl`: policy content tests. The API test now also checks the environment variables.
+- [x] `docs/architecture.md`: Lambda → DynamoDB integration, IAM strategy, environment variable strategy
+
+### Acceptance Criteria
+
+| Criterion | Status |
+|---|---|
+| Lambda can access DynamoDB | [x] IAM and client in place. Locally verified against a fake DynamoDB endpoint: the bundled handler sends correct `GetItem` calls to both tables and returns 200 `connected`. Live check runs in `deploy.yml` |
+| Environment variables configured | [x] tested in Terraform and in the offline plan |
+| IAM policy follows least privilege | [x] only the ticket's actions on the two tables and their indexes |
+| Health endpoint verifies database connectivity | [x] `connected` / `unreachable` (503) / `misconfigured` (503) |
+| No wildcard DynamoDB permissions | [x] tested. A mutation check with `dynamodb:*` or `"*"` makes the test fail |
+| Terraform validation succeeds | [x] `fmt`, `validate`; `test` passes 20 tests |
+| Application build succeeds | [x] lint, 22 tests (statements 98%, branches 100%), build |
+| Documentation updated | [x] |
+
+### Assumptions
+
+- Query on GSIs needs the index ARNs. The resource list therefore includes `<table-arn>/index/*` for both tables.
+  This is still scoped to the two tables, not a wildcard across tables.
+- `Scan` is granted because the ticket lists it explicitly. Later business tickets should avoid it (TICKET-010 uses Query).
+- The health probe uses `GetItem` on a non-existent key instead of `DescribeTable`, because `DescribeTable`
+  is not in the allowed action list. It is cheap, read-only and returns no data.
+- `base.repository.ts` (suggested structure) was not created. Without any repository it would be an
+  abstraction without users. TICKET-008 creates the repository layer.
+- The AWS SDK v3 is bundled (as the ticket asks) and minified, which gives a 552 kB bundle.
+  `keepNames` keeps stack traces readable.
+
+### Not Yet Verified
+
+- [ ] Live `/health` with `database: connected` after the first deploy (runs automatically in `deploy.yml`).

@@ -914,6 +914,66 @@ Lambda data access (TICKET-007), the per-Tenner history index (TICKET-020), seed
 
 ---
 
+# Lambda → DynamoDB Integration
+
+Introduced by TICKET-007.
+
+```text
+API Gateway → Lambda tenner-api ──(AWS SDK v3 DocumentClient)──> tenner-tenners
+                                                               └> tenner-history
+```
+
+## Environment Variable Strategy
+
+| Variable | Source | Purpose |
+|---|---|---|
+| `TENNERS_TABLE` | `aws_dynamodb_table.tenners.name` | table name (never hardcoded in code) |
+| `HISTORY_TABLE` | `aws_dynamodb_table.history.name` | table name |
+| `ENVIRONMENT` | `var.environment` | environment label |
+| `APPLICATION_NAME` | `local.common_tags.Application` | application label |
+| `LOG_LEVEL` | `var.api_log_level` | logger threshold |
+
+`backend/src/config.ts` reads all variables in one place. If a table variable is missing, the configuration
+is incomplete: `/health` reports `misconfigured` and never calls AWS.
+
+## IAM Strategy
+
+The `tenner-api-role` has two inline policies:
+
+| Policy | Actions | Resources |
+|---|---|---|
+| `tenner-api-role-logging` | `logs:CreateLogStream`, `logs:PutLogEvents` | `/tenner/api` log streams |
+| `tenner-api-role-dynamodb` | `GetItem`, `PutItem`, `UpdateItem`, `DeleteItem`, `Query`, `Scan` | the two table ARNs and their `/index/*` |
+
+- No wildcard actions, and no wildcard resources beyond each table's own indexes.
+- Terraform tests check both policies, and a mutation check showed that wildcards make the tests fail.
+- New actions (for example `TransactWriteItems` in TICKET-013) are added by the ticket that needs them.
+
+## Data Access Foundation
+
+- `backend/src/clients/dynamodb.ts` creates one shared `DynamoDBDocumentClient` per Lambda container
+  (`maxAttempts: 2`, `removeUndefinedValues`).
+- The AWS SDK v3 is bundled into `dist/index.mjs` (minified, about 550 kB) and pinned via
+  `package-lock.json`. The runtime-provided SDK is not used, so builds are reproducible.
+
+## Health Check
+
+`GET /health` sends a `GetItem` for the non-existent key `__healthcheck__` to both tables, in parallel,
+with a 2-second timeout. This is read-only and costs one read unit per table.
+
+| Result | HTTP | Body `database` |
+|---|---|---|
+| both tables answer | 200 | `connected` |
+| error or timeout (for example AccessDenied, missing table) | 503 | `unreachable` |
+| table variables missing | 503 | `misconfigured` |
+
+## Logging
+
+`backend/src/utils/logger.ts` writes JSON lines with level filtering. On startup the function logs
+the environment, application name and table names. It never logs credentials, tokens or request payloads.
+
+---
+
 # Future Ideas
 
 Out of scope for MVP.

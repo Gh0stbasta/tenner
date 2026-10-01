@@ -46,6 +46,8 @@ run "lambda_matches_runtime_requirements" {
       ENVIRONMENT      = "prod"
       LOG_LEVEL        = "INFO"
       APPLICATION_NAME = "Tenner"
+      TENNERS_TABLE    = "tenner-tenners"
+      HISTORY_TABLE    = "tenner-history"
     })
     error_message = "Lambda environment variables do not match the specification."
   }
