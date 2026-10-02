@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ConflictError, NotFoundError, PersistenceError, ValidationError } from "../src/exceptions/index.js";
 import { restoreTennerHandler } from "../src/handlers/restore-tenner.js";
 import { RestoreTennerService } from "../src/services/index.js";
-import { mockLogger, mockTennerRepository, tennerFixture } from "./mocks/index.js";
+import { mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-02T09:00:00.100Z");
 const TS = "2026-10-02T09:00:00Z";
@@ -27,26 +27,26 @@ function setup(tenner = deleted) {
 describe("RestoreTennerService", () => {
   it("restores a deleted Tenner with optimistic locking on updatedAt", async () => {
     const { repository, service } = setup();
-    const outcome = await service.restoreTenner("default", "t-1");
-    expect(repository.restore).toHaveBeenCalledWith("default", "t-1", "2026-10-01T18:00:00Z", TS);
+    const outcome = await service.restoreTenner(TEST_IDENTITY, "t-1");
+    expect(repository.restore).toHaveBeenCalledWith("default", "t-1", "2026-10-01T18:00:00Z", TS, "STEFAN");
     expect(outcome).toEqual({ response: { tennerId: "t-1", active: true, deletedAt: null }, status: "RESTORED", previousDeletedAt: "2026-10-01T18:00:00Z" });
   });
 
   it("returns success without changes for an already active Tenner", async () => {
     const { repository, service } = setup(restored);
-    await expect(service.restoreTenner("default", "t-1")).resolves.toMatchObject({ status: "ALREADY_ACTIVE", response: { active: true, deletedAt: null } });
+    await expect(service.restoreTenner(TEST_IDENTITY, "t-1")).resolves.toMatchObject({ status: "ALREADY_ACTIVE", response: { active: true, deletedAt: null } });
     expect(repository.restore).not.toHaveBeenCalled();
   });
 
   it("returns 404 for missing Tenners", async () => {
     const { repository, service } = setup();
     repository.getById.mockResolvedValue(undefined);
-    await expect(service.restoreTenner("default", "x")).rejects.toBeInstanceOf(NotFoundError);
+    await expect(service.restoreTenner(TEST_IDENTITY, "x")).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it("rejects inactive Tenners that were not deleted with TENNER_NOT_DELETED", async () => {
     const { repository, service } = setup(tennerFixture({ active: false, deletedAt: null }));
-    await expect(service.restoreTenner("default", "t-1")).rejects.toMatchObject({ code: "TENNER_NOT_DELETED", statusCode: 409 });
+    await expect(service.restoreTenner(TEST_IDENTITY, "t-1")).rejects.toMatchObject({ code: "TENNER_NOT_DELETED", statusCode: 409 });
     expect(repository.restore).not.toHaveBeenCalled();
   });
 
@@ -54,7 +54,7 @@ describe("RestoreTennerService", () => {
     const { repository, service } = setup();
     repository.restore.mockRejectedValue(new ConflictError("m", "CONCURRENT_MODIFICATION"));
     repository.getById.mockResolvedValueOnce(deleted).mockResolvedValueOnce(restored);
-    await expect(service.restoreTenner("default", "t-1")).resolves.toMatchObject({ status: "ALREADY_ACTIVE" });
+    await expect(service.restoreTenner(TEST_IDENTITY, "t-1")).resolves.toMatchObject({ status: "ALREADY_ACTIVE" });
   });
 
   it.each([
@@ -64,13 +64,13 @@ describe("RestoreTennerService", () => {
     const { repository, service } = setup();
     repository.restore.mockRejectedValue(new ConflictError("The Tenner was modified by another request.", "CONCURRENT_MODIFICATION"));
     repository.getById.mockResolvedValueOnce(deleted).mockResolvedValueOnce(current);
-    await expect(service.restoreTenner("default", "t-1")).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION", statusCode: 409 });
+    await expect(service.restoreTenner(TEST_IDENTITY, "t-1")).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION", statusCode: 409 });
   });
 
   it("propagates repository failures", async () => {
     const { repository, service } = setup();
     repository.restore.mockRejectedValue(new PersistenceError());
-    await expect(service.restoreTenner("default", "t-1")).rejects.toBeInstanceOf(PersistenceError);
+    await expect(service.restoreTenner(TEST_IDENTITY, "t-1")).rejects.toBeInstanceOf(PersistenceError);
   });
 });
 
@@ -83,14 +83,14 @@ describe("restoreTennerHandler", () => {
   ] as const)("logs %s with restoredBy and the previous deletion timestamp", async (status, message) => {
     const logger = mockLogger();
     const restore = vi.fn().mockResolvedValue({ response: { tennerId: "t-1", active: true, deletedAt: null }, status, previousDeletedAt: "2026-10-01T18:00:00Z" });
-    const response = await restoreTennerHandler(event({ restoredBy: "STEFAN" }), "default", restore, logger);
+    const response = await restoreTennerHandler(event({ restoredBy: "STEFAN" }), TEST_IDENTITY, restore, logger);
     expect(response.statusCode).toBe(200);
     expect(logger.info).toHaveBeenCalledWith(message, { tennerId: "t-1", restoredBy: "STEFAN", previousDeletedAt: "2026-10-01T18:00:00Z" });
   });
 
-  it.each([{ restoredBy: "BOB" }, {}, { restoredBy: "STEFAN", active: true }])("rejects %j", async (payload) => {
+  it.each([{ restoredBy: "BOB" }, { restoredBy: "STEFAN", active: true }])("rejects %j", async (payload) => {
     const restore = vi.fn();
-    await expect(restoreTennerHandler(event(payload), "default", restore, mockLogger())).rejects.toBeInstanceOf(ValidationError);
+    await expect(restoreTennerHandler(event(payload), TEST_IDENTITY, restore, mockLogger())).rejects.toBeInstanceOf(ValidationError);
     expect(restore).not.toHaveBeenCalled();
   });
 });

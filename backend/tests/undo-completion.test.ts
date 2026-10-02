@@ -4,7 +4,7 @@ import { ConflictError, NotFoundError, PersistenceError, ValidationError } from 
 import { undoCompletionHandler } from "../src/handlers/undo-completion.js";
 import type { CompletionRecord } from "../src/repositories/index.js";
 import { restoreSchedule, UndoCompletionService } from "../src/services/index.js";
-import { completionFixture, mockCompletionRepository, mockLogger, mockTennerRepository, tennerFixture } from "./mocks/index.js";
+import { completionFixture, mockCompletionRepository, mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY, testIdentity } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-01T19:00:00.700Z");
 const TS = "2026-10-01T19:00:00Z";
@@ -32,7 +32,7 @@ function setup(completions = [latest, previous], tenner = loaded) {
 describe("UndoCompletionService", () => {
   it("reverts the latest completion and restores the previous one atomically", async () => {
     const { tenners, history, service } = setup();
-    const outcome = await service.undoLatestCompletion("default", "tenner-001", { revertedBy: "STEFAN", reason: "Completed by mistake" });
+    const outcome = await service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN", reason: "Completed by mistake" });
 
     expect(history.getLatestActiveCompletions).toHaveBeenCalledWith("default", "tenner-001", 2);
     expect(tenners.undoCompletion).toHaveBeenCalledOnce();
@@ -53,30 +53,37 @@ describe("UndoCompletionService", () => {
     expect(outcome.response.tenner).toMatchObject({ lastCompleted: "2026-09-01T18:00:00Z", nextDue: "2026-09-15", updatedAt: TS });
   });
 
+  it("defaults revertedBy to the authenticated user and rejects another user (SECURITY-004)", async () => {
+    const { tenners, service } = setup([latest]);
+    await service.undoLatestCompletion(testIdentity({ userId: "JULIA" }), "tenner-001", {});
+    expect(tenners.undoCompletion.mock.calls[0]?.[1].completion.revertedBy).toBe("JULIA");
+    await expect(service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "JULIA" })).rejects.toMatchObject({ code: "FORBIDDEN", statusCode: 403 });
+  });
+
   it("resets to the creation date when the first completion is reverted", async () => {
     const { tenners, service } = setup([latest]);
-    const outcome = await service.undoLatestCompletion("default", "tenner-001", { revertedBy: "JULIA" });
-    expect(tenners.undoCompletion.mock.calls[0]?.[0]).toMatchObject({ lastCompleted: null, nextDue: "2026-08-20" });
+    const outcome = await service.undoLatestCompletion(testIdentity({ userId: "JULIA" }), "tenner-001", { revertedBy: "JULIA" });
+    expect(tenners.undoCompletion.mock.calls[0]?.[0]).toMatchObject({ lastCompleted: null, nextDue: "2026-08-20", updatedBy: "JULIA" });
     expect(tenners.undoCompletion.mock.calls[0]?.[1].completion.revertReason).toBeNull();
     expect(outcome.restoredPrevious).toBe(false);
   });
 
   it("uses the current frequencyDays for the restored schedule", async () => {
     const { tenners, service } = setup([latest, previous], { ...loaded, frequencyDays: 30 });
-    await service.undoLatestCompletion("default", "tenner-001", { revertedBy: "STEFAN" });
+    await service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" });
     expect(tenners.undoCompletion.mock.calls[0]?.[0].nextDue).toBe("2026-10-01");
   });
 
   it("returns NO_COMPLETION_TO_UNDO when no active completion exists", async () => {
     const { tenners, service } = setup([]);
-    await expect(service.undoLatestCompletion("default", "tenner-001", { revertedBy: "STEFAN" })).rejects.toMatchObject({ code: "NO_COMPLETION_TO_UNDO", statusCode: 409 });
+    await expect(service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" })).rejects.toMatchObject({ code: "NO_COMPLETION_TO_UNDO", statusCode: 409 });
     expect(tenners.undoCompletion).not.toHaveBeenCalled();
   });
 
   it("returns 404 for missing Tenners", async () => {
     const { tenners, service } = setup();
     tenners.getById.mockResolvedValue(undefined);
-    await expect(service.undoLatestCompletion("default", "x", { revertedBy: "STEFAN" })).rejects.toBeInstanceOf(NotFoundError);
+    await expect(service.undoLatestCompletion(TEST_IDENTITY, "x", { revertedBy: "STEFAN" })).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it.each([
@@ -84,7 +91,7 @@ describe("UndoCompletionService", () => {
     ["soft-deleted", { ...loaded, active: false, deletedAt: "2026-10-01T00:00:00Z" }],
   ])("rejects %s Tenners with TENNER_INACTIVE", async (_name, tenner) => {
     const { service } = setup([latest], tenner);
-    await expect(service.undoLatestCompletion("default", "tenner-001", { revertedBy: "STEFAN" })).rejects.toMatchObject({
+    await expect(service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" })).rejects.toMatchObject({
       code: "TENNER_INACTIVE",
       message: "Completions of inactive Tenners cannot be undone.",
     });
@@ -93,15 +100,15 @@ describe("UndoCompletionService", () => {
   it("propagates concurrent modification (Tenner changed or completion already reverted) and failures", async () => {
     const { tenners, service } = setup();
     tenners.undoCompletion.mockRejectedValueOnce(new ConflictError("The Tenner or completion was modified by another request.", "CONCURRENT_MODIFICATION"));
-    await expect(service.undoLatestCompletion("default", "tenner-001", { revertedBy: "STEFAN" })).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION" });
+    await expect(service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" })).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION" });
     tenners.undoCompletion.mockRejectedValueOnce(new PersistenceError());
-    await expect(service.undoLatestCompletion("default", "tenner-001", { revertedBy: "STEFAN" })).rejects.toBeInstanceOf(PersistenceError);
+    await expect(service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" })).rejects.toBeInstanceOf(PersistenceError);
   });
 
   describe("idempotency", () => {
     async function revertedRecord(): Promise<CompletionRecord> {
       const { tenners, service } = setup();
-      await service.undoLatestCompletion("default", "tenner-001", { revertedBy: "STEFAN" }, "undo-key");
+      await service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" }, "undo-key");
       return tenners.undoCompletion.mock.calls[0]?.[1] as CompletionRecord;
     }
 
@@ -115,7 +122,7 @@ describe("UndoCompletionService", () => {
       const record = await revertedRecord();
       const { tenners, history, service } = setup();
       history.findByRevertIdempotencyKey.mockResolvedValue(record);
-      const outcome = await service.undoLatestCompletion("default", "tenner-001", { revertedBy: "STEFAN" }, "undo-key");
+      const outcome = await service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" }, "undo-key");
       expect(outcome.replayed).toBe(true);
       expect(outcome.response.revertedCompletion.completionId).toBe("completion-002");
       expect(history.getLatestActiveCompletions).not.toHaveBeenCalled();
@@ -126,7 +133,7 @@ describe("UndoCompletionService", () => {
       const record = await revertedRecord();
       const { history, service } = setup();
       history.findByRevertIdempotencyKey.mockResolvedValue(record);
-      await expect(service.undoLatestCompletion("default", "tenner-001", { revertedBy: "JULIA" }, "undo-key")).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
+      await expect(service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { reason: "Different reason" }, "undo-key")).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
     });
 
     it("resolves a concurrent duplicate to the original result", async () => {
@@ -134,13 +141,13 @@ describe("UndoCompletionService", () => {
       const { tenners, history, service } = setup();
       history.findByRevertIdempotencyKey.mockResolvedValueOnce(undefined).mockResolvedValueOnce(record);
       tenners.undoCompletion.mockRejectedValue(new ConflictError("m", "CONCURRENT_MODIFICATION"));
-      await expect(service.undoLatestCompletion("default", "tenner-001", { revertedBy: "STEFAN" }, "undo-key")).resolves.toMatchObject({ replayed: true });
+      await expect(service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" }, "undo-key")).resolves.toMatchObject({ replayed: true });
     });
 
     it("rethrows the conflict when no replay is found", async () => {
       const { tenners, service } = setup();
       tenners.undoCompletion.mockRejectedValue(new ConflictError("m", "CONCURRENT_MODIFICATION"));
-      await expect(service.undoLatestCompletion("default", "tenner-001", { revertedBy: "STEFAN" }, "undo-key")).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION" });
+      await expect(service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" }, "undo-key")).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION" });
     });
 
     it("returns 404 on replay if the Tenner disappeared", async () => {
@@ -148,7 +155,7 @@ describe("UndoCompletionService", () => {
       const { tenners, history, service } = setup();
       history.findByRevertIdempotencyKey.mockResolvedValue(record);
       tenners.getById.mockResolvedValue(undefined);
-      await expect(service.undoLatestCompletion("default", "tenner-001", { revertedBy: "STEFAN" }, "undo-key")).rejects.toBeInstanceOf(NotFoundError);
+      await expect(service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" }, "undo-key")).rejects.toBeInstanceOf(NotFoundError);
     });
   });
 });
@@ -175,7 +182,7 @@ describe("undoCompletionHandler", () => {
   it("returns 200 and logs the structured success event", async () => {
     const logger = mockLogger();
     let t = 0;
-    const response = await undoCompletionHandler(event({ revertedBy: "STEFAN" }), "default", vi.fn().mockResolvedValue(outcome), logger, () => (t += 3));
+    const response = await undoCompletionHandler(event({ revertedBy: "STEFAN" }), TEST_IDENTITY, vi.fn().mockResolvedValue(outcome), logger, () => (t += 3));
     expect(response.statusCode).toBe(200);
     expect(logger.info).toHaveBeenCalledWith("Undo completion requested", { tennerId: "tenner-001", revertedBy: "STEFAN", idempotencyKey: false });
     expect(logger.info).toHaveBeenCalledWith(
@@ -191,7 +198,7 @@ describe("undoCompletionHandler", () => {
     ["INTERNAL_ERROR", new Error("x"), "UndoFailed"],
   ])("logs %s failures as metric events and rethrows", async (code, error, eventName) => {
     const logger = mockLogger();
-    await expect(undoCompletionHandler(event({ revertedBy: "STEFAN" }), "default", vi.fn().mockRejectedValue(error), logger)).rejects.toBe(error);
+    await expect(undoCompletionHandler(event({ revertedBy: "STEFAN" }), TEST_IDENTITY, vi.fn().mockRejectedValue(error), logger)).rejects.toBe(error);
     expect(logger.warn).toHaveBeenCalledWith("Undo completion failed", expect.objectContaining({ event: eventName, errorCode: code }));
   });
 
@@ -202,13 +209,13 @@ describe("undoCompletionHandler", () => {
     ["unknown field", { revertedBy: "STEFAN", completionId: "c-1" }],
   ])("rejects %s", async (_name, payload) => {
     const undo = vi.fn();
-    await expect(undoCompletionHandler(event(payload), "default", undo, mockLogger())).rejects.toBeInstanceOf(ValidationError);
+    await expect(undoCompletionHandler(event(payload), TEST_IDENTITY, undo, mockLogger())).rejects.toBeInstanceOf(ValidationError);
     expect(undo).not.toHaveBeenCalled();
   });
 
   it("accepts a reason of exactly 250 characters", async () => {
     const undo = vi.fn().mockResolvedValue(outcome);
-    await undoCompletionHandler(event({ revertedBy: "STEFAN", reason: "x".repeat(250) }), "default", undo, mockLogger());
+    await undoCompletionHandler(event({ revertedBy: "STEFAN", reason: "x".repeat(250) }), TEST_IDENTITY, undo, mockLogger());
     expect(undo).toHaveBeenCalledOnce();
   });
 });

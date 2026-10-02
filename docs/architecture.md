@@ -506,6 +506,30 @@ The CloudFront CSP allows `connect-src` to `cognito-idp.eu-central-1.amazonaws.c
 managed login domain (token endpoint). Outputs: `cognito_user_pool_id`, `cognito_client_id`, `cognito_issuer_url`,
 `cognito_login_url`. Accounts are created with the AWS CLI (README → "User Accounts").
 
+### Authorization Model (SECURITY-004, `backend/src/auth/identity.ts`)
+
+```text
+API Gateway JWT authorizer (signature, issuer, audience, expiry)
+  ↓ requestContext.authorizer.jwt.claims
+identityFromEvent → Identity { tenantId = custom:tenantId, userId = custom:userId }
+  ↓
+handlers / services → repositories (every key and query uses identity.tenantId)
+```
+
+- **Tenant:** only from `custom:tenantId`. There is no default tenant and no tenant parameter; client-supplied
+  `tenantId` fields are rejected (strict schemas) or ignored (headers). `custom:tenantId` is immutable and the web
+  client cannot write custom attributes, so a user cannot move into another household.
+- **Acting user:** only from `custom:userId` (must be a household member, `STEFAN` or `JULIA`).
+  - `completedBy` defaults to the acting user. Another member is allowed (covering for someone); the completion
+    then also stores `recordedBy` = acting user.
+  - `revertedBy` and `restoredBy` are the acting user; a different value returns 403.
+  - `createdBy` / `updatedBy` on Tenners are set on every write.
+- **Errors:** no claims → `401 UNAUTHORIZED`; claims missing or unusable → `403 FORBIDDEN`
+  (403, because a new token would not help and the frontend treats 401 as "log in again").
+- **Permissions inside a household:** every member may read and change every Tenner of the household.
+  Roles are out of scope (HOUSEHOLD-ADMIN-005).
+- Records written before authentication have `null` audit fields (TD-019).
+
 ## Future
 
 - MFA (SECURITY-011)
@@ -927,8 +951,9 @@ Both tables use:
 
 ## Multi-Tenancy Readiness
 
-Every key starts with `tenantId` (currently `default`). More households can be added without redesigning
-the tables (FUTURE-001). Tenant isolation is enforced in code until FUTURE-002.
+Every key starts with `tenantId`, which comes from the verified `custom:tenantId` claim (SECURITY-004). All
+current data belongs to `default`. More households can be added without redesigning the tables (FUTURE-001).
+Tenant isolation is enforced in code until FUTURE-002.
 
 ## Cost
 
@@ -1017,12 +1042,12 @@ index.ts (routing, correlation, error mapping)
 - **Domain models:** `Tenner`, `Completion`, `User`. The enumerations `Category` and `UserId` are the single
   source of allowed values.
 - **Validation:** Zod schemas with centralized limits. `validate()` raises `ValidationError` with field details.
-- **Errors:** an `ApplicationError` hierarchy (`ValidationError` 400, `UnauthorizedError` 401, `NotFoundError` 404,
+- **Errors:** an `ApplicationError` hierarchy (`ValidationError` 400, `UnauthorizedError` 401, `ForbiddenError` 403, `NotFoundError` 404,
   `ConflictError` 409, `PersistenceError` 500). Errors are mapped centrally to `{ success: false, error: { code, message } }`.
   Unknown errors become `500 INTERNAL_ERROR` without internal details.
 - **Responses:** `{ success: true, data }` for business endpoints. `/health` keeps its operational format.
-- **Configuration:** `src/config.ts` is the only reader of `process.env`. The tenant defaults to `default`
-  until SECURITY-004.
+- **Configuration:** `src/config.ts` is the only reader of `process.env`. The tenant is not configuration; it comes
+  from the JWT claims (SECURITY-004).
 - **Logging:** JSON lines, level filtering, and a child logger per request with `correlationId`
   (`x-correlation-id` header or the API Gateway request ID, echoed in the response).
 - **Enforcement:** ESLint fails if code outside `config.ts` reads `process.env`, or if handlers or services

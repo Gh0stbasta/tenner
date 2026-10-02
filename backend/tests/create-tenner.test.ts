@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ConflictError, PersistenceError, ValidationError } from "../src/exceptions/index.js";
 import { createTennerHandler } from "../src/handlers/create-tenner.js";
 import { CreateTennerService } from "../src/services/index.js";
-import { mockLogger, mockTennerRepository } from "./mocks/index.js";
+import { mockLogger, mockTennerRepository, TEST_IDENTITY, testIdentity } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-01T18:30:15.123Z");
 const ID = "5c2bfd9b-c8d1-4ab7-af57-b1dfe6ddbf05";
@@ -17,7 +17,7 @@ function service() {
 describe("CreateTennerService", () => {
   it("creates a Tenner with generated fields and defaults", async () => {
     const { repository, service: svc } = service();
-    const response = await svc.createTenner("default", request);
+    const response = await svc.createTenner(TEST_IDENTITY, request);
 
     expect(repository.save).toHaveBeenCalledWith({
       tenantId: "default",
@@ -29,6 +29,8 @@ describe("CreateTennerService", () => {
       deletedAt: null,
       createdAt: "2026-10-01T18:30:15Z",
       updatedAt: "2026-10-01T18:30:15Z",
+      createdBy: "STEFAN",
+      updatedBy: "STEFAN",
     });
     expect(response).toEqual({
       tennerId: ID,
@@ -39,19 +41,27 @@ describe("CreateTennerService", () => {
       deletedAt: null,
       createdAt: "2026-10-01T18:30:15Z",
       updatedAt: "2026-10-01T18:30:15Z",
+      createdBy: "STEFAN",
+      updatedBy: "STEFAN",
     });
+  });
+
+  it("takes tenant and audit user from the identity (SECURITY-004)", async () => {
+    const { repository, service: svc } = service();
+    await svc.createTenner(testIdentity({ tenantId: "household-2", userId: "JULIA" }), request);
+    expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "household-2", createdBy: "JULIA", updatedBy: "JULIA" }));
   });
 
   it("uses the UTC date for nextDue just before midnight UTC", async () => {
     const repository = mockTennerRepository();
     const svc = new CreateTennerService(repository, () => new Date("2026-10-01T23:59:59Z"), () => ID);
-    expect((await svc.createTenner("default", request)).nextDue).toBe("2026-10-01");
+    expect((await svc.createTenner(TEST_IDENTITY, request)).nextDue).toBe("2026-10-01");
   });
 
   it("propagates repository failures", async () => {
     const { repository, service: svc } = service();
     repository.save.mockRejectedValue(new PersistenceError("Failed to save Tenner."));
-    await expect(svc.createTenner("default", request)).rejects.toBeInstanceOf(PersistenceError);
+    await expect(svc.createTenner(TEST_IDENTITY, request)).rejects.toBeInstanceOf(PersistenceError);
   });
 });
 
@@ -62,11 +72,11 @@ describe("createTennerHandler", () => {
   it("returns 201 with the created Tenner and logs the creation", async () => {
     const logger = mockLogger();
     const { service: svc } = service();
-    const response = await createTennerHandler(event(request), "default", (t, r) => svc.createTenner(t, r), logger);
+    const response = await createTennerHandler(event(request), TEST_IDENTITY, (t, r) => svc.createTenner(t, r), logger);
 
     expect(response.statusCode).toBe(201);
     expect(JSON.parse(response.body ?? "").data).toMatchObject({ tennerId: ID, title: "Vacuum Office" });
-    expect(logger.info).toHaveBeenCalledWith("Tenner created", { tennerId: ID, assignedTo: "STEFAN", category: "HOUSEHOLD" });
+    expect(logger.info).toHaveBeenCalledWith("Tenner created", { tennerId: ID, createdBy: "STEFAN", assignedTo: "STEFAN", category: "HOUSEHOLD" });
   });
 
   it.each([
@@ -78,17 +88,17 @@ describe("createTennerHandler", () => {
     ["missing body", ""],
   ])("rejects %s", async (_name, body) => {
     const create = vi.fn();
-    await expect(createTennerHandler(event(body), "default", create, mockLogger())).rejects.toBeInstanceOf(ValidationError);
+    await expect(createTennerHandler(event(body), TEST_IDENTITY, create, mockLogger())).rejects.toBeInstanceOf(ValidationError);
     expect(create).not.toHaveBeenCalled();
   });
 
   it("propagates repository failures (mapped to 500 by the router)", async () => {
     const create = vi.fn().mockRejectedValue(new PersistenceError());
-    await expect(createTennerHandler(event(request), "default", create, mockLogger())).rejects.toBeInstanceOf(PersistenceError);
+    await expect(createTennerHandler(event(request), TEST_IDENTITY, create, mockLogger())).rejects.toBeInstanceOf(PersistenceError);
   });
 
   it("propagates conflicts", async () => {
     const create = vi.fn().mockRejectedValue(new ConflictError("Tenner already exists."));
-    await expect(createTennerHandler(event(request), "default", create, mockLogger())).rejects.toBeInstanceOf(ConflictError);
+    await expect(createTennerHandler(event(request), TEST_IDENTITY, create, mockLogger())).rejects.toBeInstanceOf(ConflictError);
   });
 });

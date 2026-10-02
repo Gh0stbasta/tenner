@@ -1,5 +1,6 @@
 /** Business logic for completing a Tenner (TICKET-013). */
 
+import type { Identity } from "../auth/index.js";
 import { toCompletionResponse, toTennerResponse, type CompleteTennerRequest, type CompleteTennerResponse } from "../dto/index.js";
 import { ConflictError, NotFoundError, ValidationError } from "../exceptions/index.js";
 import type { Completion, Tenner } from "../models/index.js";
@@ -28,9 +29,12 @@ export class CompleteTennerService {
    * Complete a Tenner: append an immutable history record and move the Tenner into its next cycle
    * (nextDue = completion date + frequencyDays), atomically. With an idempotency key, retries return
    * the original result; reusing the key for a different request is a conflict.
+   * completedBy defaults to the authenticated user; recordedBy is always the authenticated user (SECURITY-004).
    */
-  async completeTenner(tenantId: string, tennerId: string, request: CompleteTennerRequest, idempotencyKey?: string): Promise<CompleteTennerOutcome> {
-    const requestHash = sha256Json({ tennerId, completedBy: request.completedBy, actualMinutes: request.actualMinutes ?? null, completedAt: request.completedAt ?? null });
+  async completeTenner(identity: Identity, tennerId: string, request: CompleteTennerRequest, idempotencyKey?: string): Promise<CompleteTennerOutcome> {
+    const { tenantId } = identity;
+    const completedBy = request.completedBy ?? identity.userId;
+    const requestHash = sha256Json({ tennerId, completedBy, actualMinutes: request.actualMinutes ?? null, completedAt: request.completedAt ?? null });
     const completionId = idempotencyKey ? uuidV5(`${tenantId}:${idempotencyKey}`) : this.newId();
 
     if (idempotencyKey) {
@@ -48,7 +52,8 @@ export class CompleteTennerService {
       tenantId,
       completionId,
       tennerId,
-      completedBy: request.completedBy,
+      completedBy,
+      recordedBy: identity.userId,
       completedAt,
       actualMinutes: request.actualMinutes ?? tenner.estimatedMinutes,
       revertedAt: null,
@@ -60,6 +65,7 @@ export class CompleteTennerService {
       lastCompleted: completedAt,
       nextDue: nextDueAfter(completedAt, tenner.frequencyDays),
       updatedAt: toUtcTimestamp(now),
+      updatedBy: identity.userId,
     };
 
     try {

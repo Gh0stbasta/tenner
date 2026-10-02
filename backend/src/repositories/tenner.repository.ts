@@ -29,7 +29,7 @@ export interface SoftDeleteResult {
 /** Fields that may change through an update, plus the new updatedAt timestamp (TICKET-011). */
 export type TennerUpdate = {
   readonly [K in "title" | "category" | "estimatedMinutes" | "frequencyDays" | "assignedTo" | "active"]?: Tenner[K] | undefined;
-} & { readonly updatedAt: string };
+} & { readonly updatedAt: string; readonly updatedBy: UserId };
 
 /**
  * Persistence contract for Tenners. Implementations translate storage failures into
@@ -56,10 +56,10 @@ export interface TennerRepository {
    */
   update(tenantId: string, tennerId: string, changes: TennerUpdate): Promise<Tenner>;
   /**
-   * Soft delete: set active = false, deletedAt and updatedAt to the given timestamp. Never removes the item.
+   * Soft delete: set active = false, deletedAt and updatedAt to the given timestamp, updatedBy = actor. Never removes the item.
    * Reports ALREADY_DELETED (without changes) for deleted Tenners; NotFoundError if missing.
    */
-  delete(tenantId: string, tennerId: string, timestamp: string): Promise<SoftDeleteResult>;
+  delete(tenantId: string, tennerId: string, timestamp: string, actor: UserId): Promise<SoftDeleteResult>;
   /**
    * Atomically append a completion to the history and update the Tenner's schedule (TICKET-013).
    * `expected` is the Tenner state the update was computed from (optimistic locking).
@@ -74,9 +74,9 @@ export interface TennerRepository {
    */
   undoCompletion(restored: Tenner, reverted: CompletionRecord, expected: Tenner): Promise<void>;
   /**
-   * Undo a soft delete (TICKET-015): active = true, deletedAt = null, updatedAt = timestamp.
+   * Undo a soft delete (TICKET-015): active = true, deletedAt = null, updatedAt = timestamp, updatedBy = actor.
    * Schedule fields are untouched. Optimistic lock on `expectedUpdatedAt`;
    * ConflictError CONCURRENT_MODIFICATION if the Tenner changed or does not exist.
    */
-  restore(tenantId: string, tennerId: string, expectedUpdatedAt: string, timestamp: string): Promise<Tenner>;
+  restore(tenantId: string, tennerId: string, expectedUpdatedAt: string, timestamp: string, actor: UserId): Promise<Tenner>;
 }

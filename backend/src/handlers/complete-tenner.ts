@@ -1,5 +1,6 @@
 /** POST /tenners/{tennerId}/complete: complete a Tenner (TICKET-013). */
 
+import type { Identity } from "../auth/index.js";
 import type { CompleteTennerRequest } from "../dto/index.js";
 import { ApplicationError } from "../exceptions/index.js";
 import type { CompleteTennerOutcome } from "../services/index.js";
@@ -8,13 +9,13 @@ import { successResponse } from "../utils/http.js";
 import type { Logger } from "../utils/logger.js";
 import { completeTennerSchema, idempotencyKeySchema, parseJsonBody, tennerIdSchema, validate } from "../validators/index.js";
 
-export type CompleteTenner = (tenantId: string, tennerId: string, request: CompleteTennerRequest, idempotencyKey?: string) => Promise<CompleteTennerOutcome>;
+export type CompleteTenner = (identity: Identity, tennerId: string, request: CompleteTennerRequest, idempotencyKey?: string) => Promise<CompleteTennerOutcome>;
 
 const IDEMPOTENCY_HEADER = "idempotency-key";
 
 export async function completeTennerHandler(
   event: ApiEvent,
-  tenantId: string,
+  identity: Identity,
   completeTenner: CompleteTenner,
   logger: Logger,
   now: () => number = Date.now,
@@ -24,10 +25,10 @@ export async function completeTennerHandler(
   const header = event.headers?.[IDEMPOTENCY_HEADER];
   const idempotencyKey = header === undefined ? undefined : validate(idempotencyKeySchema, header);
   const request = validate(completeTennerSchema, parseJsonBody(event.body, event.isBase64Encoded));
-  logger.info("Tenner completion requested", { tennerId, completedBy: request.completedBy, idempotencyKey: idempotencyKey !== undefined });
+  logger.info("Tenner completion requested", { tennerId, completedBy: request.completedBy ?? identity.userId, recordedBy: identity.userId, idempotencyKey: idempotencyKey !== undefined });
 
   try {
-    const { response, replayed } = await completeTenner(tenantId, tennerId, request, idempotencyKey);
+    const { response, replayed } = await completeTenner(identity, tennerId, request, idempotencyKey);
     logger.info("Tenner completion succeeded", {
       event: "CompletionSucceeded",
       tennerId,

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { NotFoundError, PersistenceError, ValidationError } from "../src/exceptions/index.js";
 import { updateTennerHandler } from "../src/handlers/update-tenner.js";
 import { UpdateTennerService } from "../src/services/index.js";
-import { mockLogger, mockTennerRepository, tennerFixture } from "./mocks/index.js";
+import { mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-05T12:00:00.500Z");
 
@@ -16,7 +16,7 @@ function setup() {
 describe("UpdateTennerService", () => {
   it("updates a single field and refreshes updatedAt", async () => {
     const { repository, service } = setup();
-    const result = await service.updateTenner("default", "t-1", { frequencyDays: 30 });
+    const result = await service.updateTenner(TEST_IDENTITY, "t-1", { frequencyDays: 30 });
 
     expect(repository.update).toHaveBeenCalledWith("default", "t-1", {
       title: undefined,
@@ -26,6 +26,7 @@ describe("UpdateTennerService", () => {
       assignedTo: undefined,
       active: undefined,
       updatedAt: "2026-10-05T12:00:00Z",
+      updatedBy: "STEFAN",
     });
     expect(result.frequencyDays).toBe(30);
     expect(result.updatedAt).toBe("2026-10-05T12:00:00Z");
@@ -33,19 +34,19 @@ describe("UpdateTennerService", () => {
 
   it("updates multiple fields", async () => {
     const { repository, service } = setup();
-    await service.updateTenner("default", "t-1", { title: "Vacuum Home Office", estimatedMinutes: 15, assignedTo: "JULIA" });
+    await service.updateTenner(TEST_IDENTITY, "t-1", { title: "Vacuum Home Office", estimatedMinutes: 15, assignedTo: "JULIA" });
     expect(repository.update.mock.calls[0]?.[2]).toMatchObject({ title: "Vacuum Home Office", estimatedMinutes: 15, assignedTo: "JULIA" });
   });
 
   it("deactivates a Tenner", async () => {
     const { service } = setup();
-    expect((await service.updateTenner("default", "t-1", { active: false })).active).toBe(false);
+    expect((await service.updateTenner(TEST_IDENTITY, "t-1", { active: false })).active).toBe(false);
   });
 
   it("never passes schedule or identity fields to the repository", async () => {
     const { repository, service } = setup();
     const sneaky = { frequencyDays: 7, nextDue: "2030-01-01", lastCompleted: "x", tenantId: "other", createdAt: "x" } as never;
-    const result = await service.updateTenner("default", "t-1", sneaky);
+    const result = await service.updateTenner(TEST_IDENTITY, "t-1", sneaky);
     const changes = repository.update.mock.calls[0]?.[2] ?? {};
     expect(Object.keys(changes)).not.toEqual(expect.arrayContaining(["nextDue"]));
     for (const key of ["nextDue", "lastCompleted", "tenantId", "createdAt", "tennerId"]) expect(changes).not.toHaveProperty(key);
@@ -56,9 +57,9 @@ describe("UpdateTennerService", () => {
     const repository = mockTennerRepository();
     const service = new UpdateTennerService(repository, () => NOW);
     repository.update.mockRejectedValueOnce(new NotFoundError("Tenner not found."));
-    await expect(service.updateTenner("default", "x", { title: "abc" })).rejects.toBeInstanceOf(NotFoundError);
+    await expect(service.updateTenner(TEST_IDENTITY, "x", { title: "abc" })).rejects.toBeInstanceOf(NotFoundError);
     repository.update.mockRejectedValueOnce(new PersistenceError());
-    await expect(service.updateTenner("default", "x", { title: "abc" })).rejects.toBeInstanceOf(PersistenceError);
+    await expect(service.updateTenner(TEST_IDENTITY, "x", { title: "abc" })).rejects.toBeInstanceOf(PersistenceError);
   });
 });
 
@@ -69,7 +70,7 @@ describe("updateTennerHandler", () => {
   it("returns 200 and logs changed fields", async () => {
     const logger = mockLogger();
     const { service } = setup();
-    const response = await updateTennerHandler(event({ title: "Vacuum Home Office", frequencyDays: 30 }), "default", (t, id, r) => service.updateTenner(t, id, r), logger);
+    const response = await updateTennerHandler(event({ title: "Vacuum Home Office", frequencyDays: 30 }), TEST_IDENTITY, (t, id, r) => service.updateTenner(t, id, r), logger);
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body ?? "").data).toMatchObject({ title: "Vacuum Home Office", frequencyDays: 30 });
     expect(logger.info).toHaveBeenCalledWith("Tenner updated", { tennerId: "t-1", changedFields: ["title", "frequencyDays"], assignedTo: "STEFAN" });
@@ -83,7 +84,7 @@ describe("updateTennerHandler", () => {
     ["protected lastCompleted", { lastCompleted: "2026-10-01T00:00:00Z" }],
   ])("rejects %s", async (_name, payload) => {
     const update = vi.fn();
-    await expect(updateTennerHandler(event(payload), "default", update, mockLogger())).rejects.toBeInstanceOf(ValidationError);
+    await expect(updateTennerHandler(event(payload), TEST_IDENTITY, update, mockLogger())).rejects.toBeInstanceOf(ValidationError);
     expect(update).not.toHaveBeenCalled();
   });
 });

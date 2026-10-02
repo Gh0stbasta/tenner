@@ -34,6 +34,13 @@ export class UnauthorizedError extends ApplicationError {
   }
 }
 
+/** 403: authenticated, but the identity may not perform the request (SECURITY-004). */
+export class ForbiddenError extends ApplicationError {
+  constructor(message = "Forbidden.") {
+    super("FORBIDDEN", 403, message);
+  }
+}
+
 export class NotFoundError extends ApplicationError {
   constructor(message = "Resource not found.") {
     super("NOT_FOUND", 404, message);

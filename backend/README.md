@@ -35,7 +35,8 @@ clients/            infrastructure clients (shared DynamoDB DocumentClient)
 
 | Layer | Folder | Responsibility | Must not |
 |---|---|---|---|
-| Entry point | `src/index.ts` | route, create request logger, map errors to responses | contain business logic |
+| Entry point | `src/index.ts` | route, resolve the identity on protected routes, create request logger, map errors to responses | contain business logic |
+| Auth | `src/auth/` | `identityFromEvent`: tenant and acting user from the verified JWT claims (SECURITY-004) | read identity from body, headers or query |
 | Handlers | `src/handlers/` | HTTP concerns: parse body, validate, call service, build response | access DynamoDB or the AWS SDK (enforced by ESLint) |
 | Services | `src/services/` | business rules and workflows | access DynamoDB or the AWS SDK (enforced by ESLint) |
 | Repositories | `src/repositories/` | read and write domain objects, translate storage errors to `PersistenceError` | validate input |
@@ -54,12 +55,37 @@ clients/            infrastructure clients (shared DynamoDB DocumentClient)
 Everything may use `models`, `dto`, `exceptions` and `utils`. Wiring happens in `index.ts`
 (`createDependencies`), so tests can swap any dependency.
 
+## Authentication and Authorization (SECURITY-004)
+
+API Gateway's JWT authorizer verifies the Cognito ID token before the Lambda runs (SECURITY-002). `src/index.ts`
+then builds the identity once per request with `identityFromEvent` (`src/auth/identity.ts`):
+
+| Claim | Becomes | Rule |
+|---|---|---|
+| `custom:tenantId` | `identity.tenantId`, used for **every** repository call | `[A-Za-z0-9_-]{1,64}` |
+| `custom:userId` | `identity.userId`, the acting user | `STEFAN` or `JULIA` |
+
+| Situation | Response |
+|---|---|
+| Protected route without verified claims (no authorizer context) | `401 UNAUTHORIZED` |
+| Valid token, but the account lacks a claim or has an unknown user / malformed tenant | `403 FORBIDDEN` |
+| `GET /health` | public, no identity |
+
+- There is **no default tenant** and no tenant parameter. A `tenantId` in the query or body is rejected with 400
+  (strict schemas); headers are ignored.
+- Read handlers receive `identity.tenantId`; write handlers and services receive the whole identity.
+- The request logger is bound to `userId` (no e-mail addresses or tokens are logged).
+- Tests build authenticated events with `authenticatedEvent()` and `jwtClaims()` from `tests/mocks`.
+
 ## Domain Model
 
 | Model | Fields |
 |---|---|
-| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `active`, `createdAt`, `updatedAt` |
-| `Completion` | `tenantId`, `completionId` (stored as `historyId`), `tennerId`, `completedBy`, `completedAt`, `actualMinutes` |
+| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `active`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy` |
+| `Completion` | `tenantId`, `completionId` (stored as `historyId`), `tennerId`, `completedBy`, `recordedBy`, `completedAt`, `actualMinutes` |
+
+`createdBy`, `updatedBy` and `recordedBy` are set from the authenticated user (SECURITY-004). Records written before
+authentication have `null` there.
 | `User` | `userId`, `displayName`, `active` |
 
 | Enumeration | Values |
@@ -114,7 +140,7 @@ This is a partial update. Allowed fields: `title`, `category`, `estimatedMinutes
 and `active`. At least one field is required, and the same validation rules as on create apply.
 
 The protected fields `tenantId`, `tennerId`, `createdAt`, `lastCompleted` and `nextDue` are rejected with 400.
-`updatedAt` is refreshed. Changing `frequencyDays` does **not** change `nextDue` or `lastCompleted`.
+`updatedAt` and `updatedBy` are refreshed. Changing `frequencyDays` does **not** change `nextDue` or `lastCompleted`.
 
 The repository uses one `UpdateItem` that sets only the provided fields plus `updatedAt`, with the condition
 `attribute_exists(tennerId)` (missing → 404) and `ReturnValues: ALL_NEW`. Attributes that were not sent, such as
@@ -126,7 +152,7 @@ This is a **soft delete only**. The item and its completion history stay in Dyna
 
 | State | Result |
 |---|---|
-| exists, not deleted | `active = false`, `deletedAt = updatedAt = now` (one conditional `UpdateItem`) → 200 |
+| exists, not deleted | `active = false`, `deletedAt = updatedAt = now`, `updatedBy` = authenticated user (one conditional `UpdateItem`) → 200 |
 | already deleted | unchanged (original `deletedAt` kept) → 200 (idempotent) |
 | missing | 404 `NOT_FOUND` |
 
@@ -144,12 +170,12 @@ Effects on other endpoints:
 
 | Field | Rule |
 |---|---|
-| `completedBy` | required, `STEFAN` or `JULIA` (may differ from `assignedTo`) |
+| `completedBy` | optional, `STEFAN` or `JULIA`. Default: the authenticated user. Another member is allowed (covering for someone); the record then also stores `recordedBy` = authenticated user |
 | `actualMinutes` | optional, 1–1440. Default: the Tenner's `estimatedMinutes` |
 | `completedAt` | optional UTC timestamp. Default: now. It must not be in the future (60 s clock-skew tolerance) or earlier than `lastCompleted` |
 
 **Recurrence (completion-based):** `nextDue = UTC date(completedAt) + frequencyDays` for early, on-time and overdue
-completions alike. `lastCompleted = completedAt` and `updatedAt = now`.
+completions alike. `lastCompleted = completedAt`, `updatedAt = now` and `updatedBy` = authenticated user.
 
 **Atomicity:** a single `TransactWriteItems`:
 1. Put the history record into `tenner-history`, with `historyId` = `completionId` and the condition
@@ -176,7 +202,8 @@ or "Tenner completion failed" (`event: CompletionFailed` or `CompletionConflict`
 { "revertedBy": "STEFAN", "reason": "Completed by mistake" }
 ```
 
-`revertedBy` is required. `reason` is optional, trimmed, 1–250 characters, and whitespace-only is rejected.
+`revertedBy` is optional and defaults to the authenticated user; another user returns `403 FORBIDDEN`. The body may
+be `{}`. `reason` is optional, trimmed, 1–250 characters, and whitespace-only is rejected.
 
 **Reverted completion model:** completions are never deleted. Undo sets `revertedAt`, `revertedBy` and
 `revertReason`, which are `null` for new completions. The original fields stay unchanged.
@@ -193,7 +220,7 @@ There is no Scan. If no active completion exists, the result is `409 NO_COMPLETI
 | A previous active completion exists | its `completedAt` | UTC date(`completedAt`) + `frequencyDays` (may be in the past) |
 | The first completion was reverted | `null` | `createdAt` date (fallback: today) |
 
-`updatedAt` is set to now in both cases.
+`updatedAt` is set to now and `updatedBy` to the authenticated user in both cases.
 
 **Atomicity and concurrency:** a single `TransactWriteItems`:
 1. Mark the completion as reverted. Condition: it exists and is not reverted yet.
@@ -217,7 +244,8 @@ result without reverting another completion. Reusing the key with a different re
 { "restoredBy": "STEFAN" }
 ```
 
-`restoredBy` is required and used for audit logging only.
+`restoredBy` is optional (the body may be `{}`) and defaults to the authenticated user; another user returns
+`403 FORBIDDEN`. The restore sets `updatedBy` = authenticated user.
 
 | State | Result |
 |---|---|
@@ -339,6 +367,10 @@ and a Tenner fixture.
 | `GET /tenners/{tennerId}/history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `404` for an unknown Tenner |
 | unknown route | `404 NOT_FOUND` |
 
+Every route except `GET /health` additionally returns `401 UNAUTHORIZED` (from API Gateway or, without claims, from
+the Lambda) and `403 FORBIDDEN` for accounts without household attributes (SECURITY-004). `TennerResponse` includes
+`createdBy` and `updatedBy`.
+
 ### POST /tenners
 
 Request (all fields required, unknown fields rejected):
@@ -347,7 +379,7 @@ Request (all fields required, unknown fields rejected):
 { "title": "Vacuum Office", "category": "HOUSEHOLD", "estimatedMinutes": 10, "frequencyDays": 14, "assignedTo": "STEFAN" }
 ```
 
-The service generates `tennerId` (UUID v4), `tenantId` (from configuration), `active = true`,
+The service generates `tennerId` (UUID v4), `tenantId` (from the identity), `createdBy` = `updatedBy` = authenticated user, `active = true`,
 `lastCompleted = null`, `nextDue` = today (UTC date) and `createdAt` = `updatedAt` = now (UTC, seconds precision).
 The repository writes with `attribute_not_exists(tennerId)`, so it never overwrites an existing item.
 

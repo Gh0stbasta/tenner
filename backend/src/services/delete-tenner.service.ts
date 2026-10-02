@@ -1,5 +1,6 @@
 /** Business logic for soft-deleting Tenners (TICKET-012). */
 
+import type { Identity } from "../auth/index.js";
 import type { DeleteTennerResponse } from "../dto/index.js";
 import type { SoftDeleteResult, TennerRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock } from "../utils/clock.js";
@@ -17,11 +18,11 @@ export class DeleteTennerService {
   ) {}
 
   /**
-   * Soft delete: active = false, deletedAt = updatedAt = now. Idempotent: deleting an already
+   * Soft delete: active = false, deletedAt = updatedAt = now, updatedBy = the authenticated user. Idempotent: deleting an already
    * deleted Tenner succeeds without changes. Completion history is never touched.
    */
-  async deleteTenner(tenantId: string, tennerId: string): Promise<DeleteTennerResult> {
-    const outcome = await this.repository.delete(tenantId, tennerId, toUtcTimestamp(this.clock()));
+  async deleteTenner(identity: Identity, tennerId: string): Promise<DeleteTennerResult> {
+    const outcome = await this.repository.delete(identity.tenantId, tennerId, toUtcTimestamp(this.clock()), identity.userId);
     return { response: { tennerId, deleted: true }, outcome };
   }
 }

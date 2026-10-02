@@ -4,6 +4,7 @@
  * standard error response.
  */
 
+import { identityFromEvent, type Identity } from "./auth/index.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
 import { loadConfig, type AppConfig } from "./config.js";
 import { ApplicationError, NotFoundError } from "./exceptions/index.js";
@@ -58,25 +59,36 @@ export interface Dependencies {
 export interface RequestContext {
   readonly event: ApiEvent;
   readonly deps: Dependencies;
-  /** Logger bound to the request's correlationId. */
+  /** Logger bound to the request's correlationId (and, on protected routes, the acting user). */
   readonly logger: Logger;
 }
 
-type RouteHandler = (ctx: RequestContext) => Promise<ApiResult>;
+/** Context of a protected route: additionally carries the identity from the verified JWT claims (SECURITY-004). */
+export interface AuthenticatedContext extends RequestContext {
+  readonly identity: Identity;
+}
 
-const ROUTES: Readonly<Record<string, RouteHandler>> = {
+type RouteHandler = (ctx: AuthenticatedContext) => Promise<ApiResult>;
+type PublicRouteHandler = (ctx: RequestContext) => Promise<ApiResult>;
+
+/** Routes without authentication; must match api_public_routes in terraform/locals.tf. */
+const PUBLIC_ROUTES: Readonly<Record<string, PublicRouteHandler>> = {
   "GET /health": ({ deps, logger }) => health(deps.config, deps.probeDatabase, logger),
-  "POST /tenners": ({ event, deps, logger }) => createTennerHandler(event, deps.config.tenantId, deps.createTenner, logger),
-  "GET /tenners": ({ event, deps, logger }) => listTennersHandler(event, deps.config.tenantId, deps.listTenners, logger),
-  "GET /tenners/{tennerId}": ({ event, deps, logger }) => getTennerHandler(event, deps.config.tenantId, deps.getTenner, logger),
-  "GET /history": ({ event, deps, logger }) => historyHandler(event, deps.config.tenantId, deps.getHistory, logger),
-  "GET /tenners/{tennerId}/history": ({ event, deps, logger }) => tennerHistoryHandler(event, deps.config.tenantId, deps.getTennerHistory, logger),
-  "PUT /tenners/{tennerId}": ({ event, deps, logger }) => updateTennerHandler(event, deps.config.tenantId, deps.updateTenner, logger),
-  "DELETE /tenners/{tennerId}": ({ event, deps, logger }) => deleteTennerHandler(event, deps.config.tenantId, deps.deleteTenner, logger),
-  "POST /tenners/{tennerId}/complete": ({ event, deps, logger }) => completeTennerHandler(event, deps.config.tenantId, deps.completeTenner, logger),
-  "POST /tenners/{tennerId}/undo-completion": ({ event, deps, logger }) => undoCompletionHandler(event, deps.config.tenantId, deps.undoCompletion, logger),
-  "POST /tenners/{tennerId}/restore": ({ event, deps, logger }) => restoreTennerHandler(event, deps.config.tenantId, deps.restoreTenner, logger),
-  "GET /dashboard": ({ event, deps, logger }) => dashboardHandler(event, deps.config.tenantId, deps.getDashboard, logger),
+};
+
+/** Protected routes. The tenant comes only from the identity; there is no default tenant. */
+const ROUTES: Readonly<Record<string, RouteHandler>> = {
+  "POST /tenners": ({ event, deps, logger, identity }) => createTennerHandler(event, identity, deps.createTenner, logger),
+  "GET /tenners": ({ event, deps, logger, identity }) => listTennersHandler(event, identity.tenantId, deps.listTenners, logger),
+  "GET /tenners/{tennerId}": ({ event, deps, logger, identity }) => getTennerHandler(event, identity.tenantId, deps.getTenner, logger),
+  "GET /history": ({ event, deps, logger, identity }) => historyHandler(event, identity.tenantId, deps.getHistory, logger),
+  "GET /tenners/{tennerId}/history": ({ event, deps, logger, identity }) => tennerHistoryHandler(event, identity.tenantId, deps.getTennerHistory, logger),
+  "PUT /tenners/{tennerId}": ({ event, deps, logger, identity }) => updateTennerHandler(event, identity, deps.updateTenner, logger),
+  "DELETE /tenners/{tennerId}": ({ event, deps, logger, identity }) => deleteTennerHandler(event, identity, deps.deleteTenner, logger),
+  "POST /tenners/{tennerId}/complete": ({ event, deps, logger, identity }) => completeTennerHandler(event, identity, deps.completeTenner, logger),
+  "POST /tenners/{tennerId}/undo-completion": ({ event, deps, logger, identity }) => undoCompletionHandler(event, identity, deps.undoCompletion, logger),
+  "POST /tenners/{tennerId}/restore": ({ event, deps, logger, identity }) => restoreTennerHandler(event, identity, deps.restoreTenner, logger),
+  "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -112,20 +124,20 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     config,
     logger,
     probeDatabase: (t) => probeTables(getDocumentClient(), t),
-    createTenner: createTennerService ? (tenantId, request) => createTennerService.createTenner(tenantId, request) : notConfigured,
+    createTenner: createTennerService ? (identity, request) => createTennerService.createTenner(identity, request) : notConfigured,
     listTenners: listTennersService ? (tenantId, request) => listTennersService.listTenners(tenantId, request) : notConfigured,
-    updateTenner: updateTennerService ? (tenantId, id, request) => updateTennerService.updateTenner(tenantId, id, request) : notConfigured,
-    deleteTenner: deleteTennerService ? (tenantId, id) => deleteTennerService.deleteTenner(tenantId, id) : notConfigured,
-    restoreTenner: restoreTennerService ? (tenantId, id) => restoreTennerService.restoreTenner(tenantId, id) : notConfigured,
+    updateTenner: updateTennerService ? (identity, id, request) => updateTennerService.updateTenner(identity, id, request) : notConfigured,
+    deleteTenner: deleteTennerService ? (identity, id) => deleteTennerService.deleteTenner(identity, id) : notConfigured,
+    restoreTenner: restoreTennerService ? (identity, id) => restoreTennerService.restoreTenner(identity, id) : notConfigured,
     getHistory: historyService ? (tenantId, request) => historyService.getHistory(tenantId, request) : notConfigured,
     getTennerHistory: historyService ? (tenantId, id, request) => historyService.getTennerHistory(tenantId, id, request) : notConfigured,
     getTenner: getTennerService ? (tenantId, id, options) => getTennerService.getTenner(tenantId, id, options) : notConfigured,
     getDashboard: dashboardService ? (tenantId, request) => dashboardService.getDashboard(tenantId, request) : notConfigured,
     completeTenner: completeTennerService
-      ? (tenantId, id, request, key) => completeTennerService.completeTenner(tenantId, id, request, key)
+      ? (identity, id, request, key) => completeTennerService.completeTenner(identity, id, request, key)
       : notConfigured,
     undoCompletion: undoCompletionService
-      ? (tenantId, id, request, key) => undoCompletionService.undoLatestCompletion(tenantId, id, request, key)
+      ? (identity, id, request, key) => undoCompletionService.undoLatestCompletion(identity, id, request, key)
       : notConfigured,
   };
 }
@@ -144,6 +156,16 @@ export function correlationIdOf(event: ApiEvent): string {
   return event.requestContext?.requestId ?? "unknown";
 }
 
+/** Public routes run without identity; protected routes first resolve the identity from the JWT claims. */
+async function dispatch(event: ApiEvent, deps: Dependencies, requestLogger: Logger): Promise<ApiResult> {
+  const publicHandler = PUBLIC_ROUTES[event.routeKey];
+  if (publicHandler) return publicHandler({ event, deps, logger: requestLogger });
+  const routeHandler = ROUTES[event.routeKey];
+  if (!routeHandler) throw new NotFoundError("Route not found.");
+  const identity = identityFromEvent(event);
+  return routeHandler({ event, deps, identity, logger: requestLogger.child({ userId: identity.userId }) });
+}
+
 /** Dispatch a request to its handler. Exported for tests. */
 export async function route(event: ApiEvent, deps: Dependencies): Promise<ApiResult> {
   const correlationId = correlationIdOf(event);
@@ -154,9 +176,7 @@ export async function route(event: ApiEvent, deps: Dependencies): Promise<ApiRes
   });
 
   try {
-    const routeHandler = ROUTES[event.routeKey];
-    if (!routeHandler) throw new NotFoundError("Route not found.");
-    const response = await routeHandler({ event, deps, logger });
+    const response = await dispatch(event, deps, logger);
     logger.info("Request handled", { statusCode: response.statusCode });
     return withCorrelation(response);
   } catch (error) {
