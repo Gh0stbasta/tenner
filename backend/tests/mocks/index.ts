@@ -1,16 +1,41 @@
 /** Shared test doubles: configuration, logger, repository and service mocks. */
 
 import { vi, type Mocked } from "vitest";
+import type { Identity } from "../../src/auth/index.js";
 import type { AppConfig } from "../../src/config.js";
 import type { Completion, Tenner } from "../../src/models/index.js";
 import type { CompletionRepository, TennerRepository } from "../../src/repositories/index.js";
 import type { AnalyticsService, TennerService } from "../../src/services/index.js";
+import type { ApiEvent } from "../../src/types/api.js";
 import type { Logger } from "../../src/utils/logger.js";
+
+/** Identity of the default test user (tenant "default", user STEFAN). */
+export const TEST_IDENTITY: Identity = { tenantId: "default", userId: "STEFAN" };
+
+export function testIdentity(overrides: Partial<Identity> = {}): Identity {
+  return { ...TEST_IDENTITY, ...overrides };
+}
+
+/** JWT claims as API Gateway's JWT authorizer passes them (custom attributes of the Cognito ID token). */
+export function jwtClaims(identity: Identity = TEST_IDENTITY): Record<string, string> {
+  return { sub: "11111111-2222-3333-4444-555555555555", "custom:tenantId": identity.tenantId, "custom:userId": identity.userId };
+}
+
+/**
+ * Authenticated API event (SECURITY-004): `event` with the verified claims set like the JWT authorizer does.
+ * `claims` replaces the default claims entirely; pass `null` for an event without an authorizer context.
+ */
+export function authenticatedEvent(event: Partial<ApiEvent>, claims: Record<string, string> | null = jwtClaims()): ApiEvent {
+  const requestContext = { requestId: "req-1", ...(event.requestContext ?? {}) } as ApiEvent["requestContext"];
+  return {
+    ...event,
+    requestContext: claims === null ? requestContext : ({ ...requestContext, authorizer: { jwt: { claims, scopes: null } } } as ApiEvent["requestContext"]),
+  } as ApiEvent;
+}
 
 export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   return {
     environment: "prod",
-    tenantId: "default",
     logLevel: "INFO",
     applicationName: "Tenner",
     timezone: "Europe/Berlin",
@@ -53,6 +78,7 @@ export function completionFixture(overrides: Partial<Completion> = {}): Completi
     completionId: "completion-002",
     tennerId: "tenner-001",
     completedBy: "STEFAN",
+    recordedBy: "STEFAN",
     completedAt: "2026-10-01T18:30:00Z",
     actualMinutes: 12,
     revertedAt: null,
@@ -77,6 +103,8 @@ export function tennerFixture(overrides: Partial<Tenner> = {}): Tenner {
     deletedAt: null,
     createdAt: "2026-10-01T10:00:00Z",
     updatedAt: "2026-10-01T10:00:00Z",
+    createdBy: "STEFAN",
+    updatedBy: "STEFAN",
     ...overrides,
   };
 }

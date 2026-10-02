@@ -16,6 +16,7 @@ describe("dto mappers", () => {
       completionId: "c1",
       tennerId: "t1",
       completedBy: "JULIA",
+      recordedBy: "JULIA",
       completedAt: "2026-10-01T18:30:00Z",
       actualMinutes: 12,
       revertedAt: null,

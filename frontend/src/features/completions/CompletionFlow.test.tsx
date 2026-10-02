@@ -1,13 +1,12 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fail, mockFetch, ok, type MockResponse } from "../../tests/fetchMock";
 import { completeResponse, dashboard, tenner } from "../../tests/fixtures";
 import { renderWithProviders } from "../../tests/render";
 import { DashboardPage } from "../dashboard/DashboardPage";
 import { TennersPage } from "../tenners/TennersPage";
 import { useCompletion, UNDO_WINDOW_MS } from "./CompletionProvider";
-import { CURRENT_USER_STORAGE_KEY } from "./CurrentUserProvider";
 
 const undoResponse = ok({
   tenner: tenner(),
@@ -24,8 +23,6 @@ const completeButton = (title: string) => screen.findByRole("button", { name: `â
 
 describe("completion and undo", () => {
   beforeEach(() => vi.spyOn(console, "info").mockImplementation(() => undefined));
-  afterEach(() => window.localStorage.clear());
-
   it("removes the Tenner optimistically before the API answers", async () => {
     const pending = deferred();
     mockFetch({
@@ -112,13 +109,12 @@ describe("completion and undo", () => {
     expect(keys[0]).toBe(keys[1]);
   });
 
-  it("records the selected user as completedBy", async () => {
-    window.localStorage.setItem(CURRENT_USER_STORAGE_KEY, "JULIA");
+  it("records the logged-in user as completedBy", async () => {
     const fetchMock = mockFetch({
       "GET /tenners": ok([tenner()]),
       "POST /tenners/t-1/complete": ok(completeResponse()),
     });
-    renderWithProviders(<TennersPage />);
+    renderWithProviders(<TennersPage />, { user: "JULIA" });
     await userEvent.click(await completeButton("BÃ¼ro saugen"));
     await waitFor(() =>
       expect(fetchMock.calls().find((c) => c.key === "POST /tenners/t-1/complete")?.body).toEqual({

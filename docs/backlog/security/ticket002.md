@@ -27,7 +27,7 @@ Amazon Cognito User Pool and an API Gateway JWT authorizer.
 
 # Background
 
-Implements the decision from SECURITY-001 (assumed: Option A, one account per member).
+Implements the decision from SECURITY-001 ([ADR 0001](../../decisions/0001-authentication.md): Option A, one account per member).
 
 Version 1 requires no self-service registration: accounts are created by an
 administrator.
@@ -156,3 +156,29 @@ terraform plan
 - Frontend login (SECURITY-003)
 - Using identity in business logic (SECURITY-004)
 - MFA (SECURITY-011)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-02 (`terraform/auth.tf`).
+
+- [x] User pool `tenner-users-prod` (Essentials) and public app client `tenner-web-prod` (code + PKCE)
+- [x] Self sign-up disabled; e-mail username; password ≥ 12; recovery via verified e-mail; deletion protection
+- [x] Custom attributes `custom:tenantId` (immutable) and `custom:userId`; the app client can only write `email`
+- [x] Managed login domain (prefix from a hash of the account ID) with default branding
+- [x] JWT authorizer on all routes except `GET /health` (no webhook routes exist yet)
+- [x] Provisioning documented without secrets (README → "User Accounts"); deploy role permissions listed
+- [x] Tests: 5 new offline Terraform runs (pool, client, domain, routes/authorizer, CSP); `fmt`, `validate`,
+  `test` (38 passed); mutation checks (custom attribute writable, extra public route) make the tests fail
+- [ ] Live verification after deployment: request without token → 401, expired token → 401, valid token → 200,
+  `/health` public, app client cannot update `custom:userId` (`aws cognito-idp update-user-attributes` with a user
+  token must fail). Done after the merge; results go into this section.
+
+Deviations and assumptions:
+
+- Threat protection (Plus tier) is not enabled: Essentials includes managed login and stays free;
+  Cognito's built-in lockout and the password policy apply. Revisit with SECURITY-011.
+- E-mails are sent by Cognito's default sender (limited daily volume, enough for two invitations).
+- No custom domain for the login page (TICKET-022).
+

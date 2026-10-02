@@ -1,7 +1,9 @@
-/** Route table (FRONTEND-001). Pages are added by the feature tickets. */
+/** Route table (FRONTEND-001). Everything except the login callback requires a session (SECURITY-003). */
 
 import { Navigate, Route, Routes } from "react-router";
-import { CurrentUserSelect } from "../features/completions/CurrentUserSelect";
+import { AuthCallbackPage } from "../auth/AuthCallbackPage";
+import { AuthGate } from "../auth/AuthGate";
+import { UserMenu } from "../auth/UserMenu";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { TennerDetailPage } from "../features/tenner-detail/TennerDetailPage";
 import { TennersPage } from "../features/tenners/TennersPage";
@@ -9,10 +11,22 @@ import { AppLayout } from "../layouts/AppLayout";
 import { ComingSoonPage } from "../pages/ComingSoonPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 
-export function AppRoutes() {
+export interface AppRoutesProps {
+  /** Ends the session (SECURITY-003). */
+  readonly onLogout: () => void;
+}
+
+export function AppRoutes({ onLogout }: AppRoutesProps) {
   return (
     <Routes>
-      <Route element={<AppLayout headerActions={<CurrentUserSelect />} />}>
+      <Route path="auth/callback" element={<AuthCallbackPage />} />
+      <Route
+        element={
+          <AuthGate onLogout={onLogout}>
+            <AppLayout headerActions={<UserMenu />} />
+          </AuthGate>
+        }
+      >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="tenners" element={<TennersPage />} />

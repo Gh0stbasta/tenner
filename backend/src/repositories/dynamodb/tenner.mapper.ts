@@ -4,6 +4,8 @@ import type { Category, Tenner, UserId } from "../../models/index.js";
 
 export type TennerItem = Record<string, unknown>;
 
+const userIdOrNull = (value: unknown): UserId | null => (typeof value === "string" ? (value as UserId) : null);
+
 export function toTenner(item: TennerItem): Tenner {
   return {
     tenantId: String(item.tenantId),
@@ -19,5 +21,7 @@ export function toTenner(item: TennerItem): Tenner {
     deletedAt: typeof item.deletedAt === "string" ? item.deletedAt : null,
     createdAt: String(item.createdAt),
     updatedAt: String(item.updatedAt),
+    createdBy: userIdOrNull(item.createdBy),
+    updatedBy: userIdOrNull(item.updatedBy),
   };
 }

@@ -1,5 +1,6 @@
 /** Business logic for restoring a soft-deleted Tenner (TICKET-015). */
 
+import type { Identity } from "../auth/index.js";
 import type { RestoreTennerResponse } from "../dto/index.js";
 import { ConflictError, NotFoundError } from "../exceptions/index.js";
 import type { Tenner } from "../models/index.js";
@@ -24,10 +25,11 @@ export class RestoreTennerService {
   ) {}
 
   /**
-   * Restore a soft-deleted Tenner: active = true, deletedAt = null, updatedAt = now. The schedule
+   * Restore a soft-deleted Tenner: active = true, deletedAt = null, updatedAt = now, updatedBy = the authenticated user. The schedule
    * (lastCompleted, nextDue) and the completion history are never touched. Idempotent for active Tenners.
    */
-  async restoreTenner(tenantId: string, tennerId: string): Promise<RestoreTennerOutcome> {
+  async restoreTenner(identity: Identity, tennerId: string): Promise<RestoreTennerOutcome> {
+    const { tenantId, userId } = identity;
     const tenner = await this.repository.getById(tenantId, tennerId);
     if (!tenner) throw new NotFoundError("Tenner not found.");
     if (isRestored(tenner)) return { response: toResponse(tenner), status: "ALREADY_ACTIVE", previousDeletedAt: null };
@@ -36,7 +38,7 @@ export class RestoreTennerService {
     }
 
     try {
-      const restored = await this.repository.restore(tenantId, tennerId, tenner.updatedAt, toUtcTimestamp(this.clock()));
+      const restored = await this.repository.restore(tenantId, tennerId, tenner.updatedAt, toUtcTimestamp(this.clock()), userId);
       return { response: toResponse(restored), status: "RESTORED", previousDeletedAt: tenner.deletedAt };
     } catch (error) {
       // A parallel restore that already succeeded is not a conflict for the client (idempotency).

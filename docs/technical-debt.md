@@ -58,7 +58,10 @@ META-001, `docs/backlog/README.md`, `CLAUDE.md`
 
 ---
 
-## TD-003: No authentication while the application is publicly reachable
+## TD-003: No authentication while the application is publicly reachable (resolved)
+
+> Resolved by SECURITY-002 – SECURITY-004 (2026-10-02), effective with their deployment: the JWT authorizer protects
+> every route except `GET /health`, and the backend takes tenant and user only from the verified claims.
 
 ### Description
 
@@ -473,7 +476,9 @@ UX-007, FRONTEND-001, `frontend/vite.config.ts`
 
 ---
 
-## TD-018: Current user is chosen per device without authentication
+## TD-018: Current user is chosen per device without authentication (resolved)
+
+> Resolved by SECURITY-003 (2026-10-02): the current user comes from the Cognito ID token; the selector is removed.
 
 ### Description
 
@@ -497,3 +502,31 @@ household's members). FRONTEND-008 moves the selection to the settings page in t
 
 FRONTEND-007, FRONTEND-008, SECURITY-004, TD-003
 
+
+---
+
+## TD-019: Records written before authentication have no audit user
+
+### Description
+
+`createdBy` / `updatedBy` on Tenners and `recordedBy` on completions are only set since SECURITY-004. Older records
+return `null` for these fields. `updatedBy` is filled in on the next write; `createdBy` and `recordedBy` stay `null`.
+
+### Reason
+
+A backfill would have to guess the user; the data volume (one household, a few days of use) does not justify a
+migration script.
+
+### Impact
+
+Audit and analytics cannot attribute the creation of old Tenners or who recorded old completions.
+`completedBy` of old completions is self-declared (see TD-018). No security impact.
+
+### Suggested Improvement
+
+Accept the gap, or run a one-off backfill (e.g. `createdBy = assignedTo`) if an analytics feature needs non-null
+values.
+
+### Related Work
+
+SECURITY-004, TD-018, `backend/src/repositories/dynamodb/tenner.mapper.ts`, `completion.mapper.ts`

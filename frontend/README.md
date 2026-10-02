@@ -16,11 +16,15 @@ npm run build         # type check + production build → dist/
 
 ## Configuration
 
-| Variable            | Meaning                                                                                               |
-| ------------------- | ----------------------------------------------------------------------------------------------------- |
-| `VITE_API_BASE_URL` | API stage URL without trailing slash, e.g. `https://<id>.execute-api.eu-central-1.amazonaws.com/prod` |
+| Variable                  | Meaning                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL`       | API stage URL without trailing slash, e.g. `https://<id>.execute-api.eu-central-1.amazonaws.com/prod` |
+| `VITE_COGNITO_ISSUER_URL` | Cognito user pool issuer (Terraform output `cognito_issuer_url`)                                      |
+| `VITE_COGNITO_CLIENT_ID`  | Public app client ID (`cognito_client_id`)                                                            |
+| `VITE_COGNITO_LOGIN_URL`  | Managed login domain (`cognito_login_url`), used for logout                                           |
 
-`deploy.yml` sets it from the Terraform output `api_endpoint`. Copy `.env.example` to `.env.local` for
+`deploy.yml` sets them from the Terraform outputs. Without the Cognito values the app shows
+"Anmeldung nicht eingerichtet". Copy `.env.example` to `.env.local` for
 local development. The API only allows the CloudFront origin (CORS), so a local dev server cannot call
 the deployed API directly; tests use a fetch mock instead.
 
@@ -91,7 +95,7 @@ Features own their components, hooks and API functions, so `components/` stays s
 
 Queries and mutations share keys from `src/api/queryKeys.ts`. Completing a Tenner invalidates the dashboard,
 Tenner lists and history. Completions send an `Idempotency-Key`, so a repeated request cannot complete twice.
-The current user ("Ich bin" in the header, default Stefan) is stored per device in `localStorage` (`tenner.currentUser`) and used for completions, undo, restores and as default assignee. FRONTEND-008 moves the selection into the settings page.
+The current user comes from the login (SECURITY-003) and is used for completions, undo, restores and as default assignee.
 
 The completion workflow lives in `features/completions/CompletionProvider.tsx` at app level, so it keeps running when the optimistic update removes the card that started it.
 
@@ -100,6 +104,21 @@ The completion workflow lives in `features/completions/CompletionProvider.tsx` a
 (created, completed, archived, restored, filter changed) are logged to the console for now (`src/utils/telemetry.ts`).
 
 Success messages use the global snackbar (`components/NotificationProvider.tsx`, `useNotify()`).
+
+## Authentication (SECURITY-003)
+
+- `src/auth/`: `oidc-client-ts` `UserManager` (Authorization Code flow with PKCE against Cognito, scopes
+  `openid email`, German login page via `lang=de`) and `react-oidc-context` for React state.
+- **Login:** `AuthGate` wraps every page except `/auth/callback`. Without a session it redirects to the
+  Cognito managed login and remembers the page; `/auth/callback` finishes the code exchange and returns there.
+- **Tokens:** stored in `localStorage` (owner decision, ADR 0001): a device stays logged in for up to 30 days
+  (refresh token). Trade-off: injected scripts could read them; mitigated by the strict CSP (`script-src 'self'`)
+  and no third-party scripts.
+- **API:** `src/api/client.ts` sends `Authorization: Bearer <ID token>` (ADR 0001). On `401` it refreshes the
+  session once and retries; if that fails, it redirects to the login.
+- **Current user:** `custom:userId` from the ID token (Stefan/Julia), shown in the header with "Abmelden".
+  Accounts without a valid `custom:userId` see "Konto nicht eingerichtet". The former "Ich bin" selector is gone.
+- **Logout:** clears the tokens and opens the Cognito logout endpoint, which returns to the app.
 
 ## Theme
 

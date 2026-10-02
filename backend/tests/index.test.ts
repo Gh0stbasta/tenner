@@ -1,9 +1,12 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConflictError, NotFoundError, PersistenceError, ValidationError } from "../src/exceptions/index.js";
-import { correlationIdOf, createDependencies, handler, route, type Dependencies } from "../src/index.js";
+import { correlationIdOf, createDependencies, handler, route as routeEvent, type Dependencies } from "../src/index.js";
 import { toTennerResponse } from "../src/dto/index.js";
-import { mockLogger, tennerFixture, testConfig } from "./mocks/index.js";
+import { authenticatedEvent, jwtClaims, mockLogger, tennerFixture, testConfig, TEST_IDENTITY } from "./mocks/index.js";
+
+/** Most tests exercise authenticated requests: the event carries the default test user's verified claims. */
+const route = (event: APIGatewayProxyEventV2, d: Dependencies) => routeEvent(authenticatedEvent(event), d);
 
 const tennerResponse = toTennerResponse(tennerFixture());
 const emptyDashboard = {
@@ -120,6 +123,66 @@ describe("route", () => {
   });
 });
 
+describe("authentication (SECURITY-004)", () => {
+  const PROTECTED = [
+    "POST /tenners",
+    "GET /tenners",
+    "GET /tenners/{tennerId}",
+    "GET /history",
+    "GET /tenners/{tennerId}/history",
+    "PUT /tenners/{tennerId}",
+    "DELETE /tenners/{tennerId}",
+    "POST /tenners/{tennerId}/complete",
+    "POST /tenners/{tennerId}/undo-completion",
+    "POST /tenners/{tennerId}/restore",
+    "GET /dashboard",
+  ];
+
+  it.each(PROTECTED)("rejects %s without verified claims with 401 before any service call", async (routeKey) => {
+    const d = deps();
+    const response = await routeEvent(event(routeKey, {}, "{}"), d);
+    expect(response.statusCode).toBe(401);
+    expect(body(response).error?.code).toBe("UNAUTHORIZED");
+    for (const service of [d.createTenner, d.listTenners, d.getTenner, d.getHistory, d.getTennerHistory, d.updateTenner, d.deleteTenner, d.completeTenner, d.undoCompletion, d.restoreTenner, d.getDashboard]) {
+      expect(service).not.toHaveBeenCalled();
+    }
+  });
+
+  it("keeps GET /health public", async () => {
+    expect((await routeEvent(event("GET /health"), deps())).statusCode).toBe(200);
+  });
+
+  it("rejects an account without household attributes with 403", async () => {
+    const d = deps();
+    const response = await routeEvent(authenticatedEvent(event("GET /tenners"), { sub: "x", email: "user@example.com" }), d);
+    expect(response.statusCode).toBe(403);
+    expect(body(response).error?.code).toBe("FORBIDDEN");
+    expect(d.listTenners).not.toHaveBeenCalled();
+  });
+
+  it("passes the tenant from the claims to read and write services", async () => {
+    const d = deps();
+    const claims = jwtClaims({ tenantId: "household-2", userId: "JULIA" });
+    await routeEvent(authenticatedEvent(event("GET /tenners"), claims), d);
+    await routeEvent(authenticatedEvent({ ...event("DELETE /tenners/{tennerId}"), pathParameters: { tennerId: "t-1" } }, claims), d);
+    expect(d.listTenners).toHaveBeenCalledWith("household-2", {});
+    expect(d.deleteTenner).toHaveBeenCalledWith({ tenantId: "household-2", userId: "JULIA" }, "t-1");
+  });
+
+  it("rejects a tenantId query parameter with 400 (no client-controlled tenant selection)", async () => {
+    const d = deps();
+    const response = await route(event("GET /tenners", {}, undefined, { tenantId: "other" }), d);
+    expect(response.statusCode).toBe(400);
+    expect(d.listTenners).not.toHaveBeenCalled();
+  });
+
+  it("binds the acting user to the request logger", async () => {
+    const d = deps();
+    await route(event("GET /tenners"), d);
+    expect(d.logger.child).toHaveBeenCalledWith({ userId: TEST_IDENTITY.userId });
+  });
+});
+
 describe("POST /tenners", () => {
   const valid = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14, assignedTo: "STEFAN" };
 
@@ -128,7 +191,7 @@ describe("POST /tenners", () => {
     const response = await route(event("POST /tenners", {}, JSON.stringify(valid)), d);
     expect(response.statusCode).toBe(201);
     expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: tennerResponse });
-    expect(d.createTenner).toHaveBeenCalledWith("default", valid);
+    expect(d.createTenner).toHaveBeenCalledWith(TEST_IDENTITY, valid);
   });
 
   it("rejects invalid input with 400 before calling the service", async () => {
@@ -191,7 +254,7 @@ describe("PUT /tenners/{tennerId}", () => {
     const d = deps();
     const response = await route(put("t-1", { frequencyDays: 30 }), d);
     expect(response.statusCode).toBe(200);
-    expect(d.updateTenner).toHaveBeenCalledWith("default", "t-1", { frequencyDays: 30 });
+    expect(d.updateTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", { frequencyDays: 30 });
   });
 
   it("returns 404 when the Tenner does not exist", async () => {
@@ -224,7 +287,7 @@ describe("DELETE /tenners/{tennerId}", () => {
     const response = await route(del("t-1"), d);
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: { tennerId: "t-1", deleted: true } });
-    expect(d.deleteTenner).toHaveBeenCalledWith("default", "t-1");
+    expect(d.deleteTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1");
   });
 
   it("returns 404 for missing Tenners", async () => {
@@ -253,7 +316,7 @@ describe("POST /tenners/{tennerId}/complete", () => {
     const d = deps();
     const response = await route(complete({ completedBy: "STEFAN", actualMinutes: 12 }, { "idempotency-key": "abc-1" }), d);
     expect(response.statusCode).toBe(200);
-    expect(d.completeTenner).toHaveBeenCalledWith("default", "t-1", { completedBy: "STEFAN", actualMinutes: 12 }, "abc-1");
+    expect(d.completeTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", { completedBy: "STEFAN", actualMinutes: 12 }, "abc-1");
   });
 
   it.each([
@@ -288,7 +351,7 @@ describe("POST /tenners/{tennerId}/undo-completion", () => {
     const d = deps();
     const response = await route(undo({ revertedBy: "JULIA", reason: "  Completed by mistake " }, { "idempotency-key": "u-1" }), d);
     expect(response.statusCode).toBe(200);
-    expect(d.undoCompletion).toHaveBeenCalledWith("default", "t-1", { revertedBy: "JULIA", reason: "Completed by mistake" }, "u-1");
+    expect(d.undoCompletion).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", { revertedBy: "JULIA", reason: "Completed by mistake" }, "u-1");
   });
 
   it("maps NO_COMPLETION_TO_UNDO to 409", async () => {
@@ -305,15 +368,23 @@ describe("POST /tenners/{tennerId}/restore", () => {
 
   it("restores and returns { tennerId, active, deletedAt }", async () => {
     const d = deps();
-    const response = await route(restore({ restoredBy: "JULIA" }), d);
+    const response = await route(restore({ restoredBy: "STEFAN" }), d);
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: { tennerId: "t-1", active: true, deletedAt: null } });
-    expect(d.restoreTenner).toHaveBeenCalledWith("default", "t-1");
+    expect(d.restoreTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1");
   });
 
-  it("requires restoredBy", async () => {
+  it("defaults restoredBy to the authenticated user", async () => {
     const d = deps();
-    expect((await route(restore({}), d)).statusCode).toBe(400);
+    expect((await route(restore({}), d)).statusCode).toBe(200);
+    expect(d.restoreTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1");
+  });
+
+  it("rejects restoredBy of another user with 403 (audit fields cannot be spoofed)", async () => {
+    const d = deps();
+    const response = await route(restore({ restoredBy: "JULIA" }), d);
+    expect(response.statusCode).toBe(403);
+    expect(JSON.parse(response.body ?? "").error.code).toBe("FORBIDDEN");
     expect(d.restoreTenner).not.toHaveBeenCalled();
   });
 });

@@ -6,6 +6,11 @@ export interface Completion {
   readonly completionId: string;
   readonly tennerId: string;
   readonly completedBy: UserId;
+  /**
+   * Authenticated user who recorded the completion (SECURITY-004). Differs from completedBy when someone
+   * records a completion for another household member. Null for records created before authentication.
+   */
+  readonly recordedBy: UserId | null;
   /** ISO 8601 UTC timestamp. */
   readonly completedAt: string;
   readonly actualMinutes: number;

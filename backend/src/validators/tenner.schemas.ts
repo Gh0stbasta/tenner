@@ -38,7 +38,7 @@ export const updateTennerSchema = createTennerSchema
   .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." }) satisfies z.ZodType<UpdateTennerRequest>;
 
 export const completeTennerSchema = z.strictObject({
-  completedBy: userIdSchema,
+  completedBy: userIdSchema.optional(),
   actualMinutes: actualMinutesSchema.optional(),
   completedAt: utcTimestampSchema.optional(),
 }) satisfies z.ZodType<CompleteTennerRequest>;
@@ -63,11 +63,11 @@ export const idempotencyKeySchema = z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/,
 
 /** Undo request (TICKET-014): reason is trimmed; whitespace-only and > 250 characters are rejected. */
 export const undoCompletionSchema = z.strictObject({
-  revertedBy: userIdSchema,
+  revertedBy: userIdSchema.optional(),
   reason: z.string().trim().min(1, "Reason must not be blank.").max(250).optional(),
 }) satisfies z.ZodType<UndoCompletionRequest>;
 
-export const restoreTennerSchema = z.strictObject({ restoredBy: userIdSchema }) satisfies z.ZodType<RestoreTennerRequest>;
+export const restoreTennerSchema = z.strictObject({ restoredBy: userIdSchema.optional() }) satisfies z.ZodType<RestoreTennerRequest>;
 
 /** Query string of GET /dashboard (TICKET-016). Dates must be real calendar dates (2026-02-30 is rejected). */
 export const dashboardQuerySchema = z.strictObject({

@@ -20,4 +20,8 @@ export interface Tenner {
   readonly createdAt: string;
   /** ISO 8601 UTC timestamp. */
   readonly updatedAt: string;
+  /** Authenticated user who created the Tenner (SECURITY-004); null for records created before authentication. */
+  readonly createdBy: UserId | null;
+  /** Authenticated user of the last write (SECURITY-004); null for records last written before authentication. */
+  readonly updatedBy: UserId | null;
 }

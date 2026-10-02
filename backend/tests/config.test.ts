@@ -7,7 +7,6 @@ describe("loadConfig", () => {
   it("uses defaults when variables are missing", () => {
     expect(loadConfig({})).toEqual({
       environment: "prod",
-      tenantId: "default",
       logLevel: "INFO",
       applicationName: "Tenner",
       timezone: "Europe/Berlin",
@@ -18,7 +17,6 @@ describe("loadConfig", () => {
   it("reads provided variables", () => {
     expect(loadConfig({ ENVIRONMENT: "dev", LOG_LEVEL: "debug", APPLICATION_NAME: "Tenner", ...TABLES })).toEqual({
       environment: "dev",
-      tenantId: "default",
       logLevel: "DEBUG",
       applicationName: "Tenner",
       timezone: "Europe/Berlin",

@@ -78,6 +78,11 @@ resource "aws_apigatewayv2_route" "api" {
   api_id    = aws_apigatewayv2_api.api.id
   route_key = each.value
   target    = "integrations/${aws_apigatewayv2_integration.api.id}"
+
+  # Cognito JWT on every route except the public ones (SECURITY-002). CORS preflight (OPTIONS)
+  # is answered by API Gateway before authorization.
+  authorization_type = contains(local.api_public_routes, each.value) ? "NONE" : "JWT"
+  authorizer_id      = contains(local.api_public_routes, each.value) ? null : aws_apigatewayv2_authorizer.cognito.id
 }
 
 moved {

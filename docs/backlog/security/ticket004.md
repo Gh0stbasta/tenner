@@ -142,3 +142,38 @@ npm run test
 
 - Roles (HOUSEHOLD-ADMIN-005)
 - Multi-household switching (FUTURE-001)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-02.
+
+- [x] Tenant and user derived exclusively from verified claims: `backend/src/auth/identity.ts` (`identityFromEvent`)
+  reads `requestContext.authorizer.jwt.claims` (`custom:tenantId`, `custom:userId`) once per request in `src/index.ts`.
+  No claims → 401; missing/unknown user or malformed tenant → 403 (`ForbiddenError`, new). `GET /health` stays public.
+- [x] No client-controlled tenant selection: `AppConfig.tenantId` (`"default"`) removed; every repository call gets
+  `identity.tenantId`. A `tenantId` in query or body is rejected by the strict schemas; headers are ignored.
+- [x] Completion records the acting user: `completedBy` is optional and defaults to the user; a different member is
+  allowed and `recordedBy` stores the acting user. `revertedBy` / `restoredBy` default to the user; another user → 403.
+- [x] Audit fields populated: `createdBy` / `updatedBy` on create, update, delete, restore, complete and undo
+  (also in `TennerResponse`). Older records map to `null` (TD-019).
+- [x] Tests passing: 404 backend tests (was 369). New: `tests/identity.test.ts`, authentication tests in
+  `tests/index.test.ts` (401 on every protected route, 403, tenant from claims, logger bound to `userId`),
+  tenant isolation and legacy mapping in `tests/tenner.dynamodb.repository.test.ts`, `completedBy` default,
+  `recordedBy`, covering-for-someone, idempotent replay with omitted `completedBy`, `revertedBy` mismatch.
+  Test helper: `authenticatedEvent()` / `jwtClaims()` in `tests/mocks`.
+- Validation: `npm run lint`, `npm run build`, `npm test` (coverage 99.8 % statements; `src/auth` 100 %).
+- Docs: `backend/README.md` ("Authentication and Authorization"), `docs/architecture.md` ("Authorization Model"),
+  TD-003 resolved, TD-019 added.
+
+Deviations and assumptions:
+
+- `RequestContext` keeps its existing shape (`event`, `deps`, `logger`); protected routes get an
+  `AuthenticatedContext` with `identity`. The `correlationId` stays on the request logger instead of a separate field.
+- 403 instead of 401 for valid tokens without household attributes: a new token would not help, and the frontend
+  (SECURITY-003) treats 401 as "log in again", which would loop.
+- The frontend still sends `completedBy` / `revertedBy` / `restoredBy` (always the logged-in user), so no frontend
+  change is needed.
+- Open until deployment: "Feature deploys through GitHub Actions" (needs the merge and the Cognito accounts with
+  `custom:tenantId=default`, see README → "User Accounts").

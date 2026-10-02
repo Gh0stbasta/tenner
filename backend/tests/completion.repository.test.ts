@@ -15,6 +15,7 @@ const record: CompletionRecord = {
     completionId: "c-1",
     tennerId: "t-1",
     completedBy: "STEFAN",
+    recordedBy: "JULIA",
     completedAt: "2026-10-01T18:30:00Z",
     actualMinutes: 12,
     revertedAt: null,
@@ -43,6 +44,7 @@ describe("DynamoDbTennerRepository.completeTenner", () => {
         tennerId: "t-1",
         tenantTennerId: "default#t-1",
         completedBy: "STEFAN",
+        recordedBy: "JULIA",
         completedAt: "2026-10-01T18:30:00Z",
         actualMinutes: 12,
         revertedAt: null,
@@ -56,7 +58,7 @@ describe("DynamoDbTennerRepository.completeTenner", () => {
     expect(update?.Update).toMatchObject({
       TableName: "tenner-tenners",
       Key: { tenantId: "default", tennerId: "t-1" },
-      UpdateExpression: "SET #lastCompleted = :lastCompleted, #nextDue = :nextDue, #updatedAt = :updatedAt",
+      UpdateExpression: "SET #lastCompleted = :lastCompleted, #nextDue = :nextDue, #updatedAt = :updatedAt, #updatedBy = :updatedBy",
       ConditionExpression:
         "#updatedAt = :expectedUpdatedAt AND #frequencyDays = :expectedFrequencyDays AND #active = :true AND (attribute_not_exists(#deletedAt) OR #deletedAt = :null) AND (attribute_not_exists(#lastCompleted) OR #lastCompleted = :null)",
       ExpressionAttributeValues: {
@@ -105,7 +107,7 @@ describe("DynamoDbTennerRepository.completeTenner", () => {
 
 describe("DynamoDbCompletionRepository.getById", () => {
   it("reads the history record by historyId and maps it", async () => {
-    const item = { tenantId: "default", historyId: "c-1", tennerId: "t-1", completedBy: "STEFAN", completedAt: "2026-10-01T18:30:00Z", actualMinutes: 12, idempotencyKey: "k-1", requestHash: "h" };
+    const item = { tenantId: "default", historyId: "c-1", tennerId: "t-1", completedBy: "STEFAN", recordedBy: "JULIA", completedAt: "2026-10-01T18:30:00Z", actualMinutes: 12, idempotencyKey: "k-1", requestHash: "h" };
     const c = client(async () => ({ Item: item }));
     await expect(new DynamoDbCompletionRepository(c, "tenner-history").getById("default", "c-1")).resolves.toEqual({
       ...record,

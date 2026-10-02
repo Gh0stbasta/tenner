@@ -1,5 +1,6 @@
 /** POST /tenners/{tennerId}/undo-completion: revert the latest completion (TICKET-014). */
 
+import type { Identity } from "../auth/index.js";
 import type { UndoCompletionRequest } from "../dto/index.js";
 import { ApplicationError } from "../exceptions/index.js";
 import type { UndoCompletionOutcome } from "../services/index.js";
@@ -8,7 +9,7 @@ import { successResponse } from "../utils/http.js";
 import type { Logger } from "../utils/logger.js";
 import { idempotencyKeySchema, parseJsonBody, tennerIdSchema, undoCompletionSchema, validate } from "../validators/index.js";
 
-export type UndoCompletion = (tenantId: string, tennerId: string, request: UndoCompletionRequest, idempotencyKey?: string) => Promise<UndoCompletionOutcome>;
+export type UndoCompletion = (identity: Identity, tennerId: string, request: UndoCompletionRequest, idempotencyKey?: string) => Promise<UndoCompletionOutcome>;
 
 const EVENTS: Record<string, string> = {
   NO_COMPLETION_TO_UNDO: "UndoNoCompletion",
@@ -17,7 +18,7 @@ const EVENTS: Record<string, string> = {
 
 export async function undoCompletionHandler(
   event: ApiEvent,
-  tenantId: string,
+  identity: Identity,
   undoCompletion: UndoCompletion,
   logger: Logger,
   now: () => number = Date.now,
@@ -27,10 +28,10 @@ export async function undoCompletionHandler(
   const header = event.headers?.["idempotency-key"];
   const idempotencyKey = header === undefined ? undefined : validate(idempotencyKeySchema, header);
   const request = validate(undoCompletionSchema, parseJsonBody(event.body, event.isBase64Encoded));
-  logger.info("Undo completion requested", { tennerId, revertedBy: request.revertedBy, idempotencyKey: idempotencyKey !== undefined });
+  logger.info("Undo completion requested", { tennerId, revertedBy: identity.userId, idempotencyKey: idempotencyKey !== undefined });
 
   try {
-    const { response, restoredPrevious, replayed } = await undoCompletion(tenantId, tennerId, request, idempotencyKey);
+    const { response, restoredPrevious, replayed } = await undoCompletion(identity, tennerId, request, idempotencyKey);
     logger.info("Undo completion succeeded", {
       event: "UndoSucceeded",
       tennerId,

@@ -4,7 +4,8 @@ import type { Completion, UserId } from "../models/index.js";
 import type { TennerResponse } from "./tenner.dto.js";
 
 export interface CompleteTennerRequest {
-  readonly completedBy: UserId;
+  /** Defaults to the authenticated user. Another household member is allowed (covering for someone, SECURITY-004). */
+  readonly completedBy?: UserId | undefined;
   /** 1 - 1440. Defaults to the Tenner's estimatedMinutes. */
   readonly actualMinutes?: number | undefined;
   /** ISO 8601 UTC timestamp. Defaults to now. Must not be in the future. */
@@ -20,7 +21,8 @@ export interface CompletionResponse {
 }
 
 export interface UndoCompletionRequest {
-  readonly revertedBy: UserId;
+  /** Optional; must match the authenticated user if given (SECURITY-004). */
+  readonly revertedBy?: UserId | undefined;
   /** Optional, trimmed, 1 - 250 characters. */
   readonly reason?: string | undefined;
 }

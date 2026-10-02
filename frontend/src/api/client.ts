@@ -1,6 +1,8 @@
 /**
  * Typed API client (FRONTEND-001). The only module that calls fetch (enforced by ESLint).
  * Every backend response uses the envelope { success: true, data } or { success: false, error }.
+ * Authentication (SECURITY-003): the Cognito ID token is sent as bearer token; a 401 triggers one
+ * token refresh and retry, then a redirect to the login.
  */
 
 import { z } from "zod";
@@ -26,6 +28,23 @@ const errorEnvelopeSchema = z.object({
   }),
 });
 
+/** Authentication hooks, registered once at startup (src/auth/userManager.ts). */
+export interface ApiAuth {
+  /** A valid ID token, or undefined if the user is not logged in. */
+  readonly getToken: () => Promise<string | undefined>;
+  /** Refresh the session; the new ID token or undefined. */
+  readonly refreshToken: () => Promise<string | undefined>;
+  /** Called when the API still answers 401 after a refresh (e.g. redirect to login). */
+  readonly onUnauthorized: () => void;
+}
+
+let apiAuth: ApiAuth | undefined;
+
+/** Register (or with undefined: remove) the authentication hooks. */
+export function configureApiAuth(auth: ApiAuth | undefined): void {
+  apiAuth = auth;
+}
+
 const successEnvelopeSchema = z.object({ success: z.literal(true), data: z.unknown() });
 
 export function buildUrl(baseUrl: string, path: string, query: Readonly<Record<string, QueryValue>> = {}): string {
@@ -47,22 +66,38 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
+async function send(
+  method: string,
+  url: string,
+  headers: Record<string, string>,
+  body: unknown,
+  token: string | undefined,
+): Promise<Response> {
+  try {
+    return await fetch(url, {
+      method,
+      headers: token ? { ...headers, Authorization: `Bearer ${token}` } : headers,
+      body: body === undefined ? null : JSON.stringify(body),
+    });
+  } catch (error) {
+    throw new ApiError(0, CLIENT_ERROR_CODES.network, error instanceof Error ? error.message : "Network error.");
+  }
+}
+
 async function request<T>(method: string, path: string, options: RequestOptions<T>): Promise<T> {
   if (!config.apiBaseUrl) {
     throw new ApiError(0, CLIENT_ERROR_CODES.notConfigured, "VITE_API_BASE_URL is not configured.");
   }
   const headers: Record<string, string> = { Accept: "application/json", ...options.headers };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  const url = buildUrl(config.apiBaseUrl, path, options.query);
 
-  let response: Response;
-  try {
-    response = await fetch(buildUrl(config.apiBaseUrl, path, options.query), {
-      method,
-      headers,
-      body: options.body === undefined ? null : JSON.stringify(options.body),
-    });
-  } catch (error) {
-    throw new ApiError(0, CLIENT_ERROR_CODES.network, error instanceof Error ? error.message : "Network error.");
+  let response = await send(method, url, headers, options.body, await apiAuth?.getToken());
+  if (response.status === 401 && apiAuth) {
+    // Expired or revoked session: refresh once and retry; otherwise send the user to the login.
+    const refreshed = await apiAuth.refreshToken();
+    if (refreshed) response = await send(method, url, headers, options.body, refreshed);
+    if (response.status === 401) apiAuth.onUnauthorized();
   }
 
   const json = await readJson(response);

@@ -62,7 +62,7 @@ Document the chosen storage and its XSS trade-off.
 
 ## API Client
 
-- Attach `Authorization: Bearer <access token>` to all API requests.
+- Attach `Authorization: Bearer <ID token>` to all API requests (ADR 0001: custom attributes are only in the ID token).
 - On `401`, attempt silent refresh once, then redirect to login.
 
 ## Current User
@@ -138,3 +138,32 @@ npm run test
 - Custom login UI
 - MFA (SECURITY-011)
 - Social login (FUTURE-011)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-02.
+
+- [x] Users must log in: `AuthGate` redirects to Cognito managed login (code flow + PKCE, `lang=de`)
+- [x] API requests are authenticated: `Authorization: Bearer <ID token>` (ADR 0001)
+- [x] Token refresh: automatic silent renew with the refresh token; on `401` one refresh + retry, then login
+- [x] Logout: tokens removed, Cognito `/logout` endpoint, back to the app
+- [x] Current user from `custom:userId`; header shows the name with "Abmelden"; missing attribute → "Konto nicht eingerichtet"
+- [x] Tests: 25 new (session helpers, UserManager settings and token handling, AuthGate, callback page, API client
+  401 handling, config). Frontend: lint, 196 tests (~98.6% coverage), build.
+- [x] Browser check (Chromium, mocked Cognito and API): redirect to `/oauth2/authorize` with PKCE S256 and `lang=de`,
+  callback → code exchange → back to `/tenners/t-1`, ID token on every API call, still logged in after reload.
+
+Library choice: `oidc-client-ts` + `react-oidc-context` (standard OIDC, ~120 kB unpacked for the React binding);
+AWS Amplify would add a much larger dependency for the same flow.
+
+Token storage: `localStorage` for 30 days (owner decision 2026-10-02, ADR 0001). XSS trade-off: injected scripts could
+read the tokens; mitigated by the CSP (`script-src 'self'`), no third-party scripts and 1-hour token lifetimes.
+
+Deviations:
+
+- FRONTEND-008 (settings) does not exist yet; the header selector ("Ich bin") was removed instead of a settings dropdown.
+- The ID token is sent instead of the access token (ADR 0001).
+- Deploy: `deploy.yml` passes `VITE_COGNITO_ISSUER_URL`, `VITE_COGNITO_CLIENT_ID` and `VITE_COGNITO_LOGIN_URL` from Terraform outputs.
+

@@ -34,6 +34,9 @@ export interface TennerResponse {
   readonly deletedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+  /** SECURITY-004 audit fields; null for records written before authentication. */
+  readonly createdBy: UserId | null;
+  readonly updatedBy: UserId | null;
 }
 
 /** DELETE /tenners/{tennerId} response (TICKET-012). */
@@ -44,8 +47,8 @@ export interface DeleteTennerResponse {
 
 /** POST /tenners/{tennerId}/restore (TICKET-015). */
 export interface RestoreTennerRequest {
-  /** Used for audit logging. */
-  readonly restoredBy: UserId;
+  /** Optional; must match the authenticated user if given (SECURITY-004). */
+  readonly restoredBy?: UserId | undefined;
 }
 
 export interface RestoreTennerResponse {
@@ -68,5 +71,7 @@ export function toTennerResponse(tenner: Tenner): TennerResponse {
     deletedAt: tenner.deletedAt,
     createdAt: tenner.createdAt,
     updatedAt: tenner.updatedAt,
+    createdBy: tenner.createdBy,
+    updatedBy: tenner.updatedBy,
   };
 }

@@ -7,6 +7,7 @@ export const UNREACHABLE_MESSAGE = "Tenner ist gerade nicht erreichbar. Bitte ve
 
 const MESSAGES: Readonly<Record<string, string>> = {
   VALIDATION_ERROR: "Bitte prüfe die markierten Eingaben.",
+  UNAUTHORIZED: "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an.",
   NOT_FOUND: "Dieser Tenner existiert nicht mehr.",
   CONCURRENT_MODIFICATION: "Jemand anderes hat diesen Tenner geändert. Lade neu, um den aktuellen Stand zu sehen.",
   TENNER_INACTIVE: "Dieser Tenner ist inaktiv.",
@@ -22,6 +23,8 @@ export function errorMessage(error: unknown, fallback: string = DEFAULT_ERROR_ME
   if (!isApiError(error)) return fallback;
   const known = MESSAGES[error.code];
   if (known) return known;
+  // API Gateway answers 401 without the envelope (JWT authorizer).
+  if (error.status === 401) return MESSAGES.UNAUTHORIZED ?? fallback;
   if (error.status === 429) return "Gerade kommen zu viele Anfragen an. Bitte warte einen Moment.";
   if (error.isTransient) return UNREACHABLE_MESSAGE;
   return fallback;

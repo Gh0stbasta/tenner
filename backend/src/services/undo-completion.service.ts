@@ -1,5 +1,6 @@
 /** Business logic for undoing the latest completion of a Tenner (TICKET-014). */
 
+import { actingUser, type Identity } from "../auth/index.js";
 import {
   toRevertedCompletionResponse,
   toTennerResponse,
@@ -31,9 +32,12 @@ export class UndoCompletionService {
   /**
    * Revert the latest non-reverted completion and restore the schedule from the previous active completion
    * (or reset to "due on creation date" if none). Uses the Tenner's current frequencyDays. Atomic.
+   * revertedBy and updatedBy are the authenticated user (SECURITY-004).
    */
-  async undoLatestCompletion(tenantId: string, tennerId: string, request: UndoCompletionRequest, idempotencyKey?: string): Promise<UndoCompletionOutcome> {
-    const requestHash = sha256Json({ tennerId, revertedBy: request.revertedBy, reason: request.reason ?? null });
+  async undoLatestCompletion(identity: Identity, tennerId: string, request: UndoCompletionRequest, idempotencyKey?: string): Promise<UndoCompletionOutcome> {
+    const { tenantId } = identity;
+    const revertedBy = actingUser(identity, request.revertedBy, "revertedBy");
+    const requestHash = sha256Json({ tennerId, revertedBy, reason: request.reason ?? null });
 
     if (idempotencyKey) {
       const replay = await this.findReplay(tenantId, tennerId, idempotencyKey, requestHash);
@@ -51,8 +55,8 @@ export class UndoCompletionService {
 
     const now = this.clock();
     const timestamp = toUtcTimestamp(now);
-    const reverted: Completion = { ...latest, revertedAt: timestamp, revertedBy: request.revertedBy, revertReason: request.reason ?? null };
-    const restored = restoreSchedule(tenner, previous, now, timestamp);
+    const reverted: Completion = { ...latest, revertedAt: timestamp, revertedBy, revertReason: request.reason ?? null };
+    const restored: Tenner = { ...restoreSchedule(tenner, previous, now, timestamp), updatedBy: revertedBy };
 
     try {
       await this.tenners.undoCompletion(restored, { completion: reverted, revertIdempotencyKey: idempotencyKey, revertRequestHash: requestHash }, tenner);

@@ -76,6 +76,10 @@ For the managed resources so far:
   - `s3:PutObject` and `s3:DeleteObject` on `arn:aws:s3:::tenner-frontend-<env>/*`
   - `cloudfront:CreateInvalidation` on the distribution ARN
 - CloudWatch Logs (`/tenner/*`)
+- Authentication (SECURITY-002): `cognito-idp:*` on the Tenner user pool (create/update pool, app client,
+  domain, managed login branding, tags), `cognito-idp:CreateUserPool`, `cognito-idp:DescribeUserPoolDomain`,
+  API Gateway authorizers (`apigateway:*` on `tenner-api-gateway` already covers them) and `sts:GetCallerIdentity`
+  (always allowed)
 - IAM: create and manage `tenner-api-role` and its inline policy, plus `iam:PassRole` for that role to Lambda
 
 For the state backend:
@@ -167,6 +171,44 @@ and health check. The build gets `VITE_API_BASE_URL` from the Terraform output `
 | 3 | CloudFront invalidation of `/index.html` and `/` only, which stays within the free monthly invalidation quota | — |
 
 A failed build stops the job before anything is uploaded.
+
+### User Accounts (SECURITY-002)
+
+The app and the API require a login (Cognito, [ADR 0001](docs/decisions/0001-authentication.md)).
+There is no self sign-up. Create one account per household member **once after the first deployment**,
+for example in AWS CloudShell (region `eu-central-1`). Use real e-mail addresses; Cognito sends an
+invitation with a temporary password, and the first login asks for a new one (≥ 12 characters, upper and
+lower case, digits).
+
+```bash
+POOL_ID=$(aws cognito-idp list-user-pools --max-results 20 \
+  --query "UserPools[?Name=='tenner-users-prod'].Id | [0]" --output text)
+
+aws cognito-idp admin-create-user --user-pool-id "$POOL_ID" --username "<stefan-email>" \
+  --user-attributes Name=email,Value="<stefan-email>" Name=email_verified,Value=true \
+                    Name=custom:tenantId,Value=default Name=custom:userId,Value=STEFAN \
+  --desired-delivery-mediums EMAIL
+
+aws cognito-idp admin-create-user --user-pool-id "$POOL_ID" --username "<julia-email>" \
+  --user-attributes Name=email,Value="<julia-email>" Name=email_verified,Value=true \
+                    Name=custom:tenantId,Value=default Name=custom:userId,Value=JULIA \
+  --desired-delivery-mediums EMAIL
+```
+
+| Attribute | Value | Meaning |
+|---|---|---|
+| `custom:tenantId` | `default` | The household; all existing data belongs to `default`. Cannot be changed later |
+| `custom:userId` | `STEFAN` or `JULIA` | The household member used for "completed by" and audit fields |
+
+Other admin tasks:
+
+```bash
+aws cognito-idp admin-disable-user      --user-pool-id "$POOL_ID" --username "<email>"   # lock out
+aws cognito-idp admin-user-global-sign-out --user-pool-id "$POOL_ID" --username "<email>" # revoke sessions
+aws cognito-idp admin-reset-user-password  --user-pool-id "$POOL_ID" --username "<email>"
+```
+
+Never commit e-mail addresses, passwords or tokens.
 
 ### API Throttling
 

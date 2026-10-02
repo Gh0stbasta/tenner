@@ -14,8 +14,6 @@ export interface TableConfig {
 
 export interface AppConfig {
   readonly environment: string;
-  /** Tenant used for all requests until identity-based tenants exist (SECURITY-004). */
-  readonly tenantId: string;
   readonly logLevel: LogLevel;
   readonly applicationName: string;
   /** IANA timezone for calendar-date decisions such as the dashboard reference date (TICKET-016). */
@@ -28,7 +26,6 @@ export const LOG_LEVELS: readonly LogLevel[] = ["DEBUG", "INFO", "WARN", "ERROR"
 
 const DEFAULTS = {
   environment: "prod",
-  tenantId: "default",
   logLevel: "INFO",
   applicationName: "Tenner",
 } as const;
@@ -45,7 +42,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const history = readTrimmed(env.HISTORY_TABLE);
   return {
     environment: readTrimmed(env.ENVIRONMENT) ?? DEFAULTS.environment,
-    tenantId: DEFAULTS.tenantId,
     logLevel: LOG_LEVELS.includes(logLevel as LogLevel) ? (logLevel as LogLevel) : DEFAULTS.logLevel,
     applicationName: readTrimmed(env.APPLICATION_NAME) ?? DEFAULTS.applicationName,
     timezone: resolveTimeZone(readTrimmed(env.APPLICATION_TIMEZONE)),

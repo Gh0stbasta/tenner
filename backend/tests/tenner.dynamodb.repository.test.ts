@@ -46,6 +46,36 @@ describe("DynamoDbTennerRepository.save", () => {
   });
 });
 
+describe("tenant isolation (SECURITY-004)", () => {
+  it("scopes every key and query to the tenant parameter, so another tenant's Tenner is never addressed", async () => {
+    const c = client(async () => ({}));
+    const repository = new DynamoDbTennerRepository(c, "tenner-tenners", "tenner-history");
+    await expect(repository.getById("household-2", "t-1")).resolves.toBeUndefined();
+    await repository.list("household-2");
+    await repository.getTitles("household-2", ["t-1"]);
+    const [get, query, batch] = c.send.mock.calls.map(([command]) => (command as { input: Record<string, unknown> }).input);
+    expect(get?.Key).toEqual({ tenantId: "household-2", tennerId: "t-1" });
+    expect(query?.ExpressionAttributeValues).toMatchObject({ ":tenantId": "household-2" });
+    expect(JSON.stringify(batch)).toContain('"tenantId":"household-2"');
+    expect(JSON.stringify(c.send.mock.calls)).not.toContain('"default"');
+  });
+
+  it("does not update a Tenner of another tenant (conditional write on the tenant's key fails → 404)", async () => {
+    const c = client(async () => Promise.reject(namedError("ConditionalCheckFailedException")));
+    const repository = new DynamoDbTennerRepository(c, "tenner-tenners", "tenner-history");
+    await expect(repository.update("household-2", "t-1", { title: "x", updatedAt: "2026-10-05T12:00:00Z", updatedBy: "JULIA" })).rejects.toBeInstanceOf(NotFoundError);
+    expect((c.send.mock.calls[0]?.[0] as UpdateCommand).input.Key).toEqual({ tenantId: "household-2", tennerId: "t-1" });
+  });
+
+  it("maps records without audit fields (written before authentication) to null", async () => {
+    const legacy: Record<string, unknown> = { ...tennerFixture() };
+    delete legacy.createdBy;
+    delete legacy.updatedBy;
+    const c = client(async () => ({ Item: legacy }));
+    await expect(new DynamoDbTennerRepository(c, "t", "h").getById("default", "t-1")).resolves.toMatchObject({ createdBy: null, updatedBy: null });
+  });
+});
+
 describe("DynamoDbTennerRepository.list", () => {
   const item = { ...tennerFixture(), someStorageMetadata: "x" };
 
@@ -82,7 +112,7 @@ describe("DynamoDbTennerRepository.list", () => {
 });
 
 describe("DynamoDbTennerRepository.update", () => {
-  const changes = { title: "Vacuum Home Office", frequencyDays: 30, category: undefined, updatedAt: "2026-10-05T12:00:00Z" };
+  const changes = { title: "Vacuum Home Office", frequencyDays: 30, category: undefined, updatedAt: "2026-10-05T12:00:00Z", updatedBy: "JULIA" as const };
 
   it("sets only the provided fields on an existing item and returns the new state", async () => {
     const updated = { ...tennerFixture(), title: "Vacuum Home Office", frequencyDays: 30, updatedAt: "2026-10-05T12:00:00Z" };
@@ -94,10 +124,10 @@ describe("DynamoDbTennerRepository.update", () => {
     expect(command.input).toEqual({
       TableName: "tenner-tenners",
       Key: { tenantId: "default", tennerId: "t-1" },
-      UpdateExpression: "SET #title = :title, #frequencyDays = :frequencyDays, #updatedAt = :updatedAt",
+      UpdateExpression: "SET #title = :title, #frequencyDays = :frequencyDays, #updatedAt = :updatedAt, #updatedBy = :updatedBy",
       ConditionExpression: "attribute_exists(tennerId) AND (attribute_not_exists(#deletedAt) OR #deletedAt = :null)",
-      ExpressionAttributeNames: { "#title": "title", "#frequencyDays": "frequencyDays", "#updatedAt": "updatedAt", "#deletedAt": "deletedAt" },
-      ExpressionAttributeValues: { ":title": "Vacuum Home Office", ":frequencyDays": 30, ":updatedAt": "2026-10-05T12:00:00Z", ":null": null },
+      ExpressionAttributeNames: { "#title": "title", "#frequencyDays": "frequencyDays", "#updatedAt": "updatedAt", "#updatedBy": "updatedBy", "#deletedAt": "deletedAt" },
+      ExpressionAttributeValues: { ":title": "Vacuum Home Office", ":frequencyDays": 30, ":updatedAt": "2026-10-05T12:00:00Z", ":updatedBy": "JULIA", ":null": null },
       ReturnValues: "ALL_NEW",
     });
     expect(result).toEqual(updated);
@@ -143,7 +173,7 @@ describe("DynamoDbTennerRepository.delete (soft delete)", () => {
 
   it("sets active=false, deletedAt and updatedAt with an UpdateItem (never DeleteItem)", async () => {
     const c = client(async () => ({ Attributes: deleted }));
-    const result = await new DynamoDbTennerRepository(c, "tenner-tenners", "tenner-history").delete("default", "t-1", TS);
+    const result = await new DynamoDbTennerRepository(c, "tenner-tenners", "tenner-history").delete("default", "t-1", TS, "JULIA");
 
     expect(result).toEqual({ status: "DELETED", tenner: deleted });
     const command = c.send.mock.calls[0]?.[0] as UpdateCommand;
@@ -151,10 +181,10 @@ describe("DynamoDbTennerRepository.delete (soft delete)", () => {
     expect(command.input).toEqual({
       TableName: "tenner-tenners",
       Key: { tenantId: "default", tennerId: "t-1" },
-      UpdateExpression: "SET #active = :false, #deletedAt = :timestamp, #updatedAt = :timestamp",
+      UpdateExpression: "SET #active = :false, #deletedAt = :timestamp, #updatedAt = :timestamp, #updatedBy = :actor",
       ConditionExpression: "attribute_exists(tennerId) AND (attribute_not_exists(#deletedAt) OR #deletedAt = :null)",
-      ExpressionAttributeNames: { "#active": "active", "#deletedAt": "deletedAt", "#updatedAt": "updatedAt" },
-      ExpressionAttributeValues: { ":false": false, ":timestamp": TS, ":null": null },
+      ExpressionAttributeNames: { "#active": "active", "#deletedAt": "deletedAt", "#updatedAt": "updatedAt", "#updatedBy": "updatedBy" },
+      ExpressionAttributeValues: { ":false": false, ":timestamp": TS, ":actor": "JULIA", ":null": null },
       ReturnValues: "ALL_NEW",
     });
   });
@@ -163,27 +193,27 @@ describe("DynamoDbTennerRepository.delete (soft delete)", () => {
     const earlier = tennerFixture({ active: false, deletedAt: "2026-09-01T00:00:00Z" });
     const responses: (() => Promise<unknown>)[] = [async () => Promise.reject(namedError("ConditionalCheckFailedException")), async () => ({ Item: earlier })];
     const c = client(async () => responses.shift()?.());
-    await expect(new DynamoDbTennerRepository(c, "t", "tenner-history").delete("default", "t-1", TS)).resolves.toEqual({ status: "ALREADY_DELETED", tenner: earlier });
+    await expect(new DynamoDbTennerRepository(c, "t", "tenner-history").delete("default", "t-1", TS, "JULIA")).resolves.toEqual({ status: "ALREADY_DELETED", tenner: earlier });
     expect(c.send).toHaveBeenCalledTimes(2);
   });
 
   it("throws NotFoundError for missing Tenners", async () => {
     const responses: (() => Promise<unknown>)[] = [async () => Promise.reject(namedError("ConditionalCheckFailedException")), async () => ({})];
     const c = client(async () => responses.shift()?.());
-    await expect(new DynamoDbTennerRepository(c, "t", "tenner-history").delete("default", "x", TS)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(new DynamoDbTennerRepository(c, "t", "tenner-history").delete("default", "x", TS, "JULIA")).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it("throws CONCURRENT_MODIFICATION if the item was restored between the two calls", async () => {
     const responses: (() => Promise<unknown>)[] = [async () => Promise.reject(namedError("ConditionalCheckFailedException")), async () => ({ Item: tennerFixture() })];
     const c = client(async () => responses.shift()?.());
-    await expect(new DynamoDbTennerRepository(c, "t", "tenner-history").delete("default", "x", TS)).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION", statusCode: 409 });
+    await expect(new DynamoDbTennerRepository(c, "t", "tenner-history").delete("default", "x", TS, "JULIA")).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION", statusCode: 409 });
   });
 
   it("maps other failures and empty responses to PersistenceError", async () => {
     const failing = client(async () => Promise.reject(namedError("ThrottlingException")));
-    await expect(new DynamoDbTennerRepository(failing, "t", "tenner-history").delete("default", "x", TS)).rejects.toBeInstanceOf(PersistenceError);
+    await expect(new DynamoDbTennerRepository(failing, "t", "tenner-history").delete("default", "x", TS, "JULIA")).rejects.toBeInstanceOf(PersistenceError);
     const empty = client(async () => ({}));
-    await expect(new DynamoDbTennerRepository(empty, "t", "tenner-history").delete("default", "x", TS)).rejects.toBeInstanceOf(PersistenceError);
+    await expect(new DynamoDbTennerRepository(empty, "t", "tenner-history").delete("default", "x", TS, "JULIA")).rejects.toBeInstanceOf(PersistenceError);
   });
 });
 
@@ -193,17 +223,17 @@ describe("DynamoDbTennerRepository.restore", () => {
   it("sets active, clears deletedAt and refreshes updatedAt, locked on updatedAt; schedule untouched", async () => {
     const restoredItem = tennerFixture({ updatedAt: TS });
     const c = client(async () => ({ Attributes: restoredItem }));
-    const result = await new DynamoDbTennerRepository(c, "tenner-tenners", "tenner-history").restore("default", "t-1", "2026-10-01T18:00:00Z", TS);
+    const result = await new DynamoDbTennerRepository(c, "tenner-tenners", "tenner-history").restore("default", "t-1", "2026-10-01T18:00:00Z", TS, "JULIA");
 
     expect(result).toEqual(restoredItem);
     const command = c.send.mock.calls[0]?.[0] as UpdateCommand;
     expect(command.input).toEqual({
       TableName: "tenner-tenners",
       Key: { tenantId: "default", tennerId: "t-1" },
-      UpdateExpression: "SET #active = :true, #deletedAt = :null, #updatedAt = :timestamp",
+      UpdateExpression: "SET #active = :true, #deletedAt = :null, #updatedAt = :timestamp, #updatedBy = :actor",
       ConditionExpression: "attribute_exists(tennerId) AND #updatedAt = :expectedUpdatedAt",
-      ExpressionAttributeNames: { "#active": "active", "#deletedAt": "deletedAt", "#updatedAt": "updatedAt" },
-      ExpressionAttributeValues: { ":true": true, ":null": null, ":timestamp": TS, ":expectedUpdatedAt": "2026-10-01T18:00:00Z" },
+      ExpressionAttributeNames: { "#active": "active", "#deletedAt": "deletedAt", "#updatedAt": "updatedAt", "#updatedBy": "updatedBy" },
+      ExpressionAttributeValues: { ":true": true, ":null": null, ":timestamp": TS, ":actor": "JULIA", ":expectedUpdatedAt": "2026-10-01T18:00:00Z" },
       ReturnValues: "ALL_NEW",
     });
     expect(command.input.UpdateExpression).not.toMatch(/nextDue|lastCompleted/);
@@ -211,12 +241,12 @@ describe("DynamoDbTennerRepository.restore", () => {
 
   it("maps a failed lock to CONCURRENT_MODIFICATION", async () => {
     const c = client(async () => Promise.reject(namedError("ConditionalCheckFailedException")));
-    await expect(new DynamoDbTennerRepository(c, "t", "h").restore("default", "t-1", "x", TS)).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION", statusCode: 409 });
+    await expect(new DynamoDbTennerRepository(c, "t", "h").restore("default", "t-1", "x", TS, "JULIA")).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION", statusCode: 409 });
   });
 
   it("maps other failures and empty responses to PersistenceError", async () => {
-    await expect(new DynamoDbTennerRepository(client(async () => Promise.reject(namedError("ThrottlingException"))), "t", "h").restore("default", "t-1", "x", TS)).rejects.toBeInstanceOf(PersistenceError);
-    await expect(new DynamoDbTennerRepository(client(async () => ({})), "t", "h").restore("default", "t-1", "x", TS)).rejects.toBeInstanceOf(PersistenceError);
+    await expect(new DynamoDbTennerRepository(client(async () => Promise.reject(namedError("ThrottlingException"))), "t", "h").restore("default", "t-1", "x", TS, "JULIA")).rejects.toBeInstanceOf(PersistenceError);
+    await expect(new DynamoDbTennerRepository(client(async () => ({})), "t", "h").restore("default", "t-1", "x", TS, "JULIA")).rejects.toBeInstanceOf(PersistenceError);
   });
 });
 

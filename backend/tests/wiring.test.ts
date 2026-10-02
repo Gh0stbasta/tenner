@@ -2,7 +2,7 @@
 
 import { GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { tennerFixture, testConfig } from "./mocks/index.js";
+import { tennerFixture, testConfig, TEST_IDENTITY } from "./mocks/index.js";
 
 const send = vi.fn();
 
@@ -32,7 +32,7 @@ describe("createDependencies wiring", () => {
 
   it("creates Tenners in the configured tenners table", async () => {
     send.mockResolvedValue({});
-    const created = await deps().createTenner("default", {
+    const created = await deps().createTenner(TEST_IDENTITY, {
       title: "Vacuum Office",
       category: "HOUSEHOLD",
       estimatedMinutes: 10,
@@ -53,13 +53,13 @@ describe("createDependencies wiring", () => {
 
   it("soft deletes Tenners in the configured table", async () => {
     send.mockResolvedValue({ Attributes: tennerFixture({ active: false, deletedAt: "2026-10-01T18:00:00Z" }) });
-    await expect(deps().deleteTenner("default", "t-1")).resolves.toMatchObject({ response: { deleted: true } });
+    await expect(deps().deleteTenner(TEST_IDENTITY, "t-1")).resolves.toMatchObject({ response: { deleted: true } });
     expect((send.mock.calls[0]?.[0] as UpdateCommand).input.TableName).toBe("tenner-tenners");
   });
 
   it("completes Tenners with a transaction across both tables", async () => {
     send.mockImplementation(async (command: unknown) => (command instanceof GetCommand ? { Item: tennerFixture() } : {}));
-    await expect(deps().completeTenner("default", "t-1", { completedBy: "STEFAN" })).resolves.toMatchObject({ replayed: false });
+    await expect(deps().completeTenner(TEST_IDENTITY, "t-1", { completedBy: "STEFAN" })).resolves.toMatchObject({ replayed: false });
     const transaction = send.mock.calls.map(([c]) => c).find((c) => c instanceof TransactWriteCommand) as TransactWriteCommand;
     expect(transaction.input.TransactItems?.map((i) => i.Put?.TableName ?? i.Update?.TableName)).toEqual(["tenner-history", "tenner-tenners"]);
   });
@@ -70,7 +70,7 @@ describe("createDependencies wiring", () => {
       if (command instanceof QueryCommand) return { Items: [{ tenantId: "default", historyId: "c-1", tennerId: "t-1", completedBy: "STEFAN", completedAt: "2026-10-01T10:00:00Z", actualMinutes: 10 }] };
       return {};
     });
-    await expect(deps().undoCompletion("default", "t-1", { revertedBy: "STEFAN" })).resolves.toMatchObject({ restoredPrevious: false });
+    await expect(deps().undoCompletion(TEST_IDENTITY, "t-1", { revertedBy: "STEFAN" })).resolves.toMatchObject({ restoredPrevious: false });
     const transaction = send.mock.calls.map(([c]) => c).find((c) => c instanceof TransactWriteCommand) as TransactWriteCommand;
     expect(transaction.input.TransactItems?.map((i) => i.Update?.TableName)).toEqual(["tenner-history", "tenner-tenners"]);
   });
@@ -79,7 +79,7 @@ describe("createDependencies wiring", () => {
     send.mockImplementation(async (command: unknown) =>
       command instanceof GetCommand ? { Item: tennerFixture({ active: false, deletedAt: "2026-10-01T00:00:00Z" }) } : { Attributes: tennerFixture() },
     );
-    await expect(deps().restoreTenner("default", "t-1")).resolves.toMatchObject({ status: "RESTORED" });
+    await expect(deps().restoreTenner(TEST_IDENTITY, "t-1")).resolves.toMatchObject({ status: "RESTORED" });
   });
 
   it("serves the dashboard from one nextDue-index query", async () => {
@@ -107,7 +107,7 @@ describe("createDependencies wiring", () => {
 
   it("updates Tenners in the configured table", async () => {
     send.mockResolvedValue({ Attributes: tennerFixture({ title: "New title" }) });
-    await expect(deps().updateTenner("default", "t-1", { title: "New title" })).resolves.toMatchObject({ title: "New title" });
+    await expect(deps().updateTenner(TEST_IDENTITY, "t-1", { title: "New title" })).resolves.toMatchObject({ title: "New title" });
     expect((send.mock.calls[0]?.[0] as UpdateCommand).input.TableName).toBe("tenner-tenners");
   });
 });

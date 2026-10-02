@@ -136,3 +136,19 @@ Peer review of the ADR by the repository owner.
 - Implementation (SECURITY-002, 003)
 - MFA (SECURITY-011)
 - Social login (FUTURE-011)
+
+---
+
+# Implementation Status
+
+Done 2026-10-02.
+
+- [x] All options evaluated against the criteria (`docs/decisions/0001-authentication.md`)
+- [x] Decision documented as ADR: Option A, Cognito User Pool with one account per household member
+- [x] Architecture documentation updated (`docs/architecture.md` → Security)
+- [x] Follow-up tickets aligned: SECURITY-002 references the ADR; SECURITY-003 sends the ID token
+  (custom attributes are not in Cognito access tokens without a pre-token-generation Lambda)
+
+Owner decisions (2026-10-02): one account each for Stefan and Julia; tokens in `localStorage` for 30 days.
+Validation: owner review of the ADR in the pull request.
+

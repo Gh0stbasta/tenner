@@ -2,6 +2,7 @@
 
 import type { CreateTennerRequest, TennerResponse } from "../dto/index.js";
 import { toTennerResponse } from "../dto/index.js";
+import type { Identity } from "../auth/index.js";
 import type { Tenner } from "../models/index.js";
 import type { TennerRepository } from "../repositories/index.js";
 import { toUtcDate, toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
@@ -15,13 +16,14 @@ export class CreateTennerService {
 
   /**
    * Create a Tenner from a validated request. Defaults: new UUID, active, never completed,
-   * due today (so it appears in the due list immediately), createdAt = updatedAt = now.
+   * due today (so it appears in the due list immediately), createdAt = updatedAt = now,
+   * createdBy = updatedBy = the authenticated user, tenant from the identity.
    */
-  async createTenner(tenantId: string, request: CreateTennerRequest): Promise<TennerResponse> {
+  async createTenner(identity: Identity, request: CreateTennerRequest): Promise<TennerResponse> {
     const now = this.clock();
     const timestamp = toUtcTimestamp(now);
     const tenner: Tenner = {
-      tenantId,
+      tenantId: identity.tenantId,
       tennerId: this.newId(),
       title: request.title,
       category: request.category,
@@ -34,6 +36,8 @@ export class CreateTennerService {
       deletedAt: null,
       createdAt: timestamp,
       updatedAt: timestamp,
+      createdBy: identity.userId,
+      updatedBy: identity.userId,
     };
     await this.repository.save(tenner);
     return toTennerResponse(tenner);
