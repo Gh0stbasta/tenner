@@ -6,6 +6,7 @@
 
 import { useMutation, useMutationState, useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { errorMessage } from "../../api/errorMessages";
 import { queryKeys } from "../../api/queryKeys";
 import { useNotify } from "../../components/NotificationProvider";
 import { trackEvent } from "../../utils/telemetry";
@@ -62,9 +63,9 @@ export function CompletionProvider({ children }: { readonly children: ReactNode 
       trackEvent("CompletionUndone", { tennerId: request.tennerId });
       notify({ message: "↩ Erledigung zurückgenommen.", severity: "info" });
     },
-    onError: (_, request) =>
+    onError: (error, request) =>
       notify({
-        message: "Rückgängig machen fehlgeschlagen.",
+        message: `Rückgängig machen fehlgeschlagen. ${errorMessage(error)}`,
         severity: "error",
         action: { label: "Erneut versuchen", onClick: () => undoMutation.mutate(request) },
       }),
@@ -97,10 +98,10 @@ export function CompletionProvider({ children }: { readonly children: ReactNode 
         },
       });
     },
-    onError: (_, request, context) => {
+    onError: (error, request, context) => {
       if (context?.previous) queryClient.setQueryData(queryKeys.dashboard, context.previous);
       notify({
-        message: `„${request.title}“ konnte nicht erledigt werden.`,
+        message: `„${request.title}“ konnte nicht erledigt werden. ${errorMessage(error)}`,
         severity: "error",
         // Same Idempotency-Key: a retry cannot complete the Tenner twice.
         action: { label: "Erneut versuchen", onClick: () => completeMutation.mutate(request) },

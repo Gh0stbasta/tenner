@@ -4,6 +4,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { Alert, Box, Button } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { useMemo, useState } from "react";
+import { errorMessage } from "../../api/errorMessages";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { NoTennersFound } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/LoadingState";
@@ -81,7 +82,7 @@ export function TennersPage() {
 
       {failed && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          Die Aktion ist fehlgeschlagen. Bitte versuche es erneut.
+          Die Aktion ist fehlgeschlagen. {errorMessage(archive.error ?? restore.error)}
         </Alert>
       )}
 
@@ -90,7 +91,7 @@ export function TennersPage() {
       ) : tenners.isError ? (
         <ErrorAlert
           title="Tenner konnten nicht geladen werden"
-          message="Bitte versuche es erneut."
+          message={errorMessage(tenners.error)}
           onRetry={() => void tenners.refetch()}
         />
       ) : visible.length === 0 ? (

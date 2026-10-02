@@ -104,10 +104,24 @@ describe("CreateTennerDialog", () => {
     await waitFor(() => expect(submitButton()).toBeEnabled());
     await userEvent.click(submitButton());
     expect(
-      await screen.findByText("Tenner konnte nicht angelegt werden. Bitte versuche es erneut."),
+      await screen.findByText(
+        "Tenner konnte nicht angelegt werden. Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+      ),
     ).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Titel" })).toHaveValue("Fenster putzen");
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("never retries a failed create automatically (no idempotency key, UX-005)", async () => {
+    const fetchMock = mockFetch({
+      "POST /tenners": { status: 503, body: { success: false, error: { code: "SERVICE_UNAVAILABLE", message: "x" } } },
+    });
+    renderDialog();
+    await fillValid();
+    await waitFor(() => expect(submitButton()).toBeEnabled());
+    await userEvent.click(submitButton());
+    await screen.findByText(/^Tenner konnte nicht angelegt werden/);
+    expect(fetchMock.calls().filter((call) => call.key === "POST /tenners")).toHaveLength(1);
   });
 
   it("shows backend validation messages on the field", async () => {

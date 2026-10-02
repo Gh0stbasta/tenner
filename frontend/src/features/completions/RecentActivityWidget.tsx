@@ -2,6 +2,7 @@
 
 import { Card, CardContent, List, Typography } from "@mui/material";
 import { useId } from "react";
+import { errorMessage } from "../../api/errorMessages";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { SectionLoading } from "../../components/LoadingState";
 import { ActivityCard } from "./ActivityCard";
@@ -23,7 +24,7 @@ export function RecentActivityWidget() {
         ) : activity.isError ? (
           <ErrorAlert
             title="Aktivität nicht verfügbar"
-            message="Bitte versuche es erneut."
+            message={errorMessage(activity.error)}
             onRetry={() => void activity.refetch()}
           />
         ) : activity.data.items.length === 0 ? (

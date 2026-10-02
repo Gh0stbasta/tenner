@@ -93,7 +93,11 @@ describe("QuickAddTenner", () => {
   it("keeps the input and shows an error when the API fails", async () => {
     setup([], fail(500, "INTERNAL_ERROR"));
     await userEvent.type(input(), "Wash Car{Enter}");
-    expect(await screen.findByText("Tenner konnte nicht angelegt werden.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "Tenner konnte nicht angelegt werden. Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+      ),
+    ).toBeInTheDocument();
     expect(input()).toHaveValue("Wash Car");
   });
 

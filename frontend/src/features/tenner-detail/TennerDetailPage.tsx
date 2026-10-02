@@ -6,6 +6,7 @@ import { Button, Card, CardContent, Typography } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import { errorMessage } from "../../api/errorMessages";
 import { isApiError } from "../../api/errors";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorAlert } from "../../components/ErrorAlert";
@@ -72,7 +73,7 @@ export function TennerDetailPage() {
         <BackLink />
         <ErrorAlert
           title="Tenner konnte nicht geladen werden"
-          message="Bitte versuche es erneut."
+          message={errorMessage(tenner.error)}
           onRetry={() => void tenner.refetch()}
         />
       </>
@@ -108,7 +109,7 @@ export function TennerDetailPage() {
             <CompletionHistoryList
               items={items}
               loading={history.isPending}
-              error={history.isError}
+              error={history.error}
               hasMore={history.hasNextPage}
               loadingMore={history.isFetchingNextPage}
               onLoadMore={() => void history.fetchNextPage()}

@@ -188,14 +188,22 @@ describe("TennersPage", () => {
     renderWithProviders(<TennersPage />);
     await userEvent.click(await screen.findByRole("button", { name: "„Büro saugen“ archivieren" }));
     await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Archivieren" }));
-    expect(await screen.findByText("Die Aktion ist fehlgeschlagen. Bitte versuche es erneut.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "Die Aktion ist fehlgeschlagen. Jemand anderes hat diesen Tenner geändert. Lade neu, um den aktuellen Stand zu sehen.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows a snackbar when completing fails", async () => {
     mockFetch({ "GET /tenners": listHandler, "POST /tenners/t-1/complete": fail(409, "CONCURRENT_MODIFICATION") });
     renderWithProviders(<TennersPage />);
     await userEvent.click(await screen.findByRole("button", { name: "„Büro saugen“ erledigen" }));
-    expect(await screen.findByText("„Büro saugen“ konnte nicht erledigt werden.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "„Büro saugen“ konnte nicht erledigt werden. Jemand anderes hat diesen Tenner geändert. Lade neu, um den aktuellen Stand zu sehen.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("opens the edit dialog with the Tenner's values", async () => {

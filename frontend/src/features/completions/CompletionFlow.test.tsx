@@ -72,7 +72,11 @@ describe("completion and undo", () => {
     renderWithProviders(<TennersPage />);
     await userEvent.click(await completeButton("Büro saugen"));
     await userEvent.click(await screen.findByRole("button", { name: "Rückgängig" }));
-    expect(await screen.findByText("Rückgängig machen fehlgeschlagen.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "Rückgängig machen fehlgeschlagen. Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+      ),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
     expect(await screen.findByText("↩ Erledigung zurückgenommen.")).toBeInTheDocument();
 
@@ -93,7 +97,11 @@ describe("completion and undo", () => {
     });
     renderWithProviders(<TennersPage />);
     await userEvent.click(await completeButton("Büro saugen"));
-    expect(await screen.findByText("„Büro saugen“ konnte nicht erledigt werden.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "„Büro saugen“ konnte nicht erledigt werden. Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+      ),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
     expect(await screen.findByText("✅ „Büro saugen“ erledigt.")).toBeInTheDocument();
 

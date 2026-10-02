@@ -1,4 +1,5 @@
 import { Button, List, ListItem, ListItemText, Typography } from "@mui/material";
+import { errorMessage } from "../../api/errorMessages";
 import { SectionLoading } from "../../components/LoadingState";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { USER_LABELS } from "../../types/domain";
@@ -8,7 +9,8 @@ import type { HistoryItem } from "../completions/api";
 export interface CompletionHistoryListProps {
   readonly items: readonly HistoryItem[];
   readonly loading: boolean;
-  readonly error: boolean;
+  /** The loading error, or null. */
+  readonly error: unknown;
   readonly hasMore: boolean;
   readonly loadingMore: boolean;
   readonly onLoadMore: () => void;
@@ -30,10 +32,8 @@ export function CompletionHistoryList({
   onRetry,
 }: CompletionHistoryListProps) {
   if (loading) return <SectionLoading label="Verlauf wird geladen" />;
-  if (error)
-    return (
-      <ErrorAlert title="Verlauf konnte nicht geladen werden" message="Bitte versuche es erneut." onRetry={onRetry} />
-    );
+  if (error !== null && error !== undefined)
+    return <ErrorAlert title="Verlauf konnte nicht geladen werden" message={errorMessage(error)} onRetry={onRetry} />;
   if (items.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">

@@ -99,7 +99,9 @@ describe("EditTennerDialog", () => {
     await userEvent.type(titleInput(), " neu");
     await userEvent.click(saveButton());
     expect(
-      await screen.findByText("Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut."),
+      await screen.findByText(
+        "Änderungen konnten nicht gespeichert werden. Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+      ),
     ).toBeInTheDocument();
     expect(titleInput()).toHaveValue("Büro saugen neu");
     expect(onClose).not.toHaveBeenCalled();

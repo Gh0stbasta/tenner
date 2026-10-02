@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
+import { errorMessage } from "../../api/errorMessages";
 import { useNotify } from "../../components/NotificationProvider";
 import { formatShortDate } from "../../utils/format";
 import { useUpdateTenner, type TennerUpdate } from "./api";
@@ -116,7 +117,7 @@ function EditTennerForm({ tenner, onClose }: { readonly tenner: Tenner; readonly
           <DialogContent>
             {update.isError && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut.
+                Änderungen konnten nicht gespeichert werden. {errorMessage(update.error)}
               </Alert>
             )}
             <TennerForm form={form} showActive disabled={update.isPending} />

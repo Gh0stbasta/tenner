@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { useId } from "react";
 import { useForm } from "react-hook-form";
+import { errorMessage } from "../../api/errorMessages";
 import { useNotify } from "../../components/NotificationProvider";
 import { useCurrentUser } from "../completions/CurrentUserProvider";
 import { useCreateTenner } from "./api";
@@ -78,7 +79,7 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
         <DialogContent>
           {create.isError && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              Tenner konnte nicht angelegt werden. Bitte versuche es erneut.
+              Tenner konnte nicht angelegt werden. {errorMessage(create.error)}
             </Alert>
           )}
           <TennerForm form={form} disabled={create.isPending} />

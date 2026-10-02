@@ -3,6 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { queryKeys } from "../../api/queryKeys";
+import { errorMessage } from "../../api/errorMessages";
 import { useNotify } from "../../components/NotificationProvider";
 import type { Category } from "../../types/domain";
 import { useCurrentUser } from "../completions/CurrentUserProvider";
@@ -45,7 +46,7 @@ export function useQuickAddTenner() {
           setTitle("");
           notify({ message: `✅ „${created.title}“ angelegt.` });
         },
-        onError: () => setError("Tenner konnte nicht angelegt werden."),
+        onError: (failure) => setError(`Tenner konnte nicht angelegt werden. ${errorMessage(failure)}`),
       },
     );
   };

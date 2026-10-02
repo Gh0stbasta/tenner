@@ -70,7 +70,12 @@ Features own their components, hooks and API functions, so `components/` stays s
 - **Routing:** `/` redirects to `/dashboard`. `/tenners`, `/analytics` and `/settings` exist; unknown paths
   show a not-found page. CloudFront serves `index.html` for unknown paths (SPA fallback).
 - **Layout:** app bar, permanent side navigation from `md` (900 px), drawer behind a menu button below.
-- **Errors:** a top-level error boundary shows a fallback with a reload button instead of a blank page.
+- **Errors (UX-005):** a top-level error boundary shows a fallback with a reload button instead of a blank page.
+  `src/api/errorMessages.ts` maps API error codes to German messages (e.g. `CONCURRENT_MODIFICATION` → "Jemand anderes
+  hat diesen Tenner geändert …", network/5xx → "Tenner ist gerade nicht erreichbar …"); all error alerts and
+  snackbars use it. Backend field errors appear on the form field. A banner shows when the device is offline or the
+  API is unreachable (reads failing with network errors, 429 or 5xx) and disappears after the next successful read.
+  Failed saves keep the form input.
 
 ## Features
 

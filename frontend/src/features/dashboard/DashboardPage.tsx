@@ -1,6 +1,7 @@
 /** Dashboard (FRONTEND-002): what should I do today? */
 
 import Grid from "@mui/material/Grid";
+import { errorMessage } from "../../api/errorMessages";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { NoDashboardData } from "../../components/EmptyState";
 import { PageLoading } from "../../components/LoadingState";
@@ -36,7 +37,7 @@ export function DashboardPage() {
         <PageHeader title="Heute" />
         <ErrorAlert
           title="Dashboard konnte nicht geladen werden"
-          message="Bitte versuche es erneut."
+          message={errorMessage(dashboard.error)}
           onRetry={() => void dashboard.refetch()}
         />
       </>

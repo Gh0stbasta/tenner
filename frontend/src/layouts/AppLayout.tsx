@@ -22,6 +22,7 @@ import {
 } from "@mui/material";
 import { useState, type ReactNode } from "react";
 import { NavLink, Outlet } from "react-router";
+import { ConnectivityBanner } from "../components/ConnectivityBanner";
 import { NAVIGATION_ITEMS } from "./navigation";
 
 export const DRAWER_WIDTH = 220;
@@ -106,6 +107,7 @@ export function AppLayout({ headerActions }: AppLayoutProps) {
 
       <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, sm: 3 }, maxWidth: 1200, mx: "auto" }}>
         <Toolbar />
+        <ConnectivityBanner />
         <Outlet />
       </Box>
     </Box>

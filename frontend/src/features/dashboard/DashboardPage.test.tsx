@@ -93,7 +93,11 @@ describe("DashboardPage", () => {
     });
     renderWithProviders(<DashboardPage />);
     await userEvent.click(await screen.findByRole("button", { name: "„Haustür putzen“ erledigen" }));
-    expect(await screen.findByText("„Haustür putzen“ konnte nicht erledigt werden.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "„Haustür putzen“ konnte nicht erledigt werden. Jemand anderes hat diesen Tenner geändert. Lade neu, um den aktuellen Stand zu sehen.",
+      ),
+    ).toBeInTheDocument();
     // The optimistic removal is rolled back.
     expect(await screen.findByRole("button", { name: "„Haustür putzen“ erledigen" })).toBeInTheDocument();
   });
