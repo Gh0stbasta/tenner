@@ -15,6 +15,7 @@ import { trackEvent } from "../../utils/telemetry";
 import { useCompleteTenner } from "../completions/useCompleteTenner";
 import { DEFAULT_LIST_PARAMS, useArchiveTenner, useRestoreTenner, useTenners, type TennerListParams } from "./api";
 import { ConfirmArchiveDialog } from "./ConfirmArchiveDialog";
+import { CreateTennerDialog } from "./CreateTennerDialog";
 import type { Tenner } from "./schemas";
 import { tennerStatus } from "./status";
 import { TennerCard } from "./TennerCard";
@@ -24,8 +25,6 @@ import { TennerSearch } from "./TennerSearch";
 const SEARCH_DEBOUNCE_MS = 300;
 
 export interface TennersPageProps {
-  /** Opens the create dialog (FRONTEND-004). */
-  readonly onCreate?: () => void;
   /** Opens the edit dialog (FRONTEND-005). */
   readonly onEdit?: (tenner: Tenner) => void;
   /** Extra header content, e.g. Quick Add (FRONTEND-006). */
@@ -39,10 +38,11 @@ function summary(tenners: readonly Tenner[], today: string): string {
   return `${active.length} aktive Tenner · ${overdue} überfällig · ${formatMinutes(minutes)} geschätzt`;
 }
 
-export function TennersPage({ onCreate, onEdit, headerExtra }: TennersPageProps) {
+export function TennersPage({ onEdit, headerExtra }: TennersPageProps) {
   const [params, setParams] = useState<TennerListParams>(DEFAULT_LIST_PARAMS);
   const [search, setSearch] = useState("");
   const [archiveCandidate, setArchiveCandidate] = useState<Tenner | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(search.trim().toLocaleLowerCase("de-DE"), SEARCH_DEBOUNCE_MS);
   const today = todayIsoDate();
 
@@ -74,7 +74,7 @@ export function TennersPage({ onCreate, onEdit, headerExtra }: TennersPageProps)
         title="Tenner"
         subtitle={tenners.data ? summary(tenners.data, today) : undefined}
         actions={
-          <Button variant="contained" startIcon={<AddIcon />} onClick={onCreate}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
             Neuer Tenner
           </Button>
         }
@@ -123,6 +123,7 @@ export function TennersPage({ onCreate, onEdit, headerExtra }: TennersPageProps)
         </Grid>
       )}
 
+      <CreateTennerDialog open={createOpen} onClose={() => setCreateOpen(false)} />
       <ConfirmArchiveDialog
         tenner={archiveCandidate}
         busy={archive.isPending}

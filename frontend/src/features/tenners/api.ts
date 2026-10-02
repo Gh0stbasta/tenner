@@ -102,3 +102,24 @@ export function useRestoreTenner() {
     onSettled: invalidate,
   });
 }
+
+export interface TennerInput {
+  readonly title: string;
+  readonly category: Category;
+  readonly assignedTo: UserId;
+  readonly estimatedMinutes: number;
+  readonly frequencyDays: number;
+}
+
+export function createTenner(input: TennerInput): Promise<Tenner> {
+  return apiClient.post("/tenners", { schema: tennerSchema, body: input });
+}
+
+export function useCreateTenner() {
+  const invalidate = useInvalidateTenners();
+  return useMutation({
+    mutationFn: createTenner,
+    onSuccess: (created) => trackEvent("TennerCreated", { tennerId: created.tennerId }),
+    onSettled: invalidate,
+  });
+}

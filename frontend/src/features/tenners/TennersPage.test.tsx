@@ -184,15 +184,19 @@ describe("TennersPage", () => {
     expect(await screen.findByText("Die Aktion ist fehlgeschlagen. Bitte versuche es erneut.")).toBeInTheDocument();
   });
 
-  it("wires the create and edit triggers", async () => {
+  it("wires the edit trigger", async () => {
     mockFetch({ "GET /tenners": listHandler });
-    const onCreate = vi.fn();
     const onEdit = vi.fn();
-    renderWithProviders(<TennersPage onCreate={onCreate} onEdit={onEdit} />);
-    await userEvent.click(screen.getByRole("button", { name: "Neuer Tenner" }));
+    renderWithProviders(<TennersPage onEdit={onEdit} />);
     await userEvent.click(await screen.findByRole("button", { name: "„Büro saugen“ bearbeiten" }));
-    expect(onCreate).toHaveBeenCalledOnce();
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ tennerId: "t-1" }));
+  });
+
+  it("opens the create dialog from the header", async () => {
+    mockFetch({ "GET /tenners": listHandler });
+    renderWithProviders(<TennersPage />);
+    await userEvent.click(screen.getByRole("button", { name: "Neuer Tenner" }));
+    expect(screen.getByRole("dialog", { name: "Tenner anlegen" })).toBeInTheDocument();
   });
 
   it("collapses secondary actions into a menu on phones", async () => {

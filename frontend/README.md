@@ -74,10 +74,10 @@ Features own their components, hooks and API functions, so `components/` stays s
 
 ## Features
 
-| Route        | Feature                                                                                                                  | Ticket       |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------ | ------------ |
-| `/dashboard` | Today: summary cards, due today, overdue (highlighted), upcoming, workload per person and category, one-click completion | FRONTEND-002 |
-| `/tenners` | Management: live title search (300 ms debounce), filters (status active/archived/all, person, category), sorting, complete, archive (with confirmation), restore | FRONTEND-003 |
+| Route        | Feature                                                                                                                                                          | Ticket       |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `/dashboard` | Today: summary cards, due today, overdue (highlighted), upcoming, workload per person and category, one-click completion                                         | FRONTEND-002 |
+| `/tenners`   | Management: live title search (300 ms debounce), filters (status active/archived/all, person, category), sorting, complete, archive (with confirmation), restore | FRONTEND-003 |
 
 Queries and mutations share keys from `src/api/queryKeys.ts`. Completing a Tenner invalidates the dashboard,
 Tenner lists and history. Completions send an `Idempotency-Key`, so a repeated request cannot complete twice.
