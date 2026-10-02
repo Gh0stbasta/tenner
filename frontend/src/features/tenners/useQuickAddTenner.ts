@@ -5,7 +5,7 @@ import { useState } from "react";
 import { queryKeys } from "../../api/queryKeys";
 import { useNotify } from "../../components/NotificationProvider";
 import type { Category } from "../../types/domain";
-import { useCurrentUser } from "../completions/useCurrentUser";
+import { useCurrentUser } from "../completions/CurrentUserProvider";
 import { DEFAULT_LIST_PARAMS, listTenners, useCreateTenner } from "./api";
 import { findSimilarTenner, QUICK_ADD_DEFAULTS, suggestCategory } from "./quickAdd";
 import type { Tenner } from "./schemas";

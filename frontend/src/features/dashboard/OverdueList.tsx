@@ -1,21 +1,19 @@
 import { formatOverdue } from "../../utils/format";
+import type { DashboardTenner } from "./api";
 import { DashboardTennerCard } from "./DashboardTennerCard";
-import type { CompletableListProps } from "./DueTodayList";
 import { TennerSection } from "./TennerSection";
 
-export function OverdueList({ tenners, onComplete, completingId }: CompletableListProps) {
+export function OverdueList({ tenners }: { readonly tenners: readonly DashboardTenner[] }) {
   return (
-    <TennerSection title="Überfällig" count={tenners.length}>
-      {tenners.map((tenner) => (
+    <TennerSection title="Überfällig" items={tenners}>
+      {(tenner) => (
         <DashboardTennerCard
-          key={tenner.tennerId}
           tenner={tenner}
           variant="overdue"
           status={formatOverdue(tenner.overdueDays ?? 1)}
-          onComplete={onComplete}
-          completing={completingId === tenner.tennerId}
+          completable
         />
-      ))}
+      )}
     </TennerSection>
   );
 }

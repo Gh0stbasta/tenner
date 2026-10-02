@@ -1,15 +1,14 @@
 /** Dashboard (FRONTEND-002): what should I do today? */
 
-import { Box } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { NoDashboardData } from "../../components/EmptyState";
 import { PageLoading } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
 import { formatLongDate, formatMinutes, formatTennerCount } from "../../utils/format";
-import { useCompleteTenner } from "../completions/useCompleteTenner";
+import { RecentActivityWidget } from "../completions/RecentActivityWidget";
 import { QuickAddTenner } from "../tenners/QuickAddTenner";
-import { useDashboard, type Dashboard, type DashboardTenner } from "./api";
+import { useDashboard, type Dashboard } from "./api";
 import { DueTodayList } from "./DueTodayList";
 import { OverdueList } from "./OverdueList";
 import { SummaryCards } from "./SummaryCards";
@@ -29,7 +28,6 @@ function headerSubtitle(dashboard: Dashboard): string {
 
 export function DashboardPage() {
   const dashboard = useDashboard();
-  const complete = useCompleteTenner();
 
   if (dashboard.isPending) return <PageLoading label="Dashboard wird geladen" />;
   if (dashboard.isError) {
@@ -46,27 +44,18 @@ export function DashboardPage() {
   }
 
   const data = dashboard.data;
-  const onComplete = (tenner: DashboardTenner) =>
-    complete.mutate({ tennerId: tenner.tennerId, estimatedMinutes: tenner.estimatedMinutes });
-  const completingId = complete.isPending ? complete.variables.tennerId : undefined;
-  const nothingActionable = data.summary.totalActionableCount === 0;
-
   return (
     <>
       <PageHeader title="Heute" subtitle={headerSubtitle(data)} />
       <QuickAddTenner />
-      {complete.isError && (
-        <Box sx={{ mb: 2 }}>
-          <ErrorAlert title="Tenner konnte nicht erledigt werden" message="Bitte versuche es erneut." />
-        </Box>
-      )}
       <SummaryCards summary={data.summary} />
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 8 }}>
-          {nothingActionable && <NoDashboardData />}
-          <DueTodayList tenners={data.dueToday} onComplete={onComplete} completingId={completingId} />
-          <OverdueList tenners={data.overdue} onComplete={onComplete} completingId={completingId} />
+          {data.summary.totalActionableCount === 0 && <NoDashboardData />}
+          <DueTodayList tenners={data.dueToday} />
+          <OverdueList tenners={data.overdue} />
           <UpcomingList tenners={data.upcoming} />
+          <RecentActivityWidget />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <UserSummaryCard byUser={data.byUser} />

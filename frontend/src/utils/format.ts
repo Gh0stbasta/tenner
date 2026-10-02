@@ -44,3 +44,29 @@ export function formatDueIn(days: number): string {
   if (days === 1) return "morgen fällig";
   return `fällig in ${days} Tagen`;
 }
+
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+
+function startOfDay(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+/** "gerade eben", "vor 2 Minuten", "vor 3 Stunden", "gestern", "vor 4 Tagen", then a date. */
+export function formatRelativeTime(timestamp: string, now: Date = new Date()): string {
+  const then = new Date(timestamp);
+  const elapsed = now.getTime() - then.getTime();
+  if (elapsed < MINUTE_MS) return "gerade eben";
+  if (elapsed < HOUR_MS) {
+    const minutes = Math.floor(elapsed / MINUTE_MS);
+    return `vor ${minutes} ${minutes === 1 ? "Minute" : "Minuten"}`;
+  }
+  const days = Math.round((startOfDay(now) - startOfDay(then)) / 86_400_000);
+  if (days === 0) {
+    const hours = Math.floor(elapsed / HOUR_MS);
+    return `vor ${hours} ${hours === 1 ? "Stunde" : "Stunden"}`;
+  }
+  if (days === 1) return "gestern";
+  if (days < 7) return `vor ${days} Tagen`;
+  return then.toLocaleDateString(LOCALE, { day: "numeric", month: "short" });
+}

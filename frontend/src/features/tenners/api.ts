@@ -6,7 +6,7 @@ import { apiClient } from "../../api/client";
 import { queryKeys } from "../../api/queryKeys";
 import type { Category, UserId } from "../../types/domain";
 import { trackEvent } from "../../utils/telemetry";
-import { useCurrentUser } from "../completions/useCurrentUser";
+import { useCurrentUser } from "../completions/CurrentUserProvider";
 import { tennerSchema, type Tenner } from "./schemas";
 
 export const SORT_FIELDS = ["nextDue", "title", "createdAt", "updatedAt"] as const;

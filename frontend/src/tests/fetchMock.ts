@@ -7,7 +7,8 @@ export interface MockResponse {
   readonly body?: unknown;
 }
 
-export type MockHandler = MockResponse | ((request: { url: URL; init: RequestInit | undefined }) => MockResponse);
+export type MockHandler =
+  MockResponse | ((request: { url: URL; init: RequestInit | undefined }) => MockResponse | Promise<MockResponse>);
 
 export const TEST_API_BASE_URL = "https://api.test/prod";
 
@@ -35,7 +36,7 @@ export function mockFetch(handlers: Record<string, MockHandler>): FetchMock {
       return new Response(JSON.stringify({ success: false, error: { code: "NOT_FOUND", message: "No mock" } }), {
         status: 404,
       });
-    const response = typeof handler === "function" ? handler({ url, init }) : handler;
+    const response = typeof handler === "function" ? await handler({ url, init }) : handler;
     return new Response(response.body === undefined ? null : JSON.stringify(response.body), {
       status: response.status ?? 200,
       headers: { "Content-Type": "application/json" },

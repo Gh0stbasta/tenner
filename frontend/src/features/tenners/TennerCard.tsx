@@ -1,7 +1,6 @@
 /** A Tenner in the management list (FRONTEND-003): details, status and actions. */
 
 import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import UnarchiveOutlinedIcon from "@mui/icons-material/UnarchiveOutlined";
@@ -23,13 +22,13 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { CATEGORY_LABELS, USER_LABELS } from "../../types/domain";
+import { CompleteTennerButton } from "../completions/CompleteTennerButton";
 import { formatMinutes, formatShortDate } from "../../utils/format";
 import type { Tenner } from "./schemas";
 import { frequencyLabel, type TennerStatus } from "./status";
 import { TennerStatusBadge } from "./TennerStatusBadge";
 
 export interface TennerCardActions {
-  readonly onComplete?: (tenner: Tenner) => void;
   readonly onEdit?: (tenner: Tenner) => void;
   readonly onArchive?: (tenner: Tenner) => void;
   readonly onRestore?: (tenner: Tenner) => void;
@@ -41,15 +40,7 @@ export interface TennerCardProps extends TennerCardActions {
   readonly busy?: boolean;
 }
 
-export function TennerCard({
-  tenner,
-  status,
-  busy = false,
-  onComplete,
-  onEdit,
-  onArchive,
-  onRestore,
-}: TennerCardProps) {
+export function TennerCard({ tenner, status, busy = false, onEdit, onArchive, onRestore }: TennerCardProps) {
   const theme = useTheme();
   const compact = useMediaQuery(theme.breakpoints.down("sm"));
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -90,29 +81,20 @@ export function TennerCard({
         </Typography>
       </CardContent>
       <CardActions sx={{ px: 2, pb: 2, pt: 0, flexWrap: "wrap", gap: 1 }}>
-        {archived
-          ? onRestore && (
-              <Button
-                startIcon={<UnarchiveOutlinedIcon />}
-                onClick={() => onRestore(tenner)}
-                disabled={busy}
-                aria-label={`${name} wiederherstellen`}
-              >
-                Wiederherstellen
-              </Button>
-            )
-          : onComplete && (
-              <Button
-                variant="contained"
-                startIcon={<CheckCircleIcon />}
-                onClick={() => onComplete(tenner)}
-                disabled={busy || !tenner.active}
-                aria-label={`${name} erledigen`}
-                sx={{ minHeight: 40 }}
-              >
-                Erledigt
-              </Button>
-            )}
+        {archived ? (
+          onRestore && (
+            <Button
+              startIcon={<UnarchiveOutlinedIcon />}
+              onClick={() => onRestore(tenner)}
+              disabled={busy}
+              aria-label={`${name} wiederherstellen`}
+            >
+              Wiederherstellen
+            </Button>
+          )
+        ) : (
+          <CompleteTennerButton tenner={tenner} disabled={busy || !tenner.active} />
+        )}
         {secondary.length > 0 &&
           (compact ? (
             <>

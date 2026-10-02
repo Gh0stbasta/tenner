@@ -5,6 +5,8 @@ import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { NotificationProvider } from "./components/NotificationProvider";
+import { CompletionProvider } from "./features/completions/CompletionProvider";
+import { CurrentUserProvider } from "./features/completions/CurrentUserProvider";
 import { theme } from "./theme/theme";
 
 export interface AppProvidersProps {
@@ -18,7 +20,11 @@ export function AppProviders({ queryClient, children }: AppProvidersProps) {
       <CssBaseline />
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <NotificationProvider>{children}</NotificationProvider>
+          <NotificationProvider>
+            <CurrentUserProvider>
+              <CompletionProvider>{children}</CompletionProvider>
+            </CurrentUserProvider>
+          </NotificationProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </ThemeProvider>

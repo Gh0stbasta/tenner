@@ -12,7 +12,6 @@ import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { todayIsoDate } from "../../utils/dates";
 import { formatMinutes } from "../../utils/format";
 import { trackEvent } from "../../utils/telemetry";
-import { useCompleteTenner } from "../completions/useCompleteTenner";
 import { DEFAULT_LIST_PARAMS, useArchiveTenner, useRestoreTenner, useTenners, type TennerListParams } from "./api";
 import { ConfirmArchiveDialog } from "./ConfirmArchiveDialog";
 import { CreateTennerDialog } from "./CreateTennerDialog";
@@ -43,7 +42,6 @@ export function TennersPage() {
   const today = todayIsoDate();
 
   const tenners = useTenners(params);
-  const complete = useCompleteTenner();
   const archive = useArchiveTenner();
   const restore = useRestoreTenner();
 
@@ -55,9 +53,9 @@ export function TennersPage() {
     [tenners.data, debouncedSearch],
   );
 
-  const busyId = [complete, archive, restore].find((m) => m.isPending)?.variables;
+  const busyId = [archive, restore].find((m) => m.isPending)?.variables;
   const busyTennerId = busyId === undefined ? undefined : "tennerId" in busyId ? busyId.tennerId : undefined;
-  const failed = complete.isError || archive.isError || restore.isError;
+  const failed = archive.isError || restore.isError;
 
   const changeParams = (next: TennerListParams) => {
     trackEvent("FilterChanged", { ...next });
@@ -109,7 +107,6 @@ export function TennersPage() {
                 tenner={tenner}
                 status={tennerStatus(tenner, today)}
                 busy={busyTennerId === tenner.tennerId}
-                onComplete={(t) => complete.mutate({ tennerId: t.tennerId, estimatedMinutes: t.estimatedMinutes })}
                 onEdit={setEditing}
                 onArchive={setArchiveCandidate}
                 onRestore={(t) => restore.mutate(t)}

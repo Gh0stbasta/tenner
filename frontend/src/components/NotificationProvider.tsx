@@ -52,6 +52,8 @@ export function NotificationProvider({ children }: { readonly children: ReactNod
         <Alert
           severity={entry?.severity ?? "success"}
           variant="filled"
+          // Success messages carry their own emoji (✅, ↩); errors keep the alert icon.
+          icon={(entry?.severity ?? "success") === "error" ? undefined : false}
           onClose={close}
           action={
             entry?.action && (

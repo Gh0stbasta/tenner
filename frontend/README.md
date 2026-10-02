@@ -74,17 +74,20 @@ Features own their components, hooks and API functions, so `components/` stays s
 
 ## Features
 
-| Route                       | Feature                                                                                                                                                                     | Ticket       |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `/dashboard`                | Today: summary cards, due today, overdue (highlighted), upcoming, workload per person and category, one-click completion                                                    | FRONTEND-002 |
-| `/tenners`                  | Management: live title search (300 ms debounce), filters (status active/archived/all, person, category), sorting, complete, archive (with confirmation), restore            | FRONTEND-003 |
-| `/tenners` → "Neuer Tenner" | Create dialog: shared `TennerForm` (React Hook Form + Zod, limits mirror the backend), frequency presets, inline and server-side validation messages, full screen on phones | FRONTEND-004 |
-| `/tenners` → "Bearbeiten"   | Edit dialog: same form plus Active switch and read-only facts, sends only changed fields (`PUT`), asks before discarding unsaved changes                                    | FRONTEND-005 |
-| `/dashboard`, `/tenners`    | Quick Add: type a title and press Enter; defaults (Haushalt, current user, 10 min, every 14 days), keyword-based category suggestion, warning for similar titles            | FRONTEND-006 |
+| Route                       | Feature                                                                                                                                                                                                                                 | Ticket       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `/dashboard`                | Today: summary cards, due today, overdue (highlighted), upcoming, workload per person and category, one-click completion                                                                                                                | FRONTEND-002 |
+| `/tenners`                  | Management: live title search (300 ms debounce), filters (status active/archived/all, person, category), sorting, complete, archive (with confirmation), restore                                                                        | FRONTEND-003 |
+| `/tenners` → "Neuer Tenner" | Create dialog: shared `TennerForm` (React Hook Form + Zod, limits mirror the backend), frequency presets, inline and server-side validation messages, full screen on phones                                                             | FRONTEND-004 |
+| `/tenners` → "Bearbeiten"   | Edit dialog: same form plus Active switch and read-only facts, sends only changed fields (`PUT`), asks before discarding unsaved changes                                                                                                | FRONTEND-005 |
+| `/dashboard`, `/tenners`    | Quick Add: type a title and press Enter; defaults (Haushalt, current user, 10 min, every 14 days), keyword-based category suggestion, warning for similar titles                                                                        | FRONTEND-006 |
+| everywhere                  | Completion: one click, optimistic dashboard update with a subtle collapse, snackbar with 10-second "Rückgängig", retries with the same `Idempotency-Key`; "Zuletzt erledigt" (last 10, relative time); "Ich bin" selector in the header | FRONTEND-007 |
 
 Queries and mutations share keys from `src/api/queryKeys.ts`. Completing a Tenner invalidates the dashboard,
 Tenner lists and history. Completions send an `Idempotency-Key`, so a repeated request cannot complete twice.
-Until a user can be selected (FRONTEND-007/008), completions and restores are recorded for Stefan.
+The current user ("Ich bin" in the header, default Stefan) is stored per device in `localStorage` (`tenner.currentUser`) and used for completions, undo, restores and as default assignee. FRONTEND-008 moves the selection into the settings page.
+
+The completion workflow lives in `features/completions/CompletionProvider.tsx` at app level, so it keeps running when the optimistic update removes the card that started it.
 
 "Archived" means soft-deleted (`DELETE /tenners/{id}`); the archive view uses `GET /tenners?deleted=true`
 (TICKET-024). Status "Alle" combines three requests (active, inactive, archived). Telemetry events
