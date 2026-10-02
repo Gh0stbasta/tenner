@@ -163,7 +163,13 @@ describe("GET /tenners", () => {
     expect(d.listTenners).toHaveBeenCalledWith("default", {});
   });
 
-  it.each([{ sort: "priority" }, { assignedTo: "BOB" }, { active: "yes" }, { order: "up" }, { unknown: "1" }])("rejects %j with 400", async (query) => {
+  it("parses the archive filter deleted=true (TICKET-024)", async () => {
+    const d = deps();
+    await route(event("GET /tenners", {}, undefined, { deleted: "true" }), d);
+    expect(d.listTenners).toHaveBeenCalledWith("default", { deleted: true });
+  });
+
+  it.each([{ sort: "priority" }, { assignedTo: "BOB" }, { active: "yes" }, { deleted: "yes" }, { order: "up" }, { unknown: "1" }])("rejects %j with 400", async (query) => {
     const d = deps();
     const response = await route(event("GET /tenners", {}, undefined, query), d);
     expect(response.statusCode).toBe(400);

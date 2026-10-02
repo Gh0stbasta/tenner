@@ -15,6 +15,9 @@ export const INDEX_ASSIGNED_TO = "assignedTo-index";
 /** Condition matching items that are not soft-deleted (deletedAt missing or null). */
 export const NOT_DELETED = "(attribute_not_exists(#deletedAt) OR #deletedAt = :null)";
 
+/** Condition matching soft-deleted items only (TICKET-024). */
+export const ONLY_DELETED = `NOT ${NOT_DELETED}`;
+
 type Condition = { readonly name: string; readonly op: "=" | "<=" | "<"; readonly value: unknown };
 
 export function buildTennerQuery(tableName: string, tenantId: string, criteria: TennerCriteria = {}): QueryCommandInput {
@@ -46,10 +49,10 @@ export function buildTennerQuery(tableName: string, tenantId: string, criteria: 
 
   const keyConditionExpression = ["#tenantId = :tenantId", ...(keyCondition ? [expr(keyCondition)] : [])].join(" AND ");
   const filterParts = filters.map(expr);
-  if (!criteria.includeDeleted) {
+  if (criteria.onlyDeleted || !criteria.includeDeleted) {
     names["#deletedAt"] = "deletedAt";
     values[":null"] = null;
-    filterParts.push(NOT_DELETED);
+    filterParts.push(criteria.onlyDeleted ? ONLY_DELETED : NOT_DELETED);
   }
   const filterExpression = filterParts.join(" AND ");
 

@@ -15,6 +15,8 @@ export interface TennerCriteria {
   readonly nextDueBefore?: string | undefined;
   /** Include soft-deleted Tenners. Default: false (deleted Tenners are excluded). */
   readonly includeDeleted?: boolean | undefined;
+  /** Only soft-deleted Tenners (archive view, TICKET-024). Wins over includeDeleted. */
+  readonly onlyDeleted?: boolean | undefined;
 }
 
 /** Outcome of a soft delete (TICKET-012). */

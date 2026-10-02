@@ -51,6 +51,25 @@ describe("ListTennersService", () => {
     expect(repository.list.mock.calls[0]?.[1]).toMatchObject({ nextDueBefore: undefined, nextDueOnOrBefore: undefined });
   });
 
+  it("lists only archived Tenners without the active default (TICKET-024)", async () => {
+    const { repository, service } = setup();
+    await service.listTenners("default", { deleted: true });
+    expect(repository.list.mock.calls[0]?.[1]).toMatchObject({ onlyDeleted: true, active: undefined });
+  });
+
+  it("keeps an explicit active filter for archived Tenners", async () => {
+    const { repository, service } = setup();
+    await service.listTenners("default", { deleted: true, active: false });
+    expect(repository.list.mock.calls[0]?.[1]).toMatchObject({ onlyDeleted: true, active: false });
+  });
+
+  it("does not request archived Tenners for deleted=false", async () => {
+    const { repository, service } = setup();
+    await service.listTenners("default", { deleted: false });
+    expect(repository.list.mock.calls[0]?.[1]).not.toHaveProperty("onlyDeleted");
+    expect(repository.list.mock.calls[0]?.[1]).toMatchObject({ active: true });
+  });
+
   it("returns an empty list", async () => {
     const { service } = setup([]);
     await expect(service.listTenners("default")).resolves.toEqual([]);

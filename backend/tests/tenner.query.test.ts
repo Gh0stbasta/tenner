@@ -47,3 +47,19 @@ describe("buildTennerQuery", () => {
     expect(buildTennerQuery("t", "default", { active: false }).ExpressionAttributeValues).toMatchObject({ ":active": false });
   });
 });
+
+describe("buildTennerQuery archive view (TICKET-024)", () => {
+  it("returns only soft-deleted Tenners", () => {
+    expect(buildTennerQuery("t", "default", { onlyDeleted: true })).toMatchObject({
+      FilterExpression: "NOT (attribute_not_exists(#deletedAt) OR #deletedAt = :null)",
+      ExpressionAttributeNames: { "#tenantId": "tenantId", "#deletedAt": "deletedAt" },
+      ExpressionAttributeValues: { ":tenantId": "default", ":null": null },
+    });
+  });
+
+  it("combines onlyDeleted with other filters and wins over includeDeleted", () => {
+    expect(buildTennerQuery("t", "default", { onlyDeleted: true, includeDeleted: true, category: "HOME" })).toMatchObject({
+      FilterExpression: "#category = :category AND NOT (attribute_not_exists(#deletedAt) OR #deletedAt = :null)",
+    });
+  });
+});

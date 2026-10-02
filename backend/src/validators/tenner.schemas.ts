@@ -48,6 +48,7 @@ export const listTennersQuerySchema = z.strictObject({
   assignedTo: userIdSchema.optional(),
   category: categorySchema.optional(),
   active: booleanFlagSchema.optional(),
+  deleted: booleanFlagSchema.optional(),
   due: booleanFlagSchema.optional(),
   overdue: booleanFlagSchema.optional(),
   sort: z.enum(TENNER_SORT_FIELDS).optional(),
