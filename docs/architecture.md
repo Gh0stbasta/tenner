@@ -1080,6 +1080,28 @@ Outputs: `frontend_bucket_name`, `cloudfront_distribution_id`, `cloudfront_domai
 
 ---
 
+# Frontend Application
+
+Introduced by FRONTEND-001 (`frontend/`). Details: [`frontend/README.md`](../frontend/README.md).
+
+```text
+Browser ── CloudFront (index.html, assets/*) ── S3 tenner-frontend-<env>
+   │
+   └── fetch (src/api/client.ts) ──► API Gateway HTTP API (CORS: CloudFront origin only)
+```
+
+| Concern | Decision |
+|---|---|
+| Stack | React 19, TypeScript (strict), Vite 8, MUI 9, React Router 8, TanStack Query 5, React Hook Form, Zod |
+| Language | German UI (decision 2026-10-02); internationalization follows with UX-004 |
+| Configuration | `VITE_API_BASE_URL`, injected at build time by `deploy.yml` from the Terraform output `api_endpoint`; read only in `src/config.ts` |
+| API access | `src/api/client.ts` only (ESLint forbids `fetch` elsewhere): envelope unwrapping, Zod validation of payloads, `ApiError` with status and backend error code |
+| Server state | TanStack Query; reads retry transient failures (network, 429, 5xx) up to 3 times, writes are never retried automatically |
+| Structure | feature folders under `src/features/`; shared UI in `src/components/` |
+| Fonts | system font stack, no web fonts (the CSP allows only `'self'`) |
+
+---
+
 # Future Ideas
 
 Out of scope for MVP.

@@ -703,3 +703,22 @@ Do not implement:
 
 These capabilities will be implemented in subsequent frontend tickets.
 ``
+
+---
+
+# Implementation Status
+
+Done 2026-10-02.
+
+- All acceptance criteria met: React 19 + TypeScript strict + Vite 8, MUI 9 theme, React Router 8
+  (`/` → `/dashboard`, `/tenners`, `/analytics`, `/settings`, not-found page), TanStack Query client,
+  typed API client, responsive layout with navigation, Vitest/RTL tests, ESLint and Prettier.
+- Validation: `npm run lint` (0 warnings), `npm run format:check`, `npm test` (39 tests, ~95% coverage),
+  `npm run build`; rendered in Chromium at desktop and phone width without errors.
+- Deviations and assumptions:
+  - The UI is German (decision 2026-10-02). Placeholder pages say "Demnächst verfügbar".
+  - The environment variable is `VITE_API_BASE_URL` (not `VITE_API_URL`) because `deploy.yml` already sets it.
+  - TypeScript 6.0 instead of 7: typescript-eslint supports TypeScript < 6.1 only.
+  - System fonts instead of Roboto: the CloudFront CSP blocks external font hosts.
+  - Example tests: component (`components.test.tsx`), hook (`useDebouncedValue.test.ts`), API mock (`client.test.ts`).
+

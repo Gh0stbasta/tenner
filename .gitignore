@@ -32,3 +32,6 @@ __pycache__/
 
 # Build output
 .build/
+
+# Committed example environment files
+!.env.example
