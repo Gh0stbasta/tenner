@@ -12,7 +12,7 @@ vi.mock("react-oidc-context", () => ({
     isAuthenticated: true,
     error: undefined,
     activeNavigator: undefined,
-    user: { profile: { "custom:userId": "JULIA" }, state: undefined },
+    user: { profile: { "cognito:groups": ["household:default:JULIA"] }, state: undefined },
     signinRedirect: vi.fn(),
   }),
 }));

@@ -12,7 +12,7 @@ import { ErrorAlert } from "../components/ErrorAlert";
 import { PageLoading } from "../components/LoadingState";
 import { CompletionProvider } from "../features/completions/CompletionProvider";
 import { CurrentUserProvider } from "../features/completions/CurrentUserProvider";
-import { LOGIN_LANGUAGE, returnPath, userIdFromProfile } from "./session";
+import { LOGIN_PARAMS, returnPath, userIdFromProfile } from "./session";
 
 export interface AuthGateProps {
   readonly children: ReactNode;
@@ -28,7 +28,7 @@ export function AuthGate({ children, onLogout }: AuthGateProps) {
     () =>
       void auth.signinRedirect({
         state: { returnTo: returnPath(location) },
-        extraQueryParams: { lang: LOGIN_LANGUAGE },
+        extraQueryParams: { ...LOGIN_PARAMS },
       }),
     [auth, location],
   );
@@ -55,7 +55,7 @@ export function AuthGate({ children, onLogout }: AuthGateProps) {
     return (
       <EmptyState
         title="Konto nicht eingerichtet"
-        description="Deinem Konto ist noch keine Person im Haushalt zugeordnet (custom:userId). Bitte wende dich an die Person, die Tenner verwaltet."
+        description="Du bist mit Google angemeldet, gehörst aber noch zu keinem Haushalt. Bitte wende dich an die Person, die Tenner verwaltet, damit sie dich freischaltet. Danach meldest du dich einmal ab und wieder an."
         action={
           <Button variant="contained" onClick={onLogout}>
             Abmelden

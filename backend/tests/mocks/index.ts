@@ -16,9 +16,16 @@ export function testIdentity(overrides: Partial<Identity> = {}): Identity {
   return { ...TEST_IDENTITY, ...overrides };
 }
 
-/** JWT claims as API Gateway's JWT authorizer passes them (custom attributes of the Cognito ID token). */
+/**
+ * JWT claims as API Gateway's JWT authorizer passes them: the household group of a Google user (FUTURE-011).
+ * HTTP API flattens the cognito:groups array into one string "[a b]".
+ */
 export function jwtClaims(identity: Identity = TEST_IDENTITY): Record<string, string> {
-  return { sub: "11111111-2222-3333-4444-555555555555", "custom:tenantId": identity.tenantId, "custom:userId": identity.userId };
+  return {
+    sub: "11111111-2222-3333-4444-555555555555",
+    "cognito:username": "google_123456789",
+    "cognito:groups": `[household:${identity.tenantId}:${identity.userId}]`,
+  };
 }
 
 /**

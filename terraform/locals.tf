@@ -65,6 +65,14 @@ locals {
   auth_token_minutes      = 60
   auth_refresh_token_days = 30
 
+  # Google sign-in and household membership (FUTURE-011). A user belongs to the household through exactly one
+  # Cognito group "household:<tenantId>:<userId>"; the group arrives in the ID token as cognito:groups.
+  auth_identity_provider = "Google"
+  auth_google_scopes     = "openid email profile"
+  household_tenant_id    = "default"
+  household_members      = ["STEFAN", "JULIA"]
+  household_groups       = { for member in local.household_members : member => "household:${local.household_tenant_id}:${member}" }
+
   # Lambda bundle built by `npm run build` in backend/ (dist/index.mjs).
   api_source_dir  = "${path.module}/../backend/dist"
   api_package_zip = "${path.module}/../.build/tenner-api.zip"

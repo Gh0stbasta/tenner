@@ -1,13 +1,16 @@
 # Authentication (SECURITY-002, ADR docs/decisions/0001-authentication.md):
 # Cognito User Pool with one account per household member, managed login with PKCE,
 # and a JWT authorizer on the HTTP API.
+# Sign-in is through Google only (FUTURE-011, ADR docs/decisions/0002-google-sign-in.md); household
+# membership comes from Cognito groups.
 
 resource "aws_cognito_user_pool" "users" {
   name                = local.auth_user_pool_name
   user_pool_tier      = "ESSENTIALS" # free up to 10,000 MAU; includes managed login
   deletion_protection = "ACTIVE"
 
-  # E-mail is the username; no self sign-up, accounts are created by an administrator.
+  # E-mail is the username. Password self sign-up stays disabled; Google users are created by Cognito on
+  # their first sign-in (FUTURE-011) and have no household access until an administrator adds them to a group.
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
 
@@ -31,7 +34,8 @@ resource "aws_cognito_user_pool" "users" {
     }
   }
 
-  # Identity used by the backend (SECURITY-004). Changing this schema replaces the pool: keep it stable.
+  # Identity attributes of SECURITY-004. Unused since FUTURE-011 (groups instead), but removing a schema
+  # attribute replaces the pool and deletes all accounts: keep the schema stable.
   schema {
     name                     = "tenantId"
     attribute_data_type      = "String"
@@ -74,8 +78,8 @@ resource "aws_cognito_user_pool_client" "web" {
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_flows                  = ["code"]
   allowed_oauth_scopes                 = ["openid", "email"]
-  supported_identity_providers         = ["COGNITO"]
-  explicit_auth_flows                  = ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
+  supported_identity_providers         = [aws_cognito_identity_provider.google.provider_name] # Google only, no passwords
+  explicit_auth_flows                  = ["ALLOW_REFRESH_TOKEN_AUTH"]
 
   callback_urls = ["https://${aws_cloudfront_distribution.frontend.domain_name}${local.auth_callback_path}"]
   logout_urls   = ["https://${aws_cloudfront_distribution.frontend.domain_name}/"]
@@ -92,8 +96,8 @@ resource "aws_cognito_user_pool_client" "web" {
   enable_token_revocation       = true
   prevent_user_existence_errors = "ENABLED"
 
-  # The app may read the identity attributes but never write them: only administrators set
-  # custom:tenantId and custom:userId (an unset write list would allow writing every attribute).
+  # The app may never write identity attributes (an unset write list would allow writing every attribute).
+  # "email" must stay writable: the Google attribute mapping writes it on every sign-in.
   read_attributes  = ["email", "email_verified", "custom:tenantId", "custom:userId"]
   write_attributes = ["email"]
 }
@@ -109,6 +113,43 @@ resource "aws_cognito_managed_login_branding" "web" {
   user_pool_id                = aws_cognito_user_pool.users.id
   client_id                   = aws_cognito_user_pool_client.web.id
   use_cognito_provided_values = true
+}
+
+# Google as the only identity provider (FUTURE-011). Client ID and secret come from GitHub (TF_VAR_*);
+# the secret is a sensitive variable and is stored only in the encrypted Terraform state.
+resource "aws_cognito_identity_provider" "google" {
+  user_pool_id  = aws_cognito_user_pool.users.id
+  provider_name = local.auth_identity_provider
+  provider_type = "Google"
+
+  # The URL fields are the values Cognito sets for Google; listing them avoids a permanent plan diff.
+  provider_details = {
+    client_id                     = var.google_client_id
+    client_secret                 = var.google_client_secret
+    authorize_scopes              = local.auth_google_scopes
+    attributes_url                = "https://people.googleapis.com/v1/people/me?personFields="
+    attributes_url_add_attributes = "true"
+    authorize_url                 = "https://accounts.google.com/o/oauth2/v2/auth"
+    oidc_issuer                   = "https://accounts.google.com"
+    token_request_method          = "POST"
+    token_url                     = "https://www.googleapis.com/oauth2/v4/token"
+  }
+
+  # Only the e-mail is copied (it must be writable by the app client); the Google subject is the username.
+  attribute_mapping = {
+    email    = "email"
+    username = "sub"
+  }
+}
+
+# Household membership (FUTURE-011): one group per member, e.g. "household:default:STEFAN".
+# Adding a user to a group is a manual administrator step (README → "User Accounts").
+resource "aws_cognito_user_group" "household" {
+  for_each = local.household_groups
+
+  user_pool_id = aws_cognito_user_pool.users.id
+  name         = each.value
+  description  = "Tenner household ${local.household_tenant_id}, member ${each.key}."
 }
 
 # Validates the Cognito ID token (audience = app client, ADR 0001) on protected routes.

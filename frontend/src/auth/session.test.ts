@@ -3,9 +3,18 @@ import { buildLogoutUrl, returnPath, userIdFromProfile } from "./session";
 
 describe("session helpers", () => {
   it("reads the household member from the ID token claims", () => {
-    expect(userIdFromProfile({ "custom:userId": "JULIA" })).toBe("JULIA");
-    expect(userIdFromProfile({ "custom:userId": "BOB" })).toBeUndefined();
-    expect(userIdFromProfile({ "custom:userId": 7 })).toBeUndefined();
+    expect(userIdFromProfile({ "cognito:groups": ["household:default:JULIA"] })).toBe("JULIA");
+    expect(userIdFromProfile({ "cognito:groups": ["eu-central-1_X_Google", "household:default:STEFAN"] })).toBe(
+      "STEFAN",
+    );
+    expect(userIdFromProfile({ "cognito:groups": ["household:default:BOB"] })).toBeUndefined();
+    expect(
+      userIdFromProfile({ "cognito:groups": ["household:default:STEFAN", "household:default:JULIA"] }),
+    ).toBeUndefined();
+    expect(userIdFromProfile({ "cognito:groups": ["household:default"] })).toBeUndefined();
+    expect(userIdFromProfile({ "cognito:groups": "household:default:JULIA" })).toBeUndefined();
+    expect(userIdFromProfile({ "custom:userId": "JULIA" })).toBeUndefined();
+    expect(userIdFromProfile({})).toBeUndefined();
     expect(userIdFromProfile(undefined)).toBeUndefined();
   });
 

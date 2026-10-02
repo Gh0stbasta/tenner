@@ -44,7 +44,7 @@ describe("createUserManager", () => {
       response_type: "code",
       scope: "openid email",
       automaticSilentRenew: true,
-      extraQueryParams: { lang: "de" },
+      extraQueryParams: { lang: "de", identity_provider: "Google" },
     });
     expect((settings.userStore as { options: { store: Storage } }).options.store).toBe(window.localStorage);
   });

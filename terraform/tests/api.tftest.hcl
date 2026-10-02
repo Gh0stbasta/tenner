@@ -1,5 +1,12 @@
 # Offline tests for the API runtime (TICKET-005).
 
+# Placeholder Google OAuth client (FUTURE-011); the real values come from GitHub in CI.
+variables {
+  google_client_id     = "123456789012-abcdefghijklmnop.apps.googleusercontent.com"
+  google_client_secret = "placeholder-secret"
+}
+
+
 mock_provider "archive" {
   mock_data "archive_file" {
     defaults = {
