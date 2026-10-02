@@ -1,45 +1,26 @@
 /**
- * Current user (FRONTEND-007): who completes Tenners on this device. Stored in localStorage;
- * default Stefan. FRONTEND-008 moves the selection into the settings page.
+ * Current user (FRONTEND-007, SECURITY-003): the logged-in household member from the ID token
+ * (custom:userId). Provided by the AuthGate; tests provide a fixed user.
  */
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { USER_IDS, type UserId } from "../../types/domain";
-
-export const DEFAULT_USER: UserId = "STEFAN";
-export const CURRENT_USER_STORAGE_KEY = "tenner.currentUser";
-
-function isUserId(value: unknown): value is UserId {
-  return typeof value === "string" && (USER_IDS as readonly string[]).includes(value);
-}
-
-function readStoredUser(): UserId {
-  try {
-    const stored = window.localStorage.getItem(CURRENT_USER_STORAGE_KEY);
-    return isUserId(stored) ? stored : DEFAULT_USER;
-  } catch {
-    return DEFAULT_USER; // storage blocked (e.g. private mode)
-  }
-}
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import type { UserId } from "../../types/domain";
 
 interface CurrentUserContextValue {
   readonly user: UserId;
-  readonly setUser: (user: UserId) => void;
+  readonly logout: () => void;
 }
 
 const CurrentUserContext = createContext<CurrentUserContextValue | null>(null);
 
-export function CurrentUserProvider({ children }: { readonly children: ReactNode }) {
-  const [user, setUserState] = useState<UserId>(readStoredUser);
-  const setUser = useCallback((next: UserId) => {
-    setUserState(next);
-    try {
-      window.localStorage.setItem(CURRENT_USER_STORAGE_KEY, next);
-    } catch {
-      // Keep the in-memory value if storage is unavailable.
-    }
-  }, []);
-  const value = useMemo(() => ({ user, setUser }), [user, setUser]);
+export interface CurrentUserProviderProps {
+  readonly user: UserId;
+  readonly logout: () => void;
+  readonly children: ReactNode;
+}
+
+export function CurrentUserProvider({ user, logout, children }: CurrentUserProviderProps) {
+  const value = useMemo(() => ({ user, logout }), [user, logout]);
   return <CurrentUserContext.Provider value={value}>{children}</CurrentUserContext.Provider>;
 }
 
@@ -55,6 +36,6 @@ export function useCurrentUser(): UserId {
 }
 
 // eslint-disable-next-line react-refresh/only-export-components -- hooks belong to their provider
-export function useSetCurrentUser(): (user: UserId) => void {
-  return useCurrentUserContext().setUser;
+export function useLogout(): () => void {
+  return useCurrentUserContext().logout;
 }

@@ -12,6 +12,20 @@ describe("readConfig", () => {
     expect(readConfig({}).apiBaseUrl).toBe("");
   });
 
+  it("reads the Cognito settings only when all are present", () => {
+    const env = {
+      VITE_COGNITO_ISSUER_URL: "https://cognito-idp.eu-central-1.amazonaws.com/pool/",
+      VITE_COGNITO_CLIENT_ID: " client ",
+      VITE_COGNITO_LOGIN_URL: "https://login.example/",
+    };
+    expect(readConfig(env).auth).toEqual({
+      issuerUrl: "https://cognito-idp.eu-central-1.amazonaws.com/pool",
+      clientId: "client",
+      loginUrl: "https://login.example",
+    });
+    expect(readConfig({ ...env, VITE_COGNITO_CLIENT_ID: "" }).auth).toBeUndefined();
+  });
+
   it("reads the test environment", () => {
     expect(config.apiBaseUrl).toBe("https://api.test/prod");
   });

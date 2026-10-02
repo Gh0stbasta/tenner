@@ -134,7 +134,10 @@ jobs:
         if: hashFiles('terraform/**/*.tf') != '' && hashFiles('frontend/package.json') != ''
         run: |
           VITE_API_BASE_URL="$(terraform -chdir="$TF_DIR" output -raw api_endpoint)"
-          export VITE_API_BASE_URL
+          VITE_COGNITO_ISSUER_URL="$(terraform -chdir="$TF_DIR" output -raw cognito_issuer_url)"
+          VITE_COGNITO_CLIENT_ID="$(terraform -chdir="$TF_DIR" output -raw cognito_client_id)"
+          VITE_COGNITO_LOGIN_URL="$(terraform -chdir="$TF_DIR" output -raw cognito_login_url)"
+          export VITE_API_BASE_URL VITE_COGNITO_ISSUER_URL VITE_COGNITO_CLIENT_ID VITE_COGNITO_LOGIN_URL
           npm ci --prefix frontend
           npm run build --prefix frontend
 

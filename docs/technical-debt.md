@@ -473,7 +473,9 @@ UX-007, FRONTEND-001, `frontend/vite.config.ts`
 
 ---
 
-## TD-018: Current user is chosen per device without authentication
+## TD-018: Current user is chosen per device without authentication (resolved)
+
+> Resolved by SECURITY-003 (2026-10-02): the current user comes from the Cognito ID token; the selector is removed.
 
 ### Description
 

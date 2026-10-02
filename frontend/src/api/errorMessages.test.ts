@@ -21,6 +21,8 @@ describe("errorMessage", () => {
     ["INTERNAL_ERROR", 500, UNREACHABLE_MESSAGE],
     ["NETWORK_ERROR", 0, UNREACHABLE_MESSAGE],
     ["UNKNOWN", 400, DEFAULT_ERROR_MESSAGE],
+    ["UNAUTHORIZED", 401, "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an."],
+    ["HTTP_401", 401, "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an."],
   ])("%s (%i)", (code, status, message) => {
     expect(errorMessage(new ApiError(status, code, "x"))).toBe(message);
   });

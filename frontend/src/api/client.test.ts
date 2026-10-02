@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { fail, mockFetch, ok } from "../tests/fetchMock";
-import { apiClient, buildUrl } from "./client";
+import { apiClient, buildUrl, configureApiAuth, type ApiAuth } from "./client";
 import { ApiError } from "./errors";
 
 const itemSchema = z.object({ id: z.string() });
@@ -106,6 +106,60 @@ describe("apiClient", () => {
       vi.fn(async () => Promise.reject("offline")),
     );
     await expect(apiClient.get("/items", { schema: itemSchema })).rejects.toMatchObject({ code: "NETWORK_ERROR" });
+  });
+});
+
+describe("apiClient authentication (SECURITY-003)", () => {
+  afterEach(() => configureApiAuth(undefined));
+
+  function auth(overrides: Partial<ApiAuth> = {}) {
+    const hooks = {
+      getToken: vi.fn(async () => "id-token"),
+      refreshToken: vi.fn(async () => "fresh-token"),
+      onUnauthorized: vi.fn(),
+      ...overrides,
+    };
+    configureApiAuth(hooks);
+    return hooks;
+  }
+
+  it("sends the ID token as bearer token", async () => {
+    auth();
+    const fetchMock = mockFetch({ "GET /items": ok({ id: "1" }) });
+    await apiClient.get("/items", { schema: itemSchema });
+    expect(fetchMock.calls()[0]?.headers.Authorization).toBe("Bearer id-token");
+  });
+
+  it("sends no Authorization header without a session", async () => {
+    auth({ getToken: vi.fn(async () => undefined) });
+    const fetchMock = mockFetch({ "GET /items": ok({ id: "1" }) });
+    await apiClient.get("/items", { schema: itemSchema });
+    expect(fetchMock.calls()[0]?.headers).not.toHaveProperty("Authorization");
+  });
+
+  it("refreshes once on 401 and retries with the new token", async () => {
+    const hooks = auth();
+    let calls = 0;
+    const fetchMock = mockFetch({
+      "GET /items": () => (++calls === 1 ? { status: 401, body: { message: "Unauthorized" } } : ok({ id: "1" })),
+    });
+    await expect(apiClient.get("/items", { schema: itemSchema })).resolves.toEqual({ id: "1" });
+    expect(hooks.refreshToken).toHaveBeenCalledOnce();
+    expect(hooks.onUnauthorized).not.toHaveBeenCalled();
+    expect(fetchMock.calls()[1]?.headers.Authorization).toBe("Bearer fresh-token");
+  });
+
+  it("asks for a new login when the refresh fails or the retry is still 401", async () => {
+    const hooks = auth({ refreshToken: vi.fn(async () => undefined) });
+    mockFetch({ "GET /items": { status: 401, body: { message: "Unauthorized" } } });
+    await expect(apiClient.get("/items", { schema: itemSchema })).rejects.toMatchObject({ status: 401 });
+    expect(hooks.onUnauthorized).toHaveBeenCalledOnce();
+
+    const again = auth();
+    mockFetch({ "GET /items": { status: 401, body: { message: "Unauthorized" } } });
+    await expect(apiClient.get("/items", { schema: itemSchema })).rejects.toMatchObject({ status: 401 });
+    expect(again.refreshToken).toHaveBeenCalledOnce();
+    expect(again.onUnauthorized).toHaveBeenCalledOnce();
   });
 });
 
