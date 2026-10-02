@@ -92,6 +92,7 @@ docs/backlog/
 | [TICKET-020](infra/ticket020.md) | Implement Completion History API | High | MVP |
 | [TICKET-021](infra/ticket021.md) | Introduce Environment Separation | Medium | V2 |
 | [TICKET-022](infra/ticket022.md) | Configure Custom Domain and TLS | Low | V2 |
+| [TICKET-023](infra/ticket023.md) | Fix Invalid Characters in AWS Tags and Descriptions | Critical | MVP |
 
 ### Frontend (`frontend/`, prefix `FRONTEND-`)
 

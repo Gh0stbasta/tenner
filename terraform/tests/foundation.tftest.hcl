@@ -77,6 +77,16 @@ run "resource_group_is_tag_based" {
   }
 }
 
+# AWS Resource Groups rejects descriptions outside this pattern (TICKET-023).
+run "resource_group_description_is_valid" {
+  command = plan
+
+  assert {
+    condition     = can(regex("^[\\sa-zA-Z0-9_.-]*$", aws_resourcegroups_group.tenner.description))
+    error_message = "Resource group description may only contain letters, digits, whitespace, '_', '.' and '-'."
+  }
+}
+
 run "environment_is_validated" {
   command = plan
 

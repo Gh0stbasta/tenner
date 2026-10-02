@@ -731,10 +731,15 @@ No resource may be deployed without the mandatory tags:
    It is exposed as the output `mandatory_tag_keys`.
 2. Both workflows save the plan (`-out=tfplan`) and run `scripts/check_tags.py` on its JSON form.
    Any taggable managed resource whose `tags_all` lacks a key, or has an empty value, fails the workflow
-   before `terraform apply`.
+   before `terraform apply`. The check also rejects tag keys and values with characters outside the
+   common AWS tag set (letters, numbers, whitespace and `_ . : / = + - @`). S3 enforces this set
+   strictly; a comma in a tag broke the first deployment (TICKET-023).
 3. `deploy.yml` applies exactly the checked plan file.
 
 Resource types without tags (for example `aws_s3_bucket_versioning`) are skipped automatically.
+
+Description fields of resources (not tags) follow per-service rules that the tag check does not
+cover. The resource group description is guarded by a Terraform test (TICKET-023).
 
 ## Decision: `default_tags` instead of `merge()`
 

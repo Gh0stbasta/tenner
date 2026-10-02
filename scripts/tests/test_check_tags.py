@@ -60,6 +60,30 @@ class FindViolationsTest(unittest.TestCase):
         p = plan([], child_resources=[resource("module.x.aws_s3_bucket.b", {"Project": "Tenner"})])
         self.assertEqual(check_tags.find_violations(p)[0].address, "module.x.aws_s3_bucket.b")
 
+    def test_allowed_tag_characters(self):
+        tags = {"Project": "Tenner", "Name": "a", "Repository": "Gh0stbasta/tenner",
+                "Owner": "Jürgen Müller", "Note": "a_b.c:d=e+f-g@h 1."}
+        p = plan([resource("aws_s3_bucket.a", tags)])
+        self.assertEqual(check_tags.find_violations(p), [])
+
+    def test_invalid_tag_value(self):
+        # The comma that broke the first deploy (TICKET-023).
+        tags = {"Project": "Tenner", "Name": "a", "Description": "Bucket, served via CloudFront."}
+        p = plan([resource("aws_s3_bucket.a", tags)])
+        self.assertEqual(
+            check_tags.find_violations(p),
+            [check_tags.Violation("aws_s3_bucket.a", (), ("Description",))],
+        )
+
+    def test_invalid_tag_key(self):
+        p = plan([resource("aws_s3_bucket.a", {"Project": "Tenner", "Name": "a", "Bad(key)": "x"})])
+        self.assertEqual(check_tags.find_violations(p)[0].invalid, ("Bad(key)",))
+
+    def test_missing_and_invalid_reported_together(self):
+        p = plan([resource("aws_s3_bucket.a", {"Project": "Tenner (prod)"})])
+        violation = check_tags.find_violations(p)[0]
+        self.assertEqual((violation.missing, violation.invalid), (("Name",), ("Project",)))
+
     def test_missing_output_raises(self):
         with self.assertRaises(ValueError):
             check_tags.find_violations(plan([], keys=None))
@@ -83,6 +107,8 @@ class MainTest(unittest.TestCase):
         bad = plan([resource("aws_s3_bucket.a", {})])
         self.assertEqual(self.run_main(json.dumps(ok)), 0)
         self.assertEqual(self.run_main(json.dumps(bad)), 1)
+        invalid = plan([resource("aws_s3_bucket.a", {"Project": "Tenner", "Name": "a,b"})])
+        self.assertEqual(self.run_main(json.dumps(invalid)), 1)
         self.assertEqual(self.run_main("not json"), 2)
 
     def test_usage(self):

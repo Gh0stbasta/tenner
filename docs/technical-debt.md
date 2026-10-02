@@ -385,3 +385,33 @@ Do this as part of SECURITY-005.
 ### Related Work
 
 SECURITY-014, SECURITY-005, `terraform/api.tf`
+
+---
+
+## TD-015: AWS-side validation rules are not covered offline
+
+### Description
+
+`terraform validate`, `terraform test` (mocked provider) and `terraform plan` do not check
+service-specific value rules such as allowed characters in descriptions. The first deployment
+failed on two such rules (TICKET-023). The tag check now covers tag characters, and a Terraform
+test covers the resource group description, but other per-service fields are still unchecked.
+
+### Reason
+
+These rules are enforced by the AWS APIs at create time. The mocked provider does not know them.
+
+### Impact
+
+A deploy can fail half-way through `apply`. The resources created so far stay in the state and
+the next apply continues, so the impact is a failed run, not data loss.
+
+### Suggested Improvement
+
+Keep description strings to letters, digits, spaces, `.`, `-` and `_`. Add a check for new
+resource types with known description patterns when they are introduced, or add a short-lived
+staging environment (TICKET-021) where `apply` runs before production.
+
+### Related Work
+
+TICKET-023, TICKET-021, `scripts/check_tags.py`, `terraform/tests/foundation.tftest.hcl`

@@ -2,7 +2,7 @@
 # becomes a member automatically. No manual assignment.
 resource "aws_resourcegroups_group" "tenner" {
   name        = local.resource_group_name
-  description = "All resources of the Tenner application (tag Project = Tenner)."
+  description = "All resources of the Tenner application tagged Project Tenner."
 
   resource_query {
     type = "TAG_FILTERS_1_0"

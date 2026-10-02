@@ -17,7 +17,7 @@ The repository contains:
 - the CI/CD workflows (TICKET-001)
 - the Terraform foundation in `terraform/` (TICKET-002): provider, tagging, naming standards and the tag-based AWS Resource Group `Tenner`
 - the remote Terraform state backend (TICKET-003): S3 bucket `tenner-terraform-state` and lock table `tenner-terraform-locks`
-- tag enforcement on every plan (TICKET-001A, `scripts/check_tags.py`)
+- tag enforcement on every plan (TICKET-001A, `scripts/check_tags.py`): mandatory keys and valid AWS tag characters (TICKET-023)
 - the API runtime (TICKET-005): Lambda `tenner-api` and HTTP API `tenner-api-gateway` with `GET /health` (code in [`backend/`](backend/README.md))
 - the DynamoDB persistence layer (TICKET-006): tables `tenner-tenners` and `tenner-history` with GSIs
 - the backend API (TICKET-008 to TICKET-016): CRUD, complete/undo/restore workflows and dashboard (see [`backend/README.md`](backend/README.md))
