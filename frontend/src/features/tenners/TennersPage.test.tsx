@@ -59,6 +59,12 @@ describe("TennersPage", () => {
     expect(within(list).getByText("Julia · 30 Min.")).toBeInTheDocument();
   });
 
+  it("links each title to its detail page", async () => {
+    mockFetch({ "GET /tenners": listHandler });
+    renderWithProviders(<TennersPage />);
+    expect(await screen.findByRole("link", { name: "Büro saugen" })).toHaveAttribute("href", "/tenners/t-1");
+  });
+
   it("requests active Tenners sorted by due date by default", async () => {
     const fetchMock = mockFetch({ "GET /tenners": listHandler });
     renderWithProviders(<TennersPage />);

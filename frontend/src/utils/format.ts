@@ -12,9 +12,16 @@ export function formatMinutes(minutes: number): string {
   return `${minutes} Min.`;
 }
 
-/** "1 Tag" / "12 Tage" */
+/** "1 Tag" / "12 Tage" / "14,5 Tage" */
 export function formatDays(days: number): string {
-  return `${days} ${days === 1 ? "Tag" : "Tage"}`;
+  return `${days.toLocaleString(LOCALE)} ${days === 1 ? "Tag" : "Tage"}`;
+}
+
+/** "heute", "gestern", "vor 13 Tagen" for a whole number of days in the past. */
+export function formatDaysAgo(days: number): string {
+  if (days <= 0) return "heute";
+  if (days === 1) return "gestern";
+  return `vor ${days} Tagen`;
 }
 
 /** Parse a YYYY-MM-DD calendar date as a local date (no timezone shift). */

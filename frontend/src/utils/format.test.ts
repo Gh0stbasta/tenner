@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatDays,
+  formatDaysAgo,
   formatDueIn,
   formatLongDate,
   formatMinutes,
@@ -16,6 +17,10 @@ describe("format", () => {
     expect(formatMinutes(10)).toBe("10 Min.");
     expect(formatDays(1)).toBe("1 Tag");
     expect(formatDays(14)).toBe("14 Tage");
+    expect(formatDays(14.5)).toBe("14,5 Tage");
+    expect(formatDaysAgo(0)).toBe("heute");
+    expect(formatDaysAgo(1)).toBe("gestern");
+    expect(formatDaysAgo(13)).toBe("vor 13 Tagen");
   });
 
   it("formats overdue and due-in phrases", () => {

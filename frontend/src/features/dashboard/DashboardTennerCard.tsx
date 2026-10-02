@@ -1,6 +1,7 @@
 /** One Tenner on the dashboard: title, meta data, status and the complete action. */
 
 import { Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
+import { TennerLink } from "../../components/TennerLink";
 import { CATEGORY_LABELS, USER_LABELS } from "../../types/domain";
 import { formatMinutes } from "../../utils/format";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
@@ -29,7 +30,7 @@ export function DashboardTennerCard({ tenner, variant, status, completable = fal
       <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, "&:last-child": { pb: 2 } }}>
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography variant="h3" component="h3" sx={{ overflowWrap: "anywhere" }}>
-            {tenner.title}
+            <TennerLink tennerId={tenner.tennerId}>{tenner.title}</TennerLink>
           </Typography>
           <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1, flexWrap: "wrap", alignItems: "center" }}>
             <Chip size="small" label={CATEGORY_LABELS[tenner.category]} />

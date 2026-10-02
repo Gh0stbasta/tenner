@@ -21,6 +21,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { useState } from "react";
+import { TennerLink } from "../../components/TennerLink";
 import { CATEGORY_LABELS, USER_LABELS } from "../../types/domain";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
 import { formatMinutes, formatShortDate } from "../../utils/format";
@@ -66,7 +67,7 @@ export function TennerCard({ tenner, status, busy = false, onEdit, onArchive, on
       <CardContent sx={{ flexGrow: 1 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "flex-start" }}>
           <Typography variant="h3" component="h3" sx={{ overflowWrap: "anywhere" }}>
-            {tenner.title}
+            <TennerLink tennerId={tenner.tennerId}>{tenner.title}</TennerLink>
           </Typography>
           <TennerStatusBadge status={status} />
         </Box>

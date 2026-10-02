@@ -44,6 +44,12 @@ describe("DashboardPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("links Tenners to their detail page", async () => {
+    mockFetch({ "GET /dashboard": ok(dashboard()) });
+    renderWithProviders(<DashboardPage />);
+    expect(await screen.findByRole("link", { name: "Haustür putzen" })).toHaveAttribute("href", "/tenners/t-2");
+  });
+
   it("shows positive feedback instead of empty lists when nothing is actionable", async () => {
     mockFetch({
       "GET /dashboard": ok(dashboard({ dueToday: [], overdue: [], upcoming: [], byUser: {}, byCategory: {} })),
