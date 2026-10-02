@@ -44,16 +44,19 @@ Log retention and data encryption not reviewed centrally
 TICKET-005
 TICKET-006
 TICKET-017
+SECURITY-014
 ```
 
 ---
 
 # Scope
 
+Stage throttling and Lambda reserved concurrency were moved to SECURITY-014
+(cost cap before the first deployment). Verify them here as part of the baseline.
+
 ## API Gateway
 
 ```text
-Default route throttling: burst 20, rate 10 req/s (adjust after measurement)
 Access logging enabled (JSON, no auth headers)
 Payload size limits validated in handlers
 ```
@@ -61,7 +64,6 @@ Payload size limits validated in handlers
 ## Lambda
 
 ```text
-Reserved concurrency cap (e.g. 10) to bound cost under abuse
 Environment variables contain no secrets
 Runtime on a supported version
 ```
@@ -127,8 +129,7 @@ terraform plan
 
 # Acceptance Criteria
 
-- API throttling configured
-- Lambda concurrency capped
+- API throttling and Lambda concurrency (SECURITY-014) verified
 - IAM policies reviewed and least privilege
 - Storage protections verified
 - Security documentation created

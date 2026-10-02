@@ -55,6 +55,7 @@ Recommended order:
 ```text
 TICKET-017  Frontend hosting
 TICKET-018  Frontend deployment
+SECURITY-014  API cost cap (before first deploy)
 SECURITY-001  Authentication ADR
 SECURITY-002  Cognito + JWT authorizer
 SECURITY-003  Frontend login
