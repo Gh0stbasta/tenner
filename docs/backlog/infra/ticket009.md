@@ -516,3 +516,48 @@ Do not implement:
 - Frontend Integration
 
 These will be delivered in separate tickets.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `POST /tenners`: `backend/src/handlers/create-tenner.ts`, registered in `src/index.ts`, API Gateway route in `local.api_routes`
+- [x] `CreateTennerRequest` (DTO from TICKET-008) and `createTennerSchema`
+- [x] `CreateTennerService` (`src/services/create-tenner.service.ts`)
+- [x] TennerRepository implementation: `DynamoDbTennerRepository.save` (`src/repositories/dynamodb/`)
+- [x] Tests and documentation (`backend/README.md`, `docs/architecture.md`)
+
+### Acceptance Criteria
+
+| Criterion | Status |
+|---|---|
+| POST /tenners implemented | [x] |
+| Validation enforced | [x] title 3–100, category, estimatedMinutes 1–480, frequencyDays 1–3650, assignedTo, unknown fields rejected |
+| UUID generated | [x] `crypto.randomUUID()` |
+| DynamoDB persistence works | [x] unit-tested command. The bundle was verified against a fake DynamoDB endpoint: a correct conditional `PutItem` and 201. Live verification after deploy |
+| CreatedAt populated | [x] |
+| UpdatedAt populated | [x] |
+| Active defaults to true | [x] |
+| NextDue defaults to today | [x] UTC date |
+| Standard API response returned | [x] `{ success: true, data }`, 201 |
+| Unit tests passing | [x] 94 tests (all ticket cases: success, invalid title/frequency/category/user, repository failure) |
+
+Coverage for new code is 100%. Overall: statements 98.8%, branches 98.8%.
+
+### Assumptions
+
+- The response contains the full `TennerResponse` (a superset of the example `{ tennerId, title }`).
+- `nextDue` = today's **UTC** date. Household timezone support comes in SCHEDULING-008 (TD-005).
+- Timestamps use seconds precision (`2026-10-01T18:30:15Z`), consistent with the ticket examples.
+- The repository implements only `save`. Further methods come with TICKET-010 to TICKET-012.
+  The service depends on `Pick<TennerRepository, "save">`.
+- An existing ID results in `409 CONFLICT`. This is practically impossible with UUIDs, but the
+  conditional write prevents silent overwrites.
+- Without configured tables, `POST /tenners` answers `503 SERVICE_UNAVAILABLE`.
+- The API Gateway route resource became `for_each` over `local.api_routes`. A `moved` block keeps the existing
+  `GET /health` route (no destroy/create).
+- The bundle grows to about 1 MB because of Zod (TD-012).

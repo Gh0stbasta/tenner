@@ -605,3 +605,49 @@ Do not implement:
 - Frontend Integration
 
 These capabilities will be implemented in separate tickets if required.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `POST /tenners/{tennerId}/restore`: `src/handlers/restore-tenner.ts`, route in `src/index.ts` and `local.api_routes`
+- [x] DTOs `RestoreTennerRequest` and `RestoreTennerResponse`, schema `restoreTennerSchema`
+- [x] `RestoreTennerService.restoreTenner()`
+- [x] Repository `restore(tenantId, tennerId, expectedUpdatedAt, timestamp)`: conditional `UpdateItem`, `ALL_NEW`
+- [x] Tests and documentation
+
+### Acceptance Criteria (Testing Requirements)
+
+- [x] Successful restore → 200 `{ tennerId, active: true, deletedAt: null }`
+- [x] Restoring an already active Tenner → 200 without a write (idempotent)
+- [x] Restoring a missing Tenner → 404 `NOT_FOUND`, "Tenner not found."
+- [x] Deleted timestamp cleared (`deletedAt = null`)
+- [x] Active flag set to true
+- [x] `updatedAt` set to the current UTC timestamp
+- [x] Concurrent modification → 409 `CONCURRENT_MODIFICATION` (optimistic lock on `updatedAt`)
+- [x] Repository failure → `PersistenceError`
+- [x] `lastCompleted` and `nextDue` unchanged (the `UpdateExpression` contains neither, checked by a test). The history is not accessed.
+- [x] Logging: "Tenner restored" / "Tenner already active" with `tennerId`, `restoredBy`, `previousDeletedAt`
+
+Backend: 273 tests, 100% coverage. Terraform: 20 tests.
+
+### Validation Performed
+
+Bundle against a fake DynamoDB endpoint:
+- deleted Tenner → 200 with one conditional `UpdateItem`
+- active Tenner → 200 without a write
+- failed lock while still deleted → 409
+- missing → 404
+
+### Assumptions
+
+- **Inactive but not deleted** (deactivated with `PUT {active: false}`): the ticket only covers deleted and active
+  Tenners. Restore answers 409 `TENNER_NOT_DELETED`, because reactivation goes through `PUT {active: true}`.
+- **Parallel restore:** if the lock fails and a reload shows the Tenner is already restored, the result is 200
+  (idempotency). Otherwise 409.
+- **Response:** exactly `{ tennerId, active, deletedAt }`, as in the ticket.
+- `GET /tenners?includeDeleted=true` stays a future option (TICKET-012). The repository criterion already exists.

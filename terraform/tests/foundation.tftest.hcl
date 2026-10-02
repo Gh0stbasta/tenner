@@ -1,0 +1,108 @@
+# Offline tests for the Terraform foundation (TICKET-002).
+# The mocked provider needs no AWS credentials: run with `terraform test`.
+
+mock_provider "archive" {
+  mock_data "archive_file" {
+    defaults = {
+      output_path         = "tenner-api.zip"
+      output_base64sha256 = "bW9jaw=="
+    }
+  }
+}
+
+mock_provider "aws" {
+  mock_data "aws_region" {
+    defaults = {
+      region = "eu-central-1"
+    }
+  }
+
+  mock_data "aws_iam_policy_document" {
+    defaults = {
+      json = "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
+    }
+  }
+}
+
+run "common_tags_contain_mandatory_values" {
+  command = plan
+
+  assert {
+    condition = local.common_tags == {
+      Application = "Tenner"
+      Project     = "Tenner"
+      Owner       = "Stefan Schmidpeter"
+      Environment = "prod"
+      CreatedBy   = "GitHub Actions"
+      ManagedBy   = "Terraform"
+      Repository  = "Gh0stbasta/tenner"
+      CostCenter  = "Tenner"
+    }
+    error_message = "common_tags do not match the mandatory tag standard."
+  }
+
+  assert {
+    condition = toset(local.mandatory_tag_keys) == toset([
+      "Name", "Application", "Project", "Owner", "Environment", "CreatedBy",
+      "Purpose", "Description", "ManagedBy", "Repository", "CostCenter",
+    ])
+    error_message = "mandatory_tag_keys must match the TICKET-001A tag list."
+  }
+}
+
+run "resource_group_is_tag_based" {
+  command = plan
+
+  assert {
+    condition     = aws_resourcegroups_group.tenner.name == "Tenner"
+    error_message = "Resource group must be named Tenner."
+  }
+
+  assert {
+    condition     = aws_resourcegroups_group.tenner.resource_query[0].type == "TAG_FILTERS_1_0"
+    error_message = "Resource group membership must be tag-based."
+  }
+
+  assert {
+    condition = jsondecode(aws_resourcegroups_group.tenner.resource_query[0].query) == {
+      ResourceTypeFilters = ["AWS::AllSupported"]
+      TagFilters          = [{ Key = "Project", Values = ["Tenner"] }]
+    }
+    error_message = "Resource group must include all resources tagged Project = Tenner."
+  }
+
+  assert {
+    condition     = alltrue([for k in ["Name", "Purpose", "Description"] : contains(keys(aws_resourcegroups_group.tenner.tags), k)])
+    error_message = "Resource group must set Name, Purpose and Description tags."
+  }
+}
+
+run "environment_is_validated" {
+  command = plan
+
+  variables {
+    environment = "staging"
+  }
+
+  expect_failures = [var.environment]
+}
+
+run "cost_center_must_not_be_empty" {
+  command = plan
+
+  variables {
+    cost_center = " "
+  }
+
+  expect_failures = [var.cost_center]
+}
+
+run "region_is_validated" {
+  command = plan
+
+  variables {
+    aws_region = "not-a-region"
+  }
+
+  expect_failures = [var.aws_region]
+}

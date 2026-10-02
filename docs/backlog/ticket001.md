@@ -232,3 +232,55 @@ Do not implement:
 - Application infrastructure
 
 This ticket only establishes the CI/CD deployment foundation.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `.github/workflows/pr.yml`
+- [x] `.github/workflows/deploy.yml`
+- [x] `README.md` with deployment, prerequisites and rollback information
+
+### Acceptance Criteria Verification
+
+The workflow definitions implement every criterion. Local checks: `actionlint` with
+shellcheck passes, and the Terraform and npm commands were run against throwaway projects.
+Behavior on GitHub can only be verified by real workflow runs.
+
+| Criterion | Implemented | Verified on GitHub |
+|---|---|---|
+| PR: Terraform fmt check executes | [x] | [ ] |
+| PR: Terraform validate executes | [x] | [ ] |
+| PR: Terraform plan executes | [x] | [ ] |
+| PR: Frontend build executes | [x] | [ ] |
+| PR: Backend build executes | [x] | [ ] |
+| PR: No infrastructure changes are applied | [x] (no apply step in `pr.yml`) | [ ] |
+| Main: authenticates to AWS | [x] | [ ] |
+| Main: GithubActionsDeployRole is assumed | [x] | [ ] |
+| Main: Terraform Apply executes | [x] | [ ] |
+| Main: changes deployed automatically | [x] | [ ] |
+
+### Assumptions
+
+- No `terraform/`, `frontend/` or `backend/` directories exist yet. Their steps are skipped with
+  a notice until the directories exist, and then run automatically. Until TICKET-002, Terraform
+  steps are skipped on GitHub.
+- The role `GithubActionsDeployRole` and the secret `AWS_ROLE_ARN` already exist (stated in
+  Background). The PR workflow also needs the role to trust the `pull_request` OIDC subject,
+  because it runs `aws sts get-caller-identity` and `terraform plan`.
+- `docs/architecture.md` (authoritative) lists `npm lint` and `npm test` for pull requests, so
+  `pr.yml` runs them with `--if-present` in addition to the builds this ticket requires.
+- Terraform `1.9.8` (raised to `1.16.4` by TICKET-002) and Node.js `22` are pinned in the workflow `env` blocks.
+
+### Remaining Verification (requires GitHub/AWS)
+
+- [ ] First PR run passes and shows the assumed role.
+- [ ] First `main` run passes and shows the assumed role.
+
+### Technical Debt
+
+TD-008 (PR plan uses deploy role), TD-009 (actions not pinned by SHA).

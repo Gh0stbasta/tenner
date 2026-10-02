@@ -962,3 +962,59 @@ npm run test
 - Optional user and category filters work
 - Explicit reference date is supported
 - Europe/Berlin is used as the 
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `GET /dashboard`: `src/handlers/dashboard.ts`, route in `src/index.ts` and `local.api_routes`
+- [x] DTOs: `DashboardRequest`, `DashboardResponse`, `DashboardTennerResponse`, `DashboardSummaryResponse`, `DashboardGroupSummary`
+- [x] `DashboardService.getDashboard()`: reference date, timezone, filters, exclusions, classification, day counts, sorting, summaries
+- [x] Repository `getDashboardCandidates(tenantId, endDate)`: one Query on `nextDue-index`
+- [x] Timezone configuration:
+  - `APPLICATION_TIMEZONE` (`src/config.ts`, default `Europe/Berlin`)
+  - `src/utils/timezone.ts`
+  - Terraform `var.application_timezone` and Lambda environment variable
+- [x] `AnalyticsService.getDashboard` now uses the final DTOs. The TICKET-008 placeholder `DashboardResponse` was replaced.
+- [x] Documentation (`backend/README.md`, `docs/architecture.md`), TD-005 updated
+
+### Acceptance Criteria (Testing Requirements)
+
+All listed unit tests exist and pass:
+- mixed Tenners; due today, overdue and upcoming classification; 8-days-away exclusion
+- inactive exclusion, deleted exclusion
+- user filter, category filter, combined filters
+- default and explicit reference date (including future dates), timezone date resolution
+- invalid user, invalid category, invalid date format, invalid calendar date (`2026-02-30`)
+- empty dashboard, section sorting
+- actionable count and minutes, user summary, category summary
+- repository failure
+
+**Date boundaries** (deterministic clock, explicit timezone, no system clock):
+- UTC day differs from the Berlin day (summer and winter)
+- DST start and end
+- end of month, end of year, leap year
+
+**Integration:**
+- `GET /dashboard` routing and the standard contract are tested in `index.test.ts`.
+- `nextDue-index` usage is checked in repository and wiring tests.
+- Inactive and deleted Tenners are excluded both by the filter expression and in the service.
+- The bundle ran against a fake DynamoDB endpoint: one `nextDue-index` Query, correct summary and `byUser`,
+  and `2026-02-30` → 400.
+
+Backend: 316 tests, 100% coverage. Terraform: 21 tests.
+
+### Assumptions
+
+- **Overall response:** `referenceDate` and `timezone` are top-level fields, as in the example response. They are
+  not repeated inside `summary`.
+- **Invalid `APPLICATION_TIMEZONE`:** falls back to `Europe/Berlin`. Terraform also validates the format.
+- **CORS:** no central API Gateway CORS configuration exists yet. It comes with frontend hosting (TICKET-017),
+  which configures it for the CloudFront origin, so it also applies to `/dashboard`. No endpoint-specific CORS was added.
+- **Inconsistent "today":** the dashboard uses Berlin time, while `nextDue` calculation and list filters still use
+  UTC (TD-005 updated, SCHEDULING-008).
+- **Defensive filtering:** inactive and deleted Tenners are filtered in DynamoDB and again in the service.

@@ -561,3 +561,53 @@ Do not implement:
 - Bulk Update Operations
 
 These will be implemented in separate tickets.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `PUT /tenners/{tennerId}`: handler `src/handlers/update-tenner.ts`, route in `src/index.ts` and `local.api_routes`
+- [x] `UpdateTennerRequest` (extended with `active`), `UpdateTennerResponse`, `updateTennerSchema`, `tennerIdSchema`
+- [x] `UpdateTennerService.updateTenner()`
+- [x] Repository `update()` (conditional `UpdateItem`, `ALL_NEW`)
+- [x] Tests (`update-tenner.test.ts`, repository tests, router tests, `wiring.test.ts`) and documentation
+
+### Acceptance Criteria (Ticket Testing Requirements)
+
+- [x] Successful update
+- [x] Update a single field (only that field and `updatedAt` are written)
+- [x] Update multiple fields
+- [x] Update the active flag (`active: false`)
+- [x] Update frequency (`nextDue` and `lastCompleted` stay unchanged)
+- [x] Invalid category, invalid assigned user, invalid duration → 400
+- [x] Tenner not found → 404 `NOT_FOUND`, "Tenner not found."
+- [x] Repository failure → `PersistenceError` (500)
+- [x] Protected fields (`tenantId`, `tennerId`, `createdAt`, `lastCompleted`, `nextDue`) are rejected with 400,
+  and the service never forwards them (defense in depth, tested)
+- [x] Logging: "Tenner updated" with `tennerId`, `changedFields` and `assignedTo`
+
+Backend: 148 tests, 100% coverage. Terraform: 20 tests.
+
+### Validation Performed
+
+- `npm run lint`, `npm run build` and `npm test` pass.
+- Bundle against a fake DynamoDB endpoint:
+  - `{frequencyDays: 30, active: false}` sends exactly one `UpdateItem` with
+    `SET #frequencyDays, #active, #updatedAt`, `attribute_exists(tennerId)` and `ALL_NEW`.
+  - A body with `nextDue` returns 400.
+
+### Assumptions
+
+- **Repository signature changed:** `update(tenner)` from TICKET-008 became
+  `update(tenantId, tennerId, changes): Promise<Tenner>`. Reason: a load-modify-put would overwrite `lastCompleted`
+  and `nextDue` if a completion ran at the same time (lost update). The conditional `UpdateItem` loads, applies
+  and persists atomically, which covers the ticket's "load existing record, apply changes, persist".
+- **Protected fields:** rejected with 400 (strict schema) instead of being silently ignored.
+- **Response:** the full `TennerResponse` (a superset of the example).
+- **Deleted Tenners:** whether soft-deleted Tenners may be updated is decided in TICKET-012.
+- **Missing attributes:** an `UpdateItem` response without attributes is treated as a `PersistenceError`
+  instead of returning incomplete data.

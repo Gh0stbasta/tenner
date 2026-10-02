@@ -661,10 +661,400 @@ No AWS access keys are allowed.
 The IAM role used for deployments is:
 
 ```text
-GithubActionsDeployRole
+GitHubActionsDeployRole
 ```
 
 Terraform is the single source of truth for all infrastructure changes.
+---
+
+# Terraform Standards
+
+Introduced by TICKET-002.
+
+## Layout
+
+```text
+terraform/
+├── versions.tf          Terraform and provider version constraints, backend placeholder
+├── providers.tf         AWS provider with default tags
+├── variables.tf         aws_region (default eu-central-1), environment (default prod)
+├── locals.tf            naming prefix, resource group name, common tags
+├── data.tf              shared data sources
+├── resource-groups.tf   tag-based AWS Resource Group "Tenner"
+├── outputs.tf           shared outputs
+├── tests/               offline `terraform test` suites (mocked provider)
+├── modules/             reusable modules (only when a pattern repeats)
+└── environments/prod/   environment-specific configuration (TICKET-003, TICKET-021)
+```
+
+## Versions
+
+| Component | Constraint | CI version |
+|---|---|---|
+| Terraform | `>= 1.10` | `1.16.4` (`TF_VERSION` in workflows) |
+| AWS provider | `~> 6.0` | pinned by `terraform/.terraform.lock.hcl` |
+
+The dependency lock file is committed. Provider upgrades happen through a deliberate lock file update.
+
+## Validation
+
+Every pull request runs `terraform fmt -check -recursive`, `terraform validate` and `terraform test`
+before AWS authentication. It then runs `terraform plan` with OIDC credentials.
+
+---
+
+# Tagging Standards
+
+Every resource carries these tags:
+
+| Tag | Value | Source |
+|---|---|---|
+| Application | `Tenner` | provider `default_tags` (`local.common_tags`) |
+| Project | `Tenner` | provider `default_tags` |
+| Owner | `Stefan Schmidpeter` | provider `default_tags` |
+| Environment | `var.environment` (`prod`) | provider `default_tags` |
+| CreatedBy | `GitHub Actions` | provider `default_tags` |
+| ManagedBy | `Terraform` | provider `default_tags` |
+| Repository | `Gh0stbasta/tenner` | provider `default_tags` |
+| CostCenter | `var.cost_center` (`Tenner`) | provider `default_tags` |
+| Name | resource-specific | resource `tags` |
+| Purpose | resource-specific | resource `tags` |
+| Description | resource-specific | resource `tags` |
+
+Resources must not redefine the common tags. They only add `Name`, `Purpose` and `Description`.
+
+## Enforcement (TICKET-001A)
+
+No resource may be deployed without the mandatory tags:
+
+1. `local.mandatory_tag_keys` (`terraform/locals.tf`) is the single list of required keys.
+   It is exposed as the output `mandatory_tag_keys`.
+2. Both workflows save the plan (`-out=tfplan`) and run `scripts/check_tags.py` on its JSON form.
+   Any taggable managed resource whose `tags_all` lacks a key, or has an empty value, fails the workflow
+   before `terraform apply`.
+3. `deploy.yml` applies exactly the checked plan file.
+
+Resource types without tags (for example `aws_s3_bucket_versioning`) are skipped automatically.
+
+## Decision: `default_tags` instead of `merge()`
+
+TICKET-001A shows `tags = merge(local.common_tags, {...})` on every resource. Tenner uses
+provider `default_tags = local.common_tags` instead, plus per-resource `Name`/`Purpose`/`Description`.
+
+- **Effect:** the same (`tags_all` contains all keys).
+- **Benefits:** less repetition, and a forgotten `merge()` cannot drop the common tags.
+- **Trade-off:** the few resource types that ignore provider default tags must be caught by the plan check.
+
+## Cost Allocation
+
+AWS cost allocation by tag only works after the tags are activated as cost allocation tags in the
+Billing console (account-level, manual). Activate `Project` and `CostCenter`. This is tracked in OPERATIONS-001.
+
+---
+
+# Naming Standards
+
+```text
+tenner-<resource>
+```
+
+Examples: `tenner-api`, `tenner-frontend`, `tenner-cloudfront`, `tenner-tenners`, `tenner-history`.
+
+- No random names.
+- No generated suffixes unless the resource type technically requires them,
+  for example globally unique S3 bucket names.
+- The prefix is centralized in `local.name_prefix`.
+
+---
+
+# Resource Groups
+
+The AWS Resource Group `Tenner` (`terraform/resource-groups.tf`) uses a `TAG_FILTERS_1_0` query:
+
+```text
+ResourceTypeFilters: AWS::AllSupported
+TagFilters:          Project = Tenner
+```
+
+Membership is purely tag-driven. Resources are never assigned manually.
+Because `Project` is a default tag, every Terraform-managed resource joins the group automatically.
+
+---
+
+# State Management
+
+Introduced by TICKET-003.
+
+## Backend
+
+| Item | Value |
+|---|---|
+| Backend | S3 (`terraform/backend.tf`) |
+| Bucket | `tenner-terraform-state` |
+| State key | `prod/terraform.tfstate` |
+| Locking | S3 lock file (`use_lockfile`) and DynamoDB table `tenner-terraform-locks` |
+| Encryption | SSE-S3 (AES256) on the bucket, `encrypt = true` in the backend |
+
+The state bucket and lock table are defined in the same root configuration
+(`terraform/state-backend.tf`). They are protected with `prevent_destroy`, and the table also
+with deletion protection. Backend blocks cannot use variables, so `backend.tf` repeats the
+names as literals. A test and a comment keep them in sync with `locals.tf`.
+
+## Bucket Protection
+
+- Versioning is enabled, and all public access is blocked.
+- ACLs are disabled (`BucketOwnerEnforced`). A bucket policy denies requests without TLS.
+- Lifecycle rules:
+  - The current state version never expires.
+  - Previous versions are kept for 90 days, and the 10 newest are always kept.
+  - Incomplete multipart uploads are aborted after 7 days.
+
+## Locking Decision
+
+TICKET-003 requires a DynamoDB lock table. Terraform 1.10+ supports native S3 locking (`use_lockfile`),
+and DynamoDB-based locking is deprecated. Both are enabled during the transition.
+The table can be removed once S3 locking is proven (TD-010).
+
+## Bootstrap
+
+`scripts/bootstrap-state.sh` runs once per AWS account, with administrator credentials:
+
+```text
+1. Temporary local backend (git-ignored backend_override.tf)
+2. terraform apply -target=<state bucket and lock table resources>
+3. Remove override, terraform init -migrate-state (local → S3)
+4. terraform state list (verify), delete local state files
+```
+
+Without `--apply` the script only plans. If the bucket already exists, it refuses to run.
+
+## Recovery
+
+- **Corrupted or wrong state:** restore a previous object version of `prod/terraform.tfstate`
+  in the S3 console or with `aws s3api`, for example by copying the previous version over the current one.
+- **Stuck lock:** after making sure no apply is running, use `terraform force-unlock <LOCK_ID>`.
+- State files are never committed (`.gitignore`).
+
+---
+
+# Deployment Standards
+
+- Infrastructure changes are applied only by `.github/workflows/deploy.yml` on `main`, using GitHub OIDC.
+- Pull requests only validate, test and plan. They never apply.
+- No manual changes in AWS. Terraform is the single source of truth.
+
+---
+
+# API Runtime
+
+Introduced by TICKET-005.
+
+```text
+Client → API Gateway HTTP API (tenner-api-gateway, stage prod)
+       → Lambda tenner-api (Node.js 22, arm64, 256 MB, 10 s)
+       → CloudWatch Logs (/tenner/api, JSON)
+```
+
+| Resource | Name | Notes |
+|---|---|---|
+| Lambda | `tenner-api` | handler `index.handler`, bundle `backend/dist/index.mjs`, env `ENVIRONMENT`, `LOG_LEVEL`, `APPLICATION_NAME` |
+| Execution role | `tenner-api-role` | `logs:CreateLogStream` and `logs:PutLogEvents` on `/tenner/api` only |
+| HTTP API | `tenner-api-gateway` | route `GET /health`, Lambda proxy integration, payload format 2.0 |
+| Stage | `prod` (`var.environment`) | auto deploy, JSON access logs to `/tenner/api/access` |
+| Log groups | `/tenner/api`, `/tenner/api/access` | retention `var.log_retention_days` (default 30) |
+
+## Decisions
+
+- **HTTP API instead of REST API:** lower cost and latency, and simpler. No REST-only features are needed.
+- **One Lambda function for all routes:** routes are registered explicitly per route key, with no `$default`
+  catch-all. The function routes internally by `routeKey`.
+- **Custom log group:** Lambda logs go to `/tenner/api` through `logging_config` instead of
+  `/aws/lambda/tenner-api`. The group is Terraform-managed, with retention and tags.
+- **Packaging:** esbuild bundles the code into one ESM file. Terraform zips it with `archive_file`, and
+  `source_code_hash` triggers a redeploy when the code changes. The AWS SDK v3 is provided by the runtime
+  and is not bundled.
+- **Invoke permission:** limited to this API (`execution_arn/*/*`).
+
+## Not Yet Included
+
+Authentication (SECURITY-002), throttling (SECURITY-005), alarms (OBSERVABILITY-002). CORS was added with TICKET-017.
+
+---
+
+# Persistence Layer
+
+Introduced by TICKET-006 (`terraform/dynamodb.tf`).
+
+| Table | Primary key | GSIs | Purpose |
+|---|---|---|---|
+| `tenner-tenners` | `tenantId` (PK), `tennerId` (SK) | `nextDue-index` (`tenantId`, `nextDue`), `assignedTo-index` (`tenantId`, `assignedTo`) | Current state of Tenners |
+| `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`), `tennerId-completedAt-index` (`tenantTennerId`, `completedAt`, TICKET-014) | Immutable completion history |
+
+Both tables use:
+- `PAY_PER_REQUEST` billing
+- SSE with the AWS managed KMS key (`aws/dynamodb`)
+- point-in-time recovery (35 days)
+- deletion protection and Terraform `prevent_destroy`
+- GSI projection `ALL`. Items are small and household data volume is low, so this keeps queries simple
+  without extra reads.
+
+## Multi-Tenancy Readiness
+
+Every key starts with `tenantId` (currently `default`). More households can be added without redesigning
+the tables (FUTURE-001). Tenant isolation is enforced in code until FUTURE-002.
+
+## Cost
+
+On-demand billing with household volume stays within cents per month. PITR adds a small storage-based
+charge per GB, which is negligible at this size.
+
+## Not Yet Included
+
+Lambda data access (TICKET-007), the per-Tenner history index (TICKET-020), seed data.
+
+---
+
+# Lambda → DynamoDB Integration
+
+Introduced by TICKET-007.
+
+```text
+API Gateway → Lambda tenner-api ──(AWS SDK v3 DocumentClient)──> tenner-tenners
+                                                               └> tenner-history
+```
+
+## Environment Variable Strategy
+
+| Variable | Source | Purpose |
+|---|---|---|
+| `TENNERS_TABLE` | `aws_dynamodb_table.tenners.name` | table name (never hardcoded in code) |
+| `HISTORY_TABLE` | `aws_dynamodb_table.history.name` | table name |
+| `ENVIRONMENT` | `var.environment` | environment label |
+| `APPLICATION_NAME` | `local.common_tags.Application` | application label |
+| `LOG_LEVEL` | `var.api_log_level` | logger threshold |
+
+`backend/src/config.ts` reads all variables in one place. If a table variable is missing, the configuration
+is incomplete: `/health` reports `misconfigured` and never calls AWS.
+
+## IAM Strategy
+
+The `tenner-api-role` has two inline policies:
+
+| Policy | Actions | Resources |
+|---|---|---|
+| `tenner-api-role-logging` | `logs:CreateLogStream`, `logs:PutLogEvents` | `/tenner/api` log streams |
+| `tenner-api-role-dynamodb` | `GetItem`, `PutItem`, `UpdateItem`, `DeleteItem`, `Query`, `Scan` | the two table ARNs and their `/index/*` |
+| `tenner-api-role-dynamodb` (statement 2, TICKET-020) | `BatchGetItem` | `tenner-tenners` only (title lookup for history pages) |
+
+- No wildcard actions, and no wildcard resources beyond each table's own indexes.
+- Terraform tests check both policies, and a mutation check showed that wildcards make the tests fail.
+- New actions (for example `TransactWriteItems` in TICKET-013) are added by the ticket that needs them.
+
+## Data Access Foundation
+
+- `backend/src/clients/dynamodb.ts` creates one shared `DynamoDBDocumentClient` per Lambda container
+  (`maxAttempts: 2`, `removeUndefinedValues`).
+- The AWS SDK v3 is bundled into `dist/index.mjs` (minified, about 550 kB) and pinned via
+  `package-lock.json`. The runtime-provided SDK is not used, so builds are reproducible.
+
+## Health Check
+
+`GET /health` sends a `GetItem` for the non-existent key `__healthcheck__` to both tables, in parallel,
+with a 2-second timeout. This is read-only and costs one read unit per table.
+
+| Result | HTTP | Body `database` |
+|---|---|---|
+| both tables answer | 200 | `connected` |
+| error or timeout (for example AccessDenied, missing table) | 503 | `unreachable` |
+| table variables missing | 503 | `misconfigured` |
+
+## Logging
+
+`backend/src/utils/logger.ts` writes JSON lines with level filtering. On startup the function logs
+the environment, application name and table names. It never logs credentials, tokens or request payloads.
+
+---
+
+# Backend Architecture
+
+Introduced by TICKET-008. Details are in [`backend/README.md`](../backend/README.md).
+
+```text
+index.ts (routing, correlation, error mapping)
+  → handlers/ (HTTP, validation)
+  → services/ (business rules, interfaces)
+  → repositories/ (persistence interfaces)
+  → clients/ (AWS SDK)
+```
+
+- **Domain models:** `Tenner`, `Completion`, `User`. The enumerations `Category` and `UserId` are the single
+  source of allowed values.
+- **Validation:** Zod schemas with centralized limits. `validate()` raises `ValidationError` with field details.
+- **Errors:** an `ApplicationError` hierarchy (`ValidationError` 400, `UnauthorizedError` 401, `NotFoundError` 404,
+  `ConflictError` 409, `PersistenceError` 500). Errors are mapped centrally to `{ success: false, error: { code, message } }`.
+  Unknown errors become `500 INTERNAL_ERROR` without internal details.
+- **Responses:** `{ success: true, data }` for business endpoints. `/health` keeps its operational format.
+- **Configuration:** `src/config.ts` is the only reader of `process.env`. The tenant defaults to `default`
+  until SECURITY-004.
+- **Logging:** JSON lines, level filtering, and a child logger per request with `correlationId`
+  (`x-correlation-id` header or the API Gateway request ID, echoed in the response).
+- **Enforcement:** ESLint fails if code outside `config.ts` reads `process.env`, or if handlers or services
+  import the AWS SDK or `clients/`.
+- **Endpoints:** API routes are listed in `local.api_routes` (`terraform/locals.tf`). Each one is an explicit
+  API Gateway route, and there is no catch-all. Implemented so far: `GET /health`, `POST /tenners` (TICKET-009), `GET /tenners` (TICKET-010), `PUT /tenners/{tennerId}` (TICKET-011), `DELETE /tenners/{tennerId}` (TICKET-012), `POST /tenners/{tennerId}/complete` (TICKET-013), `POST /tenners/{tennerId}/undo-completion` (TICKET-014), `POST /tenners/{tennerId}/restore` (TICKET-015), `GET /dashboard` (TICKET-016), `GET /tenners/{tennerId}` (TICKET-019), `GET /history` and `GET /tenners/{tennerId}/history` (TICKET-020).
+- **Read access:** lists always use a DynamoDB Query on the tenant partition, choosing `assignedTo-index` or
+  `nextDue-index` when a filter allows it, and never a Scan. The `dynamodb:Scan` permission (TICKET-007) is unused.
+- **Write access:** creates are conditional puts (`attribute_not_exists`). Updates are conditional `UpdateItem`
+  calls that set only the changed attributes (`attribute_exists`), so they cannot cause lost updates on other fields.
+- **Deletion:** soft delete only (`active = false`, `deletedAt`). Records and history stay, so analytics keep
+  their relationships. Deleted Tenners are excluded from lists and cannot be updated until they are restored.
+  `DeleteItem` is never used by the code (TD-013). Restore (TICKET-015) reverses a soft delete (`active = true`,
+  `deletedAt = null`) with an `updatedAt` lock. It never changes the schedule or the history.
+- **Completion workflow (TICKET-013):** completing a Tenner appends an immutable history record and moves the Tenner
+  into its next cycle (`nextDue = UTC date(completedAt) + frequencyDays`) in one `TransactWriteItems`. Optimistic
+  locking checks the loaded state (`updatedAt`, `lastCompleted`, `frequencyDays`, active and not deleted), and
+  a conflict returns `409 CONCURRENT_MODIFICATION`. The optional `Idempotency-Key` maps to a deterministic UUID v5
+  completion ID. Retries return the original result, and conflicting reuse returns 409. Transactions need no extra
+  IAM action, because DynamoDB authorizes them through `PutItem` and `UpdateItem`.
+- **Undo workflow (TICKET-014):** completions are never deleted. Undo marks the latest non-reverted completion
+  (`revertedAt`, `revertedBy`, `revertReason`) and restores the Tenner from the previous active completion, using the
+  current `frequencyDays`. If no previous completion exists, `lastCompleted` becomes `null` and `nextDue` the
+  `createdAt` date. Both writes happen in one `TransactWriteItems`, with conditions on "not yet reverted" and the
+  loaded Tenner state. History per Tenner is read through the GSI `tennerId-completedAt-index`
+  (`tenantTennerId = "<tenant>#<tenner>"`, newest first, no Scan).
+- **Dashboard read model (TICKET-016):** `GET /dashboard` returns due today, overdue, upcoming (next 7 days),
+  a summary and actionable workload per user and category in one response. It is backed by one `nextDue-index`
+  Query (`nextDue <= reference + 7`, active and not deleted). The reference date is "today" in `APPLICATION_TIMEZONE`
+  (default `Europe/Berlin`, Terraform `var.application_timezone`), or the `date` parameter.
+- **Time and IDs:** services receive a `Clock` and an `IdGenerator` (`utils/clock.ts`), so tests are deterministic.
+  Dates are UTC until SCHEDULING-008 (TD-005).
+
+---
+
+# Frontend Hosting
+
+Introduced by TICKET-017 (`terraform/frontend-hosting.tf`).
+
+```text
+Browser ──HTTPS──> CloudFront (tenner-cloudfront, PriceClass_100, HTTP/2+3, TLS ≥ 1.2)
+                      │  Origin Access Control (SigV4)
+                      ▼
+                   S3 tenner-frontend-<env> (private, versioned, SSE-S3, BucketOwnerEnforced)
+```
+
+| Topic | Implementation |
+|---|---|
+| Access | Block Public Access. The bucket policy allows `s3:GetObject` only to `cloudfront.amazonaws.com` with `AWS:SourceArn` = this distribution. Requests without TLS are denied |
+| SPA routing | 403/404 from S3 → `/index.html` with status 200 |
+| Caching | `/assets/*` (content-hashed) uses `Managed-CachingOptimized`. Everything else, including `index.html`, uses `Managed-CachingDisabled`, so new deployments are visible immediately |
+| Security headers | HSTS (1 year), `nosniff`, `X-Frame-Options: DENY`, `strict-origin-when-cross-origin`, CSP |
+| CSP | `connect-src 'self' https://*.execute-api.<region>.amazonaws.com`. A wildcard is needed because the exact API host would create a Terraform cycle; TICKET-022 narrows it |
+| CORS (central, on the HTTP API) | Origin only `https://<cloudfront-domain>`. Methods GET/POST/PUT/DELETE/OPTIONS. Headers `content-type`, `idempotency-key`, `x-correlation-id`, `authorization`. Exposes `x-correlation-id` |
+| Rollback | S3 versioning keeps previous objects for 30 days. Normal rollback is a revert on `main` |
+| Cost | under 1 USD/month at household traffic (CloudFront free tier 1 TB/month, S3 a few MB) |
+
+Outputs: `frontend_bucket_name`, `cloudfront_distribution_id`, `cloudfront_domain_name`, `frontend_url`.
+
 ---
 
 # Future Ideas

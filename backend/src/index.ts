@@ -1,0 +1,171 @@
+/**
+ * Lambda entry point for the Tenner API (function tenner-api).
+ * Routes API Gateway HTTP API requests by route key to handlers and maps errors to the
+ * standard error response.
+ */
+
+import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
+import { loadConfig, type AppConfig } from "./config.js";
+import { ApplicationError, NotFoundError } from "./exceptions/index.js";
+import { completeTennerHandler, type CompleteTenner } from "./handlers/complete-tenner.js";
+import { createTennerHandler, type CreateTenner } from "./handlers/create-tenner.js";
+import { dashboardHandler, type GetDashboard } from "./handlers/dashboard.js";
+import { deleteTennerHandler, type DeleteTenner } from "./handlers/delete-tenner.js";
+import { getTennerHandler, type GetTenner } from "./handlers/get-tenner.js";
+import { health, type DatabaseProbe } from "./handlers/health.js";
+import { historyHandler, tennerHistoryHandler, type GetHistory, type GetTennerHistory } from "./handlers/history.js";
+import { listTennersHandler, type ListTenners } from "./handlers/list-tenners.js";
+import { restoreTennerHandler, type RestoreTenner } from "./handlers/restore-tenner.js";
+import { undoCompletionHandler, type UndoCompletion } from "./handlers/undo-completion.js";
+import { updateTennerHandler, type UpdateTenner } from "./handlers/update-tenner.js";
+import { DynamoDbCompletionRepository, DynamoDbTennerRepository } from "./repositories/index.js";
+import {
+  CompleteTennerService,
+  CreateTennerService,
+  DashboardService,
+  DeleteTennerService,
+  GetTennerService,
+  HistoryService,
+  ListTennersService,
+  RestoreTennerService,
+  UndoCompletionService,
+  UpdateTennerService,
+} from "./services/index.js";
+import { systemClock, uuidGenerator } from "./utils/clock.js";
+import type { ApiEvent, ApiResult } from "./types/api.js";
+import { errorResponse } from "./utils/http.js";
+import { createLogger, errorFields, type Logger } from "./utils/logger.js";
+
+/** Dependencies shared by all handlers; replaced in tests. */
+export interface Dependencies {
+  readonly config: AppConfig;
+  readonly logger: Logger;
+  readonly probeDatabase: DatabaseProbe;
+  readonly createTenner: CreateTenner;
+  readonly listTenners: ListTenners;
+  readonly updateTenner: UpdateTenner;
+  readonly deleteTenner: DeleteTenner;
+  readonly completeTenner: CompleteTenner;
+  readonly undoCompletion: UndoCompletion;
+  readonly restoreTenner: RestoreTenner;
+  readonly getDashboard: GetDashboard;
+  readonly getTenner: GetTenner;
+  readonly getHistory: GetHistory;
+  readonly getTennerHistory: GetTennerHistory;
+}
+
+/** Per-request context passed to route handlers. */
+export interface RequestContext {
+  readonly event: ApiEvent;
+  readonly deps: Dependencies;
+  /** Logger bound to the request's correlationId. */
+  readonly logger: Logger;
+}
+
+type RouteHandler = (ctx: RequestContext) => Promise<ApiResult>;
+
+const ROUTES: Readonly<Record<string, RouteHandler>> = {
+  "GET /health": ({ deps, logger }) => health(deps.config, deps.probeDatabase, logger),
+  "POST /tenners": ({ event, deps, logger }) => createTennerHandler(event, deps.config.tenantId, deps.createTenner, logger),
+  "GET /tenners": ({ event, deps, logger }) => listTennersHandler(event, deps.config.tenantId, deps.listTenners, logger),
+  "GET /tenners/{tennerId}": ({ event, deps, logger }) => getTennerHandler(event, deps.config.tenantId, deps.getTenner, logger),
+  "GET /history": ({ event, deps, logger }) => historyHandler(event, deps.config.tenantId, deps.getHistory, logger),
+  "GET /tenners/{tennerId}/history": ({ event, deps, logger }) => tennerHistoryHandler(event, deps.config.tenantId, deps.getTennerHistory, logger),
+  "PUT /tenners/{tennerId}": ({ event, deps, logger }) => updateTennerHandler(event, deps.config.tenantId, deps.updateTenner, logger),
+  "DELETE /tenners/{tennerId}": ({ event, deps, logger }) => deleteTennerHandler(event, deps.config.tenantId, deps.deleteTenner, logger),
+  "POST /tenners/{tennerId}/complete": ({ event, deps, logger }) => completeTennerHandler(event, deps.config.tenantId, deps.completeTenner, logger),
+  "POST /tenners/{tennerId}/undo-completion": ({ event, deps, logger }) => undoCompletionHandler(event, deps.config.tenantId, deps.undoCompletion, logger),
+  "POST /tenners/{tennerId}/restore": ({ event, deps, logger }) => restoreTennerHandler(event, deps.config.tenantId, deps.restoreTenner, logger),
+  "GET /dashboard": ({ event, deps, logger }) => dashboardHandler(event, deps.config.tenantId, deps.getDashboard, logger),
+};
+
+const CORRELATION_HEADER = "x-correlation-id";
+
+/** Build production dependencies once per container and log the startup configuration. */
+export function createDependencies(config: AppConfig = loadConfig()): Dependencies {
+  const logger = createLogger(config.logLevel);
+  logger.info("Tenner API starting", {
+    environment: config.environment,
+    application: config.applicationName,
+    timezone: config.timezone,
+    tables: config.tables ?? "not configured",
+  });
+  const tables = config.tables;
+  const notConfigured = async (): Promise<never> => {
+    throw new ApplicationError("SERVICE_UNAVAILABLE", 503, "Service is not configured.");
+  };
+  const tennerRepository = tables ? new DynamoDbTennerRepository(getDocumentClient(), tables.tenners, tables.history) : undefined;
+  const completionRepository = tables ? new DynamoDbCompletionRepository(getDocumentClient(), tables.history) : undefined;
+  const createTennerService = tennerRepository ? new CreateTennerService(tennerRepository, systemClock, uuidGenerator) : undefined;
+  const listTennersService = tennerRepository ? new ListTennersService(tennerRepository, systemClock) : undefined;
+  const getTennerService = tennerRepository ? new GetTennerService(tennerRepository) : undefined;
+  const historyService = tennerRepository && completionRepository ? new HistoryService(completionRepository, tennerRepository) : undefined;
+  const updateTennerService = tennerRepository ? new UpdateTennerService(tennerRepository, systemClock) : undefined;
+  const deleteTennerService = tennerRepository ? new DeleteTennerService(tennerRepository, systemClock) : undefined;
+  const restoreTennerService = tennerRepository ? new RestoreTennerService(tennerRepository, systemClock) : undefined;
+  const dashboardService = tennerRepository ? new DashboardService(tennerRepository, systemClock, config.timezone) : undefined;
+  const completeTennerService =
+    tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator) : undefined;
+  const undoCompletionService = tennerRepository && completionRepository ? new UndoCompletionService(tennerRepository, completionRepository, systemClock) : undefined;
+
+  return {
+    config,
+    logger,
+    probeDatabase: (t) => probeTables(getDocumentClient(), t),
+    createTenner: createTennerService ? (tenantId, request) => createTennerService.createTenner(tenantId, request) : notConfigured,
+    listTenners: listTennersService ? (tenantId, request) => listTennersService.listTenners(tenantId, request) : notConfigured,
+    updateTenner: updateTennerService ? (tenantId, id, request) => updateTennerService.updateTenner(tenantId, id, request) : notConfigured,
+    deleteTenner: deleteTennerService ? (tenantId, id) => deleteTennerService.deleteTenner(tenantId, id) : notConfigured,
+    restoreTenner: restoreTennerService ? (tenantId, id) => restoreTennerService.restoreTenner(tenantId, id) : notConfigured,
+    getHistory: historyService ? (tenantId, request) => historyService.getHistory(tenantId, request) : notConfigured,
+    getTennerHistory: historyService ? (tenantId, id, request) => historyService.getTennerHistory(tenantId, id, request) : notConfigured,
+    getTenner: getTennerService ? (tenantId, id, options) => getTennerService.getTenner(tenantId, id, options) : notConfigured,
+    getDashboard: dashboardService ? (tenantId, request) => dashboardService.getDashboard(tenantId, request) : notConfigured,
+    completeTenner: completeTennerService
+      ? (tenantId, id, request, key) => completeTennerService.completeTenner(tenantId, id, request, key)
+      : notConfigured,
+    undoCompletion: undoCompletionService
+      ? (tenantId, id, request, key) => undoCompletionService.undoLatestCompletion(tenantId, id, request, key)
+      : notConfigured,
+  };
+}
+
+let dependencies: Dependencies | undefined;
+
+export async function handler(event: ApiEvent): Promise<ApiResult> {
+  dependencies ??= createDependencies();
+  return route(event, dependencies);
+}
+
+/** Correlation ID: client-provided header (if sane) or the API Gateway request ID. */
+export function correlationIdOf(event: ApiEvent): string {
+  const header = event.headers?.[CORRELATION_HEADER];
+  if (header && /^[A-Za-z0-9._-]{1,128}$/.test(header)) return header;
+  return event.requestContext?.requestId ?? "unknown";
+}
+
+/** Dispatch a request to its handler. Exported for tests. */
+export async function route(event: ApiEvent, deps: Dependencies): Promise<ApiResult> {
+  const correlationId = correlationIdOf(event);
+  const logger = deps.logger.child({ correlationId, routeKey: event.routeKey });
+  const withCorrelation = (result: ApiResult): ApiResult => ({
+    ...result,
+    headers: { ...result.headers, [CORRELATION_HEADER]: correlationId },
+  });
+
+  try {
+    const routeHandler = ROUTES[event.routeKey];
+    if (!routeHandler) throw new NotFoundError("Route not found.");
+    const response = await routeHandler({ event, deps, logger });
+    logger.info("Request handled", { statusCode: response.statusCode });
+    return withCorrelation(response);
+  } catch (error) {
+    const response = errorResponse(error);
+    if (error instanceof ApplicationError && error.statusCode < 500) {
+      logger.warn("Request rejected", { statusCode: response.statusCode, errorCode: error.code });
+    } else {
+      logger.error("Request failed", { statusCode: response.statusCode, ...errorFields(error) });
+    }
+    return withCorrelation(response);
+  }
+}

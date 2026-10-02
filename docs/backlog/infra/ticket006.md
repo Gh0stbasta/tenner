@@ -581,3 +581,40 @@ Do not implement:
 - Analytics calculations
 
 This ticket only provisions the DynamoDB persistence layer.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+- [x] `terraform/dynamodb.tf`: `tenner-tenners` and `tenner-history`
+- [x] `terraform/outputs.tf`: name and ARN of both tables
+- [x] `terraform/tests/dynamodb.tftest.hcl`: 3 offline tests
+- [x] `docs/architecture.md` (Persistence Layer), `README.md`
+
+### Acceptance Criteria
+
+| Criterion | Status |
+|---|---|
+| tenner-tenners table created | [x] defined and tested. Created on the first deploy |
+| tenner-history table created | [x] defined and tested. Created on the first deploy |
+| PAY_PER_REQUEST enabled | [x] tested |
+| PITR enabled | [x] tested |
+| Encryption enabled | [x] SSE with the AWS managed key, tested |
+| Required GSIs created | [x] `nextDue-index`, `assignedTo-index`, `completedAt-index` (tested) |
+| Outputs exposed | [x] |
+| Resource Group membership verified | [x] `Project` default tag. Tag check on the offline plan passes |
+| Mandatory tags applied | [x] offline plan: 21 resources, `check_tags.py` compliant |
+| Terraform validation succeeds | [x] `fmt`, `validate` (no warnings); `test` passes 18 tests |
+
+### Assumptions
+
+- Deletion protection is required. In addition, Terraform `prevent_destroy` protects against accidental
+  removal through code changes.
+- GSI projection `ALL`, because the ticket specifies none. Items are small, so this avoids extra reads.
+- AWS provider 6.x deprecates `hash_key`/`range_key` inside `global_secondary_index`, so the GSIs use
+  `key_schema` blocks. Table keys still use `hash_key`/`range_key`, which are not deprecated.
+- No Lambda permissions in this ticket. They come in TICKET-007, according to Out of Scope.

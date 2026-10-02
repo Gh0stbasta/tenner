@@ -1,0 +1,73 @@
+locals {
+  # Naming standard: tenner-<resource>. No random names or generated suffixes
+  # unless a resource type technically requires them.
+  name_prefix = "tenner"
+
+  # Name of the AWS Resource Group that collects all Tenner resources.
+  resource_group_name = "Tenner"
+
+  # Remote state (TICKET-003). Must match the literals in backend.tf.
+  state_bucket_name                       = "${local.name_prefix}-terraform-state"
+  state_lock_table_name                   = "${local.name_prefix}-terraform-locks"
+  state_noncurrent_version_retention_days = 90
+  state_noncurrent_versions_to_keep       = 10
+
+  # Mandatory tags applied to every resource through provider default_tags.
+  # Name, Purpose and Description are set per resource.
+  common_tags = {
+    Application = "Tenner"
+    Project     = "Tenner"
+    Owner       = "Stefan Schmidpeter"
+    Environment = var.environment
+    CreatedBy   = "GitHub Actions"
+    ManagedBy   = "Terraform"
+    Repository  = "Gh0stbasta/tenner"
+    CostCenter  = var.cost_center
+  }
+
+  # API runtime (TICKET-005).
+  api_function_name   = "${local.name_prefix}-api"
+  api_role_name       = "${local.name_prefix}-api-role"
+  api_gateway_name    = "${local.name_prefix}-api-gateway"
+  api_log_group_name  = "/${local.name_prefix}/api"
+  api_access_log_name = "/${local.name_prefix}/api/access"
+  api_runtime         = "nodejs22.x"
+  api_architecture    = "arm64"
+  api_memory_mb       = 256
+  api_timeout_seconds = 10
+
+  # API routes served by the tenner-api Lambda.
+  api_routes = [
+    "GET /health",
+    "POST /tenners",                            # TICKET-009
+    "GET /tenners",                             # TICKET-010
+    "PUT /tenners/{tennerId}",                  # TICKET-011
+    "DELETE /tenners/{tennerId}",               # TICKET-012 (soft delete)
+    "POST /tenners/{tennerId}/complete",        # TICKET-013
+    "POST /tenners/{tennerId}/undo-completion", # TICKET-014
+    "POST /tenners/{tennerId}/restore",         # TICKET-015
+    "GET /dashboard",                           # TICKET-016
+    "GET /tenners/{tennerId}",                  # TICKET-019
+    "GET /history",                             # TICKET-020
+    "GET /tenners/{tennerId}/history",          # TICKET-020
+  ]
+
+  # Lambda bundle built by `npm run build` in backend/ (dist/index.mjs).
+  api_source_dir  = "${path.module}/../backend/dist"
+  api_package_zip = "${path.module}/../.build/tenner-api.zip"
+
+  # Persistence layer (TICKET-006).
+  tenners_table_name = "${local.name_prefix}-tenners"
+  history_table_name = "${local.name_prefix}-history"
+
+  # Frontend hosting (TICKET-017).
+  frontend_bucket_name       = "${local.name_prefix}-frontend-${var.environment}"
+  frontend_distribution_name = "${local.name_prefix}-cloudfront"
+  # AWS managed CloudFront cache policies (global, stable IDs; avoids data-source lookups).
+  cache_policy_caching_optimized = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+  cache_policy_caching_disabled  = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+
+  # Every taggable resource must end up with these tags (TICKET-001A).
+  # Enforced in CI by scripts/check_tags.py against the Terraform plan.
+  mandatory_tag_keys = concat(keys(local.common_tags), ["Name", "Purpose", "Description"])
+}

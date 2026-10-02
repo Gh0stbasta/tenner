@@ -694,3 +694,59 @@ Do not implement:
 - Frontend Integration
 
 This ticket only establishes the backend domain and application architecture foundation.
+
+---
+
+## Implementation Status
+
+Implemented: 2026-10-01.
+
+### Deliverables
+
+| Deliverable | Location |
+|---|---|
+| Domain models | `backend/src/models/`: `Tenner`, `Completion`, `User`, enumerations `CATEGORIES`/`Category`, `USER_IDS`/`UserId`, `HOUSEHOLD_USERS` |
+| DTOs | `backend/src/dto/`: `CreateTennerRequest`, `UpdateTennerRequest`, `CompleteTennerRequest`, `TennerResponse`, `CompletionResponse`, `HealthResponse`, `DashboardResponse`, `CompletionMetrics`, response envelope, mappers |
+| Repository interfaces | `backend/src/repositories/`: `TennerRepository` (getById, list, save, update, delete) and `CompletionRepository` (create, getHistory, getByTenner) |
+| Service interfaces | `backend/src/services/`: `TennerService` (createTenner, updateTenner, completeTenner, listDueTenners) and `AnalyticsService` (getDashboard, getCompletionMetrics) |
+| Validation framework | `backend/src/validators/`: Zod schemas, central `LIMITS`, `validate()`, `parseJsonBody()` |
+| Exception framework | `backend/src/exceptions/`: `ApplicationError` plus 5 subclasses; central mapping to HTTP in `utils/http.ts` and `index.ts` |
+| Logging framework | `backend/src/utils/logger.ts`: JSON, levels, `child()` for correlation, `errorFields()` |
+| Configuration framework | `backend/src/config.ts`: the only reader of `process.env` (enforced by ESLint) |
+| Test foundation | Vitest and `backend/tests/mocks/` (config, logger, repository and service mocks, fixture) |
+| Documentation | `backend/README.md`, `docs/architecture.md` (Backend Architecture) |
+
+### Acceptance Criteria
+
+- [x] Domain models created
+- [x] DTO layer created (the mappers never expose `tenantId`)
+- [x] Repository interfaces created (no implementation)
+- [x] Service interfaces created (no implementation)
+- [x] Validation framework configured (Zod 4. All rules from TICKET-009/013 are covered by tests, including boundaries)
+- [x] Error handling framework created
+- [x] Logging abstraction created (with request correlation)
+- [x] Configuration abstraction created
+- [x] Test framework configured (73 tests, 99% statements, 100% branches)
+- [x] Documentation updated
+
+### Validation Performed
+
+- `npm install` and `npm audit --omit=dev` (0 vulnerabilities)
+- `npm run lint` passes
+- `npm run build` passes (553 kB bundle)
+- `npm test`: 10 files, 73 tests
+- The ESLint architecture rules were checked with a deliberate violation (`process.env` and an `@aws-sdk` import in `services/`).
+  Both are reported as errors.
+
+### Assumptions
+
+- **Tests location:** tests live in `backend/tests/`, not in `backend/src/tests/`, so test code is never bundled.
+- **Logger:** a small built-in logger instead of `pino`, which the ticket allows ("or equivalent"). It needs no
+  dependency and covers JSON output, levels and correlation.
+- **Validation library:** Zod (recommended by the ticket), pinned to 4.6.5.
+- **`completionId`:** the domain name for the stored `historyId`, matching the TICKET-013 response.
+  The repository implementation does the mapping.
+- **`tenantId`:** comes from configuration (`default`) until SECURITY-004.
+- **Analytics DTOs:** `DashboardResponse` and `CompletionMetrics` are initial contracts.
+  TICKET-016 and the ANALYTICS domain finalize them.
+- **Layout:** `http.ts` moved to `utils/http.ts` to match the requested structure.
