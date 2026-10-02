@@ -415,3 +415,32 @@ staging environment (TICKET-021) where `apply` runs before production.
 ### Related Work
 
 TICKET-023, TICKET-021, `scripts/check_tags.py`, `terraform/tests/foundation.tftest.hcl`
+
+---
+
+## TD-016: API throttling is global, not per client
+
+### Description
+
+The HTTP API stage throttles all routes together (burst 20, 10 req/s, SECURITY-014). All clients
+share this budget.
+
+### Reason
+
+Without authentication there is no client identity to throttle on. Per-client limits need
+SECURITY-002 (JWT authorizer) or a WAF rate-based rule (~5+ USD/month).
+
+### Impact
+
+A flood from one source can push legitimate household users into HTTP 429 responses (denial of
+service). Cost stays bounded, which is the goal of SECURITY-014.
+
+### Suggested Improvement
+
+After SECURITY-002, review per-route limits. Consider a WAF rate-based rule if the app becomes
+public (FUTURE-003).
+
+### Related Work
+
+SECURITY-014, SECURITY-002, SECURITY-005, TD-003, `terraform/api.tf`
+

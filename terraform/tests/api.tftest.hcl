@@ -138,3 +138,57 @@ run "role_trusts_only_lambda" {
     error_message = "Role must be named tenner-api-role."
   }
 }
+
+# SECURITY-014: stage throttling caps the cost of the public API.
+run "stage_is_throttled_by_default" {
+  command = plan
+
+  assert {
+    condition     = aws_apigatewayv2_stage.api.default_route_settings[0].throttling_burst_limit == 20 && aws_apigatewayv2_stage.api.default_route_settings[0].throttling_rate_limit == 10
+    error_message = "HTTP API stage must throttle at burst 20 and 10 requests per second by default."
+  }
+}
+
+run "throttling_is_configurable" {
+  command = plan
+
+  variables {
+    api_throttling_burst_limit = 50
+    api_throttling_rate_limit  = 25
+  }
+
+  assert {
+    condition     = aws_apigatewayv2_stage.api.default_route_settings[0].throttling_burst_limit == 50 && aws_apigatewayv2_stage.api.default_route_settings[0].throttling_rate_limit == 25
+    error_message = "Throttling limits must follow the variables."
+  }
+}
+
+run "invalid_burst_limit_rejected" {
+  command = plan
+
+  variables {
+    api_throttling_burst_limit = 0
+  }
+
+  expect_failures = [var.api_throttling_burst_limit]
+}
+
+run "fractional_burst_limit_rejected" {
+  command = plan
+
+  variables {
+    api_throttling_burst_limit = 2.5
+  }
+
+  expect_failures = [var.api_throttling_burst_limit]
+}
+
+run "invalid_rate_limit_rejected" {
+  command = plan
+
+  variables {
+    api_throttling_rate_limit = 0
+  }
+
+  expect_failures = [var.api_throttling_rate_limit]
+}

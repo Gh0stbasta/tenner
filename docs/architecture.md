@@ -880,9 +880,27 @@ Client → API Gateway HTTP API (tenner-api-gateway, stage prod)
   and is not bundled.
 - **Invoke permission:** limited to this API (`execution_arn/*/*`).
 
+## Throttling (SECURITY-014)
+
+The `prod` stage throttles every route through `default_route_settings`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `api_throttling_burst_limit` | 20 | Maximum burst of concurrent requests |
+| `api_throttling_rate_limit` | 10 | Steady-state requests per second |
+
+Requests above the limit get HTTP 429 from API Gateway. They never invoke Lambda or DynamoDB.
+
+**Worst-case cost:** without throttling, only the account-wide Lambda concurrency limit bounded
+the load. At 1000 req/s (~86M requests/day) and about 2–3 USD per million requests, a sustained
+flood could cost 150–250 USD/day. At 10 req/s the API serves at most ~864,000 requests/day,
+about 2–3 USD/day. Rejected requests are not billed by API Gateway HTTP APIs.
+
+The limits are global, not per client (TD-016).
+
 ## Not Yet Included
 
-Authentication (SECURITY-002), throttling (SECURITY-005), alarms (OBSERVABILITY-002). CORS was added with TICKET-017.
+Authentication (SECURITY-002), alarms (OBSERVABILITY-002). CORS was added with TICKET-017.
 
 ---
 

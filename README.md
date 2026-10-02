@@ -166,6 +166,13 @@ and health check. The build gets `VITE_API_BASE_URL` from the Terraform output `
 
 A failed build stops the job before anything is uploaded.
 
+### API Throttling
+
+The API stage is throttled to protect against cost spikes (SECURITY-014): burst 20 and
+10 requests per second by default, shared by all clients. Excess requests get HTTP 429.
+Change the limits through the Terraform variables `api_throttling_burst_limit` and
+`api_throttling_rate_limit` (`terraform/variables.tf`), then merge to `main`.
+
 ### Rollback
 
 - **Workflow or application changes:** revert the commit on `main`. The deploy workflow then
