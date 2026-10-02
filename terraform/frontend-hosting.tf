@@ -159,7 +159,8 @@ resource "aws_cloudfront_response_headers_policy" "frontend" {
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data:",
         "font-src 'self' data:",
-        "connect-src 'self' https://*.execute-api.${var.aws_region}.amazonaws.com",
+        # Cognito: OIDC discovery/JWKS (cognito-idp) and token endpoint (managed login domain), SECURITY-002/003.
+        "connect-src 'self' https://*.execute-api.${var.aws_region}.amazonaws.com https://cognito-idp.${var.aws_region}.amazonaws.com https://${local.auth_login_domain}",
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",

@@ -92,3 +92,23 @@ output "frontend_url" {
   description = "HTTPS URL of the Tenner frontend."
   value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
 }
+
+output "cognito_user_pool_id" {
+  description = "ID of the Cognito user pool (user provisioning, SECURITY-002)."
+  value       = aws_cognito_user_pool.users.id
+}
+
+output "cognito_client_id" {
+  description = "ID of the public SPA app client (frontend login, SECURITY-003)."
+  value       = aws_cognito_user_pool_client.web.id
+}
+
+output "cognito_issuer_url" {
+  description = "OIDC issuer of the user pool (frontend authority, JWT authorizer)."
+  value       = "https://${aws_cognito_user_pool.users.endpoint}"
+}
+
+output "cognito_login_url" {
+  description = "Base URL of the Cognito managed login domain (logout endpoint)."
+  value       = "https://${local.auth_login_domain}"
+}

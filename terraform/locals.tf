@@ -52,6 +52,19 @@ locals {
     "GET /tenners/{tennerId}/history",          # TICKET-020
   ]
 
+  # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.
+  api_public_routes = ["GET /health"]
+
+  # Authentication (SECURITY-002, ADR 0001). The Cognito domain prefix must be unique per region;
+  # a hash of the account ID keeps it stable without exposing the account ID in the login URL.
+  auth_user_pool_name     = "${local.name_prefix}-users-${var.environment}"
+  auth_client_name        = "${local.name_prefix}-web-${var.environment}"
+  auth_domain_prefix      = "${local.name_prefix}-${var.environment}-${substr(sha1(data.aws_caller_identity.current.account_id), 0, 8)}"
+  auth_login_domain       = "${local.auth_domain_prefix}.auth.${var.aws_region}.amazoncognito.com"
+  auth_callback_path      = "/auth/callback"
+  auth_token_minutes      = 60
+  auth_refresh_token_days = 30
+
   # Lambda bundle built by `npm run build` in backend/ (dist/index.mjs).
   api_source_dir  = "${path.module}/../backend/dist"
   api_package_zip = "${path.module}/../.build/tenner-api.zip"

@@ -484,6 +484,28 @@ Decided in [`decisions/0001-authentication.md`](decisions/0001-authentication.md
 
 Implementation: SECURITY-002 (infrastructure), SECURITY-003 (frontend), SECURITY-004 (backend).
 
+### Infrastructure (SECURITY-002, `terraform/auth.tf`)
+
+```text
+Browser ──(Authorization Code + PKCE)──► Cognito managed login  tenner-prod-<hash>.auth.eu-central-1.amazoncognito.com
+   │                                          │
+   │◄──────────── ID token, refresh token ────┘
+   │
+   └── Authorization: Bearer <ID token> ──► API Gateway JWT authorizer (issuer = user pool, audience = app client)
+                                                   └── Lambda tenner-api (claims: custom:tenantId, custom:userId)
+```
+
+| Resource | Settings |
+|---|---|
+| `aws_cognito_user_pool.users` (`tenner-users-prod`) | Essentials tier, admin-only sign-up, e-mail username, password ≥ 12, deletion protection, custom attributes `tenantId` (immutable) and `userId` |
+| `aws_cognito_user_pool_client.web` (`tenner-web-prod`) | public client, code flow + PKCE, scopes `openid email`, callback `https://<cloudfront>/auth/callback`, tokens 60 min, refresh 30 days, revocation on, cannot write custom attributes |
+| `aws_cognito_user_pool_domain.login` | managed login v2, prefix `tenner-prod-<first 8 hex of sha1(account id)>` |
+| `aws_apigatewayv2_authorizer.cognito` | JWT authorizer on every route except `GET /health` (`local.api_public_routes`) |
+
+The CloudFront CSP allows `connect-src` to `cognito-idp.eu-central-1.amazonaws.com` (discovery, JWKS) and the
+managed login domain (token endpoint). Outputs: `cognito_user_pool_id`, `cognito_client_id`, `cognito_issuer_url`,
+`cognito_login_url`. Accounts are created with the AWS CLI (README → "User Accounts").
+
 ## Future
 
 - MFA (SECURITY-011)
@@ -882,7 +904,7 @@ The limits are global, not per client (TD-016).
 
 ## Not Yet Included
 
-Authentication (SECURITY-002), alarms (OBSERVABILITY-002). CORS was added with TICKET-017.
+Alarms (OBSERVABILITY-002). Authentication: see "Security" (SECURITY-002). CORS was added with TICKET-017.
 
 ---
 
