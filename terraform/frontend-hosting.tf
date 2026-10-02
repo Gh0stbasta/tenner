@@ -7,7 +7,7 @@ resource "aws_s3_bucket" "frontend" {
   tags = {
     Name        = local.frontend_bucket_name
     Purpose     = "Frontend asset storage."
-    Description = "Private bucket with the built Tenner single-page application, served via CloudFront."
+    Description = "Private bucket with the built Tenner single-page application served via CloudFront."
   }
 }
 
