@@ -184,12 +184,12 @@ describe("TennersPage", () => {
     expect(await screen.findByText("Die Aktion ist fehlgeschlagen. Bitte versuche es erneut.")).toBeInTheDocument();
   });
 
-  it("wires the edit trigger", async () => {
+  it("opens the edit dialog with the Tenner's values", async () => {
     mockFetch({ "GET /tenners": listHandler });
-    const onEdit = vi.fn();
-    renderWithProviders(<TennersPage onEdit={onEdit} />);
+    renderWithProviders(<TennersPage />);
     await userEvent.click(await screen.findByRole("button", { name: "„Büro saugen“ bearbeiten" }));
-    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ tennerId: "t-1" }));
+    expect(screen.getByRole("dialog", { name: "Tenner bearbeiten" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Titel" })).toHaveValue("Büro saugen");
   });
 
   it("opens the create dialog from the header", async () => {
@@ -210,12 +210,12 @@ describe("TennersPage", () => {
       })),
     );
     mockFetch({ "GET /tenners": listHandler, "DELETE /tenners/t-1": ok({ tennerId: "t-1", deleted: true }) });
-    const onEdit = vi.fn();
-    renderWithProviders(<TennersPage onEdit={onEdit} />);
+    renderWithProviders(<TennersPage />);
     await userEvent.click(await screen.findByRole("button", { name: "Weitere Aktionen für „Büro saugen“" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Bearbeiten" }));
-    expect(onEdit).toHaveBeenCalledOnce();
-    await userEvent.click(screen.getByRole("button", { name: "Weitere Aktionen für „Büro saugen“" }));
+    expect(screen.getByRole("dialog", { name: "Tenner bearbeiten" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Weitere Aktionen für „Büro saugen“" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Archivieren" }));
     expect(screen.getByRole("dialog", { name: "Tenner archivieren?" })).toBeInTheDocument();
   });

@@ -16,6 +16,7 @@ import { useCompleteTenner } from "../completions/useCompleteTenner";
 import { DEFAULT_LIST_PARAMS, useArchiveTenner, useRestoreTenner, useTenners, type TennerListParams } from "./api";
 import { ConfirmArchiveDialog } from "./ConfirmArchiveDialog";
 import { CreateTennerDialog } from "./CreateTennerDialog";
+import { EditTennerDialog } from "./EditTennerDialog";
 import type { Tenner } from "./schemas";
 import { tennerStatus } from "./status";
 import { TennerCard } from "./TennerCard";
@@ -25,8 +26,6 @@ import { TennerSearch } from "./TennerSearch";
 const SEARCH_DEBOUNCE_MS = 300;
 
 export interface TennersPageProps {
-  /** Opens the edit dialog (FRONTEND-005). */
-  readonly onEdit?: (tenner: Tenner) => void;
   /** Extra header content, e.g. Quick Add (FRONTEND-006). */
   readonly headerExtra?: ReactNode;
 }
@@ -38,11 +37,12 @@ function summary(tenners: readonly Tenner[], today: string): string {
   return `${active.length} aktive Tenner · ${overdue} überfällig · ${formatMinutes(minutes)} geschätzt`;
 }
 
-export function TennersPage({ onEdit, headerExtra }: TennersPageProps) {
+export function TennersPage({ headerExtra }: TennersPageProps) {
   const [params, setParams] = useState<TennerListParams>(DEFAULT_LIST_PARAMS);
   const [search, setSearch] = useState("");
   const [archiveCandidate, setArchiveCandidate] = useState<Tenner | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<Tenner | null>(null);
   const debouncedSearch = useDebouncedValue(search.trim().toLocaleLowerCase("de-DE"), SEARCH_DEBOUNCE_MS);
   const today = todayIsoDate();
 
@@ -114,7 +114,7 @@ export function TennersPage({ onEdit, headerExtra }: TennersPageProps) {
                 status={tennerStatus(tenner, today)}
                 busy={busyTennerId === tenner.tennerId}
                 onComplete={(t) => complete.mutate({ tennerId: t.tennerId, estimatedMinutes: t.estimatedMinutes })}
-                onEdit={onEdit}
+                onEdit={setEditing}
                 onArchive={setArchiveCandidate}
                 onRestore={(t) => restore.mutate(t)}
               />
@@ -124,6 +124,7 @@ export function TennersPage({ onEdit, headerExtra }: TennersPageProps) {
       )}
 
       <CreateTennerDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      <EditTennerDialog tenner={editing} onClose={() => setEditing(null)} />
       <ConfirmArchiveDialog
         tenner={archiveCandidate}
         busy={archive.isPending}

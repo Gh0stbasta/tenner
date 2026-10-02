@@ -123,3 +123,19 @@ export function useCreateTenner() {
     onSettled: invalidate,
   });
 }
+
+export type TennerUpdate = Partial<TennerInput> & { readonly active?: boolean };
+
+export function updateTenner(tennerId: string, update: TennerUpdate): Promise<Tenner> {
+  return apiClient.put(`/tenners/${encodeURIComponent(tennerId)}`, { schema: tennerSchema, body: update });
+}
+
+export function useUpdateTenner() {
+  const invalidate = useInvalidateTenners();
+  return useMutation({
+    mutationFn: ({ tennerId, update }: { readonly tennerId: string; readonly update: TennerUpdate }) =>
+      updateTenner(tennerId, update),
+    onSuccess: (updated) => trackEvent("TennerUpdated", { tennerId: updated.tennerId }),
+    onSettled: invalidate,
+  });
+}
