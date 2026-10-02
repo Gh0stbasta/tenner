@@ -611,3 +611,34 @@ Do not implement:
 - Real-Time Updates
 
 These capabilities may be added in future releases.
+
+---
+
+# Implementation Status
+
+Done 2026-10-02.
+
+- One-click "Erledigt" (`CompleteTennerButton`, check-circle icon, ≥ 44 px) on the dashboard (due today, overdue)
+  and on the Tenners page; `completedBy` = current user, `actualMinutes` = estimated minutes.
+- Optimistic update: the Tenner leaves "Heute fällig"/"Überfällig" immediately (subtle collapse), summary and
+  workload groups are adjusted; rollback on error. Dashboard, lists and history are refreshed afterwards.
+- Snackbar "✅ „Titel“ erledigt." with "Rückgängig" for 10 seconds → `POST /tenners/{id}/undo-completion`
+  (`revertedBy` = current user) → "↩ Erledigung zurückgenommen.". Failures show an error snackbar with
+  "Erneut versuchen"; retries reuse the same `Idempotency-Key`, so they cannot complete or undo twice.
+- "Zuletzt erledigt" on the dashboard: `GET /history?limit=10`, title, "Erledigt von …", relative time
+  (gerade eben, vor N Minuten/Stunden, gestern, vor N Tagen); deleted Tenners show "Gelöschter Tenner".
+- Current user: "Ich bin" selector in the header (Stefan/Julia, default Stefan), stored in `localStorage`.
+- Keyboard: Enter and Space trigger the buttons (native buttons); labels like "„Büro saugen“ erledigen".
+- Tests: 26 new (optimistic update, undo, retries with the same key, current user, activity, relative time).
+  Frontend: lint, 144 tests (~98.7% coverage), build; Chromium check with mocked API.
+- Deviations and assumptions:
+  - The ticket says the current user is selected "through settings"; the settings page is FRONTEND-008
+    (block 6). Until then the selection sits in the header.
+  - The completion workflow is a provider (`CompletionProvider`) instead of separate `useCompleteTenner`/
+    `useUndoCompletion` hooks, because the card that starts a completion is removed optimistically and its
+    hooks would unmount before the response arrives. `UndoCompletionAction`, `CompletionSnackbar` and
+    `CompletionTimeline` are covered by the provider, the global snackbar and `RecentActivityWidget`/`ActivityCard`.
+  - Undo is offered in the snackbar only. The backend always reverts the Tenner's latest completion, so an
+    undo button on older activity entries would be misleading.
+  - `react-transition-group` (already a dependency of MUI) is now a direct dependency for the collapse animation.
+

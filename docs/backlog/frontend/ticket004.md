@@ -368,4 +368,21 @@ Submission Active
 
 ---
 
-#
+# Implementation Status
+
+Done 2026-10-02.
+
+- "Neuer Tenner" on `/tenners` opens "Tenner anlegen" (MUI dialog, full screen on phones).
+- Fields: Titel, Kategorie, Zuständig, Geschätzte Minuten, Häufigkeit in Tagen; presets Täglich (1), Wöchentlich (7),
+  Alle 2 Wochen (14), Monatlich (30), Vierteljährlich (90), Jährlich (365).
+- Validation with React Hook Form + Zod (`tennerForm.schema.ts`, same limits as the backend): inline messages while
+  typing; the submit button stays disabled while the form is invalid or a request runs.
+- `POST /tenners`; on success the dialog closes, dashboard and lists are invalidated and a snackbar confirms.
+  On failure the input is kept and an error is shown; backend `VALIDATION_ERROR` details appear on the field.
+- New shared pieces: `TennerForm` (reused by FRONTEND-005), `NotificationProvider`/`useNotify`, `applyServerErrors`.
+- Tests: 12 new (dialog and notifications). Frontend: lint, 84 tests (~98% coverage), build; Chromium check.
+- Assumptions:
+  - This ticket file ends after "Submit Button" (truncated). Success and error behaviour follow FRONTEND-005
+    (close, refresh, snackbar; keep input on failure).
+  - Defaults: Haushalt, current user, 10 minutes, every 14 days (same as Quick Add, FRONTEND-006).
+

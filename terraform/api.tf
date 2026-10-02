@@ -90,6 +90,13 @@ resource "aws_apigatewayv2_stage" "api" {
   name        = var.environment
   auto_deploy = true
 
+  # Cost cap for the public API (SECURITY-014). Throttled requests get HTTP 429 from
+  # API Gateway and never invoke Lambda or DynamoDB. Limits are global, not per client.
+  default_route_settings {
+    throttling_burst_limit = var.api_throttling_burst_limit
+    throttling_rate_limit  = var.api_throttling_rate_limit
+  }
+
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_access.arn
     format = jsonencode({

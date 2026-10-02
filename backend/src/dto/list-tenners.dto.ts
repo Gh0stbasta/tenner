@@ -11,8 +11,10 @@ export type SortOrder = "asc" | "desc";
 export interface ListTennersRequest {
   readonly assignedTo?: UserId | undefined;
   readonly category?: Category | undefined;
-  /** Default: true (only active Tenners). */
+  /** Default: true (only active Tenners); no default when deleted=true. */
   readonly active?: boolean | undefined;
+  /** true: only soft-deleted (archived) Tenners (TICKET-024). Default: deleted Tenners are excluded. */
+  readonly deleted?: boolean | undefined;
   /** true: nextDue <= today. */
   readonly due?: boolean | undefined;
   /** true: nextDue < today. */

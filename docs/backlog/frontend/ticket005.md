@@ -665,3 +665,25 @@ Do not implement:
 - Advanced Scheduling
 
 These capabilities will be implemented in future tickets.
+
+---
+
+# Implementation Status
+
+Done 2026-10-02.
+
+- "Bearbeiten" on a Tenner card opens "Tenner bearbeiten" (full screen on phones) with the shared `TennerForm`
+  (refactored out of the Create dialog in FRONTEND-004) plus the Active switch (Aktiv/Inaktiv).
+- Read-only facts: Tenner-ID, Erstellt, Zuletzt erledigt ("Noch nie" if never), Nächste Fälligkeit.
+- "Änderungen speichern" is disabled while invalid, unchanged or saving. Only changed fields are sent
+  (`PUT /tenners/{id}`, partial update). Success: close, refresh dashboard and lists, snackbar
+  "✅ Tenner aktualisiert."; failure keeps the input and shows an error; backend field errors appear inline.
+- Unsaved changes: closing a changed form asks "Ungespeicherte Änderungen verwerfen?" (Verwerfen / Weiter bearbeiten).
+- Hook `useUpdateTenner()`; components `EditTennerDialog`, `DiscardChangesDialog`, `TennerForm`.
+- Tests: 10 new. Frontend: lint, 94 tests (~98% coverage), build.
+- Deviations and assumptions:
+  - "Archived" Tenners (soft-deleted) cannot be edited: the backend returns 404 for `PUT` on deleted Tenners
+    (TICKET-012). They must be restored first, so the archive view offers "Wiederherstellen" only.
+    Inactive Tenners (`active=false`) can be edited and reactivated with the switch.
+  - No separate `EditTennerButton` component: the edit action is part of `TennerCard` (button or "more" menu).
+

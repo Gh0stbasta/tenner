@@ -89,7 +89,8 @@ Unknown fields are rejected (`strictObject`). An update must contain at least on
 |---|---|---|
 | `assignedTo` | `STEFAN`, `JULIA` | assigned user |
 | `category` | category values | category |
-| `active` | `true` (default), `false` | active or inactive Tenners |
+| `active` | `true` (default), `false` | active or inactive Tenners. No default together with `deleted=true` |
+| `deleted` | `true`, `false` | `true`: only soft-deleted (archived) Tenners (TICKET-024). Default: deleted Tenners are excluded |
 | `due` | `true`, `false` | `true`: `nextDue <= today` (UTC). `false` does not filter |
 | `overdue` | `true`, `false` | `true`: `nextDue < today` (wins over `due`). `false` does not filter |
 | `sort` | `nextDue` (default), `title`, `createdAt`, `updatedAt` | sort field (ties broken by title, then ID) |
@@ -130,7 +131,7 @@ This is a **soft delete only**. The item and its completion history stay in Dyna
 | missing | 404 `NOT_FOUND` |
 
 Effects on other endpoints:
-- `GET /tenners` always excludes deleted Tenners. The repository has an `includeDeleted` criterion for TICKET-015.
+- `GET /tenners` excludes deleted Tenners unless `deleted=true` is set; then it returns only deleted Tenners (archive view, TICKET-024).
 - `PUT` on a deleted Tenner returns 404. Use the restore endpoint (TICKET-015) instead.
 
 `Tenner.deletedAt` (UTC timestamp or `null`) is part of the model and of `TennerResponse`.

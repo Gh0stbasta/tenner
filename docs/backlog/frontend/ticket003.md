@@ -700,3 +700,26 @@ Do not implement:
 - Notifications
 
 These capabilities will be implemented in future frontend tickets.
+
+---
+
+# Implementation Status
+
+Done 2026-10-02.
+
+- `/tenners`: header with "N aktive Tenner · N überfällig · N Min. geschätzt" and "Neuer Tenner" (trigger wired
+  through `onCreate`, dialog in FRONTEND-004); live title search (debounced 300 ms, client-side); filters status
+  (Aktiv/Archiviert/Alle), person, category, sort field and direction (server-side parameters).
+- Cards (1/2/3 per row): title, category, person, minutes, frequency, next due date and a status badge
+  (Heute fällig, seit N Tagen überfällig, fällig in N Tagen, Inaktiv, Archiviert).
+- Actions: Erledigt (`POST /complete`), Bearbeiten (trigger for FRONTEND-005), Archivieren with confirmation
+  (`DELETE`), Wiederherstellen in the archive (`POST /restore`). On phones, Edit and Archive move into a "more" menu.
+- Empty, skeleton loading and error-with-retry states. Console telemetry for completed, archived, restored and filter changes.
+- Backend dependency: listing archived Tenners needed `GET /tenners?deleted=true` → TICKET-024 (done before this ticket).
+- Tests: 23 new (page and status logic). Frontend: lint, 72 tests (~98.7% coverage), build; Chromium check (desktop, phone).
+- Assumptions:
+  - "Archived" = soft-deleted. Inactive Tenners (`active=false`) appear under "Alle" with an "Inaktiv" badge; their
+    complete button is disabled because the backend rejects completing inactive Tenners.
+  - Search filters the loaded list on the client (the API has no text search; household volume is small).
+  - Due status uses the browser's local date; the backend uses UTC for list filters (TD-005).
+

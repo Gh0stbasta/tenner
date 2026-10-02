@@ -880,9 +880,27 @@ Client → API Gateway HTTP API (tenner-api-gateway, stage prod)
   and is not bundled.
 - **Invoke permission:** limited to this API (`execution_arn/*/*`).
 
+## Throttling (SECURITY-014)
+
+The `prod` stage throttles every route through `default_route_settings`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `api_throttling_burst_limit` | 20 | Maximum burst of concurrent requests |
+| `api_throttling_rate_limit` | 10 | Steady-state requests per second |
+
+Requests above the limit get HTTP 429 from API Gateway. They never invoke Lambda or DynamoDB.
+
+**Worst-case cost:** without throttling, only the account-wide Lambda concurrency limit bounded
+the load. At 1000 req/s (~86M requests/day) and about 2–3 USD per million requests, a sustained
+flood could cost 150–250 USD/day. At 10 req/s the API serves at most ~864,000 requests/day,
+about 2–3 USD/day. Rejected requests are not billed by API Gateway HTTP APIs.
+
+The limits are global, not per client (TD-016).
+
 ## Not Yet Included
 
-Authentication (SECURITY-002), throttling (SECURITY-005), alarms (OBSERVABILITY-002). CORS was added with TICKET-017.
+Authentication (SECURITY-002), alarms (OBSERVABILITY-002). CORS was added with TICKET-017.
 
 ---
 
@@ -1059,6 +1077,28 @@ Browser ──HTTPS──> CloudFront (tenner-cloudfront, PriceClass_100, HTTP/2
 | Cost | under 1 USD/month at household traffic (CloudFront free tier 1 TB/month, S3 a few MB) |
 
 Outputs: `frontend_bucket_name`, `cloudfront_distribution_id`, `cloudfront_domain_name`, `frontend_url`.
+
+---
+
+# Frontend Application
+
+Introduced by FRONTEND-001 (`frontend/`). Details: [`frontend/README.md`](../frontend/README.md).
+
+```text
+Browser ── CloudFront (index.html, assets/*) ── S3 tenner-frontend-<env>
+   │
+   └── fetch (src/api/client.ts) ──► API Gateway HTTP API (CORS: CloudFront origin only)
+```
+
+| Concern | Decision |
+|---|---|
+| Stack | React 19, TypeScript (strict), Vite 8, MUI 9, React Router 8, TanStack Query 5, React Hook Form, Zod |
+| Language | German UI (decision 2026-10-02); internationalization follows with UX-004 |
+| Configuration | `VITE_API_BASE_URL`, injected at build time by `deploy.yml` from the Terraform output `api_endpoint`; read only in `src/config.ts` |
+| API access | `src/api/client.ts` only (ESLint forbids `fetch` elsewhere): envelope unwrapping, Zod validation of payloads, `ApiError` with status and backend error code |
+| Server state | TanStack Query; reads retry transient failures (network, 429, 5xx) up to 3 times, writes are never retried automatically |
+| Structure | feature folders under `src/features/`; shared UI in `src/components/` |
+| Fonts | system font stack, no web fonts (the CSP allows only `'self'`) |
 
 ---
 

@@ -1,0 +1,135 @@
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { queryKeys } from "../../api/queryKeys";
+import { fail, mockFetch, ok } from "../../tests/fetchMock";
+import { tenner } from "../../tests/fixtures";
+import { renderWithProviders } from "../../tests/render";
+import { EditTennerDialog } from "./EditTennerDialog";
+import type { Tenner } from "./schemas";
+
+const EXISTING = tenner({
+  tennerId: "t-9",
+  title: "Büro saugen",
+  lastCompleted: "2026-09-20T10:00:00Z",
+  nextDue: "2026-10-04",
+});
+
+function renderDialog(current: Tenner | null = EXISTING, onClose = vi.fn()) {
+  const result = renderWithProviders(<EditTennerDialog tenner={current} onClose={onClose} />);
+  return { ...result, onClose };
+}
+
+const saveButton = () => screen.getByRole("button", { name: "Änderungen speichern" });
+const titleInput = () => screen.getByRole("textbox", { name: "Titel" });
+
+describe("EditTennerDialog", () => {
+  beforeEach(() => vi.spyOn(console, "info").mockImplementation(() => undefined));
+
+  it("renders nothing without a Tenner", () => {
+    renderDialog(null);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("loads the existing values and read-only facts; save is disabled without changes", () => {
+    renderDialog();
+    expect(screen.getByRole("dialog", { name: "Tenner bearbeiten" })).toBeInTheDocument();
+    expect(titleInput()).toHaveValue("Büro saugen");
+    expect(screen.getByRole("spinbutton", { name: "Häufigkeit in Tagen" })).toHaveValue(14);
+    expect(screen.getByRole("switch", { name: "Aktiv" })).toBeChecked();
+    expect(screen.getByText("t-9")).toBeInTheDocument();
+    expect(screen.getByText("So., 4. Okt.")).toBeInTheDocument();
+    expect(screen.getByText(/^20\.09\.2026/)).toBeInTheDocument();
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it("shows 'Noch nie' for Tenners that were never completed", () => {
+    renderDialog(tenner({ lastCompleted: null }));
+    expect(screen.getByText("Noch nie")).toBeInTheDocument();
+  });
+
+  it("validates changes inline", async () => {
+    renderDialog();
+    await userEvent.clear(titleInput());
+    await userEvent.type(titleInput(), "ab");
+    expect(await screen.findByText("Der Titel braucht mindestens 3 Zeichen.")).toBeInTheDocument();
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it("sends only changed fields, closes, notifies and refreshes", async () => {
+    const fetchMock = mockFetch({
+      "PUT /tenners/t-9": ok({ ...EXISTING, title: "Büro gründlich saugen", frequencyDays: 30 }),
+    });
+    const { onClose, queryClient } = renderDialog();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+
+    await userEvent.clear(titleInput());
+    await userEvent.type(titleInput(), "Büro gründlich saugen");
+    await userEvent.click(screen.getByRole("button", { name: "Monatlich (30)" }));
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    await userEvent.click(saveButton());
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(fetchMock.calls()[0]?.body).toEqual({ title: "Büro gründlich saugen", frequencyDays: 30 });
+    expect(await screen.findByText("✅ Tenner aktualisiert.")).toBeInTheDocument();
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.dashboard });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.tenners });
+  });
+
+  it("deactivates through the Active toggle", async () => {
+    const fetchMock = mockFetch({ "PUT /tenners/t-9": ok({ ...EXISTING, active: false }) });
+    renderDialog();
+    await userEvent.click(screen.getByRole("switch", { name: "Aktiv" }));
+    expect(screen.getByRole("switch", { name: "Inaktiv" })).not.toBeChecked();
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(fetchMock.calls()[0]?.body).toEqual({ active: false }));
+  });
+
+  it("reactivates an inactive Tenner", async () => {
+    const fetchMock = mockFetch({ "PUT /tenners/t-9": ok(EXISTING) });
+    renderDialog({ ...EXISTING, active: false });
+    await userEvent.click(screen.getByRole("switch", { name: "Inaktiv" }));
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(fetchMock.calls()[0]?.body).toEqual({ active: true }));
+  });
+
+  it("keeps the changes and shows an error when saving fails", async () => {
+    mockFetch({ "PUT /tenners/t-9": fail(500, "INTERNAL_ERROR") });
+    const { onClose } = renderDialog();
+    await userEvent.type(titleInput(), " neu");
+    await userEvent.click(saveButton());
+    expect(
+      await screen.findByText(
+        "Änderungen konnten nicht gespeichert werden. Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+      ),
+    ).toBeInTheDocument();
+    expect(titleInput()).toHaveValue("Büro saugen neu");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("asks before discarding unsaved changes", async () => {
+    const { onClose } = renderDialog();
+    await userEvent.type(titleInput(), " neu");
+    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+
+    const confirm = screen.getByRole("dialog", { name: "Ungespeicherte Änderungen verwerfen?" });
+    await userEvent.click(within(confirm).getByRole("button", { name: "Weiter bearbeiten" }));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(await screen.findByRole("textbox", { name: "Titel" })).toHaveValue("Büro saugen neu");
+
+    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "Ungespeicherte Änderungen verwerfen?" })).getByRole("button", {
+        name: "Verwerfen",
+      }),
+    );
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("closes without asking when nothing changed", async () => {
+    const { onClose } = renderDialog();
+    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(screen.queryByText("Ungespeicherte Änderungen verwerfen?")).not.toBeInTheDocument();
+  });
+});

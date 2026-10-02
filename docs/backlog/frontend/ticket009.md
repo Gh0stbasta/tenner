@@ -257,3 +257,26 @@ Do not implement:
 - Editing history entries
 - Charts (ANALYTICS-009)
 - Household-wide history page (FRONTEND-010)
+
+---
+
+# Implementation Status
+
+Done 2026-10-02.
+
+- Route `/tenners/:tennerId`; titles on the Tenners page and on the dashboard link to it; "Alle Tenner" leads back.
+- Header: title, category, assigned user, status badge; actions Erledigt, Bearbeiten (existing dialog),
+  Archivieren (existing confirmation, then back to the list). Archived Tenners show "Wiederherstellen" instead.
+- Zeitplan: frequency, last completed (date + "gestern"/"vor N Tagen"), next due (date + relative), estimated minutes.
+- Verlauf: `GET /tenners/{id}/history?limit=20`, newest first, "Mehr anzeigen" loads the next page with the cursor
+  (`useInfiniteQuery`); empty state "Noch nicht erledigt.".
+- Regelmäßigkeit (client-side from the loaded history): completions in the last 90 days and the average interval
+  vs. the configured frequency (green when within 10%).
+- Errors: 404 → "Tenner nicht gefunden" with a link to `/tenners`; other failures → retry, separately for Tenner and history.
+- Completing or undoing invalidates the Tenner and its history (`tenners` and `history` query keys).
+- Tests: 15 new (page, consistency, links). Frontend: lint, 158 tests (~98.7% coverage), build; Chromium check (desktop, phone).
+- Assumptions:
+  - The Tenner is loaded with `includeDeleted=true`, so archived Tenners can be inspected and restored from the detail page.
+  - "Delete" is the existing archive (soft delete) flow; permanent deletion does not exist.
+  - The consistency indicator only uses the loaded history pages (20 entries at first), as the ticket describes.
+

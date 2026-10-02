@@ -63,3 +63,25 @@ variable "application_timezone" {
     error_message = "application_timezone must be an IANA timezone such as Europe/Berlin."
   }
 }
+
+variable "api_throttling_burst_limit" {
+  description = "Maximum concurrent request burst for every route of the HTTP API stage (SECURITY-014)."
+  type        = number
+  default     = 20
+
+  validation {
+    condition     = var.api_throttling_burst_limit >= 1 && floor(var.api_throttling_burst_limit) == var.api_throttling_burst_limit
+    error_message = "api_throttling_burst_limit must be a whole number of at least 1."
+  }
+}
+
+variable "api_throttling_rate_limit" {
+  description = "Steady-state requests per second for every route of the HTTP API stage (SECURITY-014)."
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.api_throttling_rate_limit > 0
+    error_message = "api_throttling_rate_limit must be greater than 0."
+  }
+}

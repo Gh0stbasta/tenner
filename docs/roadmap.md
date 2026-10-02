@@ -3,8 +3,12 @@
 This roadmap was produced by the backlog gap analysis in [META-001](meta-ticket.md).
 The full ticket index is in [`backlog/README.md`](backlog/README.md).
 
-> **Status note:** The repository contains ticket *definitions* only. There is no application
-> code, Terraform or workflow in the repository yet. "Existing" below means "a ticket defines it".
+> **Status (2026-10-02):** The gap analysis below was written when the repository contained ticket
+> definitions only ("existing" means "a ticket defines it"). Since then, Phase 1 is largely implemented and
+> deployed: CI/CD, Terraform, backend API (TICKET-001 – 020, 023, 024), API throttling (SECURITY-014) and the
+> German web app (FRONTEND-001 – 007, 009, UX-005). Open in Phase 1: authentication (SECURITY-001 – 004),
+> FRONTEND-008, SECURITY-005, SECURITY-007, OPERATIONS-001, OPERATIONS-006. Each ticket file has an
+> "Implementation Status" section.
 
 ---
 

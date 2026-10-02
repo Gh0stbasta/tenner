@@ -100,23 +100,23 @@ Short burst (≤ 100 requests) against GET /health shows HTTP 429 responses
 
 # Acceptance Criteria
 
-- [ ] HTTP API stage has default route throttling (burst 20, rate 10 req/s by default)
-- [ ] Throttling limits are configurable through validated Terraform variables
-- [ ] Terraform tests cover the defaults and the variable validation
-- [ ] Worst-case daily cost is documented in `docs/architecture.md`
-- [ ] README and technical debt are updated
-- [ ] SECURITY-005 references this ticket for throttling
+- [x] HTTP API stage has default route throttling (burst 20, rate 10 req/s by default)
+- [x] Throttling limits are configurable through validated Terraform variables
+- [x] Terraform tests cover the defaults and the variable validation
+- [x] Worst-case daily cost is documented in `docs/architecture.md`
+- [x] README and technical debt are updated
+- [x] SECURITY-005 references this ticket for throttling
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
@@ -135,3 +135,17 @@ Short burst (≤ 100 requests) against GET /health shows HTTP 429 responses
 - AWS WAF rate-based rules (cost ~5+ USD/month)
 - AWS Budgets and cost alerts (OPERATIONS-001)
 - Access logging and the rest of the SECURITY-005 baseline
+
+---
+
+# Implementation Status
+
+- `terraform/api.tf`: `default_route_settings` on `aws_apigatewayv2_stage.api`.
+- `terraform/variables.tf`: `api_throttling_burst_limit` (default 20, whole number >= 1) and
+  `api_throttling_rate_limit` (default 10, > 0).
+- Tests: 5 new runs in `terraform/tests/api.tftest.hcl` (defaults, override, three invalid values).
+  `terraform fmt -check`, `validate`, `test` (33 passed).
+- Docs: architecture (limits and worst-case cost), README ("API Throttling"), TD-016 (global limits).
+  SECURITY-005 already references this ticket.
+- Open: the manual burst test (HTTP 429) runs after the deploy.
+
