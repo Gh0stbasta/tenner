@@ -60,7 +60,7 @@ globally available. If it is taken, change it in `terraform/locals.tf` **and** `
 
 ### CI Permissions
 
-Besides permissions for the managed resources, `GithubActionsDeployRole` needs the following.
+Besides permissions for the managed resources, `GitHubActionsDeployRole` needs the following.
 
 For the managed resources so far:
 - Resource Groups
@@ -128,13 +128,20 @@ Deployments to `main` run one at a time (`concurrency: deploy-main`). A running
 
 These must exist before the workflows can authenticate. This repository does not manage them.
 
-1. **IAM role `GithubActionsDeployRole`.** It must trust the GitHub OIDC provider
+1. **IAM role `GitHubActionsDeployRole`.** It must trust the GitHub OIDC provider
    `token.actions.githubusercontent.com` with audience `sts.amazonaws.com`, and allow these subjects:
 
    ```text
-   repo:Gh0stbasta/tenner:ref:refs/heads/main   (deploy.yml)
-   repo:Gh0stbasta/tenner:pull_request          (pr.yml: identity check and terraform plan)
+   repo:Gh0stbasta@163649161/tenner@1400531132:ref:refs/heads/main   (deploy.yml)
+   repo:Gh0stbasta@163649161/tenner@1400531132:pull_request          (pr.yml: identity check and terraform plan)
    ```
+
+   GitHub includes the numeric owner and repository IDs in the `sub` claim
+   (`<owner>@<owner-id>/<repo>@<repo-id>`). A subject without the IDs, such as
+   `repo:Gh0stbasta/tenner:pull_request`, never matches. The IDs are public, not secrets.
+   The `pull_request` subject was verified in CI on 2026-10-02; the `main` subject is assumed
+   to follow the same format and is verified by the first deployment.
+   Use `StringEquals` for exact subjects. Wildcards (`*`) only work with `StringLike`.
 
 2. **Repository secret `AWS_ROLE_ARN`** containing the ARN of that role.
 
@@ -143,7 +150,7 @@ If the PR subject is not trusted, `pr.yml` fails at "Configure AWS credentials".
 ### Verifying the setup
 
 1. Open a pull request. Check that **PR Validation** passes and that the "Verify AWS identity"
-   step prints the assumed `GithubActionsDeployRole` session.
+   step prints the assumed `GitHubActionsDeployRole` session.
 2. Merge to `main`. Check that **Deploy** passes and shows the same identity.
 
 ### Frontend Publishing

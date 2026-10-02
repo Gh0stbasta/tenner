@@ -200,7 +200,7 @@ TICKET-008, TICKET-013, FRONTEND-008, HOUSEHOLD-ADMIN-001, HOUSEHOLD-ADMIN-002
 
 ### Description
 
-`pr.yml` assumes `GithubActionsDeployRole` to run `aws sts get-caller-identity` and `terraform plan`.
+`pr.yml` assumes `GitHubActionsDeployRole` to run `aws sts get-caller-identity` and `terraform plan`.
 Code in a pull request branch therefore runs with the same AWS permissions as a deployment.
 
 ### Reason
@@ -217,7 +217,7 @@ collaborator.
 ### Suggested Improvement
 
 Create a separate read-only plan role (for example `GithubActionsPlanRole`) trusted only for the
-`pull_request` subject. Keep `GithubActionsDeployRole` trusted only for `refs/heads/main` or a
+`pull_request` subject. Keep `GitHubActionsDeployRole` trusted only for `refs/heads/main` or a
 protected GitHub environment. Part of SECURITY-008.
 
 ### Related Work

@@ -661,7 +661,7 @@ No AWS access keys are allowed.
 The IAM role used for deployments is:
 
 ```text
-GithubActionsDeployRole
+GitHubActionsDeployRole
 ```
 
 Terraform is the single source of truth for all infrastructure changes.
