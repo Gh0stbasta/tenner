@@ -27,7 +27,7 @@ Amazon Cognito User Pool and an API Gateway JWT authorizer.
 
 # Background
 
-Implements the decision from SECURITY-001 (assumed: Option A, one account per member).
+Implements the decision from SECURITY-001 ([ADR 0001](../../decisions/0001-authentication.md): Option A, one account per member).
 
 Version 1 requires no self-service registration: accounts are created by an
 administrator.

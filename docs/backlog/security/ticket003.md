@@ -62,7 +62,7 @@ Document the chosen storage and its XSS trade-off.
 
 ## API Client
 
-- Attach `Authorization: Bearer <access token>` to all API requests.
+- Attach `Authorization: Bearer <ID token>` to all API requests (ADR 0001: custom attributes are only in the ID token).
 - On `401`, attempt silent refresh once, then redirect to login.
 
 ## Current User

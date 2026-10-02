@@ -471,42 +471,24 @@ Longest Overdue Tenners
 
 # Security
 
-## MVP
+## Authentication (ADR 0001)
 
-Authentication is intentionally simplified.
+Decided in [`decisions/0001-authentication.md`](decisions/0001-authentication.md) (SECURITY-001):
 
-Possible approaches:
+- Amazon Cognito User Pool (Essentials tier), **one account per household member**, no self sign-up.
+- Login through Cognito managed login (Authorization Code flow with PKCE, public SPA client).
+- The API Gateway JWT authorizer protects every route except `GET /health`. The browser sends the
+  Cognito **ID token** because it carries `custom:tenantId` and `custom:userId`.
+- The backend derives tenant and acting user only from verified claims (SECURITY-004).
+- Tokens are kept in `localStorage` for up to 30 days (refresh token), so a device stays logged in.
 
-```text
-Single Shared Household Login
-```
-
-or
-
-```text
-Basic Cognito User Pool
-```
-
-Final decision deferred.
-
-Authentication must not delay MVP delivery.
-
----
+Implementation: SECURITY-002 (infrastructure), SECURITY-003 (frontend), SECURITY-004 (backend).
 
 ## Future
 
-Potential migration:
-
-```text
-AWS Cognito
-```
-
-Features:
-
-- Multiple households
-- Individual accounts
-- MFA
-- Social Login
+- MFA (SECURITY-011)
+- Social login (FUTURE-011)
+- Multiple households (FUTURE-001): a new `custom:tenantId` per household, no data migration
 
 ---
 
