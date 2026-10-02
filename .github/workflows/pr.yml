@@ -58,6 +58,32 @@ jobs:
         if: hashFiles('terraform/**/*.tf') != ''
         run: python3 -m unittest discover -s scripts/tests
 
+      # TEMPORARY (TICKET-001 OIDC troubleshooting): prints only non-secret OIDC claims and
+      # the role name (no account ID, never the token). Remove once the trust policy works.
+      - name: Debug OIDC claims (temporary)
+        continue-on-error: true
+        env:
+          ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+        run: |
+          token=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')
+          echo "$token" | python3 -c '
+          import base64, json, sys
+          payload = sys.stdin.read().strip().split(".")[1]
+          claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+          for key in ("sub", "aud", "iss", "repository", "repository_owner", "event_name", "ref", "job_workflow_ref"):
+              print(f"{key}: {claims.get(key)}")
+          '
+          python3 - <<'PY'
+          import os, re
+          arn = os.environ.get("ROLE_ARN", "")
+          match = re.fullmatch(r"arn:aws:iam::\d{12}:role/(.+)", arn.strip())
+          print("AWS_ROLE_ARN well-formed:", bool(match))
+          print("AWS_ROLE_ARN has surrounding whitespace:", arn != arn.strip())
+          if match:
+              print("Role name:", match.group(1))
+          PY
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6
         with:
