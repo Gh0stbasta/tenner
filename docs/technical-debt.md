@@ -444,3 +444,56 @@ public (FUTURE-003).
 
 SECURITY-014, SECURITY-002, SECURITY-005, TD-003, `terraform/api.tf`
 
+---
+
+## TD-017: Frontend bundle is a single 780 kB chunk
+
+### Description
+
+`npm run build` produces one JavaScript chunk of about 780 kB (240 kB gzip). Vite warns about chunks above 500 kB.
+MUI, React Router, TanStack Query, React Hook Form and Zod are all in the initial download.
+
+### Reason
+
+The MVP routes are small and loaded together; code splitting was not part of the FRONTEND tickets.
+
+### Impact
+
+Slower first load on mobile networks (CloudFront and the immutable cache of `assets/` keep repeat visits fast).
+No functional impact.
+
+### Suggested Improvement
+
+Lazy-load routes (`React.lazy` for the detail page, management page and dialogs) and set a performance budget
+(UX-007). Check the bundle with `vite build --mode production` and a visualizer.
+
+### Related Work
+
+UX-007, FRONTEND-001, `frontend/vite.config.ts`
+
+---
+
+## TD-018: Current user is chosen per device without authentication
+
+### Description
+
+The "Ich bin" selector in the header stores the current user (Stefan/Julia) in `localStorage`. Completions, undo,
+restores and Quick Add use it. Anyone can pick any user.
+
+### Reason
+
+Authentication (SECURITY-001 – 004) is not implemented yet; FRONTEND-007 needs a current user.
+
+### Impact
+
+`completedBy` is self-declared and not trustworthy for analytics or audit. No security impact beyond TD-003.
+
+### Suggested Improvement
+
+After SECURITY-002/004, derive the user from the identity token and remove the selector (or limit it to the
+household's members). FRONTEND-008 moves the selection to the settings page in the meantime.
+
+### Related Work
+
+FRONTEND-007, FRONTEND-008, SECURITY-004, TD-003
+

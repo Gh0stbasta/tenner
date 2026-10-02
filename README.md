@@ -22,7 +22,10 @@ The repository contains:
 - the DynamoDB persistence layer (TICKET-006): tables `tenner-tenners` and `tenner-history` with GSIs
 - the backend API (TICKET-008 to TICKET-016): CRUD, complete/undo/restore workflows and dashboard (see [`backend/README.md`](backend/README.md))
 - frontend hosting (TICKET-017): private S3 bucket `tenner-frontend-<env>` behind CloudFront with Origin Access Control; URL in the Terraform output `frontend_url`
-- the frontend foundation (FRONTEND-001): React, MUI, routing, API client in [`frontend/`](frontend/README.md)
+- the backend extension for archived Tenners (TICKET-024, `GET /tenners?deleted=true`) and API throttling (SECURITY-014)
+- the German web app in [`frontend/`](frontend/README.md) (FRONTEND-001 – 007, FRONTEND-009, UX-005): dashboard,
+  Tenner management with search and filters, create/edit dialogs, Quick Add, complete with undo, recent activity,
+  Tenner detail with history, central error handling. It is published to CloudFront by `deploy.yml`.
 - the project documentation
 
 ## Terraform (local)
