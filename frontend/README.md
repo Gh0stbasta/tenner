@@ -72,6 +72,16 @@ Features own their components, hooks and API functions, so `components/` stays s
 - **Layout:** app bar, permanent side navigation from `md` (900 px), drawer behind a menu button below.
 - **Errors:** a top-level error boundary shows a fallback with a reload button instead of a blank page.
 
+## Features
+
+| Route | Feature | Ticket |
+|---|---|---|
+| `/dashboard` | Today: summary cards, due today, overdue (highlighted), upcoming, workload per person and category, one-click completion | FRONTEND-002 |
+
+Queries and mutations share keys from `src/api/queryKeys.ts`. Completing a Tenner invalidates the dashboard,
+Tenner lists and history. Completions send an `Idempotency-Key`, so a repeated request cannot complete twice.
+Until a user can be selected (FRONTEND-007/008), completions are recorded for Stefan.
+
 ## Theme
 
 `src/theme/theme.ts`: light theme, primary `#1976d2`, secondary `#2e7d32`, rounded corners, system font stack

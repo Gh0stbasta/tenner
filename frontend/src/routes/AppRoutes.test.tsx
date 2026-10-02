@@ -1,13 +1,19 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { mockFetch, ok } from "../tests/fetchMock";
+import { dashboard } from "../tests/fixtures";
 import { renderWithProviders } from "../tests/render";
 import { AppRoutes } from "./AppRoutes";
 
 describe("AppRoutes", () => {
-  it("redirects / to /dashboard", () => {
+  beforeEach(() => {
+    mockFetch({ "GET /dashboard": ok(dashboard()) });
+  });
+
+  it("redirects / to the dashboard", async () => {
     renderWithProviders(<AppRoutes />, { route: "/" });
-    expect(screen.getByRole("heading", { level: 1, name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Heute" })).toBeInTheDocument();
   });
 
   it.each([

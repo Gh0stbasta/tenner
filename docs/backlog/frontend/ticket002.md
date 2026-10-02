@@ -677,3 +677,24 @@ Do not implement:
 - Authentication
 
 These capabilities will be delivered in subsequent frontend tickets.
+
+---
+
+# Implementation Status
+
+Done 2026-10-02.
+
+- `/dashboard` (default route via `/` redirect): header with date and actionable totals, four summary cards,
+  sections "Heute fällig", "Überfällig" (red accent, "seit N Tagen überfällig"), "Demnächst" ("fällig in N Tagen"),
+  workload per person and per category. Desktop: two columns; mobile: stacked in the required order.
+- One-click "Erledigt" on due-today and overdue cards: `POST /tenners/{id}/complete` with
+  `actualMinutes = estimatedMinutes` and an `Idempotency-Key`; afterwards dashboard, lists and history are invalidated.
+- Empty state "🎉 Alles erledigt." when nothing is actionable; skeleton loading; error with retry.
+- Tests: rendering, all sections, empty, loading, error + retry, completion request body, refresh after completion,
+  completion failure, redirect. 49 tests, ~98% coverage. Checked in Chromium with mocked API (desktop and phone).
+- Assumptions:
+  - `completedBy` is Stefan until FRONTEND-007/008 add the current user.
+  - Upcoming Tenners have no complete button on the dashboard (the ticket asks for it on due-today cards);
+    early completion is available on the Tenners page (FRONTEND-003).
+  - The page title is "Heute" instead of "Dashboard" (navigation label stays "Dashboard").
+
