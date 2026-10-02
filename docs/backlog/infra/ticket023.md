@@ -74,7 +74,7 @@ TICKET-017   (frontend bucket)
 - [x] Unit tests cover valid and invalid tag characters
 - [x] Terraform test asserts the resource group description pattern
 - [x] All existing tests pass (`terraform test`, tag checker tests)
-- [ ] Deploy run on `main` succeeds (verified after merge)
+- [x] Deploy run on `main` succeeds (run 36972617518, 2026-10-02)
 
 ---
 
@@ -84,7 +84,7 @@ TICKET-017   (frontend bucket)
 - [x] Tests completed
 - [x] Documentation updated
 - [x] Technical debt documented
-- [ ] Acceptance criteria verified (deploy on `main` pending)
+- [x] Acceptance criteria verified
 - [x] Git commit created
 
 ---
@@ -116,3 +116,5 @@ TICKET-017   (frontend bucket)
 - Validation: `terraform fmt -check`, `terraform validate`, `terraform test`, tag checker tests.
   A unit test reproduces the old frontend tag (comma); a mutation check with the old resource group
   description makes the new Terraform test fail.
+- Deploy run 36972617518: `Apply complete! Resources: 25 added, 0 changed, 0 destroyed.`
+  `/health` returned `{"status":"ok",...,"database":"connected"}`.
