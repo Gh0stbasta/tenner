@@ -591,3 +591,28 @@ Do not implement:
 - Notifications
 
 These capabilities may be implemented in future tickets.
+
+---
+
+# Implementation Status
+
+Done 2026-10-02.
+
+- Quick Add card at the top of the dashboard (below the header, visible without scrolling on phones) and of the
+  Tenners page: "Was soll ein Tenner werden?" + "Hinzufügen" (icon-only on phones); Enter submits.
+- Defaults: Haushalt, current user (Stefan until FRONTEND-007/008), 10 minutes, every 14 days; new Tenners are
+  active and can be edited, completed, archived and restored like any other.
+- Smart suggestions (`quickAdd.ts`): German and English keywords per category (e.g. zwift/rad/laufen → Fitness,
+  saugen/putzen/fenster → Haushalt, kinder/henry/hugo/harper → Familie). The hint below the input shows the
+  category that will be used and that everything can be changed later.
+- Duplicate detection: before creating, the active list (cached or fetched) is checked for equal titles or titles
+  that contain each other (≥ 4 characters, case and spaces ignored). A dialog offers "Trotzdem anlegen" or "Abbrechen".
+  If the list cannot be loaded, the Tenner is still created.
+- Success: input cleared, dashboard and lists refreshed, snackbar. Errors: inline validation (required, 3–100
+  characters) and "Tenner konnte nicht angelegt werden." with the input kept.
+- Tests: 23 new (rules and widget). Frontend: lint, 117 tests (~98.6% coverage), build; Chromium check on a phone.
+- Assumptions:
+  - Assigned user = current user instead of a fixed STEFAN, so FRONTEND-008 can make it configurable; today both are Stefan.
+  - Additional categories (Haus & Garten, Finanzen, Persönlich) got keywords too; the first matching category wins.
+  - No optimistic insert (optional in the ticket); the lists refresh right after the response.
+

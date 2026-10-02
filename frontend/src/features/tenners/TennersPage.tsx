@@ -3,7 +3,7 @@
 import AddIcon from "@mui/icons-material/Add";
 import { Alert, Box, Button } from "@mui/material";
 import Grid from "@mui/material/Grid";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { NoTennersFound } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/LoadingState";
@@ -17,6 +17,7 @@ import { DEFAULT_LIST_PARAMS, useArchiveTenner, useRestoreTenner, useTenners, ty
 import { ConfirmArchiveDialog } from "./ConfirmArchiveDialog";
 import { CreateTennerDialog } from "./CreateTennerDialog";
 import { EditTennerDialog } from "./EditTennerDialog";
+import { QuickAddTenner } from "./QuickAddTenner";
 import type { Tenner } from "./schemas";
 import { tennerStatus } from "./status";
 import { TennerCard } from "./TennerCard";
@@ -25,11 +26,6 @@ import { TennerSearch } from "./TennerSearch";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-export interface TennersPageProps {
-  /** Extra header content, e.g. Quick Add (FRONTEND-006). */
-  readonly headerExtra?: ReactNode;
-}
-
 function summary(tenners: readonly Tenner[], today: string): string {
   const active = tenners.filter((t) => t.active && t.deletedAt === null);
   const overdue = active.filter((t) => t.nextDue < today).length;
@@ -37,7 +33,7 @@ function summary(tenners: readonly Tenner[], today: string): string {
   return `${active.length} aktive Tenner · ${overdue} überfällig · ${formatMinutes(minutes)} geschätzt`;
 }
 
-export function TennersPage({ headerExtra }: TennersPageProps) {
+export function TennersPage() {
   const [params, setParams] = useState<TennerListParams>(DEFAULT_LIST_PARAMS);
   const [search, setSearch] = useState("");
   const [archiveCandidate, setArchiveCandidate] = useState<Tenner | null>(null);
@@ -79,7 +75,7 @@ export function TennersPage({ headerExtra }: TennersPageProps) {
           </Button>
         }
       />
-      {headerExtra}
+      <QuickAddTenner />
       <Box sx={{ display: "grid", gap: 1.5, mb: 3 }}>
         <TennerSearch value={search} onChange={setSearch} />
         <TennerFilters value={params} onChange={changeParams} />

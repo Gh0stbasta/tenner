@@ -8,6 +8,7 @@ import { PageLoading } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
 import { formatLongDate, formatMinutes, formatTennerCount } from "../../utils/format";
 import { useCompleteTenner } from "../completions/useCompleteTenner";
+import { QuickAddTenner } from "../tenners/QuickAddTenner";
 import { useDashboard, type Dashboard, type DashboardTenner } from "./api";
 import { DueTodayList } from "./DueTodayList";
 import { OverdueList } from "./OverdueList";
@@ -53,6 +54,7 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader title="Heute" subtitle={headerSubtitle(data)} />
+      <QuickAddTenner />
       {complete.isError && (
         <Box sx={{ mb: 2 }}>
           <ErrorAlert title="Tenner konnte nicht erledigt werden" message="Bitte versuche es erneut." />

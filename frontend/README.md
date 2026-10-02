@@ -80,6 +80,7 @@ Features own their components, hooks and API functions, so `components/` stays s
 | `/tenners`                  | Management: live title search (300 ms debounce), filters (status active/archived/all, person, category), sorting, complete, archive (with confirmation), restore            | FRONTEND-003 |
 | `/tenners` → "Neuer Tenner" | Create dialog: shared `TennerForm` (React Hook Form + Zod, limits mirror the backend), frequency presets, inline and server-side validation messages, full screen on phones | FRONTEND-004 |
 | `/tenners` → "Bearbeiten"   | Edit dialog: same form plus Active switch and read-only facts, sends only changed fields (`PUT`), asks before discarding unsaved changes                                    | FRONTEND-005 |
+| `/dashboard`, `/tenners`    | Quick Add: type a title and press Enter; defaults (Haushalt, current user, 10 min, every 14 days), keyword-based category suggestion, warning for similar titles            | FRONTEND-006 |
 
 Queries and mutations share keys from `src/api/queryKeys.ts`. Completing a Tenner invalidates the dashboard,
 Tenner lists and history. Completions send an `Idempotency-Key`, so a repeated request cannot complete twice.
