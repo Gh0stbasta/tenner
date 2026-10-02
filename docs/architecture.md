@@ -473,58 +473,69 @@ Longest Overdue Tenners
 
 ## Authentication (ADR 0001)
 
-Decided in [`decisions/0001-authentication.md`](decisions/0001-authentication.md) (SECURITY-001):
+Decided in [`decisions/0001-authentication.md`](decisions/0001-authentication.md) (SECURITY-001), amended by
+[`decisions/0002-google-sign-in.md`](decisions/0002-google-sign-in.md) (FUTURE-011):
 
-- Amazon Cognito User Pool (Essentials tier), **one account per household member**, no self sign-up.
-- Login through Cognito managed login (Authorization Code flow with PKCE, public SPA client).
+- Amazon Cognito User Pool (Essentials tier), **one account per household member**, no password sign-up.
+- Sign-in **only with Google** (Cognito federation, Authorization Code flow with PKCE, public SPA client).
+  Anyone with a Google account can sign in; household access requires a Cognito group
+  `household:<tenantId>:<userId>`, assigned by an administrator.
 - The API Gateway JWT authorizer protects every route except `GET /health`. The browser sends the
-  Cognito **ID token** because it carries `custom:tenantId` and `custom:userId`.
+  Cognito **ID token** because it carries `cognito:groups`.
 - The backend derives tenant and acting user only from verified claims (SECURITY-004).
 - Tokens are kept in `localStorage` for up to 30 days (refresh token), so a device stays logged in.
 
-Implementation: SECURITY-002 (infrastructure), SECURITY-003 (frontend), SECURITY-004 (backend).
+Implementation: SECURITY-002 (infrastructure), SECURITY-003 (frontend), SECURITY-004 (backend),
+FUTURE-011 (Google sign-in, groups).
 
 ### Infrastructure (SECURITY-002, `terraform/auth.tf`)
 
 ```text
-Browser ──(Authorization Code + PKCE)──► Cognito managed login  tenner-prod-<hash>.auth.eu-central-1.amazoncognito.com
-   │                                          │
-   │◄──────────── ID token, refresh token ────┘
+Browser ──(Authorization Code + PKCE, identity_provider=Google)──► Cognito  tenner-prod-<hash>.auth.eu-central-1.amazoncognito.com
+   │                                          │  ▲
+   │                                          ▼  │ (OIDC, client ID + secret)
+   │                                       Google accounts
+   │◄──────────── ID token (cognito:groups), refresh token ────┘
    │
    └── Authorization: Bearer <ID token> ──► API Gateway JWT authorizer (issuer = user pool, audience = app client)
-                                                   └── Lambda tenner-api (claims: custom:tenantId, custom:userId)
+                                                   └── Lambda tenner-api (claim: cognito:groups → household:<tenantId>:<userId>)
 ```
 
 | Resource | Settings |
 |---|---|
 | `aws_cognito_user_pool.users` (`tenner-users-prod`) | Essentials tier, admin-only sign-up, e-mail username, password ≥ 12, deletion protection, custom attributes `tenantId` (immutable) and `userId` |
-| `aws_cognito_user_pool_client.web` (`tenner-web-prod`) | public client, code flow + PKCE, scopes `openid email`, callback `https://<cloudfront>/auth/callback`, tokens 60 min, refresh 30 days, revocation on, cannot write custom attributes |
+| `aws_cognito_user_pool_client.web` (`tenner-web-prod`) | public client, code flow + PKCE, scopes `openid email`, identity provider Google only, auth flow refresh token only (no passwords), callback `https://<cloudfront>/auth/callback`, tokens 60 min, refresh 30 days, revocation on, cannot write custom attributes |
+| `aws_cognito_identity_provider.google` | Google, scopes `openid email profile`, maps `email` and `username = sub`; client ID/secret from `var.google_client_id` / `var.google_client_secret` (GitHub variable/secret) |
+| `aws_cognito_user_group.household` | `household:default:STEFAN`, `household:default:JULIA` |
 | `aws_cognito_user_pool_domain.login` | managed login v2, prefix `tenner-prod-<first 8 hex of sha1(account id)>` |
 | `aws_apigatewayv2_authorizer.cognito` | JWT authorizer on every route except `GET /health` (`local.api_public_routes`) |
 
 The CloudFront CSP allows `connect-src` to `cognito-idp.eu-central-1.amazonaws.com` (discovery, JWKS) and the
 managed login domain (token endpoint). Outputs: `cognito_user_pool_id`, `cognito_client_id`, `cognito_issuer_url`,
-`cognito_login_url`. Accounts are created with the AWS CLI (README → "User Accounts").
+`cognito_login_url`, `cognito_google_redirect_uri`, `cognito_household_groups`. Users are created by Cognito on
+their first Google sign-in; an administrator adds them to a household group (README → "Google Sign-In and User
+Accounts"). The redirect to Google is a top-level navigation and needs no CSP change.
 
-### Authorization Model (SECURITY-004, `backend/src/auth/identity.ts`)
+### Authorization Model (SECURITY-004, FUTURE-011, `backend/src/auth/identity.ts`)
 
 ```text
 API Gateway JWT authorizer (signature, issuer, audience, expiry)
   ↓ requestContext.authorizer.jwt.claims
-identityFromEvent → Identity { tenantId = custom:tenantId, userId = custom:userId }
+identityFromEvent → Identity from the one group "household:<tenantId>:<userId>" in cognito:groups
   ↓
 handlers / services → repositories (every key and query uses identity.tenantId)
 ```
 
-- **Tenant:** only from `custom:tenantId`. There is no default tenant and no tenant parameter; client-supplied
-  `tenantId` fields are rejected (strict schemas) or ignored (headers). `custom:tenantId` is immutable and the web
-  client cannot write custom attributes, so a user cannot move into another household.
-- **Acting user:** only from `custom:userId` (must be a household member, `STEFAN` or `JULIA`).
+- **Tenant and acting user:** only from the household group in `cognito:groups`. Groups are assigned by an
+  administrator only (users cannot change their groups). There is no default tenant and no tenant parameter;
+  client-supplied `tenantId` fields are rejected (strict schemas) or ignored (headers). The user must be a
+  household member (`STEFAN` or `JULIA`). The HTTP API passes the array claim as a string `"[a b]"`; both forms
+  are accepted.
   - `completedBy` defaults to the acting user. Another member is allowed (covering for someone); the completion
     then also stores `recordedBy` = acting user.
   - `revertedBy` and `restoredBy` are the acting user; a different value returns 403.
   - `createdBy` / `updatedBy` on Tenners are set on every write.
-- **Errors:** no claims → `401 UNAUTHORIZED`; claims missing or unusable → `403 FORBIDDEN`
+- **Errors:** no claims → `401 UNAUTHORIZED`; signed in without exactly one valid household group → `403 FORBIDDEN`
   (403, because a new token would not help and the frontend treats 401 as "log in again").
 - **Permissions inside a household:** every member may read and change every Tenner of the household.
   Roles are out of scope (HOUSEHOLD-ADMIN-005).
@@ -533,8 +544,8 @@ handlers / services → repositories (every key and query uses identity.tenantId
 ## Future
 
 - MFA (SECURITY-011)
-- Social login (FUTURE-011)
-- Multiple households (FUTURE-001): a new `custom:tenantId` per household, no data migration
+- Sign in with Apple (FUTURE-011 follow-up)
+- Multiple households (FUTURE-001): new groups `household:<tenantId>:<userId>` per household, no data migration
 
 ---
 
@@ -951,7 +962,8 @@ Both tables use:
 
 ## Multi-Tenancy Readiness
 
-Every key starts with `tenantId`, which comes from the verified `custom:tenantId` claim (SECURITY-004). All
+Every key starts with `tenantId`, which comes from the verified household group in the ID token (SECURITY-004,
+FUTURE-011). All
 current data belongs to `default`. More households can be added without redesigning the tables (FUTURE-001).
 Tenant isolation is enforced in code until FUTURE-002.
 

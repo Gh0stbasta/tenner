@@ -530,3 +530,91 @@ values.
 ### Related Work
 
 SECURITY-004, TD-018, `backend/src/repositories/dynamodb/tenner.mapper.ts`, `completion.mapper.ts`
+
+---
+
+## TD-020: Anyone with a Google account can create a Cognito user
+
+### Description
+
+Since FUTURE-011, Cognito creates a user on every first Google sign-in. Strangers get no household access
+(403, "Konto nicht eingerichtet"), but their users stay in the pool until an administrator deletes them, and
+new members must be added to a household group by hand.
+
+### Reason
+
+Owner decision 2026-10-02: no allowlist; the owner reviews new accounts himself (ADR 0002).
+
+### Impact
+
+- The user list can fill with strangers; each one is a monthly active user (Essentials: 10,000 MAU free,
+  then about 0.015 USD per MAU).
+- Onboarding a member needs one CLI command.
+- No alert when someone new signs in.
+
+### Suggested Improvement
+
+A pre-sign-up Lambda trigger with an e-mail allowlist (GitHub secret) that rejects strangers and assigns the
+household group automatically, or a notification (EventBridge/SNS) on new users.
+
+### Related Work
+
+FUTURE-011, ADR 0002, `terraform/auth.tf`, README → "Google Sign-In and User Accounts"
+
+---
+
+## TD-021: Google client secret is stored in the Terraform state
+
+### Description
+
+`aws_cognito_identity_provider.google` receives the Google client secret from `var.google_client_secret`
+(GitHub secret `GOOGLE_CLIENT_SECRET`). Terraform stores it in plain text inside the state file.
+
+### Reason
+
+Terraform has no way to pass a secret to this resource without storing it in state. SSM/Secrets Manager are
+not in the allowed services yet (TD-004, SECURITY-006).
+
+### Impact
+
+Anyone who can read `s3://tenner-terraform-state/prod/` can read the secret. The bucket is private, encrypted
+(SSE-S3) and versioned, so old versions keep old secrets after a rotation. The secret alone grants no access
+to household data; it lets someone impersonate the Tenner Google client.
+
+### Suggested Improvement
+
+Restrict state bucket access to the deploy role and administrators (already the case) and rotate the secret
+when someone leaves. Later: an ephemeral or write-only argument if the AWS provider supports one for this
+resource.
+
+### Related Work
+
+FUTURE-011, SECURITY-006, `terraform/auth.tf`, `terraform/variables.tf`
+
+---
+
+## TD-022: Unused identity attributes and household members defined in three places
+
+### Description
+
+- The user pool schema still contains `custom:tenantId` and `custom:userId` (SECURITY-002), which nothing reads
+  since FUTURE-011. Removing a schema attribute replaces the pool and deletes all users.
+- The household members (`STEFAN`, `JULIA`) are defined in `terraform/locals.tf` (groups), the backend
+  (`USER_IDS`) and the frontend (`USER_IDS`).
+
+### Reason
+
+Pool replacement is destructive; the member list is hardcoded until HOUSEHOLD-ADMIN-001 (TD-007).
+
+### Impact
+
+Small confusion when reading the schema. Adding a member needs changes in three places and a deploy.
+
+### Suggested Improvement
+
+Leave the attributes until the pool must be replaced for another reason. Move members into managed data with
+HOUSEHOLD-ADMIN-001 and derive the groups from it.
+
+### Related Work
+
+FUTURE-011, TD-007, HOUSEHOLD-ADMIN-001

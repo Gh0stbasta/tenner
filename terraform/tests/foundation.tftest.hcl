@@ -1,6 +1,13 @@
 # Offline tests for the Terraform foundation (TICKET-002).
 # The mocked provider needs no AWS credentials: run with `terraform test`.
 
+# Placeholder Google OAuth client (FUTURE-011); the real values come from GitHub in CI.
+variables {
+  google_client_id     = "123456789012-abcdefghijklmnop.apps.googleusercontent.com"
+  google_client_secret = "placeholder-secret"
+}
+
+
 mock_provider "archive" {
   mock_data "archive_file" {
     defaults = {

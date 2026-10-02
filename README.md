@@ -76,8 +76,8 @@ For the managed resources so far:
   - `s3:PutObject` and `s3:DeleteObject` on `arn:aws:s3:::tenner-frontend-<env>/*`
   - `cloudfront:CreateInvalidation` on the distribution ARN
 - CloudWatch Logs (`/tenner/*`)
-- Authentication (SECURITY-002): `cognito-idp:*` on the Tenner user pool (create/update pool, app client,
-  domain, managed login branding, tags), `cognito-idp:CreateUserPool`, `cognito-idp:DescribeUserPoolDomain`,
+- Authentication (SECURITY-002, FUTURE-011): `cognito-idp:*` on the Tenner user pool (create/update pool, app client,
+  domain, managed login branding, Google identity provider, groups, tags), `cognito-idp:CreateUserPool`, `cognito-idp:DescribeUserPoolDomain`,
   API Gateway authorizers (`apigateway:*` on `tenner-api-gateway` already covers them) and `sts:GetCallerIdentity`
   (always allowed)
 - IAM: create and manage `tenner-api-role` and its inline policy, plus `iam:PassRole` for that role to Lambda
@@ -150,6 +150,8 @@ These must exist before the workflows can authenticate. This repository does not
    Use `StringEquals` for exact subjects. Wildcards (`*`) only work with `StringLike`.
 
 2. **Repository secret `AWS_ROLE_ARN`** containing the ARN of that role.
+3. **Repository variable `GOOGLE_CLIENT_ID` and secret `GOOGLE_CLIENT_SECRET`** for Google sign-in
+   (FUTURE-011, see "Google Sign-In and User Accounts"). `terraform plan` fails in both workflows without them.
 
 If the PR subject is not trusted, `pr.yml` fails at "Configure AWS credentials".
 
@@ -172,43 +174,69 @@ and health check. The build gets `VITE_API_BASE_URL` from the Terraform output `
 
 A failed build stops the job before anything is uploaded.
 
-### User Accounts (SECURITY-002)
+### Google Sign-In and User Accounts (FUTURE-011)
 
 The app and the API require a login (Cognito, [ADR 0001](docs/decisions/0001-authentication.md)).
-There is no self sign-up. Create one account per household member **once after the first deployment**,
-for example in AWS CloudShell (region `eu-central-1`). Use real e-mail addresses; Cognito sends an
-invitation with a temporary password, and the first login asks for a new one (≥ 12 characters, upper and
-lower case, digits).
+Sign-in is **only with Google** ([ADR 0002](docs/decisions/0002-google-sign-in.md)); there are no Tenner
+passwords. Anyone with a Google account can sign in, but only accounts that an administrator adds to a
+household group can see or change data. Everyone else sees "Konto nicht eingerichtet" and gets 403 from the API.
+
+#### One-time setup: Google OAuth client
+
+1. Google Cloud Console → create a project (e.g. `tenner`) → "Google Auth Platform" / "OAuth consent screen":
+   user type **External**, app name `Tenner`, scopes `openid`, `email`, `profile`.
+   Set the publishing status to **In production**; in "Testing" only listed test users can sign in.
+   The basic scopes need no Google verification.
+2. "Clients" → "Create client" → type **Web application**:
+   - Authorized redirect URI: `https://<cognito-domain>/oauth2/idpresponse`. The value is the Terraform output
+     `cognito_google_redirect_uri`; the domain is the one in `cognito_login_url` and already exists since
+     SECURITY-002. No JavaScript origin is needed (Cognito exchanges the code server-side).
+3. GitHub → repository → Settings → Secrets and variables → Actions:
+   - **Variable** `GOOGLE_CLIENT_ID` = the client ID (`<number>-<id>.apps.googleusercontent.com`)
+   - **Secret** `GOOGLE_CLIENT_SECRET` = the client secret
+
+Without both values, `terraform plan` fails in CI with a message naming the missing value. The secret is never
+committed; Terraform keeps it in the encrypted state bucket (TD-021).
+
+#### Add someone to the household
+
+Membership is a Cognito group `household:<tenantId>:<userId>`. Terraform creates `household:default:STEFAN`
+and `household:default:JULIA`. After a person has signed in with Google once (and seen
+"Konto nicht eingerichtet"), add them in AWS CloudShell (region `eu-central-1`):
 
 ```bash
 POOL_ID=$(aws cognito-idp list-user-pools --max-results 20 \
   --query "UserPools[?Name=='tenner-users-prod'].Id | [0]" --output text)
 
-aws cognito-idp admin-create-user --user-pool-id "$POOL_ID" --username "<stefan-email>" \
-  --user-attributes Name=email,Value="<stefan-email>" Name=email_verified,Value=true \
-                    Name=custom:tenantId,Value=default Name=custom:userId,Value=STEFAN \
-  --desired-delivery-mediums EMAIL
+# Who has signed in? Google users are named google_<number>.
+aws cognito-idp list-users --user-pool-id "$POOL_ID" \
+  --query "Users[].[Username, Attributes[?Name=='email'].Value | [0], UserCreateDate]" --output table
 
-aws cognito-idp admin-create-user --user-pool-id "$POOL_ID" --username "<julia-email>" \
-  --user-attributes Name=email,Value="<julia-email>" Name=email_verified,Value=true \
-                    Name=custom:tenantId,Value=default Name=custom:userId,Value=JULIA \
-  --desired-delivery-mediums EMAIL
+aws cognito-idp admin-add-user-to-group --user-pool-id "$POOL_ID" \
+  --username "google_<number>" --group-name "household:default:STEFAN"
 ```
 
-| Attribute | Value | Meaning |
-|---|---|---|
-| `custom:tenantId` | `default` | The household; all existing data belongs to `default`. Cannot be changed later |
-| `custom:userId` | `STEFAN` or `JULIA` | The household member used for "completed by" and audit fields |
+The person then signs out and in again (or waits up to 60 minutes for the next token refresh).
+Each account must be in **exactly one** household group.
+
+| Group | Meaning |
+|---|---|
+| `household:default:STEFAN` | Stefan in the household `default` (all existing data belongs to `default`) |
+| `household:default:JULIA` | Julia in the household `default` |
 
 Other admin tasks:
 
 ```bash
-aws cognito-idp admin-disable-user      --user-pool-id "$POOL_ID" --username "<email>"   # lock out
-aws cognito-idp admin-user-global-sign-out --user-pool-id "$POOL_ID" --username "<email>" # revoke sessions
-aws cognito-idp admin-reset-user-password  --user-pool-id "$POOL_ID" --username "<email>"
+aws cognito-idp admin-remove-user-from-group --user-pool-id "$POOL_ID" --username "google_<number>" \
+  --group-name "household:default:STEFAN"                                                    # revoke access
+aws cognito-idp admin-user-global-sign-out --user-pool-id "$POOL_ID" --username "google_<number>" # end sessions now
+aws cognito-idp admin-delete-user        --user-pool-id "$POOL_ID" --username "<username>"      # remove a stranger
 ```
 
-Never commit e-mail addresses, passwords or tokens.
+Without a global sign-out, a removed member keeps access until the ID token expires (at most 60 minutes).
+Password accounts created before FUTURE-011 can no longer sign in and can be deleted.
+
+Never commit e-mail addresses, client secrets or tokens.
 
 ### API Throttling
 

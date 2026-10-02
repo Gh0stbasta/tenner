@@ -45,7 +45,7 @@ describe("AuthGate", () => {
     expect(authState.signinRedirect).toHaveBeenCalledOnce();
     expect(authState.signinRedirect).toHaveBeenCalledWith({
       state: { returnTo: "/tenners?status=all" },
-      extraQueryParams: { lang: "de" },
+      extraQueryParams: { lang: "de", identity_provider: "Google" },
     });
     expect(screen.getByRole("status", { name: "Anmeldung wird geprüft" })).toBeInTheDocument();
   });
@@ -60,7 +60,7 @@ describe("AuthGate", () => {
   });
 
   it("provides the user from the token to the app", () => {
-    setAuth({ isAuthenticated: true, user: { profile: { "custom:userId": "JULIA" } } });
+    setAuth({ isAuthenticated: true, user: { profile: { "cognito:groups": ["household:default:JULIA"] } } });
     renderGate();
     expect(screen.getByText("Geschützt für JULIA")).toBeInTheDocument();
   });

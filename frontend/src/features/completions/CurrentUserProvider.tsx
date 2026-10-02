@@ -1,6 +1,6 @@
 /**
  * Current user (FRONTEND-007, SECURITY-003): the logged-in household member from the ID token
- * (custom:userId). Provided by the AuthGate; tests provide a fixed user.
+ * (household group in cognito:groups). Provided by the AuthGate; tests provide a fixed user.
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";

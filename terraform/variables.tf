@@ -85,3 +85,24 @@ variable "api_throttling_rate_limit" {
     error_message = "api_throttling_rate_limit must be greater than 0."
   }
 }
+
+variable "google_client_id" {
+  description = "OAuth client ID of the Google Cloud project used for Google sign-in (FUTURE-011). Set as GitHub variable GOOGLE_CLIENT_ID."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9]+-[a-z0-9]+\\.apps\\.googleusercontent\\.com$", var.google_client_id))
+    error_message = "google_client_id must be a Google OAuth client ID (<number>-<id>.apps.googleusercontent.com). Set the GitHub variable GOOGLE_CLIENT_ID."
+  }
+}
+
+variable "google_client_secret" {
+  description = "OAuth client secret for Google sign-in (FUTURE-011). Set as GitHub secret GOOGLE_CLIENT_SECRET; never commit it."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(trimspace(var.google_client_secret)) > 0
+    error_message = "google_client_secret must not be empty. Set the GitHub secret GOOGLE_CLIENT_SECRET."
+  }
+}

@@ -101,6 +101,11 @@ jobs:
 
       - name: Terraform plan
         if: hashFiles('terraform/**/*.tf') != ''
+        env:
+          # Google sign-in (FUTURE-011). The ID is not secret; the secret is masked in logs and stays on the
+          # runner (plan file and plan.json are never uploaded).
+          TF_VAR_google_client_id: ${{ vars.GOOGLE_CLIENT_ID }}
+          TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m -out=tfplan
 
       - name: Enforce mandatory tags

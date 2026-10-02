@@ -6,7 +6,7 @@
 import { UserManager, WebStorageStateStore } from "oidc-client-ts";
 import type { ApiAuth } from "../api/client";
 import type { AuthConfig } from "../config";
-import { CALLBACK_PATH, LOGIN_LANGUAGE, returnPath } from "./session";
+import { CALLBACK_PATH, LOGIN_PARAMS, returnPath } from "./session";
 
 export function createUserManager(auth: AuthConfig, origin: string = window.location.origin): UserManager {
   return new UserManager({
@@ -19,7 +19,7 @@ export function createUserManager(auth: AuthConfig, origin: string = window.loca
     // Owner decision 2026-10-02: stay logged in on the device (ADR 0001, XSS trade-off documented there).
     userStore: new WebStorageStateStore({ store: window.localStorage }),
     automaticSilentRenew: true,
-    extraQueryParams: { lang: LOGIN_LANGUAGE },
+    extraQueryParams: { ...LOGIN_PARAMS },
   });
 }
 

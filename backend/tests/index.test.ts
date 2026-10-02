@@ -152,7 +152,7 @@ describe("authentication (SECURITY-004)", () => {
     expect((await routeEvent(event("GET /health"), deps())).statusCode).toBe(200);
   });
 
-  it("rejects an account without household attributes with 403", async () => {
+  it("rejects a signed-in account without household group with 403", async () => {
     const d = deps();
     const response = await routeEvent(authenticatedEvent(event("GET /tenners"), { sub: "x", email: "user@example.com" }), d);
     expect(response.statusCode).toBe(403);
