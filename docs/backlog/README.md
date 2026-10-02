@@ -207,7 +207,7 @@ docs/backlog/
 | [SECURITY-011](security/ticket011.md) | Enable Multi-Factor Authentication | Low | V2 |
 | [SECURITY-012](security/ticket012.md) | Implement Security Event Logging and Audit Trail | Medium | V2 |
 | [SECURITY-013](security/ticket013.md) | Create Threat Model and Privacy Review | Medium | V2 |
-| [SECURITY-014](security/ticket014.md) | Cap API Cost with Stage Throttling and Lambda Concurrency | Critical | MVP |
+| [SECURITY-014](security/ticket014.md) | Cap API Cost with Stage Throttling | Critical | MVP |
 
 ### Observability (`observability/`, prefix `OBSERVABILITY-`)
 

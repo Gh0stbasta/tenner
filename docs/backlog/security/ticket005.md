@@ -51,8 +51,8 @@ SECURITY-014
 
 # Scope
 
-Stage throttling and Lambda reserved concurrency were moved to SECURITY-014
-(cost cap before the first deployment). Verify them here as part of the baseline.
+Stage throttling was moved to SECURITY-014 (cost cap before the first deployment).
+Verify it here as part of the baseline. Lambda reserved concurrency is tracked as TD-014.
 
 ## API Gateway
 
@@ -129,7 +129,7 @@ terraform plan
 
 # Acceptance Criteria
 
-- API throttling and Lambda concurrency (SECURITY-014) verified
+- API throttling (SECURITY-014) verified
 - IAM policies reviewed and least privilege
 - Storage protections verified
 - Security documentation created

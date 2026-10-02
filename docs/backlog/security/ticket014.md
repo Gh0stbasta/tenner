@@ -1,4 +1,4 @@
-# SECURITY-014: Cap API Cost with Stage Throttling and Lambda Concurrency
+# SECURITY-014: Cap API Cost with Stage Throttling
 
 ## Type
 
@@ -21,8 +21,7 @@ MVP (before the first deployment to `main`)
 ## Goal
 
 Bound the worst-case daily AWS cost of the public, unauthenticated API before the first
-deployment. Configure throttling on the API Gateway stage and a concurrency cap on the
-Lambda function.
+deployment. Configure throttling on the API Gateway stage.
 
 ---
 
@@ -72,16 +71,6 @@ aws_apigatewayv2_stage.default_route_settings:
 - Throttled requests return HTTP 429 from API Gateway. They never reach Lambda or
   DynamoDB and are not billed by Lambda or DynamoDB.
 
-## Lambda
-
-```text
-aws_lambda_function.reserved_concurrent_executions = var.api_reserved_concurrency
-```
-
-- Default value: decide during implementation, based on the account limit (see Assumptions).
-  `-1` (no reservation) must remain possible through the variable.
-- Validation: `-1` or a positive integer.
-
 ## Documentation
 
 - `docs/architecture.md`: replace "throttling (SECURITY-005)" with the implemented limits and
@@ -97,7 +86,7 @@ aws_lambda_function.reserved_concurrent_executions = var.api_reserved_concurrenc
 ```text
 terraform fmt -check
 terraform validate
-terraform test: stage throttling values, Lambda reserved concurrency, variable validation (invalid values rejected)
+terraform test: stage throttling values, variable validation (invalid values rejected)
 Offline terraform plan + scripts/check_tags.py
 ```
 
@@ -113,11 +102,10 @@ Short burst (≤ 100 requests) against GET /health shows HTTP 429 responses
 
 - [ ] HTTP API stage has default route throttling (burst 20, rate 10 req/s by default)
 - [ ] Throttling limits are configurable through validated Terraform variables
-- [ ] Lambda reserved concurrency is configurable through a validated Terraform variable
 - [ ] Terraform tests cover the defaults and the variable validation
 - [ ] Worst-case daily cost is documented in `docs/architecture.md`
 - [ ] README and technical debt are updated
-- [ ] SECURITY-005 references this ticket for throttling and concurrency
+- [ ] SECURITY-005 references this ticket for throttling
 
 ---
 
@@ -136,19 +124,13 @@ Short burst (≤ 100 requests) against GET /health shows HTTP 429 responses
 
 - The frontend needs at most a few requests per second for a single household, so
   10 req/s with a burst of 20 does not affect normal use.
-- **Reserved concurrency depends on the account.** AWS requires at least 100 unreserved
-  concurrent executions to remain in the account, so reserving any concurrency fails on
-  new accounts whose limit is only 10. If the account limit is 10, set the default to `-1`.
-  Stage throttling alone already caps the cost. Check the limit with:
-
-  ```bash
-  aws lambda get-account-settings --query 'AccountLimit.ConcurrentExecutions'
-  ```
+- Stage throttling alone caps the cost, because throttled requests never invoke Lambda.
 
 ---
 
 # Out of Scope
 
+- Lambda reserved concurrency (decision 2026-10-02: deferred, see TD-014)
 - Per-route or per-client throttling (needs authentication, SECURITY-002)
 - AWS WAF rate-based rules (cost ~5+ USD/month)
 - AWS Budgets and cost alerts (OPERATIONS-001)

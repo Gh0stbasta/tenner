@@ -354,3 +354,34 @@ Remove `DeleteItem` and `Scan` from the policy and update the IAM test. Add `Tra
 ### Related Work
 
 TICKET-007, TICKET-010, TICKET-012, `terraform/iam.tf`
+
+---
+
+## TD-014: No Lambda reserved concurrency for `tenner-api`
+
+### Description
+
+`tenner-api` has no reserved concurrency. Only the API Gateway stage throttling (SECURITY-014)
+and the account-wide Lambda concurrency limit bound how many instances run in parallel.
+
+### Reason
+
+Decision 2026-10-02: deferred to keep SECURITY-014 small. Reserved concurrency also depends on
+the account limit: AWS keeps at least 100 executions unreserved, so a reservation fails on
+accounts whose limit is only 10.
+
+### Impact
+
+Low while API Gateway is the only trigger, because stage throttling stops excess requests before
+Lambda. If another trigger is added, or throttling is raised, a traffic spike can scale the
+function up to the account limit. That raises cost and can starve other functions in the account.
+
+### Suggested Improvement
+
+Check the account limit with `aws lambda get-account-settings`. If it is at least 1000, set
+`reserved_concurrent_executions` (e.g. 5) through a validated Terraform variable.
+Do this as part of SECURITY-005.
+
+### Related Work
+
+SECURITY-014, SECURITY-005, `terraform/api.tf`
