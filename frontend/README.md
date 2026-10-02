@@ -74,10 +74,11 @@ Features own their components, hooks and API functions, so `components/` stays s
 
 ## Features
 
-| Route        | Feature                                                                                                                                                          | Ticket       |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `/dashboard` | Today: summary cards, due today, overdue (highlighted), upcoming, workload per person and category, one-click completion                                         | FRONTEND-002 |
-| `/tenners`   | Management: live title search (300 ms debounce), filters (status active/archived/all, person, category), sorting, complete, archive (with confirmation), restore | FRONTEND-003 |
+| Route                       | Feature                                                                                                                                                                     | Ticket       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `/dashboard`                | Today: summary cards, due today, overdue (highlighted), upcoming, workload per person and category, one-click completion                                                    | FRONTEND-002 |
+| `/tenners`                  | Management: live title search (300 ms debounce), filters (status active/archived/all, person, category), sorting, complete, archive (with confirmation), restore            | FRONTEND-003 |
+| `/tenners` → "Neuer Tenner" | Create dialog: shared `TennerForm` (React Hook Form + Zod, limits mirror the backend), frequency presets, inline and server-side validation messages, full screen on phones | FRONTEND-004 |
 
 Queries and mutations share keys from `src/api/queryKeys.ts`. Completing a Tenner invalidates the dashboard,
 Tenner lists and history. Completions send an `Idempotency-Key`, so a repeated request cannot complete twice.
@@ -85,7 +86,9 @@ Until a user can be selected (FRONTEND-007/008), completions and restores are re
 
 "Archived" means soft-deleted (`DELETE /tenners/{id}`); the archive view uses `GET /tenners?deleted=true`
 (TICKET-024). Status "Alle" combines three requests (active, inactive, archived). Telemetry events
-(completed, archived, restored, filter changed) are logged to the console for now (`src/utils/telemetry.ts`).
+(created, completed, archived, restored, filter changed) are logged to the console for now (`src/utils/telemetry.ts`).
+
+Success messages use the global snackbar (`components/NotificationProvider.tsx`, `useNotify()`).
 
 ## Theme
 
