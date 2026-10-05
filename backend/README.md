@@ -80,6 +80,22 @@ Other groups (e.g. Cognito's `<pool>_Google`) are ignored.
 - The request logger is bound to `userId` (no e-mail addresses or tokens are logged).
 - Tests build authenticated events with `authenticatedEvent()` and `jwtClaims()` from `tests/mocks`.
 
+### First-login self-assignment (HOTFIX-001)
+
+Two routes need a verified token but **no** household group; they use `principalFromEvent`
+(`cognito:username`, 401 if missing):
+
+| Route | Response |
+|---|---|
+| `GET /onboarding` | `200 { assignedTo: UserId \| null, members: [{ userId, displayName, available }] }`, live from Cognito |
+| `POST /onboarding/assignment` `{ "userId": "STEFAN" }` | `201 { userId }`; `409 ALREADY_ASSIGNED` (account has a member), `409 MEMBER_TAKEN` (member has an account), `400` for unknown users or extra fields, `503` if not configured |
+
+`HouseholdAssignmentService` stores membership as the Cognito group `household:<tenantId>:<userId>` through
+`HouseholdMembershipRepository` (`repositories/cognito/`, AWS SDK `client-cognito-identity-provider`). Each
+member can be claimed by one account; after adding, the group is counted again and the account withdraws if a
+concurrent claim won. Configuration: `COGNITO_USER_POOL_ID` and `HOUSEHOLD_TENANT_ID` (both set by Terraform).
+The assignment is logged as `HouseholdMemberAssigned` with the Cognito username, never the e-mail.
+
 ## Domain Model
 
 | Model | Fields |
@@ -388,6 +404,7 @@ The repository writes with `attribute_not_exists(tennerId)`, so it never overwri
 
 ## Dependencies
 
-- Runtime: `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb` and `zod`. All are bundled and pinned.
+- Runtime: `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`, `@aws-sdk/client-cognito-identity-provider`
+  (HOTFIX-001, same SDK version) and `zod`. All are bundled and pinned.
 - The logger is a small built-in module instead of `pino`. It has no dependency and covers JSON output,
   levels and correlation.

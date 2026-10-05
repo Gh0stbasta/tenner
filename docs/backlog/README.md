@@ -300,3 +300,11 @@ docs/backlog/
 | [FUTURE-009](future/ticket009.md) | Evaluate WhatsApp Notifications | Low | Long-Term |
 | [FUTURE-010](future/ticket010.md) | Evaluate Voice Assistant Integration | Low | Long-Term |
 | [FUTURE-011](future/ticket011.md) | Add Social Login (Google) | High | MVP (pulled forward) |
+
+### Hotfix
+
+Urgent changes outside the regular backlog live in `docs/hotfix/` (owner decision 2026-10-05).
+
+| ID | Title | Priority | Phase |
+|---|---|---|---|
+| [HOTFIX-001](../hotfix/ticket001.md) | First Login & Household Assignment Flow | High | MVP |

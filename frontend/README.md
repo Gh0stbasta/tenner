@@ -117,8 +117,12 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 - **API:** `src/api/client.ts` sends `Authorization: Bearer <ID token>` (ADR 0001). On `401` it refreshes the
   session once and retries; if that fails, it redirects to the login.
 - **Current user:** the household group `household:<tenantId>:<userId>` in `cognito:groups` of the ID token
-  (Stefan/Julia), shown in the header with "Abmelden". Google users without exactly one valid household group
-  see "Konto nicht eingerichtet" (with instructions) and make no API calls. The former "Ich bin" selector is gone.
+  (Stefan/Julia), shown in the header with "Abmelden". The former "Ich bin" selector is gone.
+- **First login (HOTFIX-001):** Google users without a household group see `AssignmentPage`
+  (`src/features/onboarding/`: page, `AssignmentCard`, `useOnboarding` / `useAssignHouseholdMember`):
+  "Willkommen bei Tenner", one card per member, taken members disabled. After the choice the session is refreshed
+  (`signinSilent`, new ID token with the group) and the app opens the dashboard. Accounts that are already
+  assigned skip the page automatically; if all members are taken the page shows "Kein freier Platz".
 - **Logout:** clears the tokens and opens the Cognito logout endpoint, which returns to the app.
 
 ## Theme

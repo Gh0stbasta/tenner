@@ -2,3 +2,5 @@ export * from "./completion.repository.js";
 export * from "./tenner.repository.js";
 export * from "./dynamodb/tenner.dynamodb.repository.js";
 export * from "./dynamodb/completion.dynamodb.repository.js";
+export * from "./household-membership.repository.js";
+export * from "./cognito/household-membership.cognito.repository.js";

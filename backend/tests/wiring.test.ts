@@ -11,10 +11,15 @@ vi.mock("../src/clients/dynamodb.js", async (importOriginal) => {
   return { ...original, getDocumentClient: () => ({ send }) };
 });
 
+const cognitoSend = vi.fn();
+
+vi.mock("../src/clients/cognito.js", () => ({ getCognitoClient: () => ({ send: cognitoSend }) }));
+
 const { createDependencies } = await import("../src/index.js");
 
 afterEach(() => {
   send.mockReset();
+  cognitoSend.mockReset();
   vi.restoreAllMocks();
 });
 
@@ -109,5 +114,26 @@ describe("createDependencies wiring", () => {
     send.mockResolvedValue({ Attributes: tennerFixture({ title: "New title" }) });
     await expect(deps().updateTenner(TEST_IDENTITY, "t-1", { title: "New title" })).resolves.toMatchObject({ title: "New title" });
     expect((send.mock.calls[0]?.[0] as UpdateCommand).input.TableName).toBe("tenner-tenners");
+  });
+
+  it("assigns household members through Cognito groups of the configured pool (HOTFIX-001)", async () => {
+    cognitoSend.mockImplementation(async (command: { constructor: { name: string } }) =>
+      command.constructor.name === "AdminListGroupsForUserCommand" ? { Groups: [] } : command.constructor.name === "ListUsersInGroupCommand" ? { Users: [] } : {},
+    );
+    await expect(deps().getOnboarding({ username: "google_1" })).resolves.toMatchObject({ assignedTo: null });
+    cognitoSend.mockClear();
+    let added = false;
+    cognitoSend.mockImplementation(async (command: { constructor: { name: string } }) => {
+      if (command.constructor.name === "AdminAddUserToGroupCommand") added = true;
+      if (command.constructor.name === "ListUsersInGroupCommand") return { Users: added ? [{}] : [] };
+      return { Groups: [] };
+    });
+    await expect(deps().assignHouseholdMember({ username: "google_1" }, "STEFAN")).resolves.toMatchObject({ group: "household:default:STEFAN" });
+    expect(cognitoSend.mock.calls.map(([c]) => (c as { input: { UserPoolId: string } }).input.UserPoolId)).toEqual(Array(4).fill("eu-central-1_TEST"));
+  });
+
+  it("reports 503 for onboarding when Cognito is not configured", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    await expect(createDependencies(testConfig({ onboarding: undefined })).getOnboarding({ username: "u" })).rejects.toMatchObject({ statusCode: 503 });
   });
 });

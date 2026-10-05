@@ -62,6 +62,15 @@ override_resource {
   }
 }
 
+override_resource {
+  target          = aws_cognito_user_pool.users
+  override_during = plan
+  values = {
+    id  = "eu-central-1_TEST"
+    arn = "arn:aws:cognito-idp:eu-central-1:000000000000:userpool/eu-central-1_TEST"
+  }
+}
+
 run "dynamodb_policy_is_scoped_to_tenner_tables" {
   command = plan
 
@@ -109,5 +118,31 @@ run "logging_policy_is_scoped_to_api_log_group" {
   assert {
     condition     = data.aws_iam_policy_document.api_logging.statement[0].resources == toset(["arn:aws:logs:eu-central-1:000000000000:log-group:/tenner/api:log-stream:*"])
     error_message = "Log permissions must be limited to the API log group."
+  }
+}
+
+run "cognito_policy_only_manages_group_membership" {
+  command = plan
+
+  assert {
+    condition = toset(data.aws_iam_policy_document.api_cognito.statement[0].actions) == toset([
+      "cognito-idp:AdminAddUserToGroup", "cognito-idp:AdminRemoveUserFromGroup",
+      "cognito-idp:AdminListGroupsForUser", "cognito-idp:ListUsersInGroup",
+    ])
+    error_message = "The API may only read and change household group membership (HOTFIX-001)."
+  }
+
+  assert {
+    condition     = data.aws_iam_policy_document.api_cognito.statement[0].resources == toset(["arn:aws:cognito-idp:eu-central-1:000000000000:userpool/eu-central-1_TEST"])
+    error_message = "Cognito permissions must be limited to the Tenner user pool."
+  }
+}
+
+run "lambda_knows_pool_and_household" {
+  command = plan
+
+  assert {
+    condition     = aws_lambda_function.api.environment[0].variables["COGNITO_USER_POOL_ID"] == "eu-central-1_TEST" && aws_lambda_function.api.environment[0].variables["HOUSEHOLD_TENANT_ID"] == "default"
+    error_message = "The Lambda needs the user pool ID and the household tenant for self-assignment."
   }
 }

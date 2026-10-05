@@ -47,6 +47,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     applicationName: "Tenner",
     timezone: "Europe/Berlin",
     tables: { tenners: "tenner-tenners", history: "tenner-history" },
+    onboarding: { userPoolId: "eu-central-1_TEST", tenantId: "default" },
     ...overrides,
   };
 }

@@ -72,3 +72,24 @@ resource "aws_iam_role_policy" "api_dynamodb" {
   role   = aws_iam_role.api.id
   policy = data.aws_iam_policy_document.api_dynamodb.json
 }
+
+# Household self-assignment (HOTFIX-001): the API adds the signed-in user to one household group and checks
+# whether a member is already taken. Scoped to the Tenner user pool; no user creation, deletion or attribute writes.
+data "aws_iam_policy_document" "api_cognito" {
+  statement {
+    sid = "HouseholdGroupMembership"
+    actions = [
+      "cognito-idp:AdminAddUserToGroup",
+      "cognito-idp:AdminRemoveUserFromGroup",
+      "cognito-idp:AdminListGroupsForUser",
+      "cognito-idp:ListUsersInGroup",
+    ]
+    resources = [aws_cognito_user_pool.users.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "api_cognito" {
+  name   = "${local.api_role_name}-cognito"
+  role   = aws_iam_role.api.id
+  policy = data.aws_iam_policy_document.api_cognito.json
+}

@@ -50,6 +50,8 @@ locals {
     "GET /tenners/{tennerId}",                  # TICKET-019
     "GET /history",                             # TICKET-020
     "GET /tenners/{tennerId}/history",          # TICKET-020
+    "GET /onboarding",                          # HOTFIX-001 (signed in, no household needed)
+    "POST /onboarding/assignment",              # HOTFIX-001
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.

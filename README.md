@@ -178,8 +178,12 @@ A failed build stops the job before anything is uploaded.
 
 The app and the API require a login (Cognito, [ADR 0001](docs/decisions/0001-authentication.md)).
 Sign-in is **only with Google** ([ADR 0002](docs/decisions/0002-google-sign-in.md)); there are no Tenner
-passwords. Anyone with a Google account can sign in, but only accounts that an administrator adds to a
-household group can see or change data. Everyone else sees "Konto nicht eingerichtet" and gets 403 from the API.
+passwords. Anyone with a Google account can sign in. On the first login the app asks "who are you?"
+(Stefan or Julia, HOTFIX-001). **Each person can be chosen by one Google account only**: once both are
+taken, everyone else sees "Kein freier Platz" and gets 403 from the API.
+
+> Until both of you have signed in once, a stranger who knows the URL could claim the free person.
+> Sign in right after the deploy; check the assignments with the commands below.
 
 #### One-time setup: Google OAuth client
 
@@ -198,11 +202,11 @@ household group can see or change data. Everyone else sees "Konto nicht eingeric
 Without both values, `terraform plan` fails in CI with a message naming the missing value. The secret is never
 committed; Terraform keeps it in the encrypted state bucket (TD-021).
 
-#### Add someone to the household
+#### Household membership
 
 Membership is a Cognito group `household:<tenantId>:<userId>`. Terraform creates `household:default:STEFAN`
-and `household:default:JULIA`. After a person has signed in with Google once (and seen
-"Konto nicht eingerichtet"), add them in AWS CloudShell (region `eu-central-1`):
+and `household:default:JULIA`. Normally the app assigns the group itself when someone picks a person on the
+first login. To check or fix assignments, use AWS CloudShell (region `eu-central-1`):
 
 ```bash
 POOL_ID=$(aws cognito-idp list-user-pools --max-results 20 \
@@ -212,12 +216,19 @@ POOL_ID=$(aws cognito-idp list-user-pools --max-results 20 \
 aws cognito-idp list-users --user-pool-id "$POOL_ID" \
   --query "Users[].[Username, Attributes[?Name=='email'].Value | [0], UserCreateDate]" --output table
 
+# Who is Stefan / Julia?
+aws cognito-idp list-users-in-group --user-pool-id "$POOL_ID" --group-name "household:default:JULIA" \
+  --query "Users[].[Username, Attributes[?Name=='email'].Value | [0]]" --output table
+
+# Assign by hand (instead of the first-login choice)
 aws cognito-idp admin-add-user-to-group --user-pool-id "$POOL_ID" \
   --username "google_<number>" --group-name "household:default:STEFAN"
 ```
 
-The person then signs out and in again (or waits up to 60 minutes for the next token refresh).
-Each account must be in **exactly one** household group.
+After a manual change the person signs out and in again (or waits up to 60 minutes for the next token
+refresh). Each account must be in **exactly one** household group, and each group should have exactly one
+member. **Wrong claim** (a stranger took a person): remove them from the group, sign them out globally and
+delete the user; the person is free again.
 
 | Group | Meaning |
 |---|---|

@@ -30,6 +30,14 @@ mock_provider "aws" {
   }
 }
 
+override_resource {
+  target          = aws_cognito_user_pool.users
+  override_during = plan
+  values = {
+    id = "eu-central-1_TEST"
+  }
+}
+
 run "lambda_matches_runtime_requirements" {
   command = plan
 
@@ -56,6 +64,8 @@ run "lambda_matches_runtime_requirements" {
       TENNERS_TABLE        = "tenner-tenners"
       HISTORY_TABLE        = "tenner-history"
       APPLICATION_TIMEZONE = "Europe/Berlin"
+      COGNITO_USER_POOL_ID = "eu-central-1_TEST"
+      HOUSEHOLD_TENANT_ID  = "default"
     })
     error_message = "Lambda environment variables do not match the specification."
   }
@@ -75,7 +85,7 @@ run "http_api_routes_health" {
   }
 
   assert {
-    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners", "GET /tenners", "PUT /tenners/{tennerId}", "DELETE /tenners/{tennerId}", "POST /tenners/{tennerId}/complete", "POST /tenners/{tennerId}/undo-completion", "POST /tenners/{tennerId}/restore", "GET /dashboard", "GET /tenners/{tennerId}", "GET /history", "GET /tenners/{tennerId}/history"])
+    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners", "GET /tenners", "PUT /tenners/{tennerId}", "DELETE /tenners/{tennerId}", "POST /tenners/{tennerId}/complete", "POST /tenners/{tennerId}/undo-completion", "POST /tenners/{tennerId}/restore", "GET /dashboard", "GET /tenners/{tennerId}", "GET /history", "GET /tenners/{tennerId}/history", "GET /onboarding", "POST /onboarding/assignment"])
     error_message = "API routes must match the implemented endpoints."
   }
 

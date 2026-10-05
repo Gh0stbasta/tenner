@@ -18,6 +18,27 @@ export const GROUPS_CLAIM = "cognito:groups";
 /** Prefix of household membership groups. */
 export const HOUSEHOLD_GROUP_PREFIX = "household:";
 
+/** Cognito username claim (e.g. google_1234567890 for Google users). */
+export const USERNAME_CLAIM = "cognito:username";
+
+/** Signed-in Cognito user, with or without household membership (HOTFIX-001 onboarding). */
+export interface Principal {
+  readonly username: string;
+}
+
+/** Group name for a household member: household:<tenantId>:<userId>. */
+export function householdGroupName(tenantId: string, userId: UserId): string {
+  return `${HOUSEHOLD_GROUP_PREFIX}${tenantId}:${userId}`;
+}
+
+/** The signed-in user from the verified claims, for routes that do not need a household (onboarding). */
+export function principalFromEvent(event: ApiEvent): Principal {
+  const claims = claimsOf(event);
+  const username = claims?.[USERNAME_CLAIM];
+  if (typeof username !== "string" || username.trim() === "") throw new UnauthorizedError("Authentication required.");
+  return { username };
+}
+
 /** Tenant and acting user, derived exclusively from verified JWT claims. */
 export interface Identity {
   readonly tenantId: string;

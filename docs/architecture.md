@@ -479,7 +479,8 @@ Decided in [`decisions/0001-authentication.md`](decisions/0001-authentication.md
 - Amazon Cognito User Pool (Essentials tier), **one account per household member**, no password sign-up.
 - Sign-in **only with Google** (Cognito federation, Authorization Code flow with PKCE, public SPA client).
   Anyone with a Google account can sign in; household access requires a Cognito group
-  `household:<tenantId>:<userId>`, assigned by an administrator.
+  `household:<tenantId>:<userId>`. On the first login the user picks a household member; each member can be
+  claimed by one account only (HOTFIX-001, ADR 0002 amendment).
 - The API Gateway JWT authorizer protects every route except `GET /health`. The browser sends the
   Cognito **ID token** because it carries `cognito:groups`.
 - The backend derives tenant and acting user only from verified claims (SECURITY-004).
@@ -507,13 +508,14 @@ Browser ──(Authorization Code + PKCE, identity_provider=Google)──► Cog
 | `aws_cognito_user_pool_client.web` (`tenner-web-prod`) | public client, code flow + PKCE, scopes `openid email`, identity provider Google only, auth flow refresh token only (no passwords), callback `https://<cloudfront>/auth/callback`, tokens 60 min, refresh 30 days, revocation on, cannot write custom attributes |
 | `aws_cognito_identity_provider.google` | Google, scopes `openid email profile`, maps `email` and `username = sub`; client ID/secret from `var.google_client_id` / `var.google_client_secret` (GitHub variable/secret) |
 | `aws_cognito_user_group.household` | `household:default:STEFAN`, `household:default:JULIA` |
+| `aws_iam_role_policy.api_cognito` | API Lambda may add/remove the caller to/from household groups and read group membership on this pool only (HOTFIX-001, TD-023) |
 | `aws_cognito_user_pool_domain.login` | managed login v2, prefix `tenner-prod-<first 8 hex of sha1(account id)>` |
 | `aws_apigatewayv2_authorizer.cognito` | JWT authorizer on every route except `GET /health` (`local.api_public_routes`) |
 
 The CloudFront CSP allows `connect-src` to `cognito-idp.eu-central-1.amazonaws.com` (discovery, JWKS) and the
 managed login domain (token endpoint). Outputs: `cognito_user_pool_id`, `cognito_client_id`, `cognito_issuer_url`,
 `cognito_login_url`, `cognito_google_redirect_uri`, `cognito_household_groups`. Users are created by Cognito on
-their first Google sign-in; an administrator adds them to a household group (README → "Google Sign-In and User
+their first Google sign-in and pick their household member in the app (README → "Google Sign-In and User
 Accounts"). The redirect to Google is a top-level navigation and needs no CSP change.
 
 ### Authorization Model (SECURITY-004, FUTURE-011, `backend/src/auth/identity.ts`)
@@ -540,6 +542,20 @@ handlers / services → repositories (every key and query uses identity.tenantId
 - **Permissions inside a household:** every member may read and change every Tenner of the household.
   Roles are out of scope (HOUSEHOLD-ADMIN-005).
 - Records written before authentication have `null` audit fields (TD-019).
+
+#### First-login self-assignment (HOTFIX-001)
+
+```text
+Signed in, no household group → GET /onboarding (principal = cognito:username)
+  → member chosen → POST /onboarding/assignment
+      account already in a household group → 409 ALREADY_ASSIGNED
+      member already has an account        → 409 MEMBER_TAKEN
+      AdminAddUserToGroup → re-count; >1 member → withdraw, 409 MEMBER_TAKEN
+  → frontend refreshes the session (refresh token) → ID token with the group → dashboard
+```
+
+The onboarding routes need a verified token (`cognito:username`) but no household; every other route still
+needs exactly one household group.
 
 ## Future
 

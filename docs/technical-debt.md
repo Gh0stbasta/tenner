@@ -537,29 +537,32 @@ SECURITY-004, TD-018, `backend/src/repositories/dynamodb/tenner.mapper.ts`, `com
 
 ### Description
 
-Since FUTURE-011, Cognito creates a user on every first Google sign-in. Strangers get no household access
-(403, "Konto nicht eingerichtet"), but their users stay in the pool until an administrator deletes them, and
-new members must be added to a household group by hand.
+Since FUTURE-011, Cognito creates a user on every first Google sign-in. Their users stay in the pool until an
+administrator deletes them. Since HOTFIX-001, a new user picks a household member on the first login; each
+member can be claimed once. **Until every member is claimed, a stranger who knows the URL can claim a free
+member and gets full household access.** After that, strangers see "Kein freier Platz" (403).
 
 ### Reason
 
-Owner decision 2026-10-02: no allowlist; the owner reviews new accounts himself (ADR 0002).
+Owner decisions 2026-10-02 (no allowlist, ADR 0002) and 2026-10-05 (self-assignment, each member once,
+HOTFIX-001).
 
 ### Impact
 
 - The user list can fill with strangers; each one is a monthly active user (Essentials: 10,000 MAU free,
   then about 0.015 USD per MAU).
-- Onboarding a member needs one CLI command.
-- No alert when someone new signs in.
+- Window of exposure for unclaimed members (today: until Julia has signed in once).
+- No alert when someone signs in or claims a member; a wrong claim is only noticed when the real person sees
+  "Bereits vergeben".
 
 ### Suggested Improvement
 
-A pre-sign-up Lambda trigger with an e-mail allowlist (GitHub secret) that rejects strangers and assigns the
-household group automatically, or a notification (EventBridge/SNS) on new users.
+A notification (SNS e-mail) on every assignment, an invitation code per member, or a pre-sign-up Lambda trigger
+with an e-mail allowlist (GitHub secret) that rejects strangers.
 
 ### Related Work
 
-FUTURE-011, ADR 0002, `terraform/auth.tf`, README → "Google Sign-In and User Accounts"
+FUTURE-011, HOTFIX-001, ADR 0002, `terraform/auth.tf`, README → "Google Sign-In and User Accounts"
 
 ---
 
@@ -618,3 +621,33 @@ HOUSEHOLD-ADMIN-001 and derive the groups from it.
 ### Related Work
 
 FUTURE-011, TD-007, HOUSEHOLD-ADMIN-001
+
+---
+
+## TD-023: The API Lambda can change Cognito group membership
+
+### Description
+
+For self-assignment (HOTFIX-001), `tenner-api-role` may call `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`,
+`AdminListGroupsForUser` and `ListUsersInGroup` on the Tenner user pool. IAM cannot restrict which user or group
+is affected; the code only ever adds the calling user to one household group and only after checking it is free.
+Concurrent claims of the same member are resolved by a re-count after adding (the later account withdraws).
+
+### Reason
+
+Storing membership as Cognito groups keeps the authorization path unchanged (groups in the ID token) and needs
+no extra table. A dedicated, narrowly scoped Lambda would add infrastructure for a two-person household.
+
+### Impact
+
+A bug or code-injection in the API Lambda could add any user to any household group. The re-count is not a
+transaction: in a very unlikely interleaving both concurrent claims withdraw and the member stays free.
+
+### Suggested Improvement
+
+Move the assignment into its own small Lambda (only `POST /onboarding/assignment`) with the Cognito permissions,
+and keep the main API role without them; or store claims in DynamoDB with a conditional write and sync groups.
+
+### Related Work
+
+HOTFIX-001, `terraform/iam.tf` (`api_cognito`), `backend/src/services/household-assignment.service.ts`

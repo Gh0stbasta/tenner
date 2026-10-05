@@ -11,6 +11,7 @@ describe("loadConfig", () => {
       applicationName: "Tenner",
       timezone: "Europe/Berlin",
       tables: undefined,
+      onboarding: undefined,
     });
   });
 
@@ -21,7 +22,13 @@ describe("loadConfig", () => {
       applicationName: "Tenner",
       timezone: "Europe/Berlin",
       tables: { tenners: "tenner-tenners", history: "tenner-history" },
+      onboarding: undefined,
     });
+  });
+
+  it("reads the onboarding settings only when both variables are set (HOTFIX-001)", () => {
+    expect(loadConfig({ COGNITO_USER_POOL_ID: "eu-central-1_X", HOUSEHOLD_TENANT_ID: "default" }).onboarding).toEqual({ userPoolId: "eu-central-1_X", tenantId: "default" });
+    expect(loadConfig({ COGNITO_USER_POOL_ID: "eu-central-1_X" }).onboarding).toBeUndefined();
   });
 
   it("reads a valid APPLICATION_TIMEZONE and falls back to Europe/Berlin for invalid values", () => {

@@ -26,6 +26,8 @@ resource "aws_lambda_function" "api" {
       TENNERS_TABLE        = aws_dynamodb_table.tenners.name
       HISTORY_TABLE        = aws_dynamodb_table.history.name
       APPLICATION_TIMEZONE = var.application_timezone
+      COGNITO_USER_POOL_ID = aws_cognito_user_pool.users.id # HOTFIX-001 self-assignment
+      HOUSEHOLD_TENANT_ID  = local.household_tenant_id
     }
   }
 

@@ -61,6 +61,8 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       replayed: false,
     })),
     deleteTenner: vi.fn(async () => ({ response: { tennerId: "t-1", deleted: true as const }, outcome: { status: "DELETED" as const, tenner: tennerFixture() } })),
+    getOnboarding: vi.fn(async () => ({ assignedTo: null, members: [] })),
+    assignHouseholdMember: vi.fn(async () => ({ response: { userId: "JULIA" as const }, group: "household:default:JULIA" })),
     ...overrides,
   };
 }
@@ -180,6 +182,33 @@ describe("authentication (SECURITY-004)", () => {
     const d = deps();
     await route(event("GET /tenners"), d);
     expect(d.logger.child).toHaveBeenCalledWith({ userId: TEST_IDENTITY.userId });
+  });
+});
+
+describe("onboarding routes (HOTFIX-001)", () => {
+  it("GET /onboarding works for a signed-in user without household group", async () => {
+    const d = deps();
+    const response = await routeEvent(authenticatedEvent(event("GET /onboarding"), { "cognito:username": "google_9" }), d);
+    expect(response.statusCode).toBe(200);
+    expect(d.getOnboarding).toHaveBeenCalledWith({ username: "google_9" });
+  });
+
+  it("POST /onboarding/assignment passes the principal and the chosen member", async () => {
+    const d = deps();
+    const response = await routeEvent(authenticatedEvent(event("POST /onboarding/assignment", {}, JSON.stringify({ userId: "JULIA" })), { "cognito:username": "google_9" }), d);
+    expect(response.statusCode).toBe(201);
+    expect(d.assignHouseholdMember).toHaveBeenCalledWith({ username: "google_9" }, "JULIA");
+  });
+
+  it("rejects onboarding without verified claims with 401", async () => {
+    const d = deps();
+    expect((await routeEvent(event("GET /onboarding"), d)).statusCode).toBe(401);
+    expect(d.getOnboarding).not.toHaveBeenCalled();
+  });
+
+  it("still blocks household routes for users without a group (403)", async () => {
+    const d = deps();
+    expect((await routeEvent(authenticatedEvent(event("GET /tenners"), { "cognito:username": "google_9" }), d)).statusCode).toBe(403);
   });
 });
 
@@ -473,6 +502,7 @@ describe("createDependencies", () => {
       application: "Tenner",
       timezone: "Europe/Berlin",
       tables: { tenners: "tenner-tenners", history: "tenner-history" },
+      onboarding: { userPoolId: "eu-central-1_TEST", tenantId: "default" },
     });
   });
 });

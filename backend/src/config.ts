@@ -20,6 +20,15 @@ export interface AppConfig {
   readonly timezone: string;
   /** DynamoDB table names. Undefined when TENNERS_TABLE or HISTORY_TABLE is missing. */
   readonly tables: TableConfig | undefined;
+  /** Self-assignment to a household member (HOTFIX-001). Undefined when the variables are missing. */
+  readonly onboarding: OnboardingConfig | undefined;
+}
+
+export interface OnboardingConfig {
+  /** Cognito user pool that holds the household groups (COGNITO_USER_POOL_ID). */
+  readonly userPoolId: string;
+  /** Household that new users join (HOUSEHOLD_TENANT_ID), e.g. "default". */
+  readonly tenantId: string;
 }
 
 export const LOG_LEVELS: readonly LogLevel[] = ["DEBUG", "INFO", "WARN", "ERROR"];
@@ -40,12 +49,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const logLevel = (env.LOG_LEVEL ?? DEFAULTS.logLevel).toUpperCase();
   const tenners = readTrimmed(env.TENNERS_TABLE);
   const history = readTrimmed(env.HISTORY_TABLE);
+  const userPoolId = readTrimmed(env.COGNITO_USER_POOL_ID);
+  const householdTenantId = readTrimmed(env.HOUSEHOLD_TENANT_ID);
   return {
     environment: readTrimmed(env.ENVIRONMENT) ?? DEFAULTS.environment,
     logLevel: LOG_LEVELS.includes(logLevel as LogLevel) ? (logLevel as LogLevel) : DEFAULTS.logLevel,
     applicationName: readTrimmed(env.APPLICATION_NAME) ?? DEFAULTS.applicationName,
     timezone: resolveTimeZone(readTrimmed(env.APPLICATION_TIMEZONE)),
     tables: tenners && history ? { tenners, history } : undefined,
+    onboarding: userPoolId && householdTenantId ? { userPoolId, tenantId: householdTenantId } : undefined,
   };
 }
 
