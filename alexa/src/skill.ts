@@ -1,6 +1,7 @@
 import { SkillBuilders, type Skill } from "ask-sdk-core";
 import type { SkillConfig } from "./config.js";
 import { ApiErrorHandler } from "./handlers/apiError.js";
+import { CompleteIntentHandler, CompletedByAnswerHandler, ConfirmNoHandler, ConfirmYesHandler, UndoIntentHandler } from "./handlers/complete.js";
 import { GenericErrorHandler } from "./handlers/error.js";
 import { FallbackIntentHandler } from "./handlers/fallback.js";
 import { HelpIntentHandler } from "./handlers/help.js";
@@ -20,6 +21,12 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
     .addRequestInterceptors(linkInterceptor(config, fetchImpl))
     .addRequestHandlers(
       LaunchRequestHandler,
+      // Answers to open completion questions come before the general handlers of the same intents.
+      CompletedByAnswerHandler,
+      ConfirmYesHandler,
+      ConfirmNoHandler,
+      CompleteIntentHandler,
+      UndoIntentHandler,
       SpeakerIntentHandler,
       TodayIntentHandler,
       OverdueIntentHandler,

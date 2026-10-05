@@ -92,7 +92,7 @@ describe("loadConfig", () => {
     expect(loadConfig({ ALEXA_SKILL_ID: "  " })).toMatchObject({ tennerApiBaseUrl: "", skillId: undefined });
   });
 
-  it("keeps two sequential API calls inside the 7 second Lambda timeout", () => {
-    expect(DEFAULT_API_TIMEOUT_MS * 2).toBeLessThan(7000);
+  it("keeps three sequential API calls inside the 7 second Lambda timeout", () => {
+    expect(DEFAULT_API_TIMEOUT_MS * 3).toBeLessThan(7000);
   });
 });

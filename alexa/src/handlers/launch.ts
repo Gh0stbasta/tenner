@@ -1,8 +1,11 @@
 import { getRequestType, type HandlerInput, type RequestHandler } from "ask-sdk-core";
 import type { Response } from "ask-sdk-model";
-import { loadHousehold } from "../session.js";
+import { logEvent } from "../log.js";
+import { apiOf, loadHousehold } from "../session.js";
+import { fetchTenners, type TennerSummary } from "../tenners.js";
+import { TennerApiError } from "../tennerApi.js";
 import { SPEECH } from "../speech.js";
-import { memberEntitiesDirective } from "./members.js";
+import { entitiesDirective } from "./members.js";
 import { setDialogState } from "./state.js";
 
 /**
@@ -16,7 +19,7 @@ export const LaunchRequestHandler: RequestHandler = {
   async handle(input: HandlerInput): Promise<Response> {
     const household = await loadHousehold(input);
     const names = household.context.members.map((member) => member.displayName);
-    const builder = input.responseBuilder.addDirective(memberEntitiesDirective(household.context.members));
+    const builder = input.responseBuilder.addDirective(entitiesDirective(household.context.members, await titlesForEntities(input)));
     if (household.unknownSpeaker && names.length > 0) {
       setDialogState(input, "AWAIT_SPEAKER");
       return builder.speak(SPEECH.whoIsSpeaking(names)).reprompt(SPEECH.whoIsSpeakingReprompt(names)).getResponse();
@@ -25,3 +28,14 @@ export const LaunchRequestHandler: RequestHandler = {
     return builder.speak(speech).reprompt(SPEECH.welcomeReprompt).getResponse();
   },
 };
+
+/** Tenner titles for voice completion (ALEXA-004); a failure only costs recognition quality, not the greeting. */
+async function titlesForEntities(input: HandlerInput): Promise<readonly TennerSummary[]> {
+  try {
+    return await fetchTenners(apiOf(input));
+  } catch (error) {
+    if (!(error instanceof TennerApiError)) throw error;
+    logEvent("info", "entities_skipped", { requestId: input.requestEnvelope.request.requestId, kind: error.kind });
+    return [];
+  }
+}

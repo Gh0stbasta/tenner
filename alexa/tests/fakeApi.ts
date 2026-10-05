@@ -12,6 +12,7 @@ export type FakeRoute = FakeResponse | ((body: unknown, url: string) => FakeResp
 
 export const CONTEXT: AlexaContext = {
   account: { userId: "STEFAN" },
+  timezone: "Europe/Berlin",
   members: [
     { userId: "STEFAN", displayName: "Stefan" },
     { userId: "JULIA", displayName: "Julia" },

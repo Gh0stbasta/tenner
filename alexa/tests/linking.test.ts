@@ -132,7 +132,7 @@ describe("speakers", () => {
     expect(answer.sessionAttributes?.state).toBeUndefined();
     expect(answer.sessionAttributes?.household).toMatchObject({ speakers: [{ personId: PERSON_ID, userId: "JULIA" }] });
     // The household context came from the session: one GET for the whole dialog.
-    expect(api.calls.filter(([, init]) => (init.method ?? "GET") === "GET")).toHaveLength(1);
+    expect(api.calls.filter(([url]) => url.endsWith("/household/alexa"))).toHaveLength(1);
   });
 
   it("matches a spoken name without entity resolution", async () => {

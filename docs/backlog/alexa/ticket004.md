@@ -149,3 +149,39 @@ Manual: complete and undo three real Tenners with different speakers; check hist
 
 - Creating or editing Tenners by voice (possible follow-up ticket)
 - Snoozing/skipping by voice (possible follow-up ticket)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Interaction model: `CompleteIntent` (slot `tenner`, type `TennerTitle`, incl. bare „erledigt“ and a
+  slot-only sample for answers), `UndoIntent`; static placeholder value keeps the type valid
+- [x] Dynamic entities on launch: active Tenners as `TennerTitle` (id = tennerId, up to 100, synonym without
+  leading article) together with the member names; a failed Tenner load does not break the greeting
+- [x] Matcher `alexa/src/matcher.ts` (pure): normalization (umlauts, articles, punctuation), token overlap with
+  edit-distance tolerance, containment, whole-string similarity; clear ≥ 0.8 with lead ≥ 0.15, due bonus for the
+  speaker's due/overdue Tenners, at most three options
+- [x] Completion: entity ID → direct; clear match → complete; uncertain → „Meinst du …?“; several → choice; none →
+  ask again; not-yet-due and paused → confirmation; `completedBy` = recognized speaker, the only member, or asked
+  („Wer hat … gemacht?“); `Idempotency-Key` = Alexa request ID; answer with next due date and rotation hint;
+  `TENNER_INACTIVE` / 404 explained
+- [x] Undo: session's last completion directly; otherwise `GET /history?limit=1[&completedBy=speaker]`, only
+  if completed today (household timezone), after confirmation; `NO_COMPLETION_TO_UNDO` explained
+- [x] Backend: `GET /household/alexa` also returns the household `timezone` (for "today" in the skill)
+- [x] Logs: match outcome, score and Tenner ID only (no titles); README: phrases and matching rules
+- [x] Tests passing: alexa 94 (+26: exact, entity ID, fuzzy, ambiguous with choice via either intent, no match,
+  not-yet-due confirmation, paused + „nein“, inactive, asked/only member, bare „erledigt“, rotation hint,
+  idempotency key, undo in session / outside with confirmation / old or none / nothing left, entities), backend
+  774; lint and build clean
+
+Decisions and assumptions:
+
+- API timeout per call lowered to 2 s: a one-shot completion needs up to three sequential calls (context, list,
+  complete) inside the 7 s Lambda timeout.
+- An uncertain single candidate is asked as „Meinst du X?“ including its warning, so „ja“ completes directly.
+- A bare name in answer to a question may arrive as `SpeakerIntent` or `CompleteIntent`; both are accepted while
+  a question is open.
+- Undo outside the session for an unrecognized speaker uses the household's latest completion today and names
+  who did it.

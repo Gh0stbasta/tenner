@@ -36,7 +36,7 @@ const household = {
   vacation: null,
 };
 
-const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [] };
+const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [] };
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
   return {

@@ -4,8 +4,8 @@ German (de-DE) Alexa custom skill "Tenner" ([ADR 0005](../docs/decisions/0005-al
 [`docs/backlog/alexa/`](../docs/backlog/alexa/)). This folder is its own npm package, next to `backend/` and
 `frontend/`; Terraform for the skill Lambda lives in [`terraform/alexa.tf`](../terraform/alexa.tf).
 
-**Current state (ALEXA-003):** today, overdue, suggestion and work-left questions by voice (see "Supported
-Phrases"), account linking and speaker recognition (ALEXA-002). „Alexa, öffne Tenner“ greets the recognized
+**Current state (ALEXA-004):** completing and undoing Tenners by voice, today/overdue/suggestion/work-left
+questions (ALEXA-003, see "Supported Phrases"), account linking and speaker recognition (ALEXA-002). „Alexa, öffne Tenner“ greets the recognized
 member by name, asks an unknown voice once „Wer spricht gerade?“ and asks unlinked accounts to link Tenner in the
 Alexa app. Help, stop, cancel, fallback and session end are handled.
 
@@ -23,6 +23,8 @@ alexa/
 │   ├── speech.ts                           all German response texts
 │   ├── answers.ts                          spoken answers from the dashboard (pure, ALEXA-003)
 │   ├── dashboard.ts                        GET /dashboard types and call
+│   ├── matcher.ts                          spoken text → Tenner (pure, ALEXA-004)
+│   ├── tenners.ts                          Tenner list, complete/undo/history calls, dates
 │   ├── session.ts                          linked token, API client, household context, speaker resolution
 │   ├── tennerApi.ts                        Tenner API client (timeout, error kinds, correlation ID)
 │   ├── config.ts                           environment (the only module reading process.env)
@@ -42,8 +44,20 @@ is recognized, for the whole household.
 | Overdue | „was ist überfällig“, „was habe ich vergessen“ | longest overdue first, „seit 4 Tagen“ |
 | Suggestion | „was soll ich jetzt machen“, „hast du einen Vorschlag“ | overdue before due today, shortest first |
 | Work left | „wie viel ist noch zu tun“, „wie viel Arbeit ist übrig“ | open minutes today + overdue, per member when household-wide |
+| Complete (ALEXA-004) | „Altglas ist erledigt“, „erledige Mobility“, „ich habe die Pflanzen gegossen“ → slot, „hake Büro saugen ab“, „erledigt“ (after a suggestion) | „Erledigt: Mobility. Als Nächstes fällig am 12. Oktober.“ (+ „Nächstes Mal ist Julia dran.“ for rotating Tenners) |
+| Undo (ALEXA-004) | „mach das rückgängig“, „das war falsch“ | the last completion of this session directly; otherwise today's latest completion (of the speaker) after „Soll ich sie rückgängig machen?“ |
 | Speaker (ALEXA-002) | „ich bin Julia“, answer to „Wer spricht gerade?“ | maps the recognized voice to the member |
 | Help / stop | „Hilfe“, „stopp“, „abbrechen“ | |
+
+**Matching rules (ALEXA-004, `src/matcher.ts`):** titles are loaded as dynamic entities on launch (up to 100;
+synonym without a leading article). Otherwise the spoken text is compared with every active Tenner: lowercase,
+umlauts spelled out, articles dropped, token overlap with a small edit-distance tolerance (plural endings,
+recognition errors), and „all spoken words appear in the title“. A Tenner is completed directly only with a score
+of at least 0.8 and a lead of 0.15 over the next candidate; due/overdue Tenners of the speaker get a small bonus.
+Otherwise Tenner asks („Meinst du Büro saugen oder Büro aufräumen?“, at most three options) or says it found
+nothing. Tenners not due yet and paused Tenners are confirmed first. `completedBy` is the recognized speaker,
+the only member, or the answer to „Wer hat … gemacht?“. The Alexa request ID is the `Idempotency-Key`, so Alexa's
+retries never complete twice. Logs carry match outcome, score and Tenner ID only.
 
 One-shot questions end the session after the answer; inside an open session Tenner asks „Was möchtest du noch
 wissen?“. Every answer also appears as a card in the Alexa app (APL screens follow in ALEXA-006).
@@ -74,7 +88,7 @@ and test it with an envelope from `tests/envelopes.ts`.
 | Invocation | only the Alexa Skills Kit with the Tenner skill ID (Lambda permission `event_source_token`), plus the SDK's skill-ID check (`ALEXA_SKILL_ID`) |
 | Environment | `TENNER_API_BASE_URL` (Tenner API stage), `ALEXA_SKILL_ID`, `LOG_LEVEL`, `ENVIRONMENT` |
 | Logs | `/tenner/alexa-skill` in eu-west-1, 30 days |
-| Data | none stored in eu-west-1; household data only via the Tenner API with the linked member's token (3 s timeout per call) |
+| Data | none stored in eu-west-1; household data only via the Tenner API with the linked member's token (2 s timeout per call) |
 
 ## Activation (one-time, owner, outside this repository)
 
@@ -132,7 +146,7 @@ The skill acts as a household member through the same Cognito user pool and Goog
 
 Error messages: not linked → „Bitte verknüpfe Tenner in der Alexa-App“ plus a link card; 401 (link expired or
 revoked) → relink prompt; 403 (account without household member) → „Dieses Konto gehört zu keinem
-Tenner-Haushalt“; API errors or timeouts (3 s per call) → „Tenner ist gerade nicht erreichbar“.
+Tenner-Haushalt“; API errors or timeouts (2 s per call) → „Tenner ist gerade nicht erreichbar“.
 
 Rotating the client secret needs a new Cognito client (a Terraform change that replaces
 `aws_cognito_user_pool_client.alexa`), new values in the console and relinking (TD-035).

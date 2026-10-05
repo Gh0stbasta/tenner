@@ -42,6 +42,24 @@ export const SPEECH = {
   // ALEXA-003 (plain text, escaped by the caller).
   unknownMember: (spoken: string, names: readonly string[]): string =>
     `Ich kenne niemanden namens ${spoken} in eurem Haushalt. Zum Haushalt gehören ${joinAlternatives(names, "und")}.`,
+  // ALEXA-004 (plain text, escaped by the caller).
+  completed: (title: string, nextDue: string): string => `Erledigt: ${title}. Als Nächstes fällig am ${nextDue}.`,
+  rotationNext: (name: string): string => `Nächstes Mal ist ${name} dran.`,
+  notDueYet: (date: string): string => `Der ist erst am ${date} fällig.`,
+  pausedWarning: "Der ist pausiert; erledigen beendet die Pause.",
+  confirmComplete: (title: string, warning: string | null): string => `${title} erledigen?${warning ? ` ${warning}` : ""}`,
+  didYouMean: (titles: readonly string[], warning: string | null): string => `Meinst du ${joinAlternatives(titles)}?${warning ? ` ${warning}` : ""}`,
+  whichTenner: "Welchen Tenner meinst du? Sag zum Beispiel: Altglas ist erledigt.",
+  noTennerFound: (spoken: string): string => `Ich habe keinen Tenner gefunden, der wie ${spoken} klingt. Welchen meinst du?`,
+  whoDidIt: (title: string, names: readonly string[]): string => `Wer hat ${title} gemacht: ${joinAlternatives(names)}?`,
+  nothingChanged: "Okay, ich habe nichts geändert.",
+  cannotComplete: (title: string): string => `${title} ist pausiert oder archiviert und kann gerade nicht erledigt werden.`,
+  tennerGone: "Diesen Tenner gibt es nicht mehr.",
+  undone: (title: string): string => `Rückgängig gemacht: ${title} ist wieder offen.`,
+  confirmUndo: (title: string, name: string | undefined): string =>
+    `Die letzte Erledigung heute war ${title}${name ? ` von ${name}` : ""}. Soll ich sie rückgängig machen?`,
+  nothingToUndo: "Heute wurde noch nichts erledigt, das ich rückgängig machen könnte.",
+  noCompletionToUndo: (title: string): string => `Für ${title} gibt es nichts mehr rückgängig zu machen.`,
   noVoiceProfile:
     "Ich kann Stimmen nur unterscheiden, wenn du in der Alexa-App ein Sprachprofil angelegt und Skills personalisieren aktiviert hast.",
 } as const;

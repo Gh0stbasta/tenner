@@ -64,7 +64,7 @@ function world(settings: Partial<HouseholdSettings> | undefined = {}) {
       return household;
     }),
   };
-  return { service: new AlexaSpeakerService(households, () => NOW), households, household: () => household };
+  return { service: new AlexaSpeakerService(households, () => NOW, "Europe/Berlin"), households, household: () => household };
 }
 
 const speaker = (personId: string, userId: string): AlexaSpeaker => ({ personId, userId, createdAt: "t", createdBy: "STEFAN" });
@@ -74,6 +74,7 @@ describe("AlexaSpeakerService", () => {
     const w = world({ alexaSpeakers: [speaker(PERSON, "JULIA"), speaker(OTHER_PERSON, "LENA")] });
     expect(await w.service.context(TEST_IDENTITY)).toEqual({
       account: { userId: "STEFAN" },
+      timezone: "Europe/Berlin",
       members: [
         { userId: "STEFAN", displayName: "Stefan" },
         { userId: "JULIA", displayName: "Julia" },
@@ -87,6 +88,11 @@ describe("AlexaSpeakerService", () => {
     const context = await world(undefined).service.context(TEST_IDENTITY);
     expect(context.members.map((member) => member.userId)).toEqual(SEED_MEMBERS.map((member) => member.userId));
     expect(context.speakers).toEqual([]);
+    expect(context.timezone).toBe("Europe/Berlin");
+  });
+
+  it("returns the household's own timezone", async () => {
+    expect((await world({ timezone: "America/New_York" }).service.context(TEST_IDENTITY)).timezone).toBe("America/New_York");
   });
 
   it("creates, uses and replaces a mapping (Speaker Mapping Create / Use)", async () => {
@@ -132,7 +138,7 @@ describe("AlexaSpeakerService", () => {
 describe("Alexa handlers", () => {
   const pathEvent = (personId: string | undefined, body?: string) =>
     authenticatedEvent({ routeKey: "PUT /household/alexa-speakers/{personId}", pathParameters: personId === undefined ? {} : { personId }, ...(body ? { body } : {}) });
-  const context = { account: { userId: "STEFAN" }, members: [], speakers: [] };
+  const context = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [], speakers: [] };
 
   it("validates the person ID and body and logs without the person ID", async () => {
     const logger = mockLogger();

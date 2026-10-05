@@ -282,7 +282,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   // HOUSEHOLD-ADMIN-004: without Cognito configuration there are no groups to revoke.
   const revokeAccess = (tenantId: string, userId: string): Promise<number> =>
     membershipRepository?.removeAllMembers(householdGroupName(tenantId, userId)) ?? Promise.resolve(0);
-  const alexaSpeakerService = householdRepository ? new AlexaSpeakerService(householdRepository, systemClock) : undefined;
+  const alexaSpeakerService = householdRepository ? new AlexaSpeakerService(householdRepository, systemClock, config.timezone) : undefined;
   const memberDeactivationService =
     householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
 

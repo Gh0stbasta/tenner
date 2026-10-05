@@ -4,6 +4,41 @@
       "invocationName": "tenner",
       "intents": [
         {
+          "name": "CompleteIntent",
+          "slots": [
+            {
+              "name": "tenner",
+              "type": "TennerTitle"
+            }
+          ],
+          "samples": [
+            "{tenner}",
+            "{tenner} ist erledigt",
+            "{tenner} erledigt",
+            "erledige {tenner}",
+            "ich habe {tenner} gemacht",
+            "ich habe {tenner} erledigt",
+            "hake {tenner} ab",
+            "{tenner} ist fertig",
+            "{tenner} abhaken",
+            "erledigt",
+            "ist erledigt",
+            "das ist erledigt",
+            "hab ich gemacht",
+            "fertig"
+          ]
+        },
+        {
+          "name": "UndoIntent",
+          "samples": [
+            "mach das rückgängig",
+            "das war falsch",
+            "letzte erledigung rückgängig",
+            "rückgängig",
+            "nimm das zurück"
+          ]
+        },
+        {
           "name": "TodayIntent",
           "slots": [
             {
@@ -134,6 +169,18 @@
               "id": "PLACEHOLDER",
               "name": {
                 "value": "mitglied",
+                "synonyms": []
+              }
+            }
+          ]
+        },
+        {
+          "name": "TennerTitle",
+          "values": [
+            {
+              "id": "PLACEHOLDER",
+              "name": {
+                "value": "aufgabe",
                 "synonyms": []
               }
             }

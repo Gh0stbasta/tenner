@@ -30,6 +30,8 @@ export interface AlexaSpeaker {
 /** GET /household/alexa */
 export interface AlexaContext {
   readonly account: { readonly userId: string };
+  /** Household timezone (IANA), for "today". */
+  readonly timezone: string;
   readonly members: readonly AlexaMember[];
   readonly speakers: readonly AlexaSpeaker[];
 }

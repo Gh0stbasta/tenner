@@ -15,10 +15,11 @@ export class AlexaSpeakerService {
   constructor(
     private readonly households: Pick<HouseholdRepository, "get" | "saveAlexaSpeakers">,
     private readonly clock: Clock,
+    private readonly defaultTimezone: string,
   ) {}
 
   async context(identity: Identity): Promise<AlexaContextResponse> {
-    return toContext(identity, await this.households.get(identity.tenantId));
+    return toContext(identity, await this.households.get(identity.tenantId), this.defaultTimezone);
   }
 
   /**
@@ -32,13 +33,13 @@ export class AlexaSpeakerService {
       throw new ValidationError("Invalid speaker mapping.", [{ field: "userId", message: "Must be an active household member." }]);
     }
     const speakers = settings?.alexaSpeakers ?? [];
-    if (speakers.some((speaker) => speaker.personId === personId && speaker.userId === userId)) return toContext(identity, settings);
+    if (speakers.some((speaker) => speaker.personId === personId && speaker.userId === userId)) return toContext(identity, settings, this.defaultTimezone);
     const others = speakers.filter((speaker) => speaker.personId !== personId);
     if (others.length >= MAX_ALEXA_SPEAKERS) throw new ConflictError(`At most ${MAX_ALEXA_SPEAKERS} speakers can be mapped.`, "LIMIT_REACHED");
     const timestamp = toUtcTimestamp(this.clock());
     const speaker: AlexaSpeaker = { personId, userId, createdAt: timestamp, createdBy: identity.userId };
     const saved = await this.households.saveAlexaSpeakers(identity.tenantId, [...others, speaker], settings?.alexaSpeakersVersion ?? 0, identity.userId, timestamp);
-    return toContext(identity, saved);
+    return toContext(identity, saved, this.defaultTimezone);
   }
 
   /** Remove a speaker mapping (Settings → Alexa); 404 if there is none. */
@@ -54,14 +55,15 @@ export class AlexaSpeakerService {
       identity.userId,
       timestamp,
     );
-    return toContext(identity, saved);
+    return toContext(identity, saved, this.defaultTimezone);
   }
 }
 
-function toContext(identity: Identity, settings: HouseholdSettings | undefined): AlexaContextResponse {
+function toContext(identity: Identity, settings: HouseholdSettings | undefined, defaultTimezone: string): AlexaContextResponse {
   const members = (settings?.members ?? SEED_MEMBERS).filter((member) => member.active);
   return {
     account: { userId: identity.userId },
+    timezone: settings?.timezone ?? defaultTimezone,
     members: members.map((member) => ({ userId: member.userId, displayName: member.displayName })),
     // Mappings to members deactivated meanwhile are hidden (and ignored by the skill) until removed.
     speakers: (settings?.alexaSpeakers ?? [])
