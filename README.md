@@ -5,6 +5,7 @@ recurring responsibilities through small, ten-minute tasks ("Tenners").
 
 > If something can be improved in 10 minutes, do a Tenner.
 
+- **Project status at a glance:** [`dashboard.md`](dashboard.md)
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Roadmap: [`docs/roadmap.md`](docs/roadmap.md)
 - Backlog: [`docs/backlog/README.md`](docs/backlog/README.md)
