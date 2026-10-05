@@ -59,3 +59,17 @@ the period has it. A snoozed Tenner is due on its snooze date.
 | `comparison.changePercent` | (period − previous) ÷ previous × 100, one decimal; `null` when the previous period has none |
 
 With a filter, completions of deleted Tenners are left out (their assignee and category are unknown).
+
+## Members — `GET /analytics/users` (ANALYTICS-003)
+
+One entry per household member from the member list (single source of truth, deactivated members included with
+`active: false`), also without activity.
+
+| Metric | Definition |
+|---|---|
+| `completions` | Completions with `completedBy` = member in the period |
+| `actualMinutes` | Sum of `actualMinutes` of those completions |
+| `assignedActive` | Active Tenners assigned to the member *now* |
+| `assignedOverdue` | Of those, overdue *now* (not paused) |
+| `completedForOthers` | Completions by the member of Tenners *now* assigned to another member (shared and deleted Tenners do not count) |
+| `shared.assignedActive`, `shared.assignedOverdue` | The same counts for shared Tenners (`HOUSEHOLD`), which belong to nobody |

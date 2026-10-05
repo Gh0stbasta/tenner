@@ -279,6 +279,7 @@ GET    /dashboard
 
 GET    /analytics/summary      (ANALYTICS-001)
 GET    /analytics/trends       (ANALYTICS-002)
+GET    /analytics/users        (ANALYTICS-003)
 ```
 
 Analytics are computed on the fly per request from `tenner-history` (Query on `completedAt-index`, never a Scan) and

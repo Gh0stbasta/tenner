@@ -2,7 +2,7 @@
  * Pure analytics aggregations (ANALYTICS-001 ff.): no I/O, no clock. Metric definitions: docs/analytics.md.
  */
 
-import type { Category, Tenner, UserId, Vacation, WeekStart } from "../models/index.js";
+import { SHARED_ASSIGNEE, type Category, type HouseholdMember, type Tenner, type UserId, type Vacation, type WeekStart } from "../models/index.js";
 import { addDays } from "../utils/clock.js";
 import { addMonths } from "../utils/schedule.js";
 import { isPaused } from "../utils/pause.js";
@@ -141,5 +141,63 @@ export function trends(
       previousPeriodCompletions: previous.length,
       changePercent: change === null ? null : Math.round(change * 1000) / 10,
     },
+  };
+}
+
+export interface UserMetrics {
+  readonly userId: UserId;
+  readonly displayName: string;
+  /** False for deactivated members (HOUSEHOLD-ADMIN-004); they stay listed for their history. */
+  readonly active: boolean;
+  readonly completions: number;
+  readonly actualMinutes: number;
+  readonly assignedActive: number;
+  readonly assignedOverdue: number;
+  readonly completedForOthers: number;
+}
+
+export interface UsersMetrics {
+  readonly period: { readonly from: string; readonly to: string };
+  readonly users: readonly UserMetrics[];
+  /** Shared Tenners (HOUSEHOLD-002) are nobody's own; their counts are reported separately. */
+  readonly shared: { readonly assignedActive: number; readonly assignedOverdue: number };
+}
+
+/**
+ * GET /analytics/users (ANALYTICS-003): one entry per household member (members list = single source of truth),
+ * including members without activity. Completions count for `completedBy`; assignments use the current assignee.
+ */
+export function userMetrics(
+  completions: readonly AnalyticsCompletion[],
+  tenners: readonly Tenner[],
+  members: readonly HouseholdMember[],
+  period: Period,
+  context: AnalyticsContext,
+): UsersMetrics {
+  const tennersById = new Map(tenners.map((tenner) => [tenner.tennerId, tenner]));
+  const active = tenners.filter(isActiveTenner);
+  const assigned = (userId: UserId) => active.filter((tenner) => tenner.assignedTo === userId);
+  const overdue = (list: readonly Tenner[]) => list.filter((tenner) => isOverdue(tenner, context)).length;
+  return {
+    period: { from: period.from, to: period.to },
+    users: members.map((member) => {
+      const own = completions.filter((completion) => completion.completedBy === member.userId);
+      const mine = assigned(member.userId);
+      return {
+        userId: member.userId,
+        displayName: member.displayName,
+        active: member.active,
+        completions: own.length,
+        actualMinutes: sumMinutes(own),
+        assignedActive: mine.length,
+        assignedOverdue: overdue(mine),
+        // Tenners assigned to another member now; shared and deleted Tenners are nobody else's.
+        completedForOthers: own.filter((completion) => {
+          const assignee = tennersById.get(completion.tennerId)?.assignedTo;
+          return assignee !== undefined && assignee !== member.userId && assignee !== SHARED_ASSIGNEE;
+        }).length,
+      };
+    }),
+    shared: { assignedActive: assigned(SHARED_ASSIGNEE).length, assignedOverdue: overdue(assigned(SHARED_ASSIGNEE)) },
   };
 }

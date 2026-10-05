@@ -3,12 +3,12 @@
  * current Tenners. Household volume is small; pre-aggregation is ANALYTICS-010.
  */
 
-import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, HouseholdResponse } from "../dto/index.js";
-import type { Tenner } from "../models/index.js";
+import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, HouseholdResponse } from "../dto/index.js";
+import { SEED_MEMBERS, type HouseholdMember, type Tenner } from "../models/index.js";
 import type { CompletionRepository, TennerRepository } from "../repositories/index.js";
 import type { Clock } from "../utils/clock.js";
 import { dateInTimeZone } from "../utils/timezone.js";
-import { filterCompletions, summarize, trends, type AnalyticsContext } from "./aggregations.js";
+import { filterCompletions, summarize, trends, userMetrics, type AnalyticsContext } from "./aggregations.js";
 import { loadCompletions } from "./historyLoader.js";
 import { inPeriod, previousPeriod, resolvePeriod, type Period } from "./period.js";
 
@@ -27,6 +27,7 @@ export class AnalyticsService {
     private readonly completions: Pick<CompletionRepository, "listCompletions">,
     private readonly settingsOf: HouseholdSettingsSource,
     private readonly clock: Clock,
+    private readonly membersOf: (tenantId: string) => Promise<readonly HouseholdMember[]> = async () => SEED_MEMBERS,
   ) {}
 
   async summary(tenantId: string, request: AnalyticsPeriodRequest): Promise<AnalyticsSummaryResponse> {
@@ -55,6 +56,17 @@ export class AnalyticsService {
       request.granularity ?? "week",
       settings.weekStartsOn,
     );
+  }
+
+  /** Per-member completions, minutes and current assignments (ANALYTICS-003). */
+  async users(tenantId: string, request: AnalyticsPeriodRequest): Promise<AnalyticsUsersResponse> {
+    const { settings, period, context } = await this.scope(tenantId, request);
+    const [completions, tenners, members] = await Promise.all([
+      loadCompletions(this.completions, tenantId, period, settings.timezone),
+      this.tenners.list(tenantId),
+      this.membersOf(tenantId),
+    ]);
+    return userMetrics(completions, tenners, members, period, context);
   }
 
   /** Settings, today and the resolved period (400 for invalid periods). */
