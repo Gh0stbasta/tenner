@@ -193,3 +193,25 @@ npm run test
 
 - Badges and rewards (FUTURE-006)
 - Streak notifications
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Habit endpoints: `GET /analytics/habits` and `GET /analytics/habits/{tennerId}` (routes in Terraform)
+- [x] Frequency-relative streaks: tolerance `frequencyDays × 1.25` (constant `STREAK_TOLERANCE`), current and longest
+- [x] Consistency score (`fulfillment × (1 − capped CV)`) and trend (±0.1 against the previous period), documented
+- [x] Insufficient data handled explicitly: `consistencyScore` and `trend` are `null` with fewer than two
+  completions; `householdConsistency` is `null` without scores
+- [x] Paused periods and skipped occurrences excluded from the expected completions (shared with ANALYTICS-006)
+- [x] Tests passing: backend 746; lint and build clean
+- [ ] Deploys through GitHub Actions: two new API routes; verified after merge
+
+Decisions and assumptions:
+
+- Streaks look back at most 366 days (one history query covers the streak window and both periods).
+- The current streak ends when the last completion is longer ago than the tolerance.
+- The detail view adds `expectedCompletions`, `actualCompletions`, `completionDates` and `intervals` for charts;
+  it returns 404 for unknown or deleted Tenners.

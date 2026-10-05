@@ -458,6 +458,8 @@ and a Tenner fixture.
 | `GET /analytics/categories` | Period query → `200 { success: true, data: { period, categories: [{ category, name, archived, activeTenners, completions, actualMinutes, shareOfMinutes, overdueNow, healthScore }] } }` (ANALYTICS-004). Every household category in display order |
 | `GET /analytics/neglected` | Period query (default `last90`) plus `limit` (1–50, default 10) → `200 { success: true, data: { period, items: [{ tennerId, title, assignedTo, category, daysOverdue, daysSinceCompleted, expectedCompletions, actualCompletions, fulfillmentRatio, neglectScore }] } }` (ANALYTICS-006). Highest neglect first; Tenners with score 0 are left out |
 | `GET /analytics/balance` | Period query → `200 { success: true, data: { period, byUser: [{ userId, displayName, shareOfMinutes, shareOfAssignedLoad }], byCategory: [{ category, name, shares }], balanceIndex } }` (ANALYTICS-007). Members in list order, no ranking |
+| `GET /analytics/habits` | Period query (default `last90`) → `200 { success: true, data: { period, householdConsistency, items: [{ tennerId, title, currentStreak, longestStreak, consistencyScore, trend }] } }` (ANALYTICS-008). `consistencyScore`/`trend` are `null` with too little data |
+| `GET /analytics/habits/{tennerId}` | Period query → `200` with the item fields plus `period`, `frequencyDays`, `expectedCompletions`, `actualCompletions`, `completionDates`, `intervals`; 404 for unknown or deleted Tenners |
 | `GET /history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `400` for invalid filters or cursor |
 | `GET /tenners/{tennerId}/history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `404` for an unknown Tenner |
 | unknown route | `404 NOT_FOUND` |

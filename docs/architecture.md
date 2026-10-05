@@ -283,6 +283,8 @@ GET    /analytics/users        (ANALYTICS-003)
 GET    /analytics/categories   (ANALYTICS-004)
 GET    /analytics/neglected    (ANALYTICS-006)
 GET    /analytics/balance      (ANALYTICS-007)
+GET    /analytics/habits       (ANALYTICS-008)
+GET    /analytics/habits/{id}  (ANALYTICS-008)
 ```
 
 Analytics are computed on the fly per request from `tenner-history` (Query on `completedAt-index`, never a Scan) and

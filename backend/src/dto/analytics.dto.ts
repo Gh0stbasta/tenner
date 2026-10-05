@@ -1,5 +1,6 @@
 /** GET /analytics/* contracts (ANALYTICS-001 ff.). Metric definitions: docs/analytics.md. */
 
+import type { HabitDetail, HabitsMetrics } from "../analytics/habits.js";
 import type { NeglectedTenner } from "../analytics/neglect.js";
 import type { PeriodRequest } from "../analytics/period.js";
 import type { BalanceMetrics, CategoriesMetrics, Granularity, SummaryMetrics, TennerFilter, TrendMetrics, UsersMetrics } from "../analytics/aggregations.js";
@@ -35,3 +36,11 @@ export interface AnalyticsNeglectedResponse {
 
 /** GET /analytics/balance (ANALYTICS-007). */
 export type AnalyticsBalanceResponse = BalanceMetrics;
+
+/** GET /analytics/habits (ANALYTICS-008). */
+export type AnalyticsHabitsResponse = HabitsMetrics;
+
+/** GET /analytics/habits/{tennerId} (ANALYTICS-008). */
+export interface AnalyticsHabitResponse extends HabitDetail {
+  readonly period: { readonly from: string; readonly to: string };
+}

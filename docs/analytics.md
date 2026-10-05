@@ -126,3 +126,24 @@ plus deactivated members with minutes in the period.
   It counts for the *current* assignee; shared Tenners (`HOUSEHOLD`) are split evenly between the active members, as
   on the dashboard.
 - Categories are the Tenners' *current* categories.
+
+## Habits — `GET /analytics/habits`, `GET /analytics/habits/{tennerId}` (ANALYTICS-008)
+
+Consistency relative to each Tenner's own frequency ("Consistency Over Intensity"). Period default `last90`; active
+Tenners only (details: any non-deleted Tenner). Constants are in `backend/src/analytics/habits.ts`.
+
+| Metric | Definition |
+|---|---|
+| `currentStreak` | Completions in a row, each within `frequencyDays × 1.25` of the previous one, ending with the last completion; 0 if the last completion is already longer ago than that |
+| `longestStreak` | Longest such run |
+| `consistencyScore` | `fulfillmentRatio × (1 − normalized interval variance)` over the period; `null` with fewer than two completions in the period |
+| `trend` | `IMPROVING` / `DECLINING` if the score changed by more than ±0.1 against the previous period, else `STABLE`; `null` if either score is `null` |
+| `householdConsistency` | Mean `consistencyScore` of active Tenners that have one; `null` if none |
+
+- **Fulfillment ratio:** as for neglected Tenners (expected completions without vacation, current pause and skipped
+  occurrences), capped at 1; 1 when nothing is expected yet.
+- **Normalized interval variance:** coefficient of variation (population standard deviation ÷ mean) of the days
+  between consecutive completions in the period, capped at 1; 0 with a single interval.
+- **Streak window:** streaks look back at most 366 days to keep history reads bounded.
+- Undone completions are not in the history reads, so undoing a completion shortens or breaks a streak.
+- Items are sorted by `consistencyScore` (highest first, `null` last), then title.
