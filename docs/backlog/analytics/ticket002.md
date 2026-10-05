@@ -164,3 +164,27 @@ npm run test
 
 - Charts (ANALYTICS-009)
 - Forecasting
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Trends endpoint: `GET /analytics/trends` (route in Terraform)
+- [x] Day, week and month granularity; weeks start on the household's `weekStartsOn` (HOUSEHOLD-ADMIN-003, the
+  centralized setting this ticket asked for), months are calendar months
+- [x] No gaps: every bucket overlapping the period is returned, empty ones with zeros
+- [x] Previous-period comparison: completions and `changePercent` (null when the previous period has none); one
+  history query covers both periods
+- [x] Filters `assignedTo` and `category`
+- [x] Timezone-correct bucketing: completions are bucketed by their household-local date (23:30 UTC test)
+- [x] Tests passing: backend 708; lint and build clean
+- [ ] Deploys through GitHub Actions: one new API route; verified after merge
+
+Decisions and assumptions:
+
+- `assignedTo` and `category` filter on the Tenner's *current* values (TD-033); `assignedTo=HOUSEHOLD` selects
+  shared Tenners. Completions of deleted Tenners count only without filters.
+- The first bucket keeps its calendar start (e.g. the Monday before `from`) so charts align; it counts only days
+  inside the period.

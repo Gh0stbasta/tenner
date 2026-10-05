@@ -2,10 +2,12 @@
  * Pure analytics aggregations (ANALYTICS-001 ff.): no I/O, no clock. Metric definitions: docs/analytics.md.
  */
 
-import type { Tenner, Vacation } from "../models/index.js";
+import type { Category, Tenner, UserId, Vacation, WeekStart } from "../models/index.js";
+import { addDays } from "../utils/clock.js";
+import { addMonths } from "../utils/schedule.js";
 import { isPaused } from "../utils/pause.js";
 import type { AnalyticsCompletion } from "./historyLoader.js";
-import type { Period } from "./period.js";
+import { startOfMonth, startOfWeek, type Period } from "./period.js";
 
 /** Facts every aggregation may need besides the data. */
 export interface AnalyticsContext {
@@ -54,5 +56,90 @@ export function summarize(completions: readonly AnalyticsCompletion[], tenners: 
     overdueNow: tenners.filter((tenner) => isOverdue(tenner, context)).length,
     onTimeRate: ratio(onTime, timed.length),
     onTimeSamples: timed.length,
+  };
+}
+
+export const GRANULARITIES = ["day", "week", "month"] as const;
+export type Granularity = (typeof GRANULARITIES)[number];
+
+/** Optional filters on the completed Tenner's current assignee and category (ANALYTICS-002). */
+export interface TennerFilter {
+  readonly assignedTo?: UserId | undefined;
+  readonly category?: Category | undefined;
+}
+
+export interface TrendBucket {
+  /** First day of the day, week or month. */
+  readonly start: string;
+  readonly completions: number;
+  readonly actualMinutes: number;
+}
+
+export interface TrendMetrics {
+  readonly granularity: Granularity;
+  readonly period: { readonly from: string; readonly to: string };
+  readonly buckets: readonly TrendBucket[];
+  readonly comparison: {
+    readonly previousPeriod: { readonly from: string; readonly to: string };
+    readonly previousPeriodCompletions: number;
+    /** Change against the previous period in percent (1 decimal); null if the previous period had none. */
+    readonly changePercent: number | null;
+  };
+}
+
+/** Completions whose Tenner matches the filter. Without a filter, completions of deleted Tenners count too. */
+export function filterCompletions(completions: readonly AnalyticsCompletion[], tennersById: ReadonlyMap<string, Tenner>, filter: TennerFilter): AnalyticsCompletion[] {
+  if (filter.assignedTo === undefined && filter.category === undefined) return [...completions];
+  return completions.filter((completion) => {
+    const tenner = tennersById.get(completion.tennerId);
+    return (
+      tenner !== undefined &&
+      (filter.assignedTo === undefined || tenner.assignedTo === filter.assignedTo) &&
+      (filter.category === undefined || tenner.category === filter.category)
+    );
+  });
+}
+
+/** Start of the bucket containing `date`. */
+export function bucketStart(date: string, granularity: Granularity, weekStartsOn: WeekStart): string {
+  if (granularity === "day") return date;
+  return granularity === "week" ? startOfWeek(date, weekStartsOn) : startOfMonth(date);
+}
+
+const nextBucket = (start: string, granularity: Granularity): string =>
+  granularity === "day" ? addDays(start, 1) : granularity === "week" ? addDays(start, 7) : addMonths(start, 1);
+
+/**
+ * GET /analytics/trends: zero-filled buckets over the period (the first bucket may start before `period.from`; only
+ * days inside the period count) and the comparison with the previous period. Inputs are already filtered.
+ */
+export function trends(
+  current: readonly AnalyticsCompletion[],
+  previous: readonly AnalyticsCompletion[],
+  period: Period,
+  previousPeriod: Period,
+  granularity: Granularity,
+  weekStartsOn: WeekStart,
+): TrendMetrics {
+  const buckets = new Map<string, { completions: number; actualMinutes: number }>();
+  for (let start = bucketStart(period.from, granularity, weekStartsOn); start <= period.to; start = nextBucket(start, granularity)) {
+    buckets.set(start, { completions: 0, actualMinutes: 0 });
+  }
+  for (const completion of current) {
+    const bucket = buckets.get(bucketStart(completion.date, granularity, weekStartsOn));
+    if (!bucket) continue;
+    bucket.completions += 1;
+    bucket.actualMinutes += completion.actualMinutes;
+  }
+  const change = ratio(current.length - previous.length, previous.length);
+  return {
+    granularity,
+    period: { from: period.from, to: period.to },
+    buckets: [...buckets].map(([start, bucket]) => ({ start, ...bucket })),
+    comparison: {
+      previousPeriod: { from: previousPeriod.from, to: previousPeriod.to },
+      previousPeriodCompletions: previous.length,
+      changePercent: change === null ? null : Math.round(change * 1000) / 10,
+    },
   };
 }

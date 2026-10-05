@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GRANULARITIES } from "../analytics/aggregations.js";
 import { PERIOD_SHORTCUTS } from "../analytics/period.js";
 import {
   TENNER_SORT_FIELDS,
@@ -18,6 +19,7 @@ import {
   type DeactivateMemberRequest,
   type StartHandoverRequest,
   type AnalyticsPeriodRequest,
+  type AnalyticsTrendsRequest,
   type CreateCategoryRequest,
   type UpdateCategoryRequest,
   type UpdateMemberRequest,
@@ -352,3 +354,11 @@ export const analyticsPeriodShape = {
 
 /** GET /analytics/summary. */
 export const analyticsPeriodSchema = z.strictObject(analyticsPeriodShape) satisfies z.ZodType<AnalyticsPeriodRequest, Record<string, string | undefined>>;
+
+/** GET /analytics/trends (ANALYTICS-002). */
+export const analyticsTrendsSchema = z.strictObject({
+  ...analyticsPeriodShape,
+  granularity: z.enum(GRANULARITIES).optional(),
+  assignedTo: userIdSchema.optional(),
+  category: categorySchema.optional(),
+}) satisfies z.ZodType<AnalyticsTrendsRequest, Record<string, string | undefined>>;

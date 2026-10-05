@@ -3,13 +3,14 @@
  * current Tenners. Household volume is small; pre-aggregation is ANALYTICS-010.
  */
 
-import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, HouseholdResponse } from "../dto/index.js";
+import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, HouseholdResponse } from "../dto/index.js";
+import type { Tenner } from "../models/index.js";
 import type { CompletionRepository, TennerRepository } from "../repositories/index.js";
 import type { Clock } from "../utils/clock.js";
 import { dateInTimeZone } from "../utils/timezone.js";
-import { summarize, type AnalyticsContext } from "./aggregations.js";
+import { filterCompletions, summarize, trends, type AnalyticsContext } from "./aggregations.js";
 import { loadCompletions } from "./historyLoader.js";
-import { resolvePeriod, type Period } from "./period.js";
+import { inPeriod, previousPeriod, resolvePeriod, type Period } from "./period.js";
 
 /** Effective household settings (timezone, week start, vacation). */
 export type HouseholdSettingsSource = (tenantId: string) => Promise<HouseholdResponse>;
@@ -37,6 +38,25 @@ export class AnalyticsService {
     return summarize(completions, tenners, period, context);
   }
 
+  /** Buckets for the period and the comparison with the previous one; one history query covers both. */
+  async trends(tenantId: string, request: AnalyticsTrendsRequest): Promise<AnalyticsTrendsResponse> {
+    const { settings, period } = await this.scope(tenantId, request);
+    const previous = previousPeriod(period);
+    const [completions, tenners] = await Promise.all([
+      loadCompletions(this.completions, tenantId, { from: previous.from, to: period.to }, settings.timezone),
+      this.tenners.list(tenantId, { includeDeleted: true }),
+    ]);
+    const matching = filterCompletions(completions, byId(tenners), { assignedTo: request.assignedTo, category: request.category });
+    return trends(
+      matching.filter((completion) => inPeriod(completion.date, period)),
+      matching.filter((completion) => inPeriod(completion.date, previous)),
+      period,
+      previous,
+      request.granularity ?? "week",
+      settings.weekStartsOn,
+    );
+  }
+
   /** Settings, today and the resolved period (400 for invalid periods). */
   private async scope(tenantId: string, request: AnalyticsPeriodRequest): Promise<Scope> {
     const settings = await this.settingsOf(tenantId);
@@ -44,3 +64,5 @@ export class AnalyticsService {
     return { settings, period: resolvePeriod(request, today, settings.weekStartsOn), context: { today, vacation: settings.vacation } };
   }
 }
+
+const byId = (tenners: readonly Tenner[]): Map<string, Tenner> => new Map(tenners.map((tenner) => [tenner.tennerId, tenner]));

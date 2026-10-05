@@ -87,8 +87,8 @@ import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
 import { SEED_CATEGORIES, SEED_MEMBERS, type Handover, type HouseholdCategory, type HouseholdMember, type Vacation } from "./models/index.js";
 import { createLogger, errorFields, type Logger } from "./utils/logger.js";
-import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, HouseholdResponse } from "./dto/index.js";
-import { analyticsPeriodSchema } from "./validators/index.js";
+import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, HouseholdResponse } from "./dto/index.js";
+import { analyticsPeriodSchema, analyticsTrendsSchema } from "./validators/index.js";
 
 /** Dependencies shared by all handlers; replaced in tests. */
 export interface Dependencies {
@@ -127,6 +127,7 @@ export interface Dependencies {
   readonly updateHousehold: UpdateHousehold;
   readonly assignHouseholdMember: AssignHouseholdMember;
   readonly analyticsSummary: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsSummaryResponse>;
+  readonly analyticsTrends: AnalyticsQuery<AnalyticsTrendsRequest, AnalyticsTrendsResponse>;
 }
 
 /** Per-request context passed to route handlers. */
@@ -194,6 +195,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
   "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHousehold, logger),
   "GET /analytics/summary": ({ event, deps, logger, identity }) => analyticsHandler("summary", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsSummary, logger),
+  "GET /analytics/trends": ({ event, deps, logger, identity }) => analyticsHandler("trends", analyticsTrendsSchema, event, identity.tenantId, deps.analyticsTrends, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -297,6 +299,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     getOnboarding: householdAssignmentService ? (principal) => householdAssignmentService.getOnboarding(principal) : notConfigured,
     assignHouseholdMember: householdAssignmentService ? (principal, userId) => householdAssignmentService.assign(principal, userId) : notConfigured,
     analyticsSummary: analyticsService ? (tenantId, request) => analyticsService.summary(tenantId, request) : notConfigured,
+    analyticsTrends: analyticsService ? (tenantId, request) => analyticsService.trends(tenantId, request) : notConfigured,
   };
 }
 

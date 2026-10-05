@@ -42,3 +42,20 @@ length immediately before.
 **On-time limitation:** the due date at completion time (`previousNextDue`) is stored on completions since
 ANALYTICS-001. Older completions do not have it and are left out of `onTimeRate`; it is `null` when no completion in
 the period has it. A snoozed Tenner is due on its snooze date.
+
+## Trends — `GET /analytics/trends` (ANALYTICS-002)
+
+| Parameter | Meaning |
+|---|---|
+| `granularity` | `day`, `week` (default; starts on the household week start), `month` (calendar month) |
+| `assignedTo` | only completions of Tenners *now* assigned to this member (`HOUSEHOLD` = shared Tenners) |
+| `category` | only completions of Tenners *now* in this category |
+
+| Field | Definition |
+|---|---|
+| `buckets[]` | One bucket per day, week or month overlapping the period, oldest first, including empty ones. `start` is the bucket's first day (the first bucket may start before the period); only days inside the period count |
+| `completions`, `actualMinutes` | Completions in the bucket and the sum of their `actualMinutes` |
+| `comparison.previousPeriodCompletions` | Completions in the previous period of equal length (same filters) |
+| `comparison.changePercent` | (period − previous) ÷ previous × 100, one decimal; `null` when the previous period has none |
+
+With a filter, completions of deleted Tenners are left out (their assignee and category are unknown).

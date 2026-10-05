@@ -278,6 +278,7 @@ POST   /tenners/{id}/complete
 GET    /dashboard
 
 GET    /analytics/summary      (ANALYTICS-001)
+GET    /analytics/trends       (ANALYTICS-002)
 ```
 
 Analytics are computed on the fly per request from `tenner-history` (Query on `completedAt-index`, never a Scan) and

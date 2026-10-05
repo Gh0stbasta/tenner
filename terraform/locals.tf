@@ -55,6 +55,7 @@ locals {
     "GET /household",                           # SCHEDULING-008
     "PUT /household",                           # SCHEDULING-008
     "GET /analytics/summary",                   # ANALYTICS-001
+    "GET /analytics/trends",                    # ANALYTICS-002
     "POST /tenners/{tennerId}/snooze",          # SCHEDULING-003
     "POST /tenners/{tennerId}/skip",            # SCHEDULING-004
     "POST /tenners/{tennerId}/pause",           # SCHEDULING-005
