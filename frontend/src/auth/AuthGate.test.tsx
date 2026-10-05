@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useCurrentUser } from "../features/completions/CurrentUserProvider";
+import { mockFetch, ok } from "../tests/fetchMock";
 import { renderWithProviders } from "../tests/render";
 import { AuthCallbackPage } from "./AuthCallbackPage";
 import { AuthConfigMissing } from "./AuthConfigMissing";
@@ -65,13 +66,51 @@ describe("AuthGate", () => {
     expect(screen.getByText("Geschützt für JULIA")).toBeInTheDocument();
   });
 
-  it("blocks accounts without a household member and offers logout", async () => {
+  it("first login: shows the household assignment instead of the app", async () => {
+    mockFetch({
+      "GET /onboarding": ok({
+        assignedTo: null,
+        members: [{ userId: "STEFAN", displayName: "Stefan", available: true }],
+      }),
+    });
     setAuth({ isAuthenticated: true, user: { profile: {} } });
     const onLogout = renderGate();
-    expect(screen.getByText("Konto nicht eingerichtet")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Willkommen bei Tenner" })).toBeInTheDocument();
     expect(screen.queryByText(/Geschützt/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Abmelden" }));
     expect(onLogout).toHaveBeenCalledOnce();
+  });
+
+  it("after the assignment: refreshes the session and redirects to the dashboard", async () => {
+    mockFetch({
+      "GET /onboarding": ok({
+        assignedTo: null,
+        members: [{ userId: "JULIA", displayName: "Julia", available: true }],
+      }),
+      "POST /onboarding/assignment": ok({ userId: "JULIA" }, 201),
+    });
+    const signinSilent = vi.fn(async () => {
+      setAuth({ isAuthenticated: true, user: { profile: { "cognito:groups": ["household:default:JULIA"] } } });
+      return { profile: { "cognito:groups": ["household:default:JULIA"] } };
+    });
+    setAuth({ isAuthenticated: true, user: { profile: {} }, signinSilent });
+    renderWithProviders(
+      <Routes>
+        <Route path="/dashboard" element={<p>Dashboard</p>} />
+        <Route
+          path="*"
+          element={
+            <AuthGate onLogout={vi.fn()}>
+              <Protected />
+            </AuthGate>
+          }
+        />
+      </Routes>,
+      { route: "/tenners", withoutSession: true },
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Ich bin Julia" }));
+    expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+    expect(signinSilent).toHaveBeenCalledOnce();
   });
 
   it("shows login errors with a retry", async () => {

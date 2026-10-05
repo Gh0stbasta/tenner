@@ -4,7 +4,8 @@
  * standard error response.
  */
 
-import { identityFromEvent, type Identity } from "./auth/index.js";
+import { identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
+import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
 import { loadConfig, type AppConfig } from "./config.js";
 import { ApplicationError, NotFoundError } from "./exceptions/index.js";
@@ -16,10 +17,11 @@ import { getTennerHandler, type GetTenner } from "./handlers/get-tenner.js";
 import { health, type DatabaseProbe } from "./handlers/health.js";
 import { historyHandler, tennerHistoryHandler, type GetHistory, type GetTennerHistory } from "./handlers/history.js";
 import { listTennersHandler, type ListTenners } from "./handlers/list-tenners.js";
+import { assignHouseholdMemberHandler, onboardingHandler, type AssignHouseholdMember, type GetOnboarding } from "./handlers/onboarding.js";
 import { restoreTennerHandler, type RestoreTenner } from "./handlers/restore-tenner.js";
 import { undoCompletionHandler, type UndoCompletion } from "./handlers/undo-completion.js";
 import { updateTennerHandler, type UpdateTenner } from "./handlers/update-tenner.js";
-import { DynamoDbCompletionRepository, DynamoDbTennerRepository } from "./repositories/index.js";
+import { CognitoHouseholdMembershipRepository, DynamoDbCompletionRepository, DynamoDbTennerRepository } from "./repositories/index.js";
 import {
   CompleteTennerService,
   CreateTennerService,
@@ -27,6 +29,7 @@ import {
   DeleteTennerService,
   GetTennerService,
   HistoryService,
+  HouseholdAssignmentService,
   ListTennersService,
   RestoreTennerService,
   UndoCompletionService,
@@ -53,6 +56,8 @@ export interface Dependencies {
   readonly getTenner: GetTenner;
   readonly getHistory: GetHistory;
   readonly getTennerHistory: GetTennerHistory;
+  readonly getOnboarding: GetOnboarding;
+  readonly assignHouseholdMember: AssignHouseholdMember;
 }
 
 /** Per-request context passed to route handlers. */
@@ -68,12 +73,24 @@ export interface AuthenticatedContext extends RequestContext {
   readonly identity: Identity;
 }
 
+/** Context of an onboarding route: signed in, but not necessarily in a household yet (HOTFIX-001). */
+export interface PrincipalContext extends RequestContext {
+  readonly principal: Principal;
+}
+
 type RouteHandler = (ctx: AuthenticatedContext) => Promise<ApiResult>;
 type PublicRouteHandler = (ctx: RequestContext) => Promise<ApiResult>;
+type OnboardingRouteHandler = (ctx: PrincipalContext) => Promise<ApiResult>;
 
 /** Routes without authentication; must match api_public_routes in terraform/locals.tf. */
 const PUBLIC_ROUTES: Readonly<Record<string, PublicRouteHandler>> = {
   "GET /health": ({ deps, logger }) => health(deps.config, deps.probeDatabase, logger),
+};
+
+/** Signed-in users without a household may call these to pick their household member (HOTFIX-001). */
+const ONBOARDING_ROUTES: Readonly<Record<string, OnboardingRouteHandler>> = {
+  "GET /onboarding": ({ deps, principal }) => onboardingHandler(principal, deps.getOnboarding),
+  "POST /onboarding/assignment": ({ event, deps, logger, principal }) => assignHouseholdMemberHandler(event, principal, deps.assignHouseholdMember, logger),
 };
 
 /** Protected routes. The tenant comes only from the identity; there is no default tenant. */
@@ -101,6 +118,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     application: config.applicationName,
     timezone: config.timezone,
     tables: config.tables ?? "not configured",
+    onboarding: config.onboarding ?? "not configured",
   });
   const tables = config.tables;
   const notConfigured = async (): Promise<never> => {
@@ -119,6 +137,10 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const completeTennerService =
     tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator) : undefined;
   const undoCompletionService = tennerRepository && completionRepository ? new UndoCompletionService(tennerRepository, completionRepository, systemClock) : undefined;
+  const onboarding = config.onboarding;
+  const householdAssignmentService = onboarding
+    ? new HouseholdAssignmentService(new CognitoHouseholdMembershipRepository(getCognitoClient(), onboarding.userPoolId), onboarding.tenantId)
+    : undefined;
 
   return {
     config,
@@ -139,6 +161,8 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     undoCompletion: undoCompletionService
       ? (identity, id, request, key) => undoCompletionService.undoLatestCompletion(identity, id, request, key)
       : notConfigured,
+    getOnboarding: householdAssignmentService ? (principal) => householdAssignmentService.getOnboarding(principal) : notConfigured,
+    assignHouseholdMember: householdAssignmentService ? (principal, userId) => householdAssignmentService.assign(principal, userId) : notConfigured,
   };
 }
 
@@ -160,6 +184,8 @@ export function correlationIdOf(event: ApiEvent): string {
 async function dispatch(event: ApiEvent, deps: Dependencies, requestLogger: Logger): Promise<ApiResult> {
   const publicHandler = PUBLIC_ROUTES[event.routeKey];
   if (publicHandler) return publicHandler({ event, deps, logger: requestLogger });
+  const onboardingHandlerForRoute = ONBOARDING_ROUTES[event.routeKey];
+  if (onboardingHandlerForRoute) return onboardingHandlerForRoute({ event, deps, logger: requestLogger, principal: principalFromEvent(event) });
   const routeHandler = ROUTES[event.routeKey];
   if (!routeHandler) throw new NotFoundError("Route not found.");
   const identity = identityFromEvent(event);

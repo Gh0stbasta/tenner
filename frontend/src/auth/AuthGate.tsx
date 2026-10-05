@@ -1,17 +1,18 @@
 /**
  * Protects the app (SECURITY-003): redirects to the Cognito login when there is no session and
- * provides the logged-in household member to the rest of the app.
+ * provides the logged-in household member to the rest of the app. Signed-in users without a household
+ * member go through the first-login assignment (HOTFIX-001).
  */
 
-import { Box, Button } from "@mui/material";
+import { Box } from "@mui/material";
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { useAuth } from "react-oidc-context";
-import { useLocation } from "react-router";
-import { EmptyState } from "../components/EmptyState";
+import { useLocation, useNavigate } from "react-router";
 import { ErrorAlert } from "../components/ErrorAlert";
 import { PageLoading } from "../components/LoadingState";
 import { CompletionProvider } from "../features/completions/CompletionProvider";
 import { CurrentUserProvider } from "../features/completions/CurrentUserProvider";
+import { AssignmentPage } from "../features/onboarding/AssignmentPage";
 import { LOGIN_PARAMS, returnPath, userIdFromProfile } from "./session";
 
 export interface AuthGateProps {
@@ -23,6 +24,7 @@ export interface AuthGateProps {
 export function AuthGate({ children, onLogout }: AuthGateProps) {
   const auth = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const redirecting = useRef(false);
   const login = useCallback(
     () =>
@@ -52,17 +54,13 @@ export function AuthGate({ children, onLogout }: AuthGateProps) {
 
   const user = userIdFromProfile(auth.user.profile);
   if (!user) {
-    return (
-      <EmptyState
-        title="Konto nicht eingerichtet"
-        description="Du bist mit Google angemeldet, gehörst aber noch zu keinem Haushalt. Bitte wende dich an die Person, die Tenner verwaltet, damit sie dich freischaltet. Danach meldest du dich einmal ab und wieder an."
-        action={
-          <Button variant="contained" onClick={onLogout}>
-            Abmelden
-          </Button>
-        }
-      />
-    );
+    // First login (HOTFIX-001): pick the household member, then refresh the token (it then carries the group).
+    const continueAfterAssignment = async () => {
+      const refreshed = await auth.signinSilent();
+      if (!userIdFromProfile(refreshed?.profile)) throw new Error("The refreshed session has no household member.");
+      void navigate("/dashboard", { replace: true });
+    };
+    return <AssignmentPage onAssigned={continueAfterAssignment} onLogout={onLogout} />;
   }
 
   return (

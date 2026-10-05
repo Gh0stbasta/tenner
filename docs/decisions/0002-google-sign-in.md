@@ -1,6 +1,6 @@
 # ADR 0002: Google Sign-In and Household Membership through Cognito Groups
 
-- **Status:** Accepted (2026-10-02)
+- **Status:** Accepted (2026-10-02); amended 2026-10-05 (self-assignment, HOTFIX-001, see the end)
 - **Ticket:** FUTURE-011 (pulled forward)
 - **Deciders:** repository owner (Stefan)
 - **Amends:** [ADR 0001](0001-authentication.md) (sign-up, login UI and identity attributes)
@@ -58,3 +58,28 @@ Constraints:
 | Mass sign-ups by strangers raise Cognito cost | Essentials includes 10,000 MAU; the owner monitors the user count (TD-020); WAF or a pre-sign-up allowlist can follow |
 | Leaked Google client secret | Rotate it in Google Cloud and GitHub; the secret alone does not grant access to household data |
 | HTTP API passes `cognito:groups` as a string `"[a b]"` | The backend accepts both the string and the array form; group names contain no spaces |
+
+## Amendment 2026-10-05: Self-Assignment on First Login (HOTFIX-001)
+
+**Context:** Assigning groups with the CLI after the first login was too much friction. HOTFIX-001 asks that a
+new Google user picks "who am I" (Stefan or Julia) in the app. Without a restriction, every Google account
+could become Stefan or Julia, which would make the household data public.
+
+**Considered:** (1) each member claimable once, (2) self-assignment pending the owner's approval,
+(3) unrestricted as written in the ticket.
+
+**Decision (owner, 2026-10-05):** option 1, **each household member can be claimed by exactly one account**,
+and each account claims at most one member.
+
+- `GET /onboarding` (signed in, no household needed) returns the account's member (live from Cognito) and which
+  members are still free. `POST /onboarding/assignment { userId }` adds the caller to
+  `household:<tenantId>:<userId>` if the account has no member yet and nobody else has that member
+  (409 `ALREADY_ASSIGNED` / `MEMBER_TAKEN`). A re-count after adding resolves concurrent claims.
+- The frontend refreshes the session after the assignment; the new ID token carries the group, so the rest of
+  the authorization model (SECURITY-004, `cognito:groups`) is unchanged.
+- The API Lambda gets `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser` and
+  `ListUsersInGroup` on the user pool (TD-023).
+
+**Consequences:** no CLI step for members any more. Once all members are claimed, strangers see
+"Kein freier Platz". **Until then, a stranger who knows the URL can claim a free member** (TD-020); the owner
+should sign in (and let Julia sign in) right after the deploy and can undo a wrong claim with the CLI (README).

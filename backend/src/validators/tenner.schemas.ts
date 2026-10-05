@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   TENNER_SORT_FIELDS,
+  type AssignHouseholdMemberRequest,
   type CompleteTennerRequest,
   type DashboardRequest,
   type HistoryRequest,
@@ -112,3 +113,6 @@ export const tennerHistoryQuerySchema = z.strictObject({
   cursor: cursorSchema.optional(),
   includeUndone: booleanFlagSchema.optional(),
 }) satisfies z.ZodType<TennerHistoryRequest, Record<string, string | undefined>>;
+
+/** POST /onboarding/assignment (HOTFIX-001). */
+export const assignHouseholdMemberSchema = z.strictObject({ userId: userIdSchema }) satisfies z.ZodType<AssignHouseholdMemberRequest>;

@@ -13,6 +13,8 @@ const MESSAGES: Readonly<Record<string, string>> = {
   TENNER_INACTIVE: "Dieser Tenner ist inaktiv.",
   NO_COMPLETION_TO_UNDO: "Es gibt keine Erledigung, die zurückgenommen werden kann.",
   TENNER_NOT_DELETED: "Dieser Tenner ist nicht archiviert.",
+  MEMBER_TAKEN: "Diese Person ist schon mit einem anderen Konto verknüpft.",
+  ALREADY_ASSIGNED: "Dein Konto ist bereits verknüpft. Du wirst gleich weitergeleitet.",
   IDEMPOTENCY_KEY_REUSED: "Diese Aktion wurde bereits mit anderen Daten ausgeführt. Bitte lade neu.",
   [CLIENT_ERROR_CODES.notConfigured]: "Die App ist nicht richtig eingerichtet: die API-Adresse fehlt.",
   [CLIENT_ERROR_CODES.invalidResponse]: "Unerwartete Antwort vom Server. Bitte lade die Seite neu.",

@@ -144,6 +144,11 @@ run "routes_require_jwt_except_health" {
   }
 
   assert {
+    condition     = aws_apigatewayv2_route.api["POST /onboarding/assignment"].authorization_type == "JWT" && aws_apigatewayv2_route.api["GET /onboarding"].authorization_type == "JWT"
+    error_message = "Onboarding routes (HOTFIX-001) must require a signed-in user."
+  }
+
+  assert {
     condition     = aws_apigatewayv2_authorizer.cognito.jwt_configuration[0].issuer == "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_TEST"
     error_message = "The authorizer issuer must be the user pool."
   }

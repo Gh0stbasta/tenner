@@ -10,3 +10,4 @@ export * from "./restore-tenner.service.js";
 export * from "./dashboard.service.js";
 export * from "./get-tenner.service.js";
 export * from "./history.service.js";
+export * from "./household-assignment.service.js";
