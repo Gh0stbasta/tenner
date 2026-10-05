@@ -148,6 +148,16 @@ npm run test
 
 ---
 
+# Owner Decision (2026-10-05)
+
+**SSM Parameter Store, SecureString, encrypted with the AWS managed key `aws/ssm`** (no cost). Secrets Manager is
+not used: the planned secrets (Telegram, VAPID, OAuth, AI keys) belong to third-party services that its rotation
+cannot renew, and about 5 secrets would cost ~2 USD per month against a running cost below 0.10 USD. Secrets
+Manager stays an option for a single secret that needs automatic rotation. The ADR in `docs/decisions/` is written
+when this ticket is implemented.
+
+---
+
 # Out of Scope
 
 - Automatic rotation
