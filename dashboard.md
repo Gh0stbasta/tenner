@@ -8,31 +8,32 @@
 |---|---|
 | **Project health** | 🟢 **Healthy**: every deploy to `main` is green and all automated tests pass |
 | **Current phase** | Phase 2 (V2, "daily usefulness"). Phase 1 (MVP) is live |
-| **Current focus** | Nothing in progress. Last finished: *Analytics* (8 analytics views and the analytics page) |
-| **Biggest blocker** | **Reminders need your decision:** where to store secrets (ADR for SSM Parameter Store vs. Secrets Manager) |
-| **Recommended next action** | Make the secrets decision, then start the *Reminders* block (SECURITY-006 → NOTIFICATION-001 → 002 → 003) |
+| **Current focus** | Nothing in progress. Last finished: *Phone app* (installable, starts from cache, one-thumb navigation and swipe) |
+| **Biggest blocker** | None. Secrets storage is decided (SSM Parameter Store); building it needs SSM permissions on the deploy role, which you add in AWS |
+| **Recommended next action** | Test the app on your phones, then start the *Reminders* block (SECURITY-006 → NOTIFICATION-001 → 002 → 003) |
 
 ## 📈 Progress
 
 ```text
-Overall   █████████░░░░░░░░░░░  44%   68 / 154 tickets
+Overall   █████████░░░░░░░░░░░  46%   71 / 154 tickets
 Phase 1   ████████████████████ 100%   46 / 46   MVP + hotfixes (live since 2026-10-02)
-Phase 2   ██████░░░░░░░░░░░░░░  28%   22 / 79   V2 (3 of 12 themes done)
+Phase 2   ██████░░░░░░░░░░░░░░  32%   25 / 79   V2 (3 of 12 themes done, Mobile 3 of 5)
 Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0 / 29   Long-Term
 ```
 
-✅ Completed: **68** · 🚧 In progress: **0** · 📋 Open: **86** · Total: **154**
+✅ Completed: **71** · 🚧 In progress: **0** · 📋 Open: **83** · Total: **154**
 
 ## 🧩 Feature Status
 
 | ✅ Live | 🔲 Missing (in roadmap order) |
 |---|---|
 | ✅ Google login, one household, private data | 🔲 **Reminders** (daily digest, Telegram, overdue alerts) |
-| ✅ Create, edit, complete, undo, archive, restore Tenners | 🔲 **Phone app** (installable PWA, push) |
+| ✅ Create, edit, complete, undo, archive, restore Tenners | 🔲 **Push notifications** on the phone (with the reminders) |
 | ✅ Dashboard, Quick Add, history, settings (German web app) | 🔲 **"I have 10 minutes"** suggestions |
 | ✅ Calendar scheduling: weekdays, months, snooze, skip, pause, vacation | 🔲 **Alarms, backups tested, runbooks** |
 | ✅ Household setup: members, categories, shared and rotating Tenners, handover | 🔲 Data export, integrations (Strava, calendar), AI (opt-in) |
-| ✅ **Analytics page:** trends, life areas, household balance, neglected Tenners, habits, time | |
+| ✅ **Analytics page:** trends, life areas, household balance, neglected Tenners, habits, time | 🔲 Offline reading and completing |
+| ✅ **Phone app:** installable, starts from cache, bottom navigation, swipe to complete | |
 | ✅ CI/CD, Terraform, cost alerts, smoke tests, security baseline | |
 
 ## 💰 Cost Overview
@@ -75,16 +76,16 @@ Opening the analytics page runs 7 small history queries; at household volume thi
 | | |
 |---|---|
 | **ADRs** | 3 accepted, **0 open** ([`docs/decisions/`](docs/decisions/)); smaller decisions (e.g. charts without a chart library) are recorded in `docs/architecture.md` |
-| **Pending decisions (yours)** | 1. Secrets storage for reminders (blocks the next block) · 2. Whether to keep open Google sign-up now that members are added in the app · 3. Delete the duplicate TICKET-003 file (TD-001) |
+| **Pending decisions (yours)** | 1. Whether to keep open Google sign-up now that members are added in the app · 2. Delete the duplicate TICKET-003 file (TD-001). Decided: secrets in SSM Parameter Store (2026-10-05, ADR follows with SECURITY-006) |
 | **Open risks** | Production is the only environment (TICKET-021) · no alarm on API errors (OBSERVABILITY-002) · backup restore never tested (OPERATIONS-003) |
 
 ## 🎯 Recommended Next Actions
 
-1. **10 minutes:** run the two manual security checks and confirm the AWS cost-alert e-mail.
-2. **Decide secrets storage** (SSM Parameter Store recommended: free and simple), then build the **Reminders** block.
-3. **Decide on sign-up exposure** (TD-020): keep it as is, or close sign-up once the household is complete.
-4. **Make it safe to run:** alarms (OBSERVABILITY-002) and a tested backup restore (OPERATIONS-003).
-5. **Phone app:** an installable PWA (MOBILE-001).
+1. **Test the app on your phones** after the deploy: install it, swipe to complete, start it offline (Android and iPhone).
+2. **Build the Reminders block:** SECURITY-006 (Parameter Store) → NOTIFICATION-001 → 002 → 003; then push (MOBILE-006).
+3. **10 minutes:** run the two manual security checks and confirm the AWS cost-alert e-mail.
+4. **Decide on sign-up exposure** (TD-020): keep it as is, or close sign-up once the household is complete.
+5. **Make it safe to run:** alarms (OBSERVABILITY-002) and a tested backup restore (OPERATIONS-003).
 
 ---
 
