@@ -24,6 +24,7 @@ describe("CreateTennerService", () => {
       tenantId: "default",
       tennerId: ID,
       ...request,
+      originalAssignee: null,
       lastCompleted: null,
       nextDue: "2026-10-01",
       snoozedUntil: null,
@@ -39,6 +40,7 @@ describe("CreateTennerService", () => {
     expect(response).toEqual({
       tennerId: ID,
       ...request,
+      originalAssignee: null,
       lastCompleted: null,
       nextDue: "2026-10-01",
       snoozedUntil: null,

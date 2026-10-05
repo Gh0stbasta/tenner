@@ -15,6 +15,7 @@ import {
   type PauseTennerRequest,
   type CreateMemberRequest,
   type DeactivateMemberRequest,
+  type StartHandoverRequest,
   type CreateCategoryRequest,
   type UpdateCategoryRequest,
   type UpdateMemberRequest,
@@ -328,3 +329,14 @@ export const updateCategorySchema = z
 
 /** POST /users/{userId}/deactivate (HOUSEHOLD-ADMIN-004). */
 export const deactivateMemberSchema = z.strictObject({ reassignTo: userIdSchema.optional() }) satisfies z.ZodType<DeactivateMemberRequest>;
+
+/** POST /users/{userId}/handover (HOUSEHOLD-004). */
+export const startHandoverSchema = z.strictObject({
+  to: userIdSchema,
+  until: isoDateSchema,
+  categories: z
+    .array(categorySchema)
+    .min(1)
+    .refine((values) => new Set(values).size === values.length, "Categories must be distinct.")
+    .optional(),
+}) satisfies z.ZodType<StartHandoverRequest>;

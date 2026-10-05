@@ -37,7 +37,11 @@ export function DashboardTennerCard({ tenner, variant, status, completable = fal
           </Typography>
           <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1, flexWrap: "wrap", alignItems: "center" }}>
             <Chip size="small" label={categoryName(tenner.category)} />
-            <AssigneeLabel assignedTo={tenner.assignedTo} estimatedMinutes={tenner.estimatedMinutes} />
+            <AssigneeLabel
+              assignedTo={tenner.assignedTo}
+              originalAssignee={tenner.originalAssignee}
+              estimatedMinutes={tenner.estimatedMinutes}
+            />
             {status !== undefined && (
               <Typography
                 variant="body2"

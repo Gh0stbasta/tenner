@@ -11,6 +11,7 @@ import {
   WEEK_STARTS,
   WEEKDAYS,
   type CategoryIcon,
+  type Handover,
   type HouseholdCategory,
   type HouseholdMember,
   type HouseholdSettings,
@@ -76,6 +77,27 @@ function toCategories(value: unknown): HouseholdCategory[] | null {
   });
 }
 
+/** Stored handovers; malformed entries are dropped (HOUSEHOLD-004). */
+function toHandovers(value: unknown): Handover[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry): Handover[] => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const { from, to, until, categories, createdAt, createdBy } = entry as Record<string, unknown>;
+    if (typeof from !== "string" || !USER_ID_PATTERN.test(from) || typeof to !== "string" || !USER_ID_PATTERN.test(to) || typeof until !== "string") return [];
+    const valid = Array.isArray(categories) ? categories.filter((category): category is string => typeof category === "string" && CATEGORY_ID_PATTERN.test(category)) : [];
+    return [
+      {
+        from,
+        to,
+        until,
+        categories: valid.length > 0 ? valid : null,
+        createdAt: typeof createdAt === "string" ? createdAt : "",
+        createdBy: typeof createdBy === "string" ? createdBy : "",
+      },
+    ];
+  });
+}
+
 function toDefaults(value: unknown): NewTennerDefaults | null {
   if (typeof value !== "object" || value === null) return null;
   const { category, estimatedMinutes, frequencyDays } = value as Record<string, unknown>;
@@ -97,6 +119,8 @@ function toSettings(item: Record<string, unknown>): HouseholdSettings {
     membersVersion: typeof item.membersVersion === "number" ? item.membersVersion : 0,
     categories: toCategories(item.categories),
     categoriesVersion: typeof item.categoriesVersion === "number" ? item.categoriesVersion : 0,
+    handovers: toHandovers(item.handovers),
+    handoversVersion: typeof item.handoversVersion === "number" ? item.handoversVersion : 0,
     updatedAt: String(item.updatedAt),
     updatedBy: typeof item.updatedBy === "string" ? (item.updatedBy as UserId) : null,
   };
@@ -138,10 +162,15 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
     return this.saveVersionedList(tenantId, "categories", categories, expectedVersion, actor, timestamp);
   }
 
+  /** Replace the handover list with optimistic locking on handoversVersion (HOUSEHOLD-004). */
+  async saveHandovers(tenantId: string, handovers: readonly Handover[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+    return this.saveVersionedList(tenantId, "handovers", handovers, expectedVersion, actor, timestamp);
+  }
+
   /** SET <list> and <list>Version = expected + 1, if the stored version still equals `expectedVersion` (0 = none). */
   private async saveVersionedList(
     tenantId: string,
-    name: "members" | "categories",
+    name: "members" | "categories" | "handovers",
     list: readonly unknown[],
     expectedVersion: number,
     actor: UserId,

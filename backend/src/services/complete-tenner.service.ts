@@ -3,7 +3,7 @@
 import type { Identity } from "../auth/index.js";
 import { toCompletionResponse, toTennerResponse, type CompleteTennerRequest, type CompleteTennerResponse } from "../dto/index.js";
 import { ConflictError, NotFoundError, ValidationError } from "../exceptions/index.js";
-import { SEED_MEMBERS, type Completion, type Tenner } from "../models/index.js";
+import { activeHandoverFor, SEED_MEMBERS, type Completion, type Handover, type HouseholdMember, type Tenner } from "../models/index.js";
 import { requireMember, type MemberSource } from "./member.service.js";
 import type { CompletionRecord, CompletionRepository, TennerRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
@@ -31,6 +31,7 @@ export class CompleteTennerService {
     private readonly timezoneOf: TimeZoneSource,
     private readonly vacationOf: VacationSource = async () => null,
     private readonly membersOf: MemberSource = async () => SEED_MEMBERS,
+    private readonly handoversOf: (tenantId: string) => Promise<readonly Handover[]> = async () => [],
   ) {}
 
   /**
@@ -69,23 +70,22 @@ export class CompleteTennerService {
       revertedAt: null,
       revertedBy: null,
       revertReason: null,
-      // HOUSEHOLD-001: remembered so that undo can restore the assignee.
+      // HOUSEHOLD-001/004: remembered so that undo can restore the assignee and the handover state.
       ...(tenner.assignmentMode === "ROTATING" ? { assignedToBefore: tenner.assignedTo } : {}),
+      ...(tenner.assignmentMode === "ROTATING" && tenner.originalAssignee !== null ? { originalAssigneeBefore: tenner.originalAssignee } : {}),
     };
+    const timezone = await this.timezoneOf(tenantId);
+    const rotated = tenner.assignmentMode === "ROTATING" && tenner.rotation ? await this.nextAssignment(tenner, members, dateInTimeZone(now, timezone)) : undefined;
     const updated: Tenner = {
       ...tenner,
       lastCompleted: completedAt,
       // A due date inside the household vacation moves behind it (SCHEDULING-005).
-      nextDue: avoidVacation(nextDueAfter(completedAt, tenner, await this.timezoneOf(tenantId)), tenner, await this.vacationOf(tenantId)),
+      nextDue: avoidVacation(nextDueAfter(completedAt, tenner, timezone), tenner, await this.vacationOf(tenantId)),
       snoozedUntil: null,
       // Completing a paused Tenner ends its pause.
       pausedAt: null,
       pausedUntil: null,
-      // A rotating Tenner moves on to the next active member after the assigned one (HOUSEHOLD-001).
-      assignedTo:
-        tenner.assignmentMode === "ROTATING" && tenner.rotation
-          ? nextInRotation(tenner.rotation, tenner.assignedTo, (userId) => members.some((member) => member.userId === userId && member.active))
-          : tenner.assignedTo,
+      ...rotated,
       updatedAt: toUtcTimestamp(now),
       updatedBy: identity.userId,
     };
@@ -102,6 +102,18 @@ export class CompleteTennerService {
     }
 
     return { response: { tenner: toTennerResponse(updated), completion: toCompletionResponse(completion) }, replayed: false };
+  }
+
+  /**
+   * A rotating Tenner moves on to the next active member after the one whose turn it was (HOUSEHOLD-001) — during a
+   * handover that is the original assignee. If the next member hands over right now, the cover takes the turn
+   * (HOUSEHOLD-004).
+   */
+  private async nextAssignment(tenner: Tenner, members: readonly HouseholdMember[], today: string): Promise<Pick<Tenner, "assignedTo" | "originalAssignee">> {
+    const turn = tenner.originalAssignee ?? tenner.assignedTo;
+    const next = nextInRotation(tenner.rotation ?? [], turn, (userId) => members.some((member) => member.userId === userId && member.active));
+    const handover = activeHandoverFor(await this.handoversOf(tenner.tenantId), next, tenner.category, today);
+    return handover ? { assignedTo: handover.to, originalAssignee: next } : { assignedTo: next, originalAssignee: null };
   }
 
   /** Default to now; reject future timestamps and timestamps before the last completion. */

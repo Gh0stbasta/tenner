@@ -31,6 +31,7 @@ const HOUSEHOLD = {
   workdays: ["MON", "TUE", "WED", "THU", "FRI"] as const,
   defaults: { category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14 },
   defaultsSource: "DEFAULT" as const,
+  handovers: [],
   vacation: null,
 };
 const VACATION: Vacation = { from: "2026-10-10", until: "2026-10-24", categories: ["HOUSEHOLD", "HOME"] };

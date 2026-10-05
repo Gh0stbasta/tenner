@@ -5,13 +5,14 @@
  */
 
 import type { Identity } from "../auth/index.js";
-import type { HouseholdResponse, UpdateHouseholdRequest } from "../dto/index.js";
+import type { HandoverResponse, HouseholdResponse, UpdateHouseholdRequest } from "../dto/index.js";
 import {
   DEFAULT_HOUSEHOLD_NAME,
   DEFAULT_TENNER_DEFAULTS,
   DEFAULT_WEEK_START,
   DEFAULT_WORKDAYS,
   SEED_CATEGORIES,
+  type Handover,
   type HouseholdSettings,
   type Vacation,
 } from "../models/index.js";
@@ -58,6 +59,10 @@ export class HouseholdService {
   }
 }
 
+export function toHandoverResponse(handover: Handover): HandoverResponse {
+  return { from: handover.from, to: handover.to, until: handover.until, categories: handover.categories };
+}
+
 /** Stored values with defaults applied. */
 export function toHouseholdResponse(settings: HouseholdSettings | undefined, defaultTimezone: string): HouseholdResponse {
   return {
@@ -68,5 +73,6 @@ export function toHouseholdResponse(settings: HouseholdSettings | undefined, def
     defaults: settings?.defaults ?? DEFAULT_TENNER_DEFAULTS,
     defaultsSource: settings?.defaults ? "HOUSEHOLD" : "DEFAULT",
     vacation: settings?.vacation ?? null,
+    handovers: (settings?.handovers ?? []).map(toHandoverResponse),
   };
 }

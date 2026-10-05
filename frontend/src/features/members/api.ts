@@ -81,19 +81,33 @@ export function useUpdateMember() {
   );
 }
 
+/**
+ * Non-archived Tenners (active and inactive) assigned to exactly this member. The member filter of GET /tenners also
+ * returns shared Tenners (HOUSEHOLD-002), so they are filtered out here.
+ */
+async function assignedTenners(userId: UserId): Promise<{ assignedTo: string; category: string }[]> {
+  const list = z.array(z.object({ assignedTo: z.string(), category: z.string() }));
+  const [active, inactive] = await Promise.all([
+    apiClient.get("/tenners", { schema: list, query: { assignedTo: userId } }),
+    apiClient.get("/tenners", { schema: list, query: { assignedTo: userId, active: false } }),
+  ]);
+  return [...active, ...inactive].filter((tenner) => tenner.assignedTo === userId);
+}
+
 /** Number of non-archived Tenners (active and inactive) assigned to a member (HOUSEHOLD-ADMIN-004). */
 export function useAssignedTennerCount(userId: UserId | null) {
   return useQuery({
     queryKey: ["tenners", "assigned-count", userId],
     enabled: userId !== null,
-    queryFn: async () => {
-      const list = z.array(z.unknown());
-      const [active, inactive] = await Promise.all([
-        apiClient.get("/tenners", { schema: list, query: { assignedTo: userId ?? "" } }),
-        apiClient.get("/tenners", { schema: list, query: { assignedTo: userId ?? "", active: false } }),
-      ]);
-      return active.length + inactive.length;
-    },
+    queryFn: async () => (await assignedTenners(userId ?? "")).length,
+  });
+}
+
+/** Categories of the non-archived Tenners assigned to a member, one entry per Tenner (HOUSEHOLD-004 preview). */
+export function useAssignedTennerCategories(userId: UserId) {
+  return useQuery({
+    queryKey: ["tenners", "assigned-categories", userId],
+    queryFn: async () => (await assignedTenners(userId)).map((tenner) => tenner.category),
   });
 }
 

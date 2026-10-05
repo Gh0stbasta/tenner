@@ -14,6 +14,8 @@ export interface DashboardTennerResponse {
   readonly title: string;
   readonly category: Category;
   readonly assignedTo: UserId;
+  /** Member the Tenner is covered for during a handover (HOUSEHOLD-004), or null. */
+  readonly originalAssignee: UserId | null;
   readonly estimatedMinutes: number;
   readonly nextDue: string;
   /** Postponed-to date (SCHEDULING-003), or null. */

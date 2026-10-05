@@ -844,3 +844,37 @@ Store optional keywords per category (or match the category name) and build the 
 ### Related Work
 
 HOUSEHOLD-ADMIN-002, FRONTEND-006, `frontend/src/features/tenners/quickAdd.ts`.
+
+## TD-031: Handover give-back runs on read, not on a schedule
+
+### Description
+
+HOUSEHOLD-004 gives handed-over Tenners back when `GET /dashboard`, `GET /tenners` or `GET /household` notices
+that a handover's last day has passed (`HandoverService.expireDue`). Known gaps:
+
+- Without any of these reads, Tenners stay with the cover after `until` (nothing else reads assignments yet; a
+  future notifier or analytics job must call `expireDue` first).
+- Each of these reads costs one extra GetItem on `tenner-households` (household settings are read several times per
+  request already, see the services' `membersOf`/`timezoneOf`/`vacationOf` sources).
+- Starting, ending and expiring move Tenners with sequential `UpdateItem` calls, not one transaction. A failure
+  leaves a partial state that the next identical start, the next end or the next read completes.
+- Give-back scans all non-deleted Tenners of the household (no index on `originalAssignee`).
+- Two requests expiring at the same moment may both give back (idempotent) and one save loses the version race
+  (logged as `Handover expiry skipped`, retried on the next read).
+
+### Reason
+
+Same decision as SCHEDULING-005: no scheduler or new infrastructure for one household (see `docs/architecture.md`).
+
+### Impact
+
+Assignments may be outdated until the next app open; slightly higher DynamoDB read cost per read request.
+
+### Suggested Improvement
+
+When NOTIFICATION-001 introduces a scheduled Lambda, call `expireDue` from it daily and drop the read hook; load
+the household item once per request and pass it to all services.
+
+### Related Work
+
+HOUSEHOLD-004, `backend/src/services/handover.service.ts`, `backend/src/index.ts`.

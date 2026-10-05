@@ -45,6 +45,7 @@ export class CreateTennerService {
       assignedTo: request.assignedTo,
       assignmentMode: request.assignmentMode,
       rotation: request.rotation,
+      originalAssignee: null,
       lastCompleted: null,
       nextDue: dateInTimeZone(now, await this.timezoneOf(identity.tenantId)),
       snoozedUntil: null,

@@ -323,7 +323,7 @@ Version 1 supported manually configured users only. Since HOUSEHOLD-ADMIN-001, m
   member's Cognito group (access ends with the next token refresh, at most 60 minutes). Not allowed for yourself or
   the last active member. Inactive members cannot be assigned or complete Tenners and are not offered in onboarding;
   `POST /users/{userId}/reactivate` makes them assignable again and their person re-claims them on the next login.
-  Rotations (HOUSEHOLD-001) do not exist yet.
+  Rotations skip deactivated members (HOUSEHOLD-001).
 - **Shared Tenners (HOUSEHOLD-002):** `assignedTo = "HOUSEHOLD"` (constant `SHARED_ASSIGNEE`, reserved — no member
   can get this ID) means anyone can do it. A member filter (dashboard, `GET /tenners?assignedTo=`) includes shared
   Tenners; the list queries `assignedTo-index` twice (member + `HOUSEHOLD`). Dashboard "Nach Person" counts each
@@ -334,6 +334,23 @@ Version 1 supported manually configured users only. Since HOUSEHOLD-ADMIN-001, m
   moves to the next active member after the **assigned** one (covering does not break the order; deactivated
   members are skipped); the completion stores `assignedToBefore`, and undo restores it. Changing only `assignedTo`
   of a rotating Tenner is allowed; the next completion continues from there.
+- **Temporary handover (HOUSEHOLD-004):** `POST /users/{userId}/handover` `{ to, until, categories? }` moves the
+  member's non-archived Tenners (optionally only some categories) to `to` and sets `originalAssignee = userId` on
+  each; `DELETE` gives them back early. The running handovers are a list on the household item (`handovers`,
+  `handoversVersion`, at most one per member); `GET /household` returns them. Rules: both active members, `to` not
+  away itself, `until` (inclusive, household-local date) not in the past; a second handover of the same member →
+  409 `HANDOVER_ACTIVE` (the identical request finishes an interrupted one). Tenners the member covers for someone
+  else move on but keep their original owner. A manual change of `assignedTo` clears `originalAssignee` (that Tenner
+  stays where it was put). Rotating Tenners: a completion continues the rotation from the original assignee's turn
+  and ends the cover for that Tenner; if the next member is away, the cover takes the turn (`originalAssignee` =
+  next member). Undo restores assignee and `originalAssignee`. A member deactivated during the handover does not
+  get Tenners back.
+  - **Decision — give-back on read instead of a scheduler.** Context: the ticket allows "scheduled notifier job or
+    on read"; no scheduler exists yet (NOTIFICATION-001 is open). Options: (a) EventBridge schedule + Lambda,
+    (b) give back on the next read. Decision: (b) — `GET /dashboard`, `GET /tenners` and `GET /household` first give
+    back handovers whose last day has passed (one GetItem when nothing expired; errors are logged and never fail
+    the read). Consequences: no new infrastructure or IAM; assignments are corrected when someone opens the app.
+    Risks: without reads the cover keeps the Tenners; one extra read per request (TD-031).
 - No registration process beyond the Google self-assignment (HOTFIX-001).
 
 No self-service onboarding.
@@ -1086,7 +1103,7 @@ Introduced by TICKET-006 (`terraform/dynamodb.tf`).
 |---|---|---|---|
 | `tenner-tenners` | `tenantId` (PK), `tennerId` (SK) | `nextDue-index` (`tenantId`, `nextDue`), `assignedTo-index` (`tenantId`, `assignedTo`) | Current state of Tenners |
 | `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`), `tennerId-completedAt-index` (`tenantTennerId`, `completedAt`, TICKET-014) | Immutable completion history |
-| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `members` + `membersVersion` (HOUSEHOLD-ADMIN-001), `categories` + `categoriesVersion` (HOUSEHOLD-ADMIN-002), `name`, `weekStartsOn`, `workdays`, `defaults` (HOUSEHOLD-ADMIN-003), `updatedAt`, `updatedBy` |
+| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `members` + `membersVersion` (HOUSEHOLD-ADMIN-001), `categories` + `categoriesVersion` (HOUSEHOLD-ADMIN-002), `name`, `weekStartsOn`, `workdays`, `defaults` (HOUSEHOLD-ADMIN-003), `handovers` + `handoversVersion` (HOUSEHOLD-004), `updatedAt`, `updatedBy` |
 
 All tables use:
 - `PAY_PER_REQUEST` billing

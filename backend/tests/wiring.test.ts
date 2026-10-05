@@ -58,7 +58,9 @@ describe("createDependencies wiring", () => {
   it("lists Tenners from the configured table", async () => {
     send.mockResolvedValue({ Items: [tennerFixture()] });
     await expect(deps().listTenners("default", {})).resolves.toHaveLength(1);
-    expect((send.mock.calls[0]?.[0] as QueryCommand).input.TableName).toBe("tenner-tenners");
+    // HOUSEHOLD-004: expired handovers are checked on the household item first.
+    expect((send.mock.calls[0]?.[0] as GetCommand).input.TableName).toBe("tenner-households");
+    expect((send.mock.calls[1]?.[0] as QueryCommand).input.TableName).toBe("tenner-tenners");
   });
 
   it("soft deletes Tenners in the configured table", async () => {

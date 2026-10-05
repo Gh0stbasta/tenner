@@ -1,6 +1,6 @@
 /** API contracts for household settings (SCHEDULING-008). */
 
-import type { Category, NewTennerDefaults, WeekStart, Weekday } from "../models/index.js";
+import type { Category, NewTennerDefaults, UserId, WeekStart, Weekday } from "../models/index.js";
 
 export interface VacationResponse {
   readonly from: string;
@@ -21,6 +21,36 @@ export interface HouseholdResponse {
   readonly defaultsSource: "DEFAULT" | "HOUSEHOLD";
   /** Household vacation (SCHEDULING-005), or null. */
   readonly vacation: VacationResponse | null;
+  /** Running handovers (HOUSEHOLD-004); expired ones are given back on the next read. */
+  readonly handovers: readonly HandoverResponse[];
+}
+
+export interface HandoverResponse {
+  readonly from: UserId;
+  readonly to: UserId;
+  /** Last day of the handover (inclusive, household-local date). */
+  readonly until: string;
+  /** null = all categories. */
+  readonly categories: readonly Category[] | null;
+}
+
+/** POST /users/{userId}/handover (HOUSEHOLD-004). */
+export interface StartHandoverRequest {
+  readonly to: UserId;
+  readonly until: string;
+  readonly categories?: readonly Category[] | undefined;
+}
+
+export interface StartHandoverResponse {
+  readonly handover: HandoverResponse;
+  /** Tenners now assigned to `to`. */
+  readonly handedOver: number;
+}
+
+/** DELETE /users/{userId}/handover. */
+export interface EndHandoverResponse {
+  /** Tenners given back to the member. */
+  readonly returned: number;
 }
 
 /** PUT /household/vacation (SCHEDULING-005). */

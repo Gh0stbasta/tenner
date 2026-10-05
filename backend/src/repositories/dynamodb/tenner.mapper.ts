@@ -39,6 +39,7 @@ export function toTenner(item: TennerItem): Tenner {
     weekdays: weekdaysOf(item.weekdays, frequencyUnit),
     assignedTo: item.assignedTo as UserId,
     ...assignmentOf(item),
+    originalAssignee: typeof item.originalAssignee === "string" && USER_ID_PATTERN.test(item.originalAssignee) ? item.originalAssignee : null,
     lastCompleted: typeof item.lastCompleted === "string" ? item.lastCompleted : null,
     nextDue: String(item.nextDue),
     snoozedUntil: typeof item.snoozedUntil === "string" ? item.snoozedUntil : null,

@@ -1,11 +1,23 @@
-/** GET/POST /users, PUT /users/{userId} (HOUSEHOLD-ADMIN-001), POST /users/{userId}/deactivate|reactivate (HOUSEHOLD-ADMIN-004). */
+/**
+ * GET/POST /users, PUT /users/{userId} (HOUSEHOLD-ADMIN-001), POST /users/{userId}/deactivate|reactivate (HOUSEHOLD-ADMIN-004),
+ * POST|DELETE /users/{userId}/handover (HOUSEHOLD-004).
+ */
 
 import type { Identity } from "../auth/index.js";
-import type { CreateMemberRequest, DeactivateMemberRequest, DeactivateMemberResponse, MemberResponse, UpdateMemberRequest } from "../dto/index.js";
+import type {
+  CreateMemberRequest,
+  DeactivateMemberRequest,
+  DeactivateMemberResponse,
+  EndHandoverResponse,
+  MemberResponse,
+  StartHandoverRequest,
+  StartHandoverResponse,
+  UpdateMemberRequest,
+} from "../dto/index.js";
 import type { ApiEvent, ApiResult } from "../types/api.js";
 import { successResponse } from "../utils/http.js";
 import type { Logger } from "../utils/logger.js";
-import { createMemberSchema, deactivateMemberSchema, parseJsonBody, updateMemberSchema, userIdSchema, validate } from "../validators/index.js";
+import { createMemberSchema, deactivateMemberSchema, parseJsonBody, startHandoverSchema, updateMemberSchema, userIdSchema, validate } from "../validators/index.js";
 
 export type ListMembers = (tenantId: string) => Promise<MemberResponse[]>;
 export type CreateMember = (identity: Identity, request: CreateMemberRequest) => Promise<MemberResponse>;
@@ -55,4 +67,30 @@ export async function reactivateMemberHandler(event: ApiEvent, identity: Identit
   const member = await reactivate(identity, userId);
   logger.info("Household member reactivated", { event: "MemberReactivated", userId, reactivatedBy: identity.userId });
   return successResponse(200, member);
+}
+
+export type StartHandover = (identity: Identity, userId: string, request: StartHandoverRequest) => Promise<StartHandoverResponse>;
+export type EndHandover = (identity: Identity, userId: string) => Promise<EndHandoverResponse>;
+
+export async function startHandoverHandler(event: ApiEvent, identity: Identity, startHandover: StartHandover, logger: Logger): Promise<ApiResult> {
+  const userId = validate(userIdSchema, event.pathParameters?.userId);
+  const request = validate(startHandoverSchema, parseJsonBody(event.body, event.isBase64Encoded));
+  const result = await startHandover(identity, userId, request);
+  logger.info("Handover started", {
+    event: "HandoverStarted",
+    from: userId,
+    to: result.handover.to,
+    until: result.handover.until,
+    categories: result.handover.categories,
+    handedOver: result.handedOver,
+    startedBy: identity.userId,
+  });
+  return successResponse(201, result);
+}
+
+export async function endHandoverHandler(event: ApiEvent, identity: Identity, endHandover: EndHandover, logger: Logger): Promise<ApiResult> {
+  const userId = validate(userIdSchema, event.pathParameters?.userId);
+  const result = await endHandover(identity, userId);
+  logger.info("Handover ended", { event: "HandoverEnded", from: userId, returned: result.returned, endedBy: identity.userId });
+  return successResponse(200, result);
 }

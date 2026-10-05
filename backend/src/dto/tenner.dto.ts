@@ -44,6 +44,8 @@ export interface TennerResponse {
   readonly assignedTo: UserId;
   readonly assignmentMode: AssignmentMode;
   readonly rotation: readonly UserId[] | null;
+  /** Member the Tenner is covered for during a handover (HOUSEHOLD-004), or null. */
+  readonly originalAssignee: UserId | null;
   readonly lastCompleted: string | null;
   readonly nextDue: string;
   readonly snoozedUntil: string | null;
@@ -90,6 +92,7 @@ export function toTennerResponse(tenner: Tenner): TennerResponse {
     assignedTo: tenner.assignedTo,
     assignmentMode: tenner.assignmentMode,
     rotation: tenner.rotation,
+    originalAssignee: tenner.originalAssignee,
     lastCompleted: tenner.lastCompleted,
     nextDue: tenner.nextDue,
     snoozedUntil: tenner.snoozedUntil,

@@ -26,6 +26,11 @@ export interface Tenner {
   readonly assignmentMode: AssignmentMode;
   /** Ordered members for ROTATING (at least 2); null for FIXED. */
   readonly rotation: readonly UserId[] | null;
+  /**
+   * Member the Tenner belongs to while it is handed over to `assignedTo` (HOUSEHOLD-004), or null. The handover's
+   * end gives it back; a manual reassignment clears it. Items stored before read as null.
+   */
+  readonly originalAssignee: UserId | null;
   /** ISO 8601 UTC timestamp of the last completion, or null if never completed. */
   readonly lastCompleted: string | null;
   /** Calendar date (YYYY-MM-DD) when the Tenner is due next. */

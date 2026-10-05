@@ -16,6 +16,15 @@ const vacationSchema = z.object({
 });
 export type Vacation = z.infer<typeof vacationSchema>;
 
+/** Temporary handover of one member's Tenners (HOUSEHOLD-004); `until` is the last day. */
+const handoverSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  until: z.string(),
+  categories: z.array(categorySchema).nullable(),
+});
+export type Handover = z.infer<typeof handoverSchema>;
+
 export const WEEK_STARTS = ["MONDAY", "SUNDAY"] as const;
 export type WeekStart = (typeof WEEK_STARTS)[number];
 
@@ -38,6 +47,7 @@ const householdSchema = z.object({
   defaults: tennerDefaultsSchema.default(BUILT_IN_TENNER_DEFAULTS),
   defaultsSource: z.enum(["DEFAULT", "HOUSEHOLD"]).default("DEFAULT"),
   vacation: vacationSchema.nullable().default(null),
+  handovers: z.array(handoverSchema).default([]),
 });
 export type Household = z.infer<typeof householdSchema>;
 
@@ -145,4 +155,52 @@ export function useEndVacation() {
 /** Household defaults for new Tenners (built-in values while loading). */
 export function useHouseholdTennerDefaults(): HouseholdTennerDefaults {
   return useHousehold().data?.defaults ?? BUILT_IN_TENNER_DEFAULTS;
+}
+
+/** Running handovers (HOUSEHOLD-004); expired ones are given back by the server on the next read. */
+export function useHandovers(): readonly Handover[] {
+  return useHousehold().data?.handovers ?? [];
+}
+
+export interface HandoverInput {
+  readonly from: string;
+  readonly to: string;
+  readonly until: string;
+  /** Omitted = all categories. */
+  readonly categories?: readonly Category[];
+}
+
+const startHandoverSchema = z.object({ handover: handoverSchema, handedOver: z.number() });
+const endHandoverSchema = z.object({ returned: z.number() });
+
+/** A handover reassigns Tenners, so household, dashboard and lists are reloaded. */
+function useHandoverMutation<TInput, TResult>(mutationFn: (input: TInput) => Promise<TResult>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.household });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tenners });
+    },
+  });
+}
+
+export function useStartHandover() {
+  return useHandoverMutation(async ({ from, ...body }: HandoverInput) => {
+    const result = await apiClient.post(`/users/${encodeURIComponent(from)}/handover`, {
+      schema: startHandoverSchema,
+      body,
+    });
+    trackEvent("HandoverStarted", { until: body.until, handedOver: result.handedOver });
+    return result;
+  });
+}
+
+export function useEndHandover() {
+  return useHandoverMutation(async (from: string) => {
+    const result = await apiClient.delete(`/users/${encodeURIComponent(from)}/handover`, { schema: endHandoverSchema });
+    trackEvent("HandoverEnded", { returned: result.returned });
+    return result;
+  });
 }

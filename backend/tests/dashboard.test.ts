@@ -57,7 +57,7 @@ describe("DashboardService", () => {
     expect(all).not.toContain("deleted-but-active-flag");
     expect(dashboard.overdue.map((i) => i.overdueDays)).toEqual([11, 3]);
     expect(dashboard.upcoming.map((i) => i.daysUntilDue)).toEqual([3, 3, 7]);
-    expect(dashboard.dueToday[0]).toEqual({ tennerId: "due-c", title: "Water Plants", category: "HOME", assignedTo: "STEFAN", estimatedMinutes: 5, nextDue: REF, snoozedUntil: null });
+    expect(dashboard.dueToday[0]).toEqual({ tennerId: "due-c", title: "Water Plants", category: "HOME", assignedTo: "STEFAN", originalAssignee: null, estimatedMinutes: 5, nextDue: REF, snoozedUntil: null });
     expect(dashboard.dueToday[0]).not.toHaveProperty("overdueDays");
   });
 

@@ -60,8 +60,9 @@ export class UndoCompletionService {
     const reverted: Completion = { ...latest, revertedAt: timestamp, revertedBy, revertReason: request.reason ?? null };
     const restored: Tenner = {
       ...restoreSchedule(tenner, previous, now, timestamp, await this.timezoneOf(tenantId)),
-      // HOUSEHOLD-001: undo also turns a rotation back.
+      // HOUSEHOLD-001: undo also turns a rotation back (with its handover state, HOUSEHOLD-004).
       assignedTo: latest.assignedToBefore ?? tenner.assignedTo,
+      originalAssignee: latest.assignedToBefore !== undefined ? (latest.originalAssigneeBefore ?? null) : tenner.originalAssignee,
       updatedBy: revertedBy,
     };
 

@@ -65,6 +65,8 @@ locals {
     "PUT /users/{userId}",                      # HOUSEHOLD-ADMIN-001
     "POST /users/{userId}/deactivate",          # HOUSEHOLD-ADMIN-004
     "POST /users/{userId}/reactivate",          # HOUSEHOLD-ADMIN-004
+    "POST /users/{userId}/handover",            # HOUSEHOLD-004
+    "DELETE /users/{userId}/handover",          # HOUSEHOLD-004
     "GET /categories",                          # HOUSEHOLD-ADMIN-002
     "POST /categories",                         # HOUSEHOLD-ADMIN-002
     "PUT /categories/{categoryId}",             # HOUSEHOLD-ADMIN-002

@@ -13,7 +13,9 @@ export type TelemetryEvent =
   | "TennerPaused"
   | "TennerResumed"
   | "VacationSet"
-  | "VacationEnded";
+  | "VacationEnded"
+  | "HandoverStarted"
+  | "HandoverEnded";
 
 export function trackEvent(event: TelemetryEvent, properties: Readonly<Record<string, unknown>> = {}): void {
   console.info(`[telemetry] ${event}`, properties);

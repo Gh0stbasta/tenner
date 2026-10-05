@@ -117,7 +117,11 @@ export function TennerCard({
         </Box>
         <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1, flexWrap: "wrap", alignItems: "center" }}>
           <Chip size="small" label={categoryName(tenner.category)} />
-          <AssigneeLabel assignedTo={tenner.assignedTo} estimatedMinutes={tenner.estimatedMinutes} />
+          <AssigneeLabel
+            assignedTo={tenner.assignedTo}
+            originalAssignee={tenner.originalAssignee}
+            estimatedMinutes={tenner.estimatedMinutes}
+          />
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           {frequencyLabel(tenner)} · Fällig: {formatShortDate(tenner.nextDue)}

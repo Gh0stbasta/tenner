@@ -1,4 +1,7 @@
-/** Assignee and minutes on Tenner cards; shared Tenners get a distinct marker (HOUSEHOLD-002). */
+/**
+ * Assignee and minutes on Tenner cards; shared Tenners get a distinct marker (HOUSEHOLD-002), covered Tenners name
+ * the member they are covered for (HOUSEHOLD-004).
+ */
 
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import { Box, Typography } from "@mui/material";
@@ -8,13 +11,16 @@ import { useMemberName } from "./api";
 
 export function AssigneeLabel({
   assignedTo,
+  originalAssignee = null,
   estimatedMinutes,
 }: {
   readonly assignedTo: UserId;
+  readonly originalAssignee?: UserId | null;
   readonly estimatedMinutes: number;
 }) {
   const memberName = useMemberName();
-  const label = `${memberName(assignedTo)} · ${formatMinutes(estimatedMinutes)}`;
+  const cover = originalAssignee === null ? "" : ` (für ${memberName(originalAssignee)})`;
+  const label = `${memberName(assignedTo)}${cover} · ${formatMinutes(estimatedMinutes)}`;
   if (assignedTo !== SHARED_ASSIGNEE) {
     return (
       <Typography variant="body2" color="text.secondary">

@@ -19,7 +19,7 @@ function memoryRepository(timezone?: string) {
   };
 }
 
-const DEFAULT_HOUSEHOLD = { name: "Unser Haushalt", timezone: "Europe/Berlin", weekStartsOn: "MONDAY", workdays: ["MON", "TUE", "WED", "THU", "FRI"], defaults: { category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14 }, defaultsSource: "DEFAULT", vacation: null } as const;
+const DEFAULT_HOUSEHOLD = { name: "Unser Haushalt", timezone: "Europe/Berlin", weekStartsOn: "MONDAY", workdays: ["MON", "TUE", "WED", "THU", "FRI"], defaults: { category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14 }, defaultsSource: "DEFAULT", vacation: null, handovers: [] } as const;
 
 describe("HouseholdService", () => {
   it("returns the stored timezone or the configured default (getHouseholdTimezone)", async () => {

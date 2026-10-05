@@ -32,6 +32,7 @@ const household = {
   workdays: ["MON", "TUE", "WED", "THU", "FRI"] as const,
   defaults: { category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14 },
   defaultsSource: "DEFAULT" as const,
+  handovers: [],
   vacation: null,
 };
 
@@ -91,6 +92,8 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     updateMember: vi.fn(async () => ({ userId: "STEFAN", displayName: "Steffen", color: "BLUE" as const, active: true })),
     deactivateMember: vi.fn(async () => ({ member: { userId: "JULIA", displayName: "Julia", color: "PURPLE" as const, active: false }, reassigned: 2, reassignedTo: "STEFAN", revokedAccounts: 1 })),
     reactivateMember: vi.fn(async () => ({ userId: "JULIA", displayName: "Julia", color: "PURPLE" as const, active: true })),
+    startHandover: vi.fn(async () => ({ handover: { from: "JULIA", to: "STEFAN", until: "2026-10-12", categories: null }, handedOver: 3 })),
+    endHandover: vi.fn(async () => ({ returned: 3 })),
     listCategories: vi.fn(async () => [{ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: false }]),
     createCategory: vi.fn(async () => ({ categoryId: "GARDEN", name: "Garten", icon: "GARDEN" as const, color: "GREEN" as const, sortOrder: 6, archived: false })),
     updateCategory: vi.fn(async () => ({ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: true })),
@@ -368,6 +371,18 @@ describe("member deactivation routes (HOUSEHOLD-ADMIN-004)", () => {
     expect(d.deactivateMember).toHaveBeenCalledWith(TEST_IDENTITY, "JULIA", { reassignTo: "STEFAN" });
     expect((await route(withUser("POST /users/{userId}/reactivate"), d)).statusCode).toBe(200);
     expect(d.reactivateMember).toHaveBeenCalledWith(TEST_IDENTITY, "JULIA");
+  });
+
+  it("starts and ends a handover (HOUSEHOLD-004)", async () => {
+    const d = deps();
+    const withUser = (routeKey: string, body?: string) => ({ ...event(routeKey, {}, body), pathParameters: { userId: "JULIA" } }) as APIGatewayProxyEventV2;
+    const start = await route(withUser("POST /users/{userId}/handover", JSON.stringify({ to: "STEFAN", until: "2026-10-12" })), d);
+    expect(start.statusCode).toBe(201);
+    expect(d.startHandover).toHaveBeenCalledWith(TEST_IDENTITY, "JULIA", { to: "STEFAN", until: "2026-10-12" });
+    expect((await route(withUser("POST /users/{userId}/handover", JSON.stringify({ to: "STEFAN", until: "12.10.2026" })), d)).statusCode).toBe(400);
+    expect((await route(withUser("POST /users/{userId}/handover", JSON.stringify({ to: "STEFAN", until: "2026-10-12", categories: [] })), d)).statusCode).toBe(400);
+    expect((await route(withUser("DELETE /users/{userId}/handover"), d)).statusCode).toBe(200);
+    expect(d.endHandover).toHaveBeenCalledWith(TEST_IDENTITY, "JULIA");
   });
 });
 

@@ -11,6 +11,8 @@ const dashboardTennerSchema = z.object({
   title: z.string(),
   category: categorySchema,
   assignedTo: userIdSchema,
+  /** HOUSEHOLD-004: member the Tenner is covered for during a handover. */
+  originalAssignee: z.string().nullable().default(null),
   estimatedMinutes: z.number(),
   nextDue: z.string(),
   snoozedUntil: z.string().nullable(),

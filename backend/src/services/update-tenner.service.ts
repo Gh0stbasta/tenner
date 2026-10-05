@@ -38,6 +38,8 @@ export class UpdateTennerService {
       frequencyInterval: request.frequencyInterval,
       weekdays: request.weekdays,
       assignedTo: request.assignedTo,
+      // A manual reassignment ends the handover for this Tenner (HOUSEHOLD-004).
+      originalAssignee: request.assignedTo !== undefined ? null : undefined,
       assignmentMode: request.assignmentMode,
       rotation: request.rotation,
       active: request.active,

@@ -22,6 +22,8 @@ export const tennerSchema = z.object({
   /** HOUSEHOLD-001: rotating assignment; FIXED for Tenners from before. */
   assignmentMode: z.enum(["FIXED", "ROTATING"]).default("FIXED"),
   rotation: z.array(z.string()).nullable().default(null),
+  /** HOUSEHOLD-004: member the Tenner is covered for during a handover. */
+  originalAssignee: z.string().nullable().default(null),
   lastCompleted: z.string().nullable(),
   nextDue: z.string(),
   /** SCHEDULING-003: postponed-to date, cleared by the next completion. */

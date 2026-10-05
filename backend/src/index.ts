@@ -30,13 +30,17 @@ import { createCategoryHandler, listCategoriesHandler, updateCategoryHandler, ty
 import {
   createMemberHandler,
   deactivateMemberHandler,
+  endHandoverHandler,
   listMembersHandler,
   reactivateMemberHandler,
+  startHandoverHandler,
   updateMemberHandler,
   type CreateMember,
   type DeactivateMember,
+  type EndHandover,
   type ListMembers,
   type ReactivateMember,
+  type StartHandover,
   type UpdateMember,
 } from "./handlers/members.js";
 import { historyHandler, tennerHistoryHandler, type GetHistory, type GetTennerHistory } from "./handlers/history.js";
@@ -62,6 +66,7 @@ import {
   HistoryService,
   HouseholdAssignmentService,
   HouseholdService,
+  HandoverService,
   ListTennersService,
   RestoreTennerService,
   CategoryService,
@@ -77,7 +82,7 @@ import {
 import { systemClock, uuidGenerator } from "./utils/clock.js";
 import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
-import { SEED_CATEGORIES, SEED_MEMBERS, type HouseholdCategory, type HouseholdMember, type Vacation } from "./models/index.js";
+import { SEED_CATEGORIES, SEED_MEMBERS, type Handover, type HouseholdCategory, type HouseholdMember, type Vacation } from "./models/index.js";
 import { createLogger, errorFields, type Logger } from "./utils/logger.js";
 
 /** Dependencies shared by all handlers; replaced in tests. */
@@ -103,6 +108,8 @@ export interface Dependencies {
   readonly updateMember: UpdateMember;
   readonly deactivateMember: DeactivateMember;
   readonly reactivateMember: ReactivateMember;
+  readonly startHandover: StartHandover;
+  readonly endHandover: EndHandover;
   readonly listCategories: ListCategories;
   readonly createCategory: CreateCategory;
   readonly updateCategory: UpdateCategory;
@@ -172,6 +179,8 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "PUT /users/{userId}": ({ event, deps, logger, identity }) => updateMemberHandler(event, identity, deps.updateMember, logger),
   "POST /users/{userId}/deactivate": ({ event, deps, logger, identity }) => deactivateMemberHandler(event, identity, deps.deactivateMember, logger),
   "POST /users/{userId}/reactivate": ({ event, deps, logger, identity }) => reactivateMemberHandler(event, identity, deps.reactivateMember, logger),
+  "POST /users/{userId}/handover": ({ event, deps, logger, identity }) => startHandoverHandler(event, identity, deps.startHandover, logger),
+  "DELETE /users/{userId}/handover": ({ event, deps, logger, identity }) => endHandoverHandler(event, identity, deps.endHandover, logger),
   "GET /categories": ({ deps, identity }) => listCategoriesHandler(identity.tenantId, deps.listCategories),
   "POST /categories": ({ event, deps, logger, identity }) => createCategoryHandler(event, identity, deps.createCategory, logger),
   "PUT /categories/{categoryId}": ({ event, deps, logger, identity }) => updateCategoryHandler(event, identity, deps.updateCategory, logger),
@@ -209,6 +218,10 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   // HOUSEHOLD-ADMIN-002: managed categories; without the households table only the seed categories exist.
   const categoryService = householdRepository ? new CategoryService(householdRepository, systemClock) : undefined;
   const categoriesOf = (tenantId: string): Promise<readonly HouseholdCategory[]> => categoryService?.categoriesOf(tenantId) ?? Promise.resolve(SEED_CATEGORIES);
+  // HOUSEHOLD-004: no scheduler — expired handovers are given back before the reads that show assignments.
+  const handoverService = householdRepository && tennerRepository ? new HandoverService(householdRepository, tennerRepository, systemClock, timezoneOf, logger) : undefined;
+  const handoversOf = (tenantId: string): Promise<readonly Handover[]> => handoverService?.handoversOf(tenantId) ?? Promise.resolve([]);
+  const expireHandovers = (tenantId: string): Promise<void> => handoverService?.expireDue(tenantId) ?? Promise.resolve();
   const createTennerService = tennerRepository ? new CreateTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf, membersOf, categoriesOf) : undefined;
   const listTennersService = tennerRepository ? new ListTennersService(tennerRepository, systemClock, timezoneOf) : undefined;
   const getTennerService = tennerRepository ? new GetTennerService(tennerRepository) : undefined;
@@ -218,7 +231,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const restoreTennerService = tennerRepository ? new RestoreTennerService(tennerRepository, systemClock) : undefined;
   const dashboardService = tennerRepository ? new DashboardService(tennerRepository, systemClock, timezoneOf, vacationOf, membersOf) : undefined;
   const completeTennerService =
-    tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator, timezoneOf, vacationOf, membersOf) : undefined;
+    tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator, timezoneOf, vacationOf, membersOf, handoversOf) : undefined;
   const undoCompletionService = tennerRepository && completionRepository ? new UndoCompletionService(tennerRepository, completionRepository, systemClock, timezoneOf) : undefined;
   const snoozeTennerService = tennerRepository ? new SnoozeTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf) : undefined;
   const skipTennerService = tennerRepository ? new SkipTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf, vacationOf) : undefined;
@@ -238,14 +251,14 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     logger,
     probeDatabase: (t) => probeTables(getDocumentClient(), t),
     createTenner: createTennerService ? (identity, request) => createTennerService.createTenner(identity, request) : notConfigured,
-    listTenners: listTennersService ? (tenantId, request) => listTennersService.listTenners(tenantId, request) : notConfigured,
+    listTenners: listTennersService ? async (tenantId, request) => (await expireHandovers(tenantId), listTennersService.listTenners(tenantId, request)) : notConfigured,
     updateTenner: updateTennerService ? (identity, id, request) => updateTennerService.updateTenner(identity, id, request) : notConfigured,
     deleteTenner: deleteTennerService ? (identity, id) => deleteTennerService.deleteTenner(identity, id) : notConfigured,
     restoreTenner: restoreTennerService ? (identity, id) => restoreTennerService.restoreTenner(identity, id) : notConfigured,
     getHistory: historyService ? (tenantId, request) => historyService.getHistory(tenantId, request) : notConfigured,
     getTennerHistory: historyService ? (tenantId, id, request) => historyService.getTennerHistory(tenantId, id, request) : notConfigured,
     getTenner: getTennerService ? (tenantId, id, options) => getTennerService.getTenner(tenantId, id, options) : notConfigured,
-    getDashboard: dashboardService ? (tenantId, request) => dashboardService.getDashboard(tenantId, request) : notConfigured,
+    getDashboard: dashboardService ? async (tenantId, request) => (await expireHandovers(tenantId), dashboardService.getDashboard(tenantId, request)) : notConfigured,
     completeTenner: completeTennerService
       ? (identity, id, request, key) => completeTennerService.completeTenner(identity, id, request, key)
       : notConfigured,
@@ -263,10 +276,12 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     updateMember: memberService ? (identity, userId, request) => memberService.updateMember(identity, userId, request) : notConfigured,
     deactivateMember: memberDeactivationService ? (identity, userId, request) => memberDeactivationService.deactivate(identity, userId, request) : notConfigured,
     reactivateMember: memberDeactivationService ? (identity, userId) => memberDeactivationService.reactivate(identity, userId) : notConfigured,
+    startHandover: handoverService ? (identity, userId, request) => handoverService.start(identity, userId, request) : notConfigured,
+    endHandover: handoverService ? (identity, userId) => handoverService.end(identity, userId) : notConfigured,
     listCategories: categoryService ? (tenantId) => categoryService.listCategories(tenantId) : notConfigured,
     createCategory: categoryService ? (identity, request) => categoryService.createCategory(identity, request) : notConfigured,
     updateCategory: categoryService ? (identity, categoryId, request) => categoryService.updateCategory(identity, categoryId, request) : notConfigured,
-    getHousehold: householdService ? (tenantId) => householdService.getHousehold(tenantId) : notConfigured,
+    getHousehold: householdService ? async (tenantId) => (await expireHandovers(tenantId), householdService.getHousehold(tenantId)) : notConfigured,
     updateHousehold: householdService ? (identity, request) => householdService.updateSettings(identity, request) : notConfigured,
     getOnboarding: householdAssignmentService ? (principal) => householdAssignmentService.getOnboarding(principal) : notConfigured,
     assignHouseholdMember: householdAssignmentService ? (principal, userId) => householdAssignmentService.assign(principal, userId) : notConfigured,

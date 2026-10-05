@@ -1,5 +1,6 @@
 import type { Category, UserId, WeekStart, Weekday } from "./enums.js";
 import type { HouseholdCategory } from "./category.js";
+import type { Handover } from "./handover.js";
 import type { HouseholdMember } from "./user.js";
 import type { Vacation } from "./vacation.js";
 
@@ -25,6 +26,9 @@ export interface HouseholdSettings {
   /** Household categories (HOUSEHOLD-ADMIN-002); null = never saved, the seed categories apply. */
   readonly categories: readonly HouseholdCategory[] | null;
   readonly categoriesVersion: number;
+  /** Running handovers (HOUSEHOLD-004), at most one per member; expired ones are removed lazily. */
+  readonly handovers: readonly Handover[];
+  readonly handoversVersion: number;
   readonly updatedAt: string;
   readonly updatedBy: UserId | null;
 }

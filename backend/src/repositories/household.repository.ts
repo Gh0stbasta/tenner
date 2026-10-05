@@ -1,4 +1,4 @@
-import type { HouseholdCategory, HouseholdMember, HouseholdSettings, HouseholdSettingsChange, UserId, Vacation } from "../models/index.js";
+import type { Handover, HouseholdCategory, HouseholdMember, HouseholdSettings, HouseholdSettingsChange, UserId, Vacation } from "../models/index.js";
 
 /** Persistence of household settings (SCHEDULING-008). Storage failures become PersistenceError. */
 export interface HouseholdRepository {
@@ -15,4 +15,6 @@ export interface HouseholdRepository {
   saveMembers(tenantId: string, members: readonly HouseholdMember[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
   /** Same as saveMembers for the category list (HOUSEHOLD-ADMIN-002). */
   saveCategories(tenantId: string, categories: readonly HouseholdCategory[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
+  /** Same as saveMembers for the running handovers (HOUSEHOLD-004). */
+  saveHandovers(tenantId: string, handovers: readonly Handover[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
 }
