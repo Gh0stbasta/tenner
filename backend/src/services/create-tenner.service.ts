@@ -8,7 +8,7 @@ import { requireSelectableCategory, type CategorySource } from "./category.servi
 import type { TennerRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
 import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
-import { requireAssignee, type MemberSource } from "./member.service.js";
+import { requireAssignee, requireMember, type MemberSource } from "./member.service.js";
 
 export class CreateTennerService {
   constructor(
@@ -26,7 +26,9 @@ export class CreateTennerService {
    * createdBy = updatedBy = the authenticated user, tenant from the identity.
    */
   async createTenner(identity: Identity, request: CreateTennerRequest): Promise<TennerResponse> {
-    requireAssignee(await this.membersOf(identity.tenantId), request.assignedTo);
+    const members = await this.membersOf(identity.tenantId);
+    requireAssignee(members, request.assignedTo);
+    for (const userId of request.rotation ?? []) requireMember(members, userId, "rotation");
     requireSelectableCategory(await this.categoriesOf(identity.tenantId), request.category);
     const now = this.clock();
     const timestamp = toUtcTimestamp(now);
@@ -41,6 +43,8 @@ export class CreateTennerService {
       frequencyInterval: request.frequencyInterval,
       weekdays: request.weekdays,
       assignedTo: request.assignedTo,
+      assignmentMode: request.assignmentMode,
+      rotation: request.rotation,
       lastCompleted: null,
       nextDue: dateInTimeZone(now, await this.timezoneOf(identity.tenantId)),
       snoozedUntil: null,

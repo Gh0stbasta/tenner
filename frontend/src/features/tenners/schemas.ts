@@ -19,6 +19,9 @@ export const tennerSchema = z.object({
   /** SCHEDULING-002: weekdays for WEEK frequencies, otherwise null. */
   weekdays: z.array(z.enum(WEEKDAYS)).nullable(),
   assignedTo: userIdSchema,
+  /** HOUSEHOLD-001: rotating assignment; FIXED for Tenners from before. */
+  assignmentMode: z.enum(["FIXED", "ROTATING"]).default("FIXED"),
+  rotation: z.array(z.string()).nullable().default(null),
   lastCompleted: z.string().nullable(),
   nextDue: z.string(),
   /** SCHEDULING-003: postponed-to date, cleared by the next completion. */

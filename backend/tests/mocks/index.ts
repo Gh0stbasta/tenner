@@ -108,6 +108,8 @@ export function tennerFixture(overrides: Partial<Tenner> = {}): Tenner {
     frequencyInterval: 14,
     weekdays: null,
     assignedTo: "STEFAN",
+    assignmentMode: "FIXED",
+    rotation: null,
     lastCompleted: null,
     nextDue: "2026-10-01",
     snoozedUntil: null,

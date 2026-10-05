@@ -1,6 +1,6 @@
 /** Maps DynamoDB items to Tenner domain objects (explicit fields only; storage metadata is dropped). */
 
-import { FREQUENCY_UNITS, WEEKDAYS, type Category, type FrequencyUnit, type Tenner, type UserId, type Weekday } from "../../models/index.js";
+import { FREQUENCY_UNITS, USER_ID_PATTERN, WEEKDAYS, type Category, type FrequencyUnit, type Tenner, type UserId, type Weekday } from "../../models/index.js";
 
 export type TennerItem = Record<string, unknown>;
 
@@ -18,6 +18,12 @@ function weekdaysOf(value: unknown, unit: FrequencyUnit): Weekday[] | null {
   return weekdays.length > 0 ? weekdays : null;
 }
 
+/** Rotation only with mode ROTATING and at least two valid IDs; everything else reads as FIXED (HOUSEHOLD-001). */
+function assignmentOf(item: TennerItem): Pick<Tenner, "assignmentMode" | "rotation"> {
+  const rotation = Array.isArray(item.rotation) ? item.rotation.filter((id): id is string => typeof id === "string" && USER_ID_PATTERN.test(id)) : [];
+  return item.assignmentMode === "ROTATING" && rotation.length >= 2 ? { assignmentMode: "ROTATING", rotation } : { assignmentMode: "FIXED", rotation: null };
+}
+
 export function toTenner(item: TennerItem): Tenner {
   const frequencyDays = Number(item.frequencyDays);
   const frequencyUnit = frequencyUnitOf(item.frequencyUnit);
@@ -32,6 +38,7 @@ export function toTenner(item: TennerItem): Tenner {
     frequencyInterval: item.frequencyUnit === frequencyUnit && typeof item.frequencyInterval === "number" ? item.frequencyInterval : frequencyDays,
     weekdays: weekdaysOf(item.weekdays, frequencyUnit),
     assignedTo: item.assignedTo as UserId,
+    ...assignmentOf(item),
     lastCompleted: typeof item.lastCompleted === "string" ? item.lastCompleted : null,
     nextDue: String(item.nextDue),
     snoozedUntil: typeof item.snoozedUntil === "string" ? item.snoozedUntil : null,

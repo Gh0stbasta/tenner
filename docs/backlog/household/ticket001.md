@@ -133,3 +133,27 @@ npm run test
 # Out of Scope
 
 - Load-based automatic assignment (AI-006)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Rotating Tenners alternate assignees: `assignmentMode` `ROTATING` with an ordered `rotation`; completion moves
+  `assignedTo` to the next active member (wraps around; deactivated members skipped)
+- [x] Undo restores the previous assignee: the completion stores `assignedToBefore`; undo sets it back
+- [x] Covering does not break rotation: the next assignee follows the assigned member, not `completedBy`
+- [x] Validation: at least two distinct active members, not `HOUSEHOLD`, assignee part of the rotation
+- [x] Frontend: "Abwechselnd zuständig" switch with member chips (order = member order), "Aktuell zuständig" limited
+  to the rotation; the Tenners list shows "Abwechselnd, danach …"
+- [x] Tests passing: backend 658 (advances, wraps, completion by other user, undo restores, deactivated skipped,
+  minimum two members), frontend 302; lint and build clean
+- [ ] Deploys through GitHub Actions: no infrastructure change; verified after merge
+
+Decisions and assumptions:
+
+- Rotation order follows the household member order in the form (no drag-and-drop ordering).
+- A partial update of only `assignedTo` is not checked against the stored rotation (no extra read); the next
+  completion continues from the new assignee (or the first active rotation member if it is not part of it).
+- Dashboard items do not show the next assignee (only the Tenners list and its cards).

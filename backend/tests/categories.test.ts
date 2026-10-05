@@ -68,7 +68,7 @@ describe("CategoryService", () => {
 describe("Tenner validation with managed categories", () => {
   const archived = [...SEED_CATEGORIES.map((c) => (c.categoryId === "FINANCE" ? { ...c, archived: true } : c)), GARDEN];
   const categoriesOf = async () => archived;
-  const request = { title: "Rasen mähen", estimatedMinutes: 30, frequencyDays: 7, frequencyUnit: "DAY", frequencyInterval: 7, weekdays: null, assignedTo: "STEFAN" } as const;
+  const request = { title: "Rasen mähen", estimatedMinutes: 30, frequencyDays: 7, frequencyUnit: "DAY", frequencyInterval: 7, weekdays: null, assignedTo: "STEFAN", assignmentMode: "FIXED", rotation: null } as const;
 
   it("accepts new categories and rejects unknown and archived ones for new Tenners", async () => {
     const service = new CreateTennerService(mockTennerRepository(), () => NOW, () => "t-1", async () => "UTC", undefined, categoriesOf);

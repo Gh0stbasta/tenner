@@ -32,7 +32,9 @@ import { isPausedIndividually } from "../pause/pauseStatus";
 import type { Tenner } from "./schemas";
 import { frequencyLabel, type TennerStatus } from "./status";
 import { TennerStatusBadge } from "./TennerStatusBadge";
+import { useActiveMembers, useMemberName } from "../members/api";
 import { AssigneeLabel } from "../members/AssigneeLabel";
+import { nextInRotation } from "../members/rotation";
 
 export interface TennerCardActions {
   readonly onEdit?: (tenner: Tenner) => void;
@@ -61,6 +63,17 @@ export function TennerCard({
   onResume,
 }: TennerCardProps) {
   const categoryName = useCategoryName();
+  const memberName = useMemberName();
+  const activeMembers = useActiveMembers();
+  // HOUSEHOLD-001: who is next after the current assignee.
+  const nextAssignee =
+    tenner.assignmentMode === "ROTATING" && tenner.rotation
+      ? nextInRotation(
+          tenner.rotation,
+          tenner.assignedTo,
+          (id) => activeMembers.length === 0 || activeMembers.some((m) => m.userId === id),
+        )
+      : null;
   const theme = useTheme();
   const compact = useMediaQuery(theme.breakpoints.down("sm"));
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -108,6 +121,7 @@ export function TennerCard({
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           {frequencyLabel(tenner)} · Fällig: {formatShortDate(tenner.nextDue)}
+          {nextAssignee !== null && ` · Abwechselnd, danach ${memberName(nextAssignee)}`}
         </Typography>
       </CardContent>
       <CardActions sx={{ px: 2, pb: 2, pt: 0, flexWrap: "wrap", gap: 1 }}>

@@ -88,7 +88,7 @@ describe("deactivated members in validation and history", () => {
 
   it("rejects deactivated members as assignee and as completedBy", async () => {
     const create = new CreateTennerService(mockTennerRepository(), () => NOW, () => "t-1", async () => "UTC", members);
-    const request = { title: "Spielen", category: "FAMILY", estimatedMinutes: 10, frequencyDays: 1, frequencyUnit: "DAY", frequencyInterval: 1, weekdays: null } as const;
+    const request = { title: "Spielen", category: "FAMILY", estimatedMinutes: 10, frequencyDays: 1, frequencyUnit: "DAY", frequencyInterval: 1, weekdays: null, assignmentMode: "FIXED", rotation: null } as const;
     await expect(create.createTenner(TEST_IDENTITY, { ...request, assignedTo: "LENA" })).rejects.toBeInstanceOf(ValidationError);
     const repo = mockTennerRepository();
     repo.getById.mockResolvedValue(tennerFixture());

@@ -126,6 +126,7 @@ Zod schemas are in `src/validators/`. The limits are centralized in `LIMITS`:
 | `frequencyDays` | integer, 1–3650. Alone it means unit `DAY` with that interval |
 | `frequencyUnit` | `DAY`, `WEEK`, `MONTH`, `YEAR` (SCHEDULING-001) |
 | `frequencyInterval` | integer ≥ 1, default 1; only with `frequencyUnit`; at most 3650 approximate days (e.g. 10 years) |
+| `assignmentMode`, `rotation` | HOUSEHOLD-001: `FIXED` (default, `rotation` null) or `ROTATING` with `rotation` = ordered list of ≥ 2 distinct active members containing `assignedTo`; `rotation` without `ROTATING` → 400. Completion advances `assignedTo` to the next active member; undo restores it |
 | `weekdays` | `null` or 1–7 distinct values of `MON`..`SUN` (SCHEDULING-002); only with `frequencyUnit: "WEEK"` in the same request. Normalized to ISO order |
 
 Send either `frequencyDays` or `frequencyUnit` (+ `frequencyInterval`), not both (400 otherwise). The validator

@@ -8,6 +8,7 @@ import { requireMember, type MemberSource } from "./member.service.js";
 import type { CompletionRecord, CompletionRepository, TennerRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
 import { avoidVacation, type VacationSource } from "../utils/pause.js";
+import { nextInRotation } from "../utils/rotation.js";
 import { calculateNextDue, type Frequency } from "../utils/schedule.js";
 import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
 import { sha256Json, uuidV5 } from "../utils/uuid.js";
@@ -41,7 +42,8 @@ export class CompleteTennerService {
   async completeTenner(identity: Identity, tennerId: string, request: CompleteTennerRequest, idempotencyKey?: string): Promise<CompleteTennerOutcome> {
     const { tenantId } = identity;
     const completedBy = request.completedBy ?? identity.userId;
-    if (request.completedBy !== undefined) requireMember(await this.membersOf(tenantId), completedBy, "completedBy");
+    const members = await this.membersOf(tenantId);
+    if (request.completedBy !== undefined) requireMember(members, completedBy, "completedBy");
     const requestHash = sha256Json({ tennerId, completedBy, actualMinutes: request.actualMinutes ?? null, completedAt: request.completedAt ?? null });
     const completionId = idempotencyKey ? uuidV5(`${tenantId}:${idempotencyKey}`) : this.newId();
 
@@ -67,6 +69,8 @@ export class CompleteTennerService {
       revertedAt: null,
       revertedBy: null,
       revertReason: null,
+      // HOUSEHOLD-001: remembered so that undo can restore the assignee.
+      ...(tenner.assignmentMode === "ROTATING" ? { assignedToBefore: tenner.assignedTo } : {}),
     };
     const updated: Tenner = {
       ...tenner,
@@ -77,6 +81,11 @@ export class CompleteTennerService {
       // Completing a paused Tenner ends its pause.
       pausedAt: null,
       pausedUntil: null,
+      // A rotating Tenner moves on to the next active member after the assigned one (HOUSEHOLD-001).
+      assignedTo:
+        tenner.assignmentMode === "ROTATING" && tenner.rotation
+          ? nextInRotation(tenner.rotation, tenner.assignedTo, (userId) => members.some((member) => member.userId === userId && member.active))
+          : tenner.assignedTo,
       updatedAt: toUtcTimestamp(now),
       updatedBy: identity.userId,
     };

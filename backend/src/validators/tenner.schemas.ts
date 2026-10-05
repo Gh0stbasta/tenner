@@ -41,7 +41,7 @@ import {
 } from "./common.js";
 import { isValidTimeZone } from "../utils/timezone.js";
 import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
-import { WEEK_STARTS, WEEKDAYS, type Weekday } from "../models/index.js";
+import { ASSIGNMENT_MODES, SHARED_ASSIGNEE, WEEK_STARTS, WEEKDAYS, type AssignmentMode, type UserId, type Weekday } from "../models/index.js";
 
 const tennerFields = {
   title: titleSchema,
@@ -52,6 +52,8 @@ const tennerFields = {
   frequencyInterval: frequencyIntervalSchema.optional(),
   weekdays: weekdaysSchema.nullable().optional(),
   assignedTo: userIdSchema,
+  assignmentMode: z.enum(ASSIGNMENT_MODES).optional(),
+  rotation: z.array(userIdSchema).max(20).nullable().optional(),
 };
 
 interface FrequencyInput {
@@ -95,6 +97,38 @@ function normalizeFrequency(value: FrequencyInput, ctx: z.RefinementCtx): Normal
   return { frequencyDays: approximateFrequencyDays(frequencyUnit, interval, weekdays), frequencyUnit, frequencyInterval: interval, weekdays };
 }
 
+interface AssignmentInput {
+  readonly assignedTo?: UserId | undefined;
+  readonly assignmentMode?: AssignmentMode | undefined;
+  readonly rotation?: readonly UserId[] | null | undefined;
+}
+
+/**
+ * Normalize the assignment fields (HOUSEHOLD-001): ROTATING needs `rotation` (≥ 2 distinct members, not HOUSEHOLD)
+ * in the same request, and a given `assignedTo` must be part of it; FIXED stores rotation null. `rotation` without
+ * ROTATING is rejected. Undefined result = no assignment-mode change.
+ */
+function normalizeAssignment(value: AssignmentInput, ctx: z.RefinementCtx): { assignmentMode: AssignmentMode; rotation: UserId[] | null } | undefined {
+  const { assignmentMode, rotation, assignedTo } = value;
+  const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
+  if (rotation != null && assignmentMode !== "ROTATING") {
+    issue("rotation", "rotation requires assignmentMode ROTATING in the same request.");
+    return undefined;
+  }
+  if (assignmentMode === undefined) return undefined;
+  if (assignmentMode === "FIXED") return { assignmentMode, rotation: null };
+  const members = rotation ?? [];
+  if (members.length < 2 || new Set(members).size !== members.length || members.includes(SHARED_ASSIGNEE)) {
+    issue("rotation", "A rotation needs at least two distinct household members.");
+    return undefined;
+  }
+  if (assignedTo !== undefined && !members.includes(assignedTo)) {
+    issue("assignedTo", "Must be part of the rotation.");
+    return undefined;
+  }
+  return { assignmentMode, rotation: [...members] };
+}
+
 /** The request without the raw frequency fields (they are replaced by the normalized ones). */
 function omitFrequency<T extends FrequencyInput>(value: T): Omit<T, keyof FrequencyInput> {
   const rest: Record<string, unknown> = { ...(value as Record<string, unknown>) };
@@ -102,6 +136,8 @@ function omitFrequency<T extends FrequencyInput>(value: T): Omit<T, keyof Freque
   delete rest.frequencyUnit;
   delete rest.frequencyInterval;
   delete rest.weekdays;
+  delete rest.assignmentMode;
+  delete rest.rotation;
   return rest as Omit<T, keyof FrequencyInput>;
 }
 
@@ -113,7 +149,9 @@ export const createTennerSchema = z.strictObject(tennerFields).transform((value,
     if (ctx.issues.length === 0) ctx.addIssue({ code: "custom", path: ["frequencyDays"], message: "frequencyDays or frequencyUnit is required." });
     return z.NEVER;
   }
-  return { ...rest, ...frequency };
+  const assignment = normalizeAssignment(value, ctx) ?? { assignmentMode: "FIXED" as const, rotation: null };
+  if (ctx.issues.length > 0) return z.NEVER;
+  return { ...rest, ...frequency, ...assignment };
 }) satisfies z.ZodType<CreateTennerRequest>;
 
 /** Partial update; protected fields (tenantId, tennerId, createdAt, lastCompleted, nextDue) are rejected as unknown keys. */
@@ -124,7 +162,8 @@ export const updateTennerSchema = z
   .transform((value, ctx): UpdateTennerRequest => {
     const rest = omitFrequency(value);
     const frequency = normalizeFrequency(value, ctx);
-    return frequency === undefined ? rest : { ...rest, ...frequency };
+    const assignment = normalizeAssignment(value, ctx);
+    return { ...rest, ...(frequency ?? {}), ...(assignment ?? {}) };
   }) satisfies z.ZodType<UpdateTennerRequest>;
 
 export const completeTennerSchema = z.strictObject({

@@ -27,6 +27,7 @@ export function toCompletionItem(record: CompletionRecord): Record<string, unkno
     revertedAt: completion.revertedAt,
     revertedBy: completion.revertedBy,
     revertReason: completion.revertReason,
+    ...optional("assignedToBefore", completion.assignedToBefore),
     ...optional("idempotencyKey", record.idempotencyKey),
     ...optional("requestHash", record.requestHash),
   };
@@ -86,6 +87,7 @@ export function toCompletion(item: Record<string, unknown>): Completion {
     revertedAt: stringOrNull(item.revertedAt),
     revertedBy: stringOrNull(item.revertedBy) as UserId | null,
     revertReason: stringOrNull(item.revertReason),
+    ...(typeof item.assignedToBefore === "string" ? { assignedToBefore: item.assignedToBefore } : {}),
   };
 }
 

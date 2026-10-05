@@ -36,3 +36,7 @@ export type Weekday = (typeof WEEKDAYS)[number];
 /** First day of the week for week-based views and analytics (HOUSEHOLD-ADMIN-003). */
 export const WEEK_STARTS = ["MONDAY", "SUNDAY"] as const;
 export type WeekStart = (typeof WEEK_STARTS)[number];
+
+/** How a Tenner's assignee is chosen (HOUSEHOLD-001): fixed, or rotating after each completion. */
+export const ASSIGNMENT_MODES = ["FIXED", "ROTATING"] as const;
+export type AssignmentMode = (typeof ASSIGNMENT_MODES)[number];

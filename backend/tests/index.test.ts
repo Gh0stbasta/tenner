@@ -253,7 +253,7 @@ describe("POST /tenners", () => {
     const response = await route(event("POST /tenners", {}, JSON.stringify(valid)), d);
     expect(response.statusCode).toBe(201);
     expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: tennerResponse });
-    expect(d.createTenner).toHaveBeenCalledWith(TEST_IDENTITY, { ...valid, frequencyUnit: "DAY", frequencyInterval: valid.frequencyDays, weekdays: null });
+    expect(d.createTenner).toHaveBeenCalledWith(TEST_IDENTITY, { ...valid, frequencyUnit: "DAY", frequencyInterval: valid.frequencyDays, weekdays: null, assignmentMode: "FIXED", rotation: null });
   });
 
   it("rejects invalid input with 400 before calling the service", async () => {

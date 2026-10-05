@@ -154,6 +154,8 @@ describe("CreateTennerDialog", () => {
       frequencyUnit: "MONTH",
       frequencyInterval: 3,
       weekdays: null,
+      assignmentMode: "FIXED",
+      rotation: null,
     });
     expect(await screen.findByText("✅ „Fenster putzen“ angelegt.")).toBeInTheDocument();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.dashboard });

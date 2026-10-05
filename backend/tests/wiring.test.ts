@@ -46,6 +46,8 @@ describe("createDependencies wiring", () => {
       frequencyInterval: 14,
       weekdays: null,
       assignedTo: "STEFAN",
+      assignmentMode: "FIXED",
+      rotation: null,
     });
     const command = send.mock.calls.map(([c]) => c).find((c) => c instanceof PutCommand) as PutCommand;
     expect(command).toBeInstanceOf(PutCommand);

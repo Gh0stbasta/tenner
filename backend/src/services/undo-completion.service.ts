@@ -58,7 +58,12 @@ export class UndoCompletionService {
     const now = this.clock();
     const timestamp = toUtcTimestamp(now);
     const reverted: Completion = { ...latest, revertedAt: timestamp, revertedBy, revertReason: request.reason ?? null };
-    const restored: Tenner = { ...restoreSchedule(tenner, previous, now, timestamp, await this.timezoneOf(tenantId)), updatedBy: revertedBy };
+    const restored: Tenner = {
+      ...restoreSchedule(tenner, previous, now, timestamp, await this.timezoneOf(tenantId)),
+      // HOUSEHOLD-001: undo also turns a rotation back.
+      assignedTo: latest.assignedToBefore ?? tenner.assignedTo,
+      updatedBy: revertedBy,
+    };
 
     try {
       await this.tenners.undoCompletion(restored, { completion: reverted, revertIdempotencyKey: idempotencyKey, revertRequestHash: requestHash }, tenner);

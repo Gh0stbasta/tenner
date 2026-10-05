@@ -23,7 +23,8 @@ import { applyServerErrors } from "./applyServerErrors";
 import { DiscardChangesDialog } from "./DiscardChangesDialog";
 import type { Tenner } from "./schemas";
 import { TennerForm } from "./TennerForm";
-import { tennerFormSchema, weekdaysForApi, type TennerFormValues } from "./tennerForm.schema";
+import { assignmentForApi, tennerFormSchema, weekdaysForApi, type TennerFormValues } from "./tennerForm.schema";
+import { useAssignees } from "../members/useAssignees";
 
 export interface EditTennerDialogProps {
   /** The Tenner to edit; null closes the dialog. */
@@ -52,6 +53,8 @@ function toFormValues(tenner: Tenner): TennerFormValues {
     frequencyUnit,
     frequencyInterval,
     weekdays: [...(tenner.weekdays ?? [])],
+    rotating: tenner.assignmentMode === "ROTATING",
+    rotation: [...(tenner.rotation ?? [])],
     active,
   };
 }
@@ -94,6 +97,7 @@ function EditTennerForm({ tenner, onClose }: { readonly tenner: Tenner; readonly
   const titleId = useId();
   const notify = useNotify();
   const update = useUpdateTenner();
+  const memberOrder = useAssignees().map((member) => member.userId);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   const form = useForm<TennerFormValues>({
@@ -120,6 +124,11 @@ function EditTennerForm({ tenner, onClose }: { readonly tenner: Tenner; readonly
       changes.frequencyUnit = values.frequencyUnit;
       changes.frequencyInterval = values.frequencyInterval;
       changes.weekdays = weekdaysForApi(values);
+    }
+    // Mode, rotation and assignee belong together (HOUSEHOLD-001).
+    if (dirtyFields.rotating || dirtyFields.rotation) {
+      Object.assign(changes, assignmentForApi(values, memberOrder));
+      changes.assignedTo = values.assignedTo;
     }
     update.mutate(
       { tennerId: tenner.tennerId, update: changes as TennerUpdate },

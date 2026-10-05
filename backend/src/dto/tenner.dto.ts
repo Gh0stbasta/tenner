@@ -1,6 +1,6 @@
 /** API contracts for Tenners. Requests are produced by validators (see validators/). */
 
-import type { Category, FrequencyUnit, Tenner, UserId, Weekday } from "../models/index.js";
+import type { AssignmentMode, Category, FrequencyUnit, Tenner, UserId, Weekday } from "../models/index.js";
 
 /**
  * Validated create request. The frequency is normalized by the validator (SCHEDULING-001): clients send either
@@ -16,6 +16,9 @@ export interface CreateTennerRequest {
   /** WEEK only (SCHEDULING-002); null for every other frequency. */
   readonly weekdays: readonly Weekday[] | null;
   readonly assignedTo: UserId;
+  /** HOUSEHOLD-001: normalized by the validator (FIXED + null by default). */
+  readonly assignmentMode: AssignmentMode;
+  readonly rotation: readonly UserId[] | null;
 }
 
 /**
@@ -39,6 +42,8 @@ export interface TennerResponse {
   readonly frequencyInterval: number;
   readonly weekdays: readonly Weekday[] | null;
   readonly assignedTo: UserId;
+  readonly assignmentMode: AssignmentMode;
+  readonly rotation: readonly UserId[] | null;
   readonly lastCompleted: string | null;
   readonly nextDue: string;
   readonly snoozedUntil: string | null;
@@ -83,6 +88,8 @@ export function toTennerResponse(tenner: Tenner): TennerResponse {
     frequencyInterval: tenner.frequencyInterval,
     weekdays: tenner.weekdays,
     assignedTo: tenner.assignedTo,
+    assignmentMode: tenner.assignmentMode,
+    rotation: tenner.rotation,
     lastCompleted: tenner.lastCompleted,
     nextDue: tenner.nextDue,
     snoozedUntil: tenner.snoozedUntil,

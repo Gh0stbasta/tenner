@@ -74,6 +74,8 @@ export function tenner(overrides: Partial<Tenner> = {}): Tenner {
     frequencyInterval: 14,
     weekdays: null,
     assignedTo: "STEFAN",
+    assignmentMode: "FIXED",
+    rotation: null,
     lastCompleted: null,
     nextDue: "2026-10-02",
     snoozedUntil: null,

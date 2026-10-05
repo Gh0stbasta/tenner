@@ -2,7 +2,14 @@
 
 import { Box, Chip, FormControlLabel, MenuItem, Stack, Switch, TextField, Typography } from "@mui/material";
 import { Controller, type UseFormReturn } from "react-hook-form";
-import { FREQUENCY_UNITS, FREQUENCY_UNIT_LABELS, WEEKDAYS, WEEKDAY_LABELS, type Weekday } from "../../types/domain";
+import {
+  FREQUENCY_UNITS,
+  FREQUENCY_UNIT_LABELS,
+  SHARED_ASSIGNEE,
+  WEEKDAYS,
+  WEEKDAY_LABELS,
+  type Weekday,
+} from "../../types/domain";
 import { useCategoryOptions } from "../categories/useCategoryOptions";
 import { useAssignees } from "../members/useAssignees";
 import { FREQUENCY_PRESETS, type TennerFormValues } from "./tennerForm.schema";
@@ -23,6 +30,13 @@ export function TennerForm({ form, showActive = false, disabled = false }: Tenne
     formState: { errors },
   } = form;
   const assignees = useAssignees(watch("assignedTo"), { includeShared: true });
+  const members = useAssignees();
+  const [rotating, rotation] = watch(["rotating", "rotation"]);
+  const toggleRotationMember = (userId: string) =>
+    setValue("rotation", rotation.includes(userId) ? rotation.filter((id) => id !== userId) : [...rotation, userId], {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
   const categoryOptions = useCategoryOptions(watch("category"));
   const [unit, interval, weekdays] = watch(["frequencyUnit", "frequencyInterval", "weekdays"]);
   const isPreset = (preset: (typeof FREQUENCY_PRESETS)[number]) =>
@@ -73,14 +87,17 @@ export function TennerForm({ form, showActive = false, disabled = false }: Tenne
           render={({ field }) => (
             <TextField
               select
-              label="Zuständig"
+              label={rotating ? "Aktuell zuständig" : "Zuständig"}
               required
               disabled={disabled}
               error={errors.assignedTo !== undefined}
               helperText={errors.assignedTo?.message}
               {...field}
             >
-              {assignees.map((member) => (
+              {(rotating
+                ? assignees.filter((member) => rotation.includes(member.userId) || member.userId === field.value)
+                : assignees
+              ).map((member) => (
                 <MenuItem key={member.userId} value={member.userId}>
                   {member.displayName}
                 </MenuItem>
@@ -88,6 +105,59 @@ export function TennerForm({ form, showActive = false, disabled = false }: Tenne
             </TextField>
           )}
         />
+      </Box>
+      <Box>
+        <Controller
+          control={control}
+          name="rotating"
+          render={({ field }) => (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={field.value}
+                  disabled={disabled}
+                  onChange={(event) => {
+                    field.onChange(event.target.checked);
+                    // Start a rotation with the current assignee.
+                    const current = form.getValues("assignedTo");
+                    if (event.target.checked && rotation.length === 0 && current !== SHARED_ASSIGNEE)
+                      setValue("rotation", [current], { shouldDirty: true });
+                    void form.trigger(["rotation", "assignedTo"]);
+                  }}
+                />
+              }
+              label="Abwechselnd zuständig"
+            />
+          )}
+        />
+        {rotating && (
+          <>
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: "wrap", mt: 1 }}
+              role="group"
+              aria-label="Rotation"
+            >
+              {members.map((member) => (
+                <Chip
+                  key={member.userId}
+                  label={member.displayName}
+                  color={rotation.includes(member.userId) ? "primary" : "default"}
+                  variant={rotation.includes(member.userId) ? "filled" : "outlined"}
+                  aria-pressed={rotation.includes(member.userId)}
+                  disabled={disabled}
+                  onClick={() => toggleRotationMember(member.userId)}
+                />
+              ))}
+            </Stack>
+            <Typography variant="caption" color={errors.rotation ? "error" : "text.secondary"}>
+              {errors.rotation?.message ??
+                "Nach jeder Erledigung ist die nächste Person dran – auch wenn jemand einspringt."}
+            </Typography>
+          </>
+        )}
       </Box>
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
         <TextField

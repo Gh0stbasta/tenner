@@ -78,7 +78,7 @@ describe("MemberService", () => {
 
 describe("validation uses the stored members", () => {
   const members = async () => [...SEED_MEMBERS, LENA];
-  const request = { title: "Spielzeug aufräumen", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 1, frequencyUnit: "DAY", frequencyInterval: 1, weekdays: null } as const;
+  const request = { title: "Spielzeug aufräumen", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 1, frequencyUnit: "DAY", frequencyInterval: 1, weekdays: null, assignmentMode: "FIXED", rotation: null } as const;
 
   it("accepts new members and rejects unknown ones on create", async () => {
     const repo = mockTennerRepository();

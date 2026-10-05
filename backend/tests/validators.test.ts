@@ -17,7 +17,7 @@ function detailsOf(fn: () => unknown): { field: string; message: string }[] {
 
 describe("createTennerSchema", () => {
   it("accepts a valid request and trims the title", () => {
-    expect(validate(createTennerSchema, { ...valid, title: "  Vacuum Office  " })).toEqual({ ...valid, frequencyUnit: "DAY", frequencyInterval: 14, weekdays: null });
+    expect(validate(createTennerSchema, { ...valid, title: "  Vacuum Office  " })).toEqual({ ...valid, frequencyUnit: "DAY", frequencyInterval: 14, weekdays: null, assignmentMode: "FIXED", rotation: null });
   });
 
   it.each([

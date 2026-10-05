@@ -58,7 +58,7 @@ describe("DynamoDbTennerRepository.completeTenner", () => {
     expect(update?.Update).toMatchObject({
       TableName: "tenner-tenners",
       Key: { tenantId: "default", tennerId: "t-1" },
-      UpdateExpression: "SET #lastCompleted = :lastCompleted, #nextDue = :nextDue, #snoozedUntil = :snoozedUntil, #pausedAt = :pausedAt, #pausedUntil = :pausedUntil, #updatedAt = :updatedAt, #updatedBy = :updatedBy",
+      UpdateExpression: "SET #lastCompleted = :lastCompleted, #nextDue = :nextDue, #snoozedUntil = :snoozedUntil, #pausedAt = :pausedAt, #pausedUntil = :pausedUntil, #assignedTo = :assignedTo, #updatedAt = :updatedAt, #updatedBy = :updatedBy",
       ConditionExpression:
         "#updatedAt = :expectedUpdatedAt AND #frequencyDays = :expectedFrequencyDays AND #active = :true AND (attribute_not_exists(#deletedAt) OR #deletedAt = :null) AND (attribute_not_exists(#lastCompleted) OR #lastCompleted = :null)",
       ExpressionAttributeValues: {

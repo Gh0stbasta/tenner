@@ -329,6 +329,11 @@ Version 1 supported manually configured users only. Since HOUSEHOLD-ADMIN-001, m
   Tenners; the list queries `assignedTo-index` twice (member + `HOUSEHOLD`). Dashboard "Nach Person" counts each
   shared Tenner for every active member (`sharedCount`) and splits its minutes evenly. Completions are attributed to
   `completedBy` as before; `HOUSEHOLD` is never a completer. Deactivation may reassign to `HOUSEHOLD`.
+- **Rotating assignment (HOUSEHOLD-001):** `assignmentMode` `FIXED` (default) or `ROTATING` with an ordered
+  `rotation` (≥ 2 distinct members, not `HOUSEHOLD`; the assignee must be part of it). On completion the assignee
+  moves to the next active member after the **assigned** one (covering does not break the order; deactivated
+  members are skipped); the completion stores `assignedToBefore`, and undo restores it. Changing only `assignedTo`
+  of a rotating Tenner is allowed; the next completion continues from there.
 - No registration process beyond the Google self-assignment (HOTFIX-001).
 
 No self-service onboarding.

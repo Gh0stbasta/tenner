@@ -7,7 +7,7 @@ import { CompleteTennerService, CreateTennerService, DashboardService, ListTenne
 import { householdSettings, mockCompletionRepository, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-05T08:00:00Z");
-const request = { title: "Spülmaschine ausräumen", category: "HOUSEHOLD", estimatedMinutes: 5, frequencyDays: 1, frequencyUnit: "DAY", frequencyInterval: 1, weekdays: null } as const;
+const request = { title: "Spülmaschine ausräumen", category: "HOUSEHOLD", estimatedMinutes: 5, frequencyDays: 1, frequencyUnit: "DAY", frequencyInterval: 1, weekdays: null, assignmentMode: "FIXED", rotation: null } as const;
 
 describe("shared Tenners", () => {
   it("can be created and changed with the reserved assignee", async () => {
