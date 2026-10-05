@@ -7,12 +7,11 @@ import {
   CATEGORY_LABELS,
   FREQUENCY_UNITS,
   FREQUENCY_UNIT_LABELS,
-  USER_IDS,
-  USER_LABELS,
   WEEKDAYS,
   WEEKDAY_LABELS,
   type Weekday,
 } from "../../types/domain";
+import { useAssignees } from "../members/useAssignees";
 import { FREQUENCY_PRESETS, type TennerFormValues } from "./tennerForm.schema";
 
 export interface TennerFormProps {
@@ -30,6 +29,7 @@ export function TennerForm({ form, showActive = false, disabled = false }: Tenne
     watch,
     formState: { errors },
   } = form;
+  const assignees = useAssignees(watch("assignedTo"));
   const [unit, interval, weekdays] = watch(["frequencyUnit", "frequencyInterval", "weekdays"]);
   const isPreset = (preset: (typeof FREQUENCY_PRESETS)[number]) =>
     preset.unit === unit && preset.interval === interval && (unit !== "WEEK" || weekdays.length === 0);
@@ -85,9 +85,9 @@ export function TennerForm({ form, showActive = false, disabled = false }: Tenne
               helperText={errors.assignedTo?.message}
               {...field}
             >
-              {USER_IDS.map((user) => (
-                <MenuItem key={user} value={user}>
-                  {USER_LABELS[user]}
+              {assignees.map((member) => (
+                <MenuItem key={member.userId} value={member.userId}>
+                  {member.displayName}
                 </MenuItem>
               ))}
             </TextField>

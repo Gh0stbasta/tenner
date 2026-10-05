@@ -16,3 +16,4 @@ export * from "./snooze-tenner.service.js";
 export * from "./skip-tenner.service.js";
 export * from "./pause-tenner.service.js";
 export * from "./vacation.service.js";
+export * from "./member.service.js";

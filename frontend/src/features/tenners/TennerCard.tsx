@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { TennerLink } from "../../components/TennerLink";
-import { CATEGORY_LABELS, USER_LABELS } from "../../types/domain";
+import { CATEGORY_LABELS } from "../../types/domain";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
 import { formatMinutes, formatShortDate } from "../../utils/format";
 import { useToday } from "../household/api";
@@ -32,6 +32,7 @@ import { isPausedIndividually } from "../pause/pauseStatus";
 import type { Tenner } from "./schemas";
 import { frequencyLabel, type TennerStatus } from "./status";
 import { TennerStatusBadge } from "./TennerStatusBadge";
+import { useMemberName } from "../members/api";
 
 export interface TennerCardActions {
   readonly onEdit?: (tenner: Tenner) => void;
@@ -59,6 +60,7 @@ export function TennerCard({
   onPause,
   onResume,
 }: TennerCardProps) {
+  const memberName = useMemberName();
   const theme = useTheme();
   const compact = useMediaQuery(theme.breakpoints.down("sm"));
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -103,7 +105,7 @@ export function TennerCard({
         <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1, flexWrap: "wrap", alignItems: "center" }}>
           <Chip size="small" label={CATEGORY_LABELS[tenner.category]} />
           <Typography variant="body2" color="text.secondary">
-            {USER_LABELS[tenner.assignedTo]} · {formatMinutes(tenner.estimatedMinutes)}
+            {memberName(tenner.assignedTo)} · {formatMinutes(tenner.estimatedMinutes)}
           </Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>

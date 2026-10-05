@@ -1,7 +1,8 @@
 /** Actionable workload grouped by user and by category (FRONTEND-002). */
 
 import { Card, CardContent, List, ListItem, ListItemText, Typography } from "@mui/material";
-import { CATEGORIES, CATEGORY_LABELS, USER_IDS, USER_LABELS } from "../../types/domain";
+import { CATEGORIES, CATEGORY_LABELS } from "../../types/domain";
+import { useActiveMembers, useMemberName } from "../members/api";
 import { formatMinutes, formatTennerCount } from "../../utils/format";
 import type { GroupSummary } from "./api";
 
@@ -44,12 +45,13 @@ function WorkloadCard<K extends string>({ title, keys, labels, groups }: Workloa
   );
 }
 
-export function UserSummaryCard({
-  byUser,
-}: {
-  readonly byUser: WorkloadCardProps<(typeof USER_IDS)[number]>["groups"];
-}) {
-  return <WorkloadCard title="Nach Person" keys={USER_IDS} labels={USER_LABELS} groups={byUser} />;
+/** Members in their configured order, then any other assignee in the data (e.g. not loaded yet). */
+export function UserSummaryCard({ byUser }: { readonly byUser: Partial<Record<string, GroupSummary>> }) {
+  const memberName = useMemberName();
+  const ordered = useActiveMembers().map((member) => member.userId);
+  const keys = [...ordered, ...Object.keys(byUser).filter((userId) => !ordered.includes(userId))];
+  const labels = Object.fromEntries(keys.map((userId) => [userId, memberName(userId)]));
+  return <WorkloadCard title="Nach Person" keys={keys} labels={labels} groups={byUser} />;
 }
 
 export function CategorySummaryCard({

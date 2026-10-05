@@ -6,6 +6,7 @@ import { CognitoHouseholdMembershipRepository, type HouseholdMembershipRepositor
 import { HouseholdAssignmentService } from "../src/services/index.js";
 import type { ApiEvent } from "../src/types/api.js";
 import { authenticatedEvent, mockLogger } from "./mocks/index.js";
+import { SEED_MEMBERS } from "../src/models/index.js";
 
 const ME = { username: "google_111" };
 const STEFAN = "household:default:STEFAN";
@@ -21,12 +22,15 @@ function store(initial: Record<string, string[]> = {}): Mocked<HouseholdMembersh
     memberCount: vi.fn(async (group: string) => Math.min(members(group).size, 2)),
     addMember: vi.fn(async (username: string, group: string) => void members(group).add(username)),
     removeMember: vi.fn(async (username: string, group: string) => void members(group).delete(username)),
+    ensureGroup: vi.fn(async () => undefined),
   };
 }
 
+const SEEDED = async () => SEED_MEMBERS;
+
 describe("HouseholdAssignmentService.getOnboarding", () => {
   it("first login: not assigned, both members available", async () => {
-    await expect(new HouseholdAssignmentService(store(), "default").getOnboarding(ME)).resolves.toEqual({
+    await expect(new HouseholdAssignmentService(store(), "default", SEEDED).getOnboarding(ME)).resolves.toEqual({
       assignedTo: null,
       members: [
         { userId: "STEFAN", displayName: "Stefan", available: true },
@@ -36,13 +40,13 @@ describe("HouseholdAssignmentService.getOnboarding", () => {
   });
 
   it("existing assignment: reports the member (the client skips onboarding)", async () => {
-    const result = await new HouseholdAssignmentService(store({ [STEFAN]: ["google_111"] }), "default").getOnboarding(ME);
+    const result = await new HouseholdAssignmentService(store({ [STEFAN]: ["google_111"] }), "default", SEEDED).getOnboarding(ME);
     expect(result.assignedTo).toBe("STEFAN");
     expect(result.members.find((m) => m.userId === "STEFAN")?.available).toBe(false);
   });
 
   it("marks members claimed by other accounts as unavailable", async () => {
-    const result = await new HouseholdAssignmentService(store({ [JULIA]: ["google_222"] }), "default").getOnboarding(ME);
+    const result = await new HouseholdAssignmentService(store({ [JULIA]: ["google_222"] }), "default", SEEDED).getOnboarding(ME);
     expect(result).toMatchObject({ assignedTo: null, members: [{ userId: "STEFAN", available: true }, { userId: "JULIA", available: false }] });
   });
 });
@@ -53,19 +57,19 @@ describe("HouseholdAssignmentService.assign", () => {
     ["JULIA", JULIA],
   ] as const)("assigns %s to a free account", async (userId, group) => {
     const memberships = store();
-    await expect(new HouseholdAssignmentService(memberships, "default").assign(ME, userId)).resolves.toEqual({ response: { userId }, group });
+    await expect(new HouseholdAssignmentService(memberships, "default", SEEDED).assign(ME, userId)).resolves.toEqual({ response: { userId }, group });
     expect(memberships.groups.get(group)).toEqual(new Set(["google_111"]));
   });
 
   it("rejects a second assignment of the same account (ALREADY_ASSIGNED)", async () => {
     const memberships = store({ [STEFAN]: ["google_111"] });
-    await expect(new HouseholdAssignmentService(memberships, "default").assign(ME, "JULIA")).rejects.toMatchObject({ code: "ALREADY_ASSIGNED", statusCode: 409 });
+    await expect(new HouseholdAssignmentService(memberships, "default", SEEDED).assign(ME, "JULIA")).rejects.toMatchObject({ code: "ALREADY_ASSIGNED", statusCode: 409 });
     expect(memberships.addMember).not.toHaveBeenCalled();
   });
 
   it("rejects a member claimed by another account (MEMBER_TAKEN): strangers cannot take over", async () => {
     const memberships = store({ [JULIA]: ["google_222"] });
-    await expect(new HouseholdAssignmentService(memberships, "default").assign(ME, "JULIA")).rejects.toMatchObject({ code: "MEMBER_TAKEN", statusCode: 409 });
+    await expect(new HouseholdAssignmentService(memberships, "default", SEEDED).assign(ME, "JULIA")).rejects.toMatchObject({ code: "MEMBER_TAKEN", statusCode: 409 });
     expect(memberships.addMember).not.toHaveBeenCalled();
   });
 
@@ -74,14 +78,14 @@ describe("HouseholdAssignmentService.assign", () => {
     memberships.addMember.mockImplementationOnce(async (username, group) => {
       memberships.groups.set(group, new Set(["google_222", username])); // the other account was added at the same time
     });
-    await expect(new HouseholdAssignmentService(memberships, "default").assign(ME, "JULIA")).rejects.toBeInstanceOf(ConflictError);
+    await expect(new HouseholdAssignmentService(memberships, "default", SEEDED).assign(ME, "JULIA")).rejects.toBeInstanceOf(ConflictError);
     expect(memberships.removeMember).toHaveBeenCalledWith("google_111", JULIA);
     expect(memberships.groups.get(JULIA)).toEqual(new Set(["google_222"]));
   });
 
   it("uses the configured tenant in the group name", async () => {
     const memberships = store();
-    await new HouseholdAssignmentService(memberships, "household-2").assign(ME, "STEFAN");
+    await new HouseholdAssignmentService(memberships, "household-2", SEEDED).assign(ME, "STEFAN");
     expect(memberships.addMember).toHaveBeenCalledWith("google_111", "household:household-2:STEFAN");
   });
 });
@@ -104,7 +108,7 @@ describe("onboarding handlers", () => {
     expect(logger.info).toHaveBeenCalledWith("Household member assigned", { event: "HouseholdMemberAssigned", username: "google_111", userId: "JULIA", group: JULIA });
   });
 
-  it.each([{ userId: "BOB" }, {}, { userId: "JULIA", tenantId: "other" }])("POST rejects %j with 400", async (body) => {
+  it.each([{ userId: "bob" }, {}, { userId: "JULIA", tenantId: "other" }])("POST rejects %j with 400", async (body) => {
     const assign = vi.fn();
     await expect(assignHouseholdMemberHandler(event(body), ME, assign, mockLogger())).rejects.toBeInstanceOf(ValidationError);
     expect(assign).not.toHaveBeenCalled();
@@ -157,5 +161,18 @@ describe("CognitoHouseholdMembershipRepository", () => {
     await expect(repository.memberCount(STEFAN)).rejects.toBeInstanceOf(PersistenceError);
     await expect(repository.addMember("u", STEFAN)).rejects.toBeInstanceOf(PersistenceError);
     await expect(repository.removeMember("u", STEFAN)).rejects.toBeInstanceOf(PersistenceError);
+    await expect(repository.ensureGroup(STEFAN)).rejects.toBeInstanceOf(PersistenceError);
+  });
+
+  it("creates missing groups idempotently and counts a missing group as free (HOUSEHOLD-ADMIN-001)", async () => {
+    const named = (name: string) => Object.assign(new Error(name), { name });
+    const c = client(async (command) => {
+      if (command.constructor.name === "CreateGroupCommand") throw named("GroupExistsException");
+      throw named("ResourceNotFoundException");
+    });
+    const repository = new CognitoHouseholdMembershipRepository(c as never, "pool-1");
+    await expect(repository.ensureGroup("household:default:LENA")).resolves.toBeUndefined();
+    expect(c.send.mock.calls[0]?.[0].input).toMatchObject({ UserPoolId: "pool-1", GroupName: "household:default:LENA" });
+    await expect(repository.memberCount("household:default:LENA")).resolves.toBe(0);
   });
 });

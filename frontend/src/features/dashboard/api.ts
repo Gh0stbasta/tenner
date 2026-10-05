@@ -46,7 +46,7 @@ export const dashboardSchema = z.object({
   overdue: z.array(dashboardTennerSchema),
   upcoming: z.array(dashboardTennerSchema),
   paused: z.array(pausedTennerSchema).default([]),
-  byUser: z.partialRecord(userIdSchema, groupSummarySchema),
+  byUser: z.partialRecord(z.string(), groupSummarySchema),
   byCategory: z.partialRecord(categorySchema, groupSummarySchema),
 });
 export type Dashboard = z.infer<typeof dashboardSchema>;

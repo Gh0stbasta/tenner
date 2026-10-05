@@ -4,11 +4,12 @@
  */
 
 import { Button, Typography } from "@mui/material";
-import { USER_LABELS } from "../../types/domain";
 import { useCurrentUser, useLogout } from "../completions/CurrentUserProvider";
 import { SettingsSection } from "./SettingsSection";
+import { useMemberName } from "../members/api";
 
 export function ProfileSettings() {
+  const memberName = useMemberName();
   const user = useCurrentUser();
   const logout = useLogout();
   return (
@@ -17,7 +18,7 @@ export function ProfileSettings() {
       description="Du bist mit deinem Google-Konto angemeldet. Die Person ist fest mit dem Konto verknüpft."
     >
       <Typography sx={{ mb: 2 }}>
-        Angemeldet als <strong>{USER_LABELS[user]}</strong>
+        Angemeldet als <strong>{memberName(user)}</strong>
       </Typography>
       <Button variant="outlined" onClick={logout}>
         Abmelden

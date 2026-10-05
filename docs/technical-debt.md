@@ -177,7 +177,10 @@ TICKET-001, SECURITY-001
 
 ---
 
-## TD-007: Several tickets mark the user list and categories as hardcoded
+## TD-007: Several tickets mark the user list and categories as hardcoded (users resolved)
+
+> Household members resolved by HOUSEHOLD-ADMIN-001 (2026-10-05): members are managed data in `tenner-households`;
+> only the seed members (STEFAN, JULIA) remain as one constant. Categories follow with HOUSEHOLD-ADMIN-002.
 
 ### Description
 
@@ -544,7 +547,8 @@ SECURITY-004, TD-018, `backend/src/repositories/dynamodb/tenner.mapper.ts`, `com
 Since FUTURE-011, Cognito creates a user on every first Google sign-in. Their users stay in the pool until an
 administrator deletes them. Since HOTFIX-001, a new user picks a household member on the first login; each
 member can be claimed once. **Until every member is claimed, a stranger who knows the URL can claim a free
-member and gets full household access.** After that, strangers see "Kein freier Platz" (403).
+member and gets full household access.** After that, strangers see "Kein freier Platz" (403). Since
+HOUSEHOLD-ADMIN-001, every member added in the settings is a new free place until its person signs in.
 
 ### Reason
 
@@ -633,7 +637,8 @@ FUTURE-011, TD-007, HOUSEHOLD-ADMIN-001
 ### Description
 
 For self-assignment (HOTFIX-001), `tenner-api-role` may call `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`,
-`AdminListGroupsForUser` and `ListUsersInGroup` on the Tenner user pool. IAM cannot restrict which user or group
+`AdminListGroupsForUser`, `ListUsersInGroup` and, since HOUSEHOLD-ADMIN-001, `CreateGroup` (groups of members added
+in the app are created on their first assignment) on the Tenner user pool. IAM cannot restrict which user or group
 is affected; the code only ever adds the calling user to one household group and only after checking it is free.
 Concurrent claims of the same member are resolved by a re-count after adding (the later account withdraws).
 

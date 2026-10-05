@@ -76,6 +76,9 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     resumeTenner: vi.fn(async () => tennerResponse),
     setVacation: vi.fn(async () => ({ household: { timezone: "Europe/Berlin", vacation: { from: "2026-10-10", until: "2026-10-24", categories: null } }, rescheduled: 2, conflicts: 0 })),
     endVacation: vi.fn(async () => ({ timezone: "Europe/Berlin", vacation: null })),
+    listMembers: vi.fn(async () => [{ userId: "STEFAN", displayName: "Stefan", color: "BLUE" as const, active: true }]),
+    createMember: vi.fn(async () => ({ userId: "LENA", displayName: "Lena", color: "GREEN" as const, active: true })),
+    updateMember: vi.fn(async () => ({ userId: "STEFAN", displayName: "Steffen", color: "BLUE" as const, active: true })),
     getOnboarding: vi.fn(async () => ({ assignedTo: null, members: [] })),
     assignHouseholdMember: vi.fn(async () => ({ response: { userId: "JULIA" as const }, group: "household:default:JULIA" })),
     ...overrides,
@@ -276,7 +279,7 @@ describe("GET /tenners", () => {
     expect(d.listTenners).toHaveBeenCalledWith("default", { deleted: true });
   });
 
-  it.each([{ sort: "priority" }, { assignedTo: "BOB" }, { active: "yes" }, { deleted: "yes" }, { order: "up" }, { unknown: "1" }])("rejects %j with 400", async (query) => {
+  it.each([{ sort: "priority" }, { assignedTo: "bob" }, { active: "yes" }, { deleted: "yes" }, { order: "up" }, { unknown: "1" }])("rejects %j with 400", async (query) => {
     const d = deps();
     const response = await route(event("GET /tenners", {}, undefined, query), d);
     expect(response.statusCode).toBe(400);
@@ -327,6 +330,18 @@ describe("pause and vacation routes (SCHEDULING-005)", () => {
     expect(d.setVacation).toHaveBeenCalledWith(TEST_IDENTITY, { from: "2026-10-10", until: "2026-10-24" });
     expect((await route(event("DELETE /household/vacation"), d)).statusCode).toBe(200);
     expect(d.endVacation).toHaveBeenCalledWith(TEST_IDENTITY);
+  });
+});
+
+describe("member routes (HOUSEHOLD-ADMIN-001)", () => {
+  it("lists, creates and updates members", async () => {
+    const d = deps();
+    expect((await route(event("GET /users"), d)).statusCode).toBe(200);
+    expect(d.listMembers).toHaveBeenCalledWith("default");
+    expect((await route(event("POST /users", {}, JSON.stringify({ displayName: "Lena", color: "GREEN" })), d)).statusCode).toBe(201);
+    const put = { ...event("PUT /users/{userId}", {}, JSON.stringify({ displayName: "Steffen" })), pathParameters: { userId: "STEFAN" } } as APIGatewayProxyEventV2;
+    expect((await route(put, d)).statusCode).toBe(200);
+    expect(d.updateMember).toHaveBeenCalledWith(TEST_IDENTITY, "STEFAN", { displayName: "Steffen" });
   });
 });
 
@@ -488,7 +503,7 @@ describe("GET /dashboard", () => {
     expect(d.getDashboard).toHaveBeenCalledWith("default", { assignedTo: "STEFAN", category: "HOUSEHOLD", date: "2026-10-01" });
   });
 
-  it.each([{ assignedTo: "BOB" }, { category: "GARDEN" }, { date: "01.10.2026" }, { date: "2026-02-30" }])("rejects %j with 400 Invalid dashboard query.", async (query) => {
+  it.each([{ assignedTo: "bob" }, { category: "GARDEN" }, { date: "01.10.2026" }, { date: "2026-02-30" }])("rejects %j with 400 Invalid dashboard query.", async (query) => {
     const d = deps();
     const response = await route(event("GET /dashboard", {}, undefined, query), d);
     expect(response.statusCode).toBe(400);
@@ -527,7 +542,7 @@ describe("history routes", () => {
     expect(d.getHistory).toHaveBeenCalledWith("default", { from: "2026-09-01", to: "2026-09-30", completedBy: "JULIA", limit: 50, includeUndone: true });
   });
 
-  it.each([{ limit: "0" }, { limit: "101" }, { limit: "ten" }, { from: "2026-10-02", to: "2026-10-01" }, { cursor: "not base64!" }, { completedBy: "BOB" }, { foo: "1" }])("GET /history rejects %j", async (query) => {
+  it.each([{ limit: "0" }, { limit: "101" }, { limit: "ten" }, { from: "2026-10-02", to: "2026-10-01" }, { cursor: "not base64!" }, { completedBy: "bob" }, { foo: "1" }])("GET /history rejects %j", async (query) => {
     const d = deps();
     expect((await route(event("GET /history", {}, undefined, query), d)).statusCode).toBe(400);
     expect(d.getHistory).not.toHaveBeenCalled();

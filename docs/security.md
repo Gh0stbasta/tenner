@@ -69,7 +69,7 @@ no `*` action; every wildcard resource justified.
 | `-logging` | `logs:CreateLogStream`, `logs:PutLogEvents` | `/tenner/api` log group, `:log-stream:*` | ✅ Wildcard on stream names is required (Lambda creates streams per container) |
 | `-dynamodb` | `GetItem`, `PutItem`, `UpdateItem`, `Query` | all Tenner tables and their indexes | ✅ **SECURITY-005 removed `Scan` and `DeleteItem`** (never used; deletes are soft deletes). Index wildcard `/index/*` covers the GSIs only |
 | `-dynamodb` | `BatchGetItem` | `tenner-tenners` | ✅ Title lookup for history (TICKET-020) |
-| `-cognito` | `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `ListUsersInGroup` | Tenner user pool | ⚠️ IAM cannot restrict the user or group; the code only adds the caller to one free household group (TD-023) |
+| `-cognito` | `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `ListUsersInGroup`, `CreateGroup` (HOUSEHOLD-ADMIN-001) | Tenner user pool | ⚠️ IAM cannot restrict the user or group; the code only adds the caller to one free household group (TD-023) |
 | Trust | `sts:AssumeRole` | `lambda.amazonaws.com` | ✅ |
 
 ### `GitHubActionsDeployRole` (managed outside this repository)

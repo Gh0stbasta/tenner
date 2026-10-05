@@ -3,7 +3,8 @@
 import type { Identity } from "../auth/index.js";
 import { toCompletionResponse, toTennerResponse, type CompleteTennerRequest, type CompleteTennerResponse } from "../dto/index.js";
 import { ConflictError, NotFoundError, ValidationError } from "../exceptions/index.js";
-import type { Completion, Tenner } from "../models/index.js";
+import { SEED_MEMBERS, type Completion, type Tenner } from "../models/index.js";
+import { requireMember, type MemberSource } from "./member.service.js";
 import type { CompletionRecord, CompletionRepository, TennerRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
 import { avoidVacation, type VacationSource } from "../utils/pause.js";
@@ -28,6 +29,7 @@ export class CompleteTennerService {
     private readonly newId: IdGenerator,
     private readonly timezoneOf: TimeZoneSource,
     private readonly vacationOf: VacationSource = async () => null,
+    private readonly membersOf: MemberSource = async () => SEED_MEMBERS,
   ) {}
 
   /**
@@ -39,6 +41,7 @@ export class CompleteTennerService {
   async completeTenner(identity: Identity, tennerId: string, request: CompleteTennerRequest, idempotencyKey?: string): Promise<CompleteTennerOutcome> {
     const { tenantId } = identity;
     const completedBy = request.completedBy ?? identity.userId;
+    if (request.completedBy !== undefined) requireMember(await this.membersOf(tenantId), completedBy, "completedBy");
     const requestHash = sha256Json({ tennerId, completedBy, actualMinutes: request.actualMinutes ?? null, completedAt: request.completedAt ?? null });
     const completionId = idempotencyKey ? uuidV5(`${tenantId}:${idempotencyKey}`) : this.newId();
 

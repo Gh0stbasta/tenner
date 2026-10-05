@@ -88,7 +88,7 @@ describe("restoreTennerHandler", () => {
     expect(logger.info).toHaveBeenCalledWith(message, { tennerId: "t-1", restoredBy: "STEFAN", previousDeletedAt: "2026-10-01T18:00:00Z" });
   });
 
-  it.each([{ restoredBy: "BOB" }, { restoredBy: "STEFAN", active: true }])("rejects %j", async (payload) => {
+  it.each([{ restoredBy: "bob" }, { restoredBy: "STEFAN", active: true }])("rejects %j", async (payload) => {
     const restore = vi.fn();
     await expect(restoreTennerHandler(event(payload), TEST_IDENTITY, restore, mockLogger())).rejects.toBeInstanceOf(ValidationError);
     expect(restore).not.toHaveBeenCalled();

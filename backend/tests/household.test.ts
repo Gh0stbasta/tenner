@@ -11,9 +11,10 @@ const NOW = new Date("2026-10-05T08:00:00Z");
 
 function memoryRepository(timezone?: string): HouseholdRepository & { saveTimezone: ReturnType<typeof vi.fn> } {
   return {
-    get: vi.fn(async (tenantId: string) => (timezone ? { tenantId, timezone, vacation: null, updatedAt: "t", updatedBy: null } : undefined)),
-    saveTimezone: vi.fn(async (tenantId: string, tz: string, actor, timestamp: string) => ({ tenantId, timezone: tz, vacation: null, updatedAt: timestamp, updatedBy: actor })),
+    get: vi.fn(async (tenantId: string) => (timezone ? { tenantId, timezone, vacation: null, members: null, membersVersion: 0, updatedAt: "t", updatedBy: null } : undefined)),
+    saveTimezone: vi.fn(async (tenantId: string, tz: string, actor, timestamp: string) => ({ tenantId, timezone: tz, vacation: null, members: null, membersVersion: 0, updatedAt: timestamp, updatedBy: actor })),
     saveVacation: vi.fn(),
+    saveMembers: vi.fn(),
   };
 }
 
@@ -62,7 +63,7 @@ describe("DynamoDbHouseholdRepository", () => {
 
   it("reads the item by tenant; missing settings read as null", async () => {
     const c = client(async () => ({ Item: { tenantId: "default", timezone: "Europe/Berlin", updatedAt: "t", updatedBy: "JULIA" } }));
-    await expect(new DynamoDbHouseholdRepository(c, "tenner-households").get("default")).resolves.toEqual({ tenantId: "default", timezone: "Europe/Berlin", vacation: null, updatedAt: "t", updatedBy: "JULIA" });
+    await expect(new DynamoDbHouseholdRepository(c, "tenner-households").get("default")).resolves.toEqual({ tenantId: "default", timezone: "Europe/Berlin", vacation: null, members: null, membersVersion: 0, updatedAt: "t", updatedBy: "JULIA" });
     expect((c.send.mock.calls[0]?.[0] as GetCommand).input).toEqual({ TableName: "tenner-households", Key: { tenantId: "default" } });
     await expect(new DynamoDbHouseholdRepository(client(async () => ({ Item: { tenantId: "default" } })), "t").get("default")).resolves.toMatchObject({ timezone: null, vacation: null });
     await expect(new DynamoDbHouseholdRepository(client(async () => ({})), "t").get("default")).resolves.toBeUndefined();
@@ -77,7 +78,7 @@ describe("DynamoDbHouseholdRepository", () => {
   });
 
   it("upserts only the vacation (SCHEDULING-005)", async () => {
-    const c = client(async () => ({ Attributes: { tenantId: "default", vacation: null, updatedAt: "ts", updatedBy: "STEFAN" } }));
+    const c = client(async () => ({ Attributes: { tenantId: "default", vacation: null, members: null, membersVersion: 0, updatedAt: "ts", updatedBy: "STEFAN" } }));
     await new DynamoDbHouseholdRepository(c, "tenner-households").saveVacation("default", null, "STEFAN", "ts");
     expect((c.send.mock.calls[0]?.[0] as UpdateCommand).input).toMatchObject({
       UpdateExpression: "SET #value = :value, #updatedAt = :timestamp, #updatedBy = :actor",

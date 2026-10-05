@@ -295,9 +295,30 @@ Stefan
 Julia
 ```
 
-Version 1 will support manually configured users only.
+Version 1 supported manually configured users only. Since HOUSEHOLD-ADMIN-001, members are managed in the app
+(Settings → "Haushaltsmitglieder"):
 
-No registration process.
+| Field | Rule |
+|---|---|
+| `userId` | stable, immutable uppercase slug (`^[A-Z][A-Z0-9_]{0,29}$`), derived from the name if omitted ("Lena" → `LENA`) |
+| `displayName` | 1–40 characters |
+| `color` | one of `BLUE`, `GREEN`, `ORANGE`, `PURPLE`, `RED`, `TEAL`, `PINK`, `GREY` |
+| `active` | always true until deactivation (HOUSEHOLD-ADMIN-004) |
+| `createdAt`, `updatedAt` | UTC timestamps |
+
+- **Storage decision:** the member list is an attribute of the household item in `tenner-households` (with
+  `membersVersion` for optimistic locking), not a new `tenner-users` table as the ticket proposed. Reasons: one
+  GetItem returns all members together with timezone and vacation; no new table, IAM or deploy-role permissions; a
+  household has a handful of members (capped at 20). A separate table becomes worthwhile only with many members or
+  per-member access patterns.
+- **Seed:** while a household has not saved a list, the seed members `STEFAN` and `JULIA` apply (read-time default,
+  idempotent, no migration). The first change stores seed + change.
+- **Validation:** request schemas only check the ID format; services check `assignedTo` (create, update) and an
+  explicit `completedBy` against the active members (400 "Unknown household member."). Filters accept any valid ID.
+  Identity no longer checks a hardcoded list: household groups are only assigned for existing members (onboarding).
+- **Cognito groups:** `STEFAN` and `JULIA` groups are managed by Terraform; groups of members added in the app are
+  created by the API on their first assignment (`cognito-idp:CreateGroup`).
+- No registration process beyond the Google self-assignment (HOTFIX-001).
 
 No self-service onboarding.
 
@@ -554,8 +575,8 @@ Browser ──(Authorization Code + PKCE, identity_provider=Google)──► Cog
 | `aws_cognito_user_pool.users` (`tenner-users-prod`) | Essentials tier, admin-only sign-up, e-mail username, password ≥ 12, deletion protection, custom attributes `tenantId` (immutable) and `userId` |
 | `aws_cognito_user_pool_client.web` (`tenner-web-prod`) | public client, code flow + PKCE, scopes `openid email`, identity provider Google only, auth flow refresh token only (no passwords), callback `https://<cloudfront>/auth/callback`, tokens 60 min, refresh 30 days, revocation on, cannot write custom attributes |
 | `aws_cognito_identity_provider.google` | Google, scopes `openid email profile`, maps `email` and `username = sub`; client ID/secret from `var.google_client_id` / `var.google_client_secret` (GitHub variable/secret) |
-| `aws_cognito_user_group.household` | `household:default:STEFAN`, `household:default:JULIA` |
-| `aws_iam_role_policy.api_cognito` | API Lambda may add/remove the caller to/from household groups and read group membership on this pool only (HOTFIX-001, TD-023) |
+| `aws_cognito_user_group.household` | `household:default:STEFAN`, `household:default:JULIA` (seed members; groups of members added in the app are created by the API, HOUSEHOLD-ADMIN-001) |
+| `aws_iam_role_policy.api_cognito` | API Lambda may add/remove the caller to/from household groups, read group membership and create member groups on this pool only (HOTFIX-001, HOUSEHOLD-ADMIN-001, TD-023) |
 | `aws_cognito_user_pool_domain.login` | managed login v2, prefix `tenner-prod-<first 8 hex of sha1(account id)>` |
 | `aws_apigatewayv2_authorizer.cognito` | JWT authorizer on every route except `GET /health` (`local.api_public_routes`) |
 
@@ -577,8 +598,8 @@ handlers / services → repositories (every key and query uses identity.tenantId
 
 - **Tenant and acting user:** only from the household group in `cognito:groups`. Groups are assigned by an
   administrator only (users cannot change their groups). There is no default tenant and no tenant parameter;
-  client-supplied `tenantId` fields are rejected (strict schemas) or ignored (headers). The user must be a
-  household member (`STEFAN` or `JULIA`). The HTTP API passes the array claim as a string `"[a b]"`; both forms
+  client-supplied `tenantId` fields are rejected (strict schemas) or ignored (headers). The user ID must match
+  `^[A-Z][A-Z0-9_]{0,29}$`; groups exist only for household members (HOUSEHOLD-ADMIN-001). The HTTP API passes the array claim as a string `"[a b]"`; both forms
   are accepted.
   - `completedBy` defaults to the acting user. Another member is allowed (covering for someone); the completion
     then also stores `recordedBy` = acting user.
@@ -1014,7 +1035,7 @@ Introduced by TICKET-006 (`terraform/dynamodb.tf`).
 |---|---|---|---|
 | `tenner-tenners` | `tenantId` (PK), `tennerId` (SK) | `nextDue-index` (`tenantId`, `nextDue`), `assignedTo-index` (`tenantId`, `assignedTo`) | Current state of Tenners |
 | `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`), `tennerId-completedAt-index` (`tenantTennerId`, `completedAt`, TICKET-014) | Immutable completion history |
-| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `updatedAt`, `updatedBy` |
+| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `members` + `membersVersion` (HOUSEHOLD-ADMIN-001), `updatedAt`, `updatedBy` |
 
 All tables use:
 - `PAY_PER_REQUEST` billing

@@ -76,7 +76,7 @@ describe("EditTennerDialog", () => {
     await userEvent.click(saveButton());
 
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls()[0]?.body).toEqual({
+    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({
       title: "Büro gründlich saugen",
       frequencyUnit: "MONTH",
       frequencyInterval: 1,
@@ -96,7 +96,11 @@ describe("EditTennerDialog", () => {
     await waitFor(() => expect(saveButton()).toBeEnabled());
     await userEvent.click(saveButton());
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls()[0]?.body).toEqual({ frequencyUnit: "DAY", frequencyInterval: 21, weekdays: null });
+    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({
+      frequencyUnit: "DAY",
+      frequencyInterval: 21,
+      weekdays: null,
+    });
   });
 
   it("loads and changes weekdays of a weekday-bound Tenner (SCHEDULING-002)", async () => {
@@ -114,7 +118,7 @@ describe("EditTennerDialog", () => {
     await waitFor(() => expect(saveButton()).toBeEnabled());
     await userEvent.click(saveButton());
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls()[0]?.body).toEqual({
+    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({
       frequencyUnit: "WEEK",
       frequencyInterval: 1,
       weekdays: ["SAT", "SUN"],
@@ -127,7 +131,9 @@ describe("EditTennerDialog", () => {
     await userEvent.click(screen.getByRole("switch", { name: "Aktiv" }));
     expect(screen.getByRole("switch", { name: "Inaktiv" })).not.toBeChecked();
     await userEvent.click(saveButton());
-    await waitFor(() => expect(fetchMock.calls()[0]?.body).toEqual({ active: false }));
+    await waitFor(() =>
+      expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({ active: false }),
+    );
   });
 
   it("reactivates an inactive Tenner", async () => {
@@ -135,7 +141,9 @@ describe("EditTennerDialog", () => {
     renderDialog({ ...EXISTING, active: false });
     await userEvent.click(screen.getByRole("switch", { name: "Inaktiv" }));
     await userEvent.click(saveButton());
-    await waitFor(() => expect(fetchMock.calls()[0]?.body).toEqual({ active: true }));
+    await waitFor(() =>
+      expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({ active: true }),
+    );
   });
 
   it("keeps the changes and shows an error when saving fails", async () => {

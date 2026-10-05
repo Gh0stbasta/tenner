@@ -105,12 +105,13 @@ The assignment is logged as `HouseholdMemberAssigned` with the Cognito username,
 
 `createdBy`, `updatedBy` and `recordedBy` are set from the authenticated user (SECURITY-004). Records written before
 authentication have `null` there.
-| `User` | `userId`, `displayName`, `active` |
+| `HouseholdMember` | `userId`, `displayName`, `color`, `active`, `createdAt`, `updatedAt` (HOUSEHOLD-ADMIN-001, stored in `tenner-households`) |
 
 | Enumeration | Values |
 |---|---|
 | `Category` | `HOUSEHOLD`, `FITNESS`, `FAMILY`, `HOME`, `PERSONAL`, `FINANCE` |
-| `UserId` | `STEFAN`, `JULIA` (hardcoded until HOUSEHOLD-ADMIN-001, see TD-007) |
+| `UserId` | managed member IDs, format `^[A-Z][A-Z0-9_]{0,29}$`; seed members `STEFAN`, `JULIA` |
+| `MemberColor` | `BLUE`, `GREEN`, `ORANGE`, `PURPLE`, `RED`, `TEAL`, `PINK`, `GREY` |
 
 ## Validation
 
@@ -432,6 +433,9 @@ and a Tenner fixture.
 | `POST /tenners/{tennerId}/skip` | `200 { success: true, data: { tenner, skip } }` (SCHEDULING-004). Returns `400`, `404`, or `409` with `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
 | `POST /tenners/{tennerId}/restore` | `200 { success: true, data: { tennerId, active, deletedAt } }` (TICKET-015, idempotent). Returns `400`, `404`, or `409` with `TENNER_NOT_DELETED` or `CONCURRENT_MODIFICATION` |
 | `GET /dashboard` | `200 { success: true, data: DashboardResponse }` (TICKET-016). Returns `400 VALIDATION_ERROR` "Invalid dashboard query." |
+| `GET /users` | `200 { success: true, data: MemberResponse[] }` with `userId`, `displayName`, `color`, `active` (HOUSEHOLD-ADMIN-001). Seed members until the household saves its own list |
+| `POST /users` | Body `{ "displayName": "Lena", "color": "GREEN", "userId"?: "LENA" }` → `201 MemberResponse`. `userId` defaults to a slug of the name. 400 invalid fields, 409 `MEMBER_EXISTS`, 409 `CONCURRENT_MODIFICATION`; at most 20 members. Logged as `MemberCreated` |
+| `PUT /users/{userId}` | Body `{ "displayName"?, "color"? }` (at least one; `userId` immutable) → `200 MemberResponse`. 404 for unknown members. Logged as `MemberUpdated` |
 | `GET /household` | `200 { success: true, data: { timezone, vacation } }` (SCHEDULING-008/005). Falls back to `APPLICATION_TIMEZONE`; `vacation` is `{ from, until, categories }` or null |
 | `PUT /household/vacation` | Body `{ "from": "YYYY-MM-DD", "until": "YYYY-MM-DD", "categories"?: [...] }` (SCHEDULING-005) → `200 { success: true, data: { household, rescheduled, conflicts } }`. `until` before `from` or in the past, empty or duplicate categories → 400. Moves affected Tenners behind the vacation (spread by daily load); concurrently changed Tenners keep their date and are counted in `conflicts`. Logged as `HouseholdVacationSet` |
 | `DELETE /household/vacation` | `200 { success: true, data: { timezone, vacation: null } }`. Moved due dates stay. Logged as `HouseholdVacationEnded` |

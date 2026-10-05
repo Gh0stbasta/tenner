@@ -1,13 +1,41 @@
 /**
  * Domain enumerations and display labels. Values mirror backend/src/models/enums.ts.
- * Users are hardcoded until HOUSEHOLD-ADMIN-001 (TD-007).
+ * Household members are managed data since HOUSEHOLD-ADMIN-001 (see features/members).
  */
 
 export const CATEGORIES = ["HOUSEHOLD", "FITNESS", "FAMILY", "HOME", "PERSONAL", "FINANCE"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
-export const USER_IDS = ["STEFAN", "JULIA"] as const;
-export type UserId = (typeof USER_IDS)[number];
+/** Household member ID: immutable uppercase slug, e.g. "STEFAN" (HOUSEHOLD-ADMIN-001). */
+export type UserId = string;
+export const USER_ID_PATTERN = /^[A-Z][A-Z0-9_]{0,29}$/;
+
+/** Member colors (HOUSEHOLD-ADMIN-001); mirrors backend MEMBER_COLORS. */
+export const MEMBER_COLORS = ["BLUE", "GREEN", "ORANGE", "PURPLE", "RED", "TEAL", "PINK", "GREY"] as const;
+export type MemberColor = (typeof MEMBER_COLORS)[number];
+
+export const MEMBER_COLOR_LABELS: Readonly<Record<MemberColor, string>> = {
+  BLUE: "Blau",
+  GREEN: "Grün",
+  ORANGE: "Orange",
+  PURPLE: "Lila",
+  RED: "Rot",
+  TEAL: "Türkis",
+  PINK: "Pink",
+  GREY: "Grau",
+};
+
+/** Swatch colors (readable on light and dark backgrounds). */
+export const MEMBER_COLOR_VALUES: Readonly<Record<MemberColor, string>> = {
+  BLUE: "#1e6fd9",
+  GREEN: "#2e8540",
+  ORANGE: "#d9730d",
+  PURPLE: "#7b4fc9",
+  RED: "#d0352f",
+  TEAL: "#13868f",
+  PINK: "#c2357f",
+  GREY: "#6b7280",
+};
 
 export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
   HOUSEHOLD: "Haushalt",
@@ -16,11 +44,6 @@ export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
   HOME: "Haus & Garten",
   PERSONAL: "Persönlich",
   FINANCE: "Finanzen",
-};
-
-export const USER_LABELS: Readonly<Record<UserId, string>> = {
-  STEFAN: "Stefan",
-  JULIA: "Julia",
 };
 
 /** Frequency units (SCHEDULING-001). Mirrors backend/src/models/enums.ts. */

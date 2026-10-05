@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toCompletionResponse, toTennerResponse } from "../src/dto/index.js";
-import { CATEGORIES, HOUSEHOLD_USERS, USER_IDS } from "../src/models/index.js";
+import { CATEGORIES, SEED_MEMBERS } from "../src/models/index.js";
 import { tennerFixture } from "./mocks/index.js";
 
 describe("dto mappers", () => {
@@ -28,9 +28,8 @@ describe("dto mappers", () => {
 });
 
 describe("domain enumerations", () => {
-  it("define the initial categories and users", () => {
+  it("define the initial categories and seed members", () => {
     expect(CATEGORIES).toEqual(["HOUSEHOLD", "FITNESS", "FAMILY", "HOME", "PERSONAL", "FINANCE"]);
-    expect(USER_IDS).toEqual(["STEFAN", "JULIA"]);
-    expect(HOUSEHOLD_USERS.map((u) => u.userId)).toEqual([...USER_IDS]);
+    expect(SEED_MEMBERS.map((member) => member.userId)).toEqual(["STEFAN", "JULIA"]);
   });
 });

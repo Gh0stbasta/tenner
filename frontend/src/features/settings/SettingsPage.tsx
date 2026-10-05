@@ -1,4 +1,4 @@
-/** Settings (FRONTEND-008): profile, defaults for new Tenners, dashboard sections, app preferences. */
+/** Settings (FRONTEND-008): profile, defaults for new Tenners, dashboard sections, app preferences, members. */
 
 import { Box, Button, Typography } from "@mui/material";
 import { useState } from "react";
@@ -6,6 +6,7 @@ import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
 import { ApplicationSettings } from "./ApplicationSettings";
 import { DashboardSettings } from "./DashboardSettings";
+import { MembersSettings } from "./MembersSettings";
 import { ProfileSettings } from "./ProfileSettings";
 import { QuickAddSettings } from "./QuickAddSettings";
 import { ResetSettingsDialog } from "./ResetSettingsDialog";
@@ -22,6 +23,7 @@ export function SettingsPage() {
       <QuickAddSettings />
       <DashboardSettings />
       <ApplicationSettings />
+      <MembersSettings />
       <Box
         sx={{
           mt: 3,

@@ -4,9 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiClient } from "../../api/client";
 import { queryKeys } from "../../api/queryKeys";
-import { USER_IDS, type UserId } from "../../types/domain";
+import type { UserId } from "../../types/domain";
 
-const userIdSchema = z.enum(USER_IDS);
+const userIdSchema = z.string();
 
 export const onboardingSchema = z.object({
   assignedTo: userIdSchema.nullable(),

@@ -2,7 +2,8 @@
 
 import { MenuItem, Stack, TextField } from "@mui/material";
 import { useState } from "react";
-import { CATEGORIES, CATEGORY_LABELS, USER_IDS, USER_LABELS, type Category } from "../../types/domain";
+import { CATEGORIES, CATEGORY_LABELS, type Category } from "../../types/domain";
+import { useAssignees } from "../members/useAssignees";
 import { FREQUENCY_RANGE, MINUTES_RANGE, type DefaultAssignee } from "./preferences";
 import { SettingsSection } from "./SettingsSection";
 import { useSettings } from "./SettingsProvider";
@@ -51,6 +52,7 @@ function NumberSetting({ label, value, range, onSave }: NumberSettingProps) {
 
 export function QuickAddSettings() {
   const { preferences, update } = useSettings();
+  const assignees = useAssignees(preferences.defaultAssignedTo === "SELF" ? undefined : preferences.defaultAssignedTo);
   return (
     <SettingsSection
       title="Standardwerte für neue Tenner"
@@ -78,9 +80,9 @@ export function QuickAddSettings() {
           fullWidth
         >
           <MenuItem value="SELF">Ich selbst</MenuItem>
-          {USER_IDS.map((user) => (
-            <MenuItem key={user} value={user}>
-              {USER_LABELS[user]}
+          {assignees.map((member) => (
+            <MenuItem key={member.userId} value={member.userId}>
+              {member.displayName}
             </MenuItem>
           ))}
         </TextField>

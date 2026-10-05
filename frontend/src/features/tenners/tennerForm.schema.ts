@@ -5,7 +5,6 @@ import {
   APPROXIMATE_DAYS_PER_UNIT,
   CATEGORIES,
   FREQUENCY_UNITS,
-  USER_IDS,
   WEEKDAYS,
   type FrequencyUnit,
   type Weekday,
@@ -36,7 +35,7 @@ export const tennerFormSchema = z
       .min(LIMITS.titleMin, `Der Titel braucht mindestens ${LIMITS.titleMin} Zeichen.`)
       .max(LIMITS.titleMax, `Der Titel darf höchstens ${LIMITS.titleMax} Zeichen haben.`),
     category: z.enum(CATEGORIES, { error: "Bitte eine Kategorie wählen." }),
-    assignedTo: z.enum(USER_IDS, { error: "Bitte eine Person wählen." }),
+    assignedTo: z.string({ error: "Bitte eine Person wählen." }).min(1, "Bitte eine Person wählen."),
     estimatedMinutes: integerBetween(
       LIMITS.minutesMin,
       LIMITS.minutesMax,

@@ -6,11 +6,11 @@
  * fields from the request body, headers or query string, and it never falls back to a default tenant.
  *
  * Household membership is a Cognito group "household:<tenantId>:<userId>" (e.g. household:default:STEFAN),
- * which an administrator assigns. Anyone with a Google account can sign in, but only group members get access.
+ * which the onboarding flow assigns for an existing household member (HOTFIX-001, HOUSEHOLD-ADMIN-001). Anyone with a Google account can sign in, but only group members get access.
  */
 
 import { ForbiddenError, UnauthorizedError } from "../exceptions/index.js";
-import { USER_IDS, type UserId } from "../models/index.js";
+import type { UserId } from "../models/index.js";
 import type { ApiEvent } from "../types/api.js";
 
 /** Cognito group claim in the ID token. */
@@ -45,7 +45,7 @@ export interface Identity {
   readonly userId: UserId;
 }
 
-const HOUSEHOLD_GROUP_PATTERN = /^household:([A-Za-z0-9_-]{1,64}):([A-Z]+)$/;
+const HOUSEHOLD_GROUP_PATTERN = /^household:([A-Za-z0-9_-]{1,64}):([A-Z][A-Z0-9_]{0,29})$/;
 
 type ClaimValue = string | number | boolean | readonly string[];
 type Claims = Readonly<Record<string, ClaimValue>>;
@@ -86,8 +86,8 @@ export function identityFromEvent(event: ApiEvent): Identity {
   const tenantId = match?.[1];
   const userId = match?.[2];
   if (tenantId === undefined || userId === undefined) throw new ForbiddenError("The account's household group is invalid.");
-  if (!(USER_IDS as readonly string[]).includes(userId)) throw new ForbiddenError("The account's user is not a household member.");
-  return { tenantId, userId: userId as UserId };
+  // Groups are only assigned for existing members (onboarding checks the member list, HOUSEHOLD-ADMIN-001).
+  return { tenantId, userId };
 }
 
 /**

@@ -103,7 +103,7 @@ describe("CreateTennerDialog", () => {
     await userEvent.click(submitButton());
 
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls()[0]?.body).toMatchObject({
+    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toMatchObject({
       frequencyUnit: "WEEK",
       frequencyInterval: 1,
       weekdays: ["TUE", "FRI"],
@@ -123,7 +123,10 @@ describe("CreateTennerDialog", () => {
     await waitFor(() => expect(submitButton()).toBeEnabled());
     await userEvent.click(submitButton());
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls()[0]?.body).toMatchObject({ frequencyUnit: "DAY", weekdays: null });
+    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toMatchObject({
+      frequencyUnit: "DAY",
+      weekdays: null,
+    });
   });
 
   it("creates the Tenner, closes, notifies and refreshes dashboard and lists", async () => {
@@ -141,7 +144,7 @@ describe("CreateTennerDialog", () => {
     await userEvent.click(submitButton());
 
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls()[0]?.body).toEqual({
+    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({
       title: "Fenster putzen",
       category: "HOME",
       assignedTo: "JULIA",

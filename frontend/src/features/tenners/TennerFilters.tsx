@@ -2,7 +2,8 @@
 
 import { MenuItem, TextField } from "@mui/material";
 import Grid from "@mui/material/Grid";
-import { CATEGORIES, CATEGORY_LABELS, USER_IDS, USER_LABELS, type Category, type UserId } from "../../types/domain";
+import { CATEGORIES, CATEGORY_LABELS, type Category, type UserId } from "../../types/domain";
+import { useAssignees } from "../members/useAssignees";
 import { SORT_FIELDS, type SortField, type SortOrder, type StatusFilter, type TennerListParams } from "./api";
 
 const STATUS_LABELS: Readonly<Record<StatusFilter, string>> = { active: "Aktiv", archived: "Archiviert", all: "Alle" };
@@ -49,6 +50,7 @@ function Select<T extends string>({ label, value, options, labels, onChange }: S
 
 export function TennerFilters({ value, onChange }: TennerFiltersProps) {
   const set = (patch: Partial<TennerListParams>) => onChange({ ...value, ...patch });
+  const assignees = useAssignees(value.assignedTo);
   return (
     <Grid container spacing={1.5} component="section" aria-label="Filter">
       <Grid size={{ xs: 6, md: 2.4 }}>
@@ -64,8 +66,11 @@ export function TennerFilters({ value, onChange }: TennerFiltersProps) {
         <Select<UserId | typeof ALL>
           label="Person"
           value={value.assignedTo ?? ALL}
-          options={[ALL, ...USER_IDS]}
-          labels={{ ALL: "Alle", ...USER_LABELS }}
+          options={[ALL, ...assignees.map((member) => member.userId)]}
+          labels={{
+            ALL: "Alle",
+            ...Object.fromEntries(assignees.map((member) => [member.userId, member.displayName])),
+          }}
           onChange={(user) => set({ assignedTo: user === ALL ? undefined : user })}
         />
       </Grid>

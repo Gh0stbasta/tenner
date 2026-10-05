@@ -5,7 +5,7 @@ import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutlineOutlined
 import UnarchiveOutlinedIcon from "@mui/icons-material/UnarchiveOutlined";
 import { Button, Chip, Stack } from "@mui/material";
 import { PageHeader } from "../../components/PageHeader";
-import { CATEGORY_LABELS, USER_LABELS } from "../../types/domain";
+import { CATEGORY_LABELS } from "../../types/domain";
 import { useHouseholdVacation, useToday } from "../household/api";
 import { isPausedIndividually } from "../pause/pauseStatus";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
@@ -14,6 +14,7 @@ import { SnoozeMenu } from "../snooze/SnoozeMenu";
 import type { Tenner } from "../tenners/schemas";
 import { tennerStatus } from "../tenners/status";
 import { TennerStatusBadge } from "../tenners/TennerStatusBadge";
+import { useMemberName } from "../members/api";
 
 export interface TennerDetailHeaderProps {
   readonly tenner: Tenner;
@@ -35,6 +36,7 @@ export function TennerDetailHeader({
   onPause,
   onResume,
 }: TennerDetailHeaderProps) {
+  const memberName = useMemberName();
   const today = useToday();
   const status = tennerStatus(tenner, today, useHouseholdVacation());
   const pausedIndividually = isPausedIndividually(tenner, today);
@@ -51,7 +53,7 @@ export function TennerDetailHeader({
           aria-label="Status"
         >
           <Chip size="small" label={CATEGORY_LABELS[tenner.category]} />
-          <span>{USER_LABELS[tenner.assignedTo]}</span>
+          <span>{memberName(tenner.assignedTo)}</span>
           <TennerStatusBadge status={status} />
           <SnoozedBadge snoozedUntil={tenner.snoozedUntil} />
         </Stack>

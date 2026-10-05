@@ -26,7 +26,14 @@ export function fail(status: number, code: string, message = code): MockResponse
   return { status, body: { success: false, error: { code, message } } };
 }
 
-export function mockFetch(handlers: Record<string, MockHandler>): FetchMock {
+/** The household members every app screen loads (HOUSEHOLD-ADMIN-001); tests can override "GET /users". */
+export const DEFAULT_MEMBERS = [
+  { userId: "STEFAN", displayName: "Stefan", color: "BLUE", active: true },
+  { userId: "JULIA", displayName: "Julia", color: "PURPLE", active: true },
+];
+
+export function mockFetch(routes: Record<string, MockHandler>): FetchMock {
+  const handlers: Record<string, MockHandler> = { "GET /users": ok(DEFAULT_MEMBERS), ...routes };
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(typeof input === "string" ? input : input.toString());
     const method = init?.method ?? "GET";

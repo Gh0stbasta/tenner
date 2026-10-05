@@ -217,7 +217,7 @@ describe("undoCompletionHandler", () => {
   });
 
   it.each([
-    ["invalid reverted user", { revertedBy: "BOB" }],
+    ["invalid reverted user", { revertedBy: "bob" }],
     ["reason too long", { revertedBy: "STEFAN", reason: "x".repeat(251) }],
     ["whitespace-only reason", { revertedBy: "STEFAN", reason: "   " }],
     ["unknown field", { revertedBy: "STEFAN", completionId: "c-1" }],

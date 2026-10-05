@@ -173,7 +173,7 @@ describe("dashboardHandler", () => {
   });
 
   it.each([
-    ["invalid user", { assignedTo: "BOB" }],
+    ["invalid user", { assignedTo: "bob" }],
     ["invalid category", { category: "GARDEN" }],
     ["invalid date format", { date: "2026/10/01" }],
     ["invalid calendar date", { date: "2026-02-30" }],

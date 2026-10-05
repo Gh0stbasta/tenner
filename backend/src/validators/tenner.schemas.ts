@@ -13,6 +13,8 @@ import {
   type SnoozeTennerRequest,
   type SkipTennerRequest,
   type PauseTennerRequest,
+  type CreateMemberRequest,
+  type UpdateMemberRequest,
   type VacationRequest,
   type UndoCompletionRequest,
   type UpdateTennerRequest,
@@ -27,6 +29,8 @@ import {
   frequencyIntervalSchema,
   frequencyUnitSchema,
   weekdaysSchema,
+  displayNameSchema,
+  memberColorSchema,
   titleSchema,
   userIdSchema,
   utcTimestampSchema,
@@ -238,3 +242,15 @@ export const vacationSchema = z
       .optional(),
   })
   .refine((value) => value.from <= value.until, { path: ["until"], message: "Must not be before from." }) satisfies z.ZodType<VacationRequest>;
+
+/** POST /users (HOUSEHOLD-ADMIN-001). */
+export const createMemberSchema = z.strictObject({
+  userId: userIdSchema.optional(),
+  displayName: displayNameSchema,
+  color: memberColorSchema,
+}) satisfies z.ZodType<CreateMemberRequest>;
+
+/** PUT /users/{userId}: rename or recolor; userId is immutable. */
+export const updateMemberSchema = z
+  .strictObject({ displayName: displayNameSchema.optional(), color: memberColorSchema.optional() })
+  .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." }) satisfies z.ZodType<UpdateMemberRequest>;

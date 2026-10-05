@@ -23,7 +23,7 @@ describe("identityFromEvent", () => {
     ["no groups claim (signed in, not yet assigned)", { sub: "x", email: "someone@example.com" }],
     ["only non-household groups", { "cognito:groups": "[eu-central-1_TEST_Google]" }],
     ["two household groups", { "cognito:groups": "[household:default:STEFAN household:default:JULIA]" }],
-    ["unknown user", { "cognito:groups": "[household:default:BOB]" }],
+    ["invalid member ID", { "cognito:groups": "[household:default:bob]" }],
     ["malformed tenant", { "cognito:groups": "[household:default#other:STEFAN]" }],
     ["missing user", { "cognito:groups": "[household:default]" }],
     ["legacy custom attributes only", { "custom:tenantId": "default", "custom:userId": "STEFAN" }],

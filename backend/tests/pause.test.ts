@@ -142,7 +142,7 @@ describe("PauseTennerService", () => {
 
 describe("VacationService", () => {
   function setup(tenners: Tenner[], conflictFor: string[] = []) {
-    const households = { saveVacation: vi.fn(async (tenantId: string, vacation: Vacation | null) => ({ tenantId, timezone: null, vacation, updatedAt: "ts", updatedBy: "STEFAN" as const })) };
+    const households = { saveVacation: vi.fn(async (tenantId: string, vacation: Vacation | null) => ({ tenantId, timezone: null, vacation, members: null, membersVersion: 0, updatedAt: "ts", updatedBy: "STEFAN" })) };
     const repository = mockTennerRepository();
     repository.list.mockResolvedValue(tenners);
     repository.updateSchedule.mockImplementation(async (_tenant, id) => {

@@ -28,7 +28,7 @@ describe("createTennerSchema", () => {
     ["estimatedMinutes above range", { estimatedMinutes: 481 }, "estimatedMinutes"],
     ["estimatedMinutes not integer", { estimatedMinutes: 2.5 }, "estimatedMinutes"],
     ["frequencyDays above range", { frequencyDays: 3651 }, "frequencyDays"],
-    ["unknown user", { assignedTo: "BOB" }, "assignedTo"],
+    ["unknown user", { assignedTo: "bob" }, "assignedTo"],
     ["wrong type", { frequencyDays: "14" }, "frequencyDays"],
   ])("rejects %s", (_name, override, field) => {
     expect(detailsOf(() => validate(createTennerSchema, { ...valid, ...override })).map((d) => d.field)).toContain(field);

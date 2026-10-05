@@ -134,6 +134,7 @@ describe("createDependencies wiring", () => {
   });
 
   it("assigns household members through Cognito groups of the configured pool (HOTFIX-001)", async () => {
+    send.mockResolvedValue({});
     cognitoSend.mockImplementation(async (command: { constructor: { name: string } }) =>
       command.constructor.name === "AdminListGroupsForUserCommand" ? { Groups: [] } : command.constructor.name === "ListUsersInGroupCommand" ? { Users: [] } : {},
     );
@@ -146,7 +147,7 @@ describe("createDependencies wiring", () => {
       return { Groups: [] };
     });
     await expect(deps().assignHouseholdMember({ username: "google_1" }, "STEFAN")).resolves.toMatchObject({ group: "household:default:STEFAN" });
-    expect(cognitoSend.mock.calls.map(([c]) => (c as { input: { UserPoolId: string } }).input.UserPoolId)).toEqual(Array(4).fill("eu-central-1_TEST"));
+    expect(cognitoSend.mock.calls.map(([c]) => (c as { input: { UserPoolId: string } }).input.UserPoolId)).toEqual(Array(5).fill("eu-central-1_TEST"));
   });
 
   it("reports 503 for onboarding when Cognito is not configured", async () => {

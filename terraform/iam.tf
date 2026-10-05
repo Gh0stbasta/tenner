@@ -83,6 +83,8 @@ data "aws_iam_policy_document" "api_cognito" {
       "cognito-idp:AdminRemoveUserFromGroup",
       "cognito-idp:AdminListGroupsForUser",
       "cognito-idp:ListUsersInGroup",
+      # HOUSEHOLD-ADMIN-001: groups of members added in the app are created on their first assignment.
+      "cognito-idp:CreateGroup",
     ]
     resources = [aws_cognito_user_pool.users.arn]
   }
