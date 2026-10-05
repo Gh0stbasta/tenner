@@ -58,7 +58,14 @@ jobs:
         if: hashFiles('terraform/**/*.tf') != ''
         run: python3 -m unittest discover -s scripts/tests
 
+      # HOTFIX-002: Dependabot runs get no repository secrets (and must not get the deploy role, TD-008),
+      # so the AWS-dependent steps below are skipped for its pull requests.
+      - name: Report skipped AWS plan for Dependabot
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        run: echo "::notice::Dependabot pull request - Terraform plan skipped (no AWS access). The deploy workflow plans after the merge."
+
       - name: Configure AWS credentials (OIDC)
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -66,27 +73,28 @@ jobs:
           role-session-name: tenner-pr-${{ github.run_id }}
 
       - name: Verify AWS identity
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         run: aws sts get-caller-identity
 
       - name: Terraform init
-        if: hashFiles('terraform/**/*.tf') != ''
+        if: github.event.pull_request.user.login != 'dependabot[bot]' && hashFiles('terraform/**/*.tf') != ''
         run: terraform -chdir="$TF_DIR" init -input=false
 
       - name: Setup Node.js (Lambda bundle)
-        if: hashFiles('terraform/**/*.tf') != '' && hashFiles('backend/package.json') != ''
+        if: github.event.pull_request.user.login != 'dependabot[bot]' && hashFiles('terraform/**/*.tf') != '' && hashFiles('backend/package.json') != ''
         uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Build Lambda bundle
-        if: hashFiles('terraform/**/*.tf') != '' && hashFiles('backend/package.json') != ''
+        if: github.event.pull_request.user.login != 'dependabot[bot]' && hashFiles('terraform/**/*.tf') != '' && hashFiles('backend/package.json') != ''
         working-directory: backend
         run: |
           npm ci
           npm run build
 
       - name: Terraform plan
-        if: hashFiles('terraform/**/*.tf') != ''
+        if: github.event.pull_request.user.login != 'dependabot[bot]' && hashFiles('terraform/**/*.tf') != ''
         env:
           # Google sign-in (FUTURE-011). The ID is not secret; the secret is masked in logs and stays on the
           # runner (plan file and plan.json are never uploaded).
@@ -98,7 +106,7 @@ jobs:
         run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m -out=tfplan
 
       - name: Enforce mandatory tags
-        if: hashFiles('terraform/**/*.tf') != ''
+        if: github.event.pull_request.user.login != 'dependabot[bot]' && hashFiles('terraform/**/*.tf') != ''
         run: |
           terraform -chdir="$TF_DIR" show -json tfplan > plan.json
           python3 scripts/check_tags.py plan.json

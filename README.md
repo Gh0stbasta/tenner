@@ -292,7 +292,10 @@ short throttling burst test). Request bodies above 16 KiB are rejected with 413.
 
 - **Dependabot** (`.github/dependabot.yml`): weekly update PRs for `frontend/` and `backend/` npm packages
   (minor and patch grouped) and GitHub Actions, monthly for the Terraform providers. At most 3 open PRs per
-  ecosystem. Each update PR runs the normal PR validation.
+  ecosystem. Major updates of `typescript` (until typescript-eslint supports them) and `@types/node` (follows the
+  Node.js 22 runtime) are ignored. Each update PR runs the PR validation **without the Terraform plan**: Dependabot
+  runs get no repository secrets, and they should not get the deploy role (TD-008). The deploy workflow plans after
+  the merge, so review Terraform provider updates with extra care (HOTFIX-002).
 - **CI audit** (PR validation and deploy build): `npm audit --omit=dev` for frontend and backend, evaluated by
   `scripts/check_npm_audit.py`. High or critical vulnerabilities in **production** dependencies fail the build.
   Dev-only tools (Vite, ESLint, Vitest) are not blocking.
