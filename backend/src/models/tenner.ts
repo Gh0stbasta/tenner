@@ -21,6 +21,8 @@ export interface Tenner {
   readonly lastCompleted: string | null;
   /** Calendar date (YYYY-MM-DD) when the Tenner is due next. */
   readonly nextDue: string;
+  /** Date the Tenner was postponed to (SCHEDULING-003), or null. Cleared by the next completion. */
+  readonly snoozedUntil: string | null;
   readonly active: boolean;
   /** ISO 8601 UTC timestamp of the soft delete, or null if not deleted (TICKET-012). */
   readonly deletedAt: string | null;

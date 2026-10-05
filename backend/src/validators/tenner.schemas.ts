@@ -10,6 +10,7 @@ import {
   type CreateTennerRequest,
   type ListTennersRequest,
   type RestoreTennerRequest,
+  type SnoozeTennerRequest,
   type UndoCompletionRequest,
   type UpdateTennerRequest,
 } from "../dto/index.js";
@@ -192,3 +193,13 @@ export const updateHouseholdSchema = z.strictObject({
     .max(64)
     .refine((value) => /^[A-Za-z0-9_+\-/]+$/.test(value) && isValidTimeZone(value), { message: "Unknown timezone." }),
 }) satisfies z.ZodType<UpdateHouseholdRequest>;
+
+/** Snooze (SCHEDULING-003): exactly one of `until` (real calendar date) or `days` (1–3650). */
+export const snoozeTennerSchema = z
+  .strictObject({
+    until: isoDateSchema.optional(),
+    days: z.number().int().min(1).max(3650).optional(),
+  })
+  .refine((value) => (value.until === undefined) !== (value.days === undefined), {
+    message: "Provide either until or days.",
+  }) satisfies z.ZodType<SnoozeTennerRequest>;

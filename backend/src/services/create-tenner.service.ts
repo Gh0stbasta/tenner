@@ -36,6 +36,7 @@ export class CreateTennerService {
       assignedTo: request.assignedTo,
       lastCompleted: null,
       nextDue: dateInTimeZone(now, await this.timezoneOf(identity.tenantId)),
+      snoozedUntil: null,
       active: true,
       deletedAt: null,
       createdAt: timestamp,

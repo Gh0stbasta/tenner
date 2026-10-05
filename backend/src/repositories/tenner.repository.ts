@@ -1,4 +1,4 @@
-import type { Category, Tenner, UserId } from "../models/index.js";
+import type { Category, SnoozeEvent, Tenner, UserId } from "../models/index.js";
 import type { CompletionRecord } from "./completion.repository.js";
 
 /**
@@ -73,6 +73,13 @@ export interface TennerRepository {
    * Errors: ConflictError CONCURRENT_MODIFICATION if the Tenner changed or the completion was already reverted.
    */
   undoCompletion(restored: Tenner, reverted: CompletionRecord, expected: Tenner): Promise<void>;
+
+  /**
+   * Atomically record a snooze event in tenner-history and move the Tenner's nextDue (SCHEDULING-003).
+   * `expected` is the loaded Tenner (optimistic locking on updatedAt, active, not deleted).
+   * Errors: ConflictError CONCURRENT_MODIFICATION if the Tenner changed, PersistenceError otherwise.
+   */
+  snoozeTenner(updated: Tenner, event: SnoozeEvent, expected: Tenner): Promise<void>;
   /**
    * Undo a soft delete (TICKET-015): active = true, deletedAt = null, updatedAt = timestamp, updatedBy = actor.
    * Schedule fields are untouched. Optimistic lock on `expectedUpdatedAt`;

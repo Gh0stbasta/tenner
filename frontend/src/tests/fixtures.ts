@@ -11,6 +11,7 @@ export function dashboardTenner(overrides: Partial<DashboardTenner> = {}): Dashb
     assignedTo: "STEFAN",
     estimatedMinutes: 10,
     nextDue: "2026-10-02",
+    snoozedUntil: null,
     ...overrides,
   };
 }
@@ -73,6 +74,7 @@ export function tenner(overrides: Partial<Tenner> = {}): Tenner {
     assignedTo: "STEFAN",
     lastCompleted: null,
     nextDue: "2026-10-02",
+    snoozedUntil: null,
     active: true,
     deletedAt: null,
     createdAt: "2026-09-01T08:00:00Z",

@@ -54,6 +54,7 @@ locals {
     "POST /onboarding/assignment",              # HOTFIX-001
     "GET /household",                           # SCHEDULING-008
     "PUT /household",                           # SCHEDULING-008
+    "POST /tenners/{tennerId}/snooze",          # SCHEDULING-003
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.

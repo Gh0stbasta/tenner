@@ -17,6 +17,8 @@ export const tennerSchema = z.object({
   assignedTo: userIdSchema,
   lastCompleted: z.string().nullable(),
   nextDue: z.string(),
+  /** SCHEDULING-003: postponed-to date, cleared by the next completion. */
+  snoozedUntil: z.string().nullable(),
   active: z.boolean(),
   deletedAt: z.string().nullable(),
   createdAt: z.string(),

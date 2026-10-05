@@ -39,6 +39,10 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       },
       replayed: false,
     })),
+    snoozeTenner: vi.fn(async () => ({
+      tenner: tennerResponse,
+      snooze: { snoozeId: "s-1", snoozedBy: "STEFAN" as const, snoozedAt: "2026-10-01T18:30:00Z", previousNextDue: "2026-10-01", snoozedUntil: "2026-10-04" },
+    })),
     getDashboard: vi.fn(async () => emptyDashboard),
     getTenner: vi.fn(async () => tennerResponse),
     getHistory: vi.fn(async () => ({ items: [], nextCursor: null })),
@@ -268,6 +272,22 @@ describe("GET /tenners", () => {
     const response = await route(event("GET /tenners", {}, undefined, query), d);
     expect(response.statusCode).toBe(400);
     expect(d.listTenners).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /tenners/{tennerId}/snooze (SCHEDULING-003)", () => {
+  it("snoozes and returns 200", async () => {
+    const d = deps();
+    const response = await route({ ...event("POST /tenners/{tennerId}/snooze", {}, JSON.stringify({ days: 3 })), pathParameters: { tennerId: "t-1" } } as APIGatewayProxyEventV2, d);
+    expect(response.statusCode).toBe(200);
+    expect(d.snoozeTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", { days: 3 });
+  });
+
+  it("rejects requests with both until and days", async () => {
+    const d = deps();
+    const response = await route({ ...event("POST /tenners/{tennerId}/snooze", {}, JSON.stringify({ days: 3, until: "2026-10-08" })), pathParameters: { tennerId: "t-1" } } as APIGatewayProxyEventV2, d);
+    expect(response.statusCode).toBe(400);
+    expect(d.snoozeTenner).not.toHaveBeenCalled();
   });
 });
 

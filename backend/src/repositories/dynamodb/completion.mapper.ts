@@ -4,7 +4,7 @@
  * tennerId-completedAt-index (TICKET-014).
  */
 
-import type { Completion, UserId } from "../../models/index.js";
+import type { Completion, SnoozeEvent, UserId } from "../../models/index.js";
 import type { CompletionRecord } from "../completion.repository.js";
 
 export function tenantTennerId(tenantId: string, tennerId: string): string {
@@ -29,6 +29,27 @@ export function toCompletionItem(record: CompletionRecord): Record<string, unkno
     revertReason: completion.revertReason,
     ...optional("idempotencyKey", record.idempotencyKey),
     ...optional("requestHash", record.requestHash),
+  };
+}
+
+/** historyId prefix of snooze events. "#" never occurs in completion IDs (UUIDs), so keys cannot collide. */
+export const SNOOZE_HISTORY_PREFIX = "snooze#";
+
+/**
+ * Snooze audit event (SCHEDULING-003). Deliberately without completedAt and tenantTennerId: both GSIs
+ * (completedAt-index, tennerId-completedAt-index) are sparse on these keys, so completion history, undo and
+ * analytics never see snoozes. Read snoozes with a base-table query on the historyId prefix if needed.
+ */
+export function toSnoozeItem(event: SnoozeEvent): Record<string, unknown> {
+  return {
+    tenantId: event.tenantId,
+    historyId: `${SNOOZE_HISTORY_PREFIX}${event.snoozeId}`,
+    eventType: "SNOOZE",
+    tennerId: event.tennerId,
+    snoozedBy: event.snoozedBy,
+    snoozedAt: event.snoozedAt,
+    previousNextDue: event.previousNextDue,
+    snoozedUntil: event.snoozedUntil,
   };
 }
 

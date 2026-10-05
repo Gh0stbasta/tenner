@@ -100,7 +100,7 @@ The assignment is logged as `HouseholdMemberAssigned` with the Cognito username,
 
 | Model | Fields |
 |---|---|
-| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `frequencyUnit`, `frequencyInterval`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `active`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy` |
+| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `frequencyUnit`, `frequencyInterval`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `snoozedUntil` (YYYY-MM-DD or null, SCHEDULING-003), `active`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy` |
 | `Completion` | `tenantId`, `completionId` (stored as `historyId`), `tennerId`, `completedBy`, `recordedBy`, `completedAt`, `actualMinutes` |
 
 `createdBy`, `updatedBy` and `recordedBy` are set from the authenticated user (SECURITY-004). Records written before
@@ -264,6 +264,26 @@ result without reverting another completion. Reusing the key with a different re
 `revertedBy`, `restoredPrevious`, `restoredNextDue`, `durationMs`) or "Undo completion failed"
 (`UndoNoCompletion` / `UndoConflict` / `UndoFailed`, `errorCode`, `durationMs`).
 
+### POST /tenners/{tennerId}/snooze
+
+Postpones a Tenner without completing it (SCHEDULING-003). Body: exactly one of
+
+| Field | Rule |
+|---|---|
+| `until` | `YYYY-MM-DD`, a real calendar date |
+| `days` | integer 1–3650, counted from today in the household timezone |
+
+Rules (400 `VALIDATION_ERROR` with the field otherwise): the date must be after today and after the current
+`nextDue`, and not later than one frequency interval or 30 days from today, whichever is later. Inactive or archived
+Tenners → 409 `TENNER_INACTIVE`; unknown → 404; a concurrent change → 409 `CONCURRENT_MODIFICATION`.
+
+Effect: `nextDue = snoozedUntil = <date>`, `updatedAt`/`updatedBy` refreshed, plus an audit event in `tenner-history`
+(`eventType: "SNOOZE"`, `historyId: "snooze#<id>"`, `previousNextDue`, `snoozedUntil`, `snoozedBy`, `snoozedAt`)
+in one transaction. Snooze events have no `completedAt`, so history, undo and analytics never see them.
+The next completion sets `snoozedUntil` back to `null`. Logged as `TennerSnoozed`.
+
+Response: `200 { success: true, data: { tenner: TennerResponse, snooze: { snoozeId, snoozedBy, snoozedAt, previousNextDue, snoozedUntil } } }`.
+
 ### POST /tenners/{tennerId}/restore
 
 ```json
@@ -388,6 +408,7 @@ and a Tenner fixture.
 | `DELETE /tenners/{tennerId}` | `200 { success: true, data: { tennerId, deleted: true } }` (TICKET-012, soft delete, idempotent). Returns `404 NOT_FOUND` |
 | `POST /tenners/{tennerId}/complete` | `200 { success: true, data: { tenner, completion } }` (TICKET-013). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | `POST /tenners/{tennerId}/undo-completion` | `200 { success: true, data: { tenner, revertedCompletion } }` (TICKET-014). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `NO_COMPLETION_TO_UNDO`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
+| `POST /tenners/{tennerId}/snooze` | `200 { success: true, data: { tenner, snooze } }` (SCHEDULING-003). Returns `400`, `404`, or `409` with `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
 | `POST /tenners/{tennerId}/restore` | `200 { success: true, data: { tennerId, active, deletedAt } }` (TICKET-015, idempotent). Returns `400`, `404`, or `409` with `TENNER_NOT_DELETED` or `CONCURRENT_MODIFICATION` |
 | `GET /dashboard` | `200 { success: true, data: DashboardResponse }` (TICKET-016). Returns `400 VALIDATION_ERROR` "Invalid dashboard query." |
 | `GET /household` | `200 { success: true, data: { timezone } }` (SCHEDULING-008). Falls back to `APPLICATION_TIMEZONE` |

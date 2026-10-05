@@ -16,6 +16,8 @@ export interface DashboardTennerResponse {
   readonly assignedTo: UserId;
   readonly estimatedMinutes: number;
   readonly nextDue: string;
+  /** Postponed-to date (SCHEDULING-003), or null. */
+  readonly snoozedUntil: string | null;
   /** Overdue section only: days since nextDue. */
   readonly overdueDays?: number;
   /** Upcoming section only: days until nextDue (1 - 7). */

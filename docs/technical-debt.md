@@ -760,3 +760,28 @@ and send them from Quick Add and the create dialog.
 ### Related Work
 
 SCHEDULING-001, FRONTEND-008, `frontend/src/features/settings/useNewTennerDefaults.ts`.
+
+## TD-028: Snooze events are stored but not readable through the API
+
+### Description
+
+SCHEDULING-003 writes an audit event (`eventType = SNOOZE`) for every snooze into `tenner-history`, but no
+endpoint or UI lists them, and undoing a completion does not restore a snooze it cleared.
+
+### Reason
+
+The ticket requires snoozes to be auditable and distinguishable from completions; analytics (ANALYTICS domain)
+is the intended consumer and does not exist yet.
+
+### Impact
+
+Snoozes can only be inspected in DynamoDB. Analytics cannot yet report how often Tenners are postponed.
+
+### Suggested Improvement
+
+Add a base-table query (`tenantId`, `begins_with(historyId, "snooze#")`) behind a read endpoint when analytics
+needs it; consider a GSI if per-Tenner snooze history is needed at scale.
+
+### Related Work
+
+SCHEDULING-003, ANALYTICS tickets, `backend/src/repositories/dynamodb/completion.mapper.ts` (`toSnoozeItem`).

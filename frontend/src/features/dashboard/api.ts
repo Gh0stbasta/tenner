@@ -13,6 +13,7 @@ const dashboardTennerSchema = z.object({
   assignedTo: userIdSchema,
   estimatedMinutes: z.number(),
   nextDue: z.string(),
+  snoozedUntil: z.string().nullable(),
   overdueDays: z.number().optional(),
   daysUntilDue: z.number().optional(),
 });

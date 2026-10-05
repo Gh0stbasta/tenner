@@ -38,6 +38,7 @@ export interface TennerResponse {
   readonly assignedTo: UserId;
   readonly lastCompleted: string | null;
   readonly nextDue: string;
+  readonly snoozedUntil: string | null;
   readonly active: boolean;
   readonly deletedAt: string | null;
   readonly createdAt: string;
@@ -77,6 +78,7 @@ export function toTennerResponse(tenner: Tenner): TennerResponse {
     assignedTo: tenner.assignedTo,
     lastCompleted: tenner.lastCompleted,
     nextDue: tenner.nextDue,
+    snoozedUntil: tenner.snoozedUntil,
     active: tenner.active,
     deletedAt: tenner.deletedAt,
     createdAt: tenner.createdAt,

@@ -67,6 +67,7 @@ export class CompleteTennerService {
       ...tenner,
       lastCompleted: completedAt,
       nextDue: nextDueAfter(completedAt, tenner, await this.timezoneOf(tenantId)),
+      snoozedUntil: null,
       updatedAt: toUtcTimestamp(now),
       updatedBy: identity.userId,
     };

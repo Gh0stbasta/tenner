@@ -12,3 +12,4 @@ export * from "./get-tenner.service.js";
 export * from "./history.service.js";
 export * from "./household-assignment.service.js";
 export * from "./household.service.js";
+export * from "./snooze-tenner.service.js";

@@ -14,10 +14,10 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import type { DocumentSender } from "../../clients/dynamodb.js";
 import { ConflictError, NotFoundError, PersistenceError } from "../../exceptions/index.js";
-import type { Tenner, UserId } from "../../models/index.js";
+import type { SnoozeEvent, Tenner, UserId } from "../../models/index.js";
 import type { CompletionRecord } from "../completion.repository.js";
 import type { SoftDeleteResult, TennerCriteria, TennerRepository, TennerUpdate } from "../tenner.repository.js";
-import { toCompletionItem } from "./completion.mapper.js";
+import { toCompletionItem, toSnoozeItem } from "./completion.mapper.js";
 import { isConditionalCheckFailed, toConflictOrPersistenceError, toNotFoundOrPersistenceError, toPersistenceError } from "./errors.js";
 import { toTenner } from "./tenner.mapper.js";
 import { buildTennerQuery, NOT_DELETED } from "./tenner.query.js";
@@ -237,6 +237,52 @@ export class DynamoDbTennerRepository implements TennerRepository {
     }
   }
 
+  /**
+   * One TransactWriteItems: [0] put the snooze event into tenner-history (must not exist), [1] set nextDue and
+   * snoozedUntil (Tenner must still match `expected`: updatedAt, active, not deleted). SCHEDULING-003.
+   */
+  async snoozeTenner(updated: Tenner, event: SnoozeEvent, expected: Tenner): Promise<void> {
+    try {
+      await this.client.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            { Put: { TableName: this.historyTableName, Item: toSnoozeItem(event), ConditionExpression: "attribute_not_exists(historyId)" } },
+            {
+              Update: {
+                TableName: this.tableName,
+                Key: { tenantId: expected.tenantId, tennerId: expected.tennerId },
+                UpdateExpression: "SET #nextDue = :nextDue, #snoozedUntil = :snoozedUntil, #updatedAt = :updatedAt, #updatedBy = :updatedBy",
+                ConditionExpression: ["#updatedAt = :expectedUpdatedAt", "#active = :true", NOT_DELETED].join(" AND "),
+                ExpressionAttributeNames: {
+                  "#nextDue": "nextDue",
+                  "#snoozedUntil": "snoozedUntil",
+                  "#updatedAt": "updatedAt",
+                  "#updatedBy": "updatedBy",
+                  "#active": "active",
+                  "#deletedAt": "deletedAt",
+                },
+                ExpressionAttributeValues: {
+                  ":nextDue": updated.nextDue,
+                  ":snoozedUntil": updated.snoozedUntil,
+                  ":updatedAt": updated.updatedAt,
+                  ":updatedBy": updated.updatedBy,
+                  ":expectedUpdatedAt": expected.updatedAt,
+                  ":true": true,
+                  ":null": null,
+                },
+              },
+            },
+          ],
+        }),
+      );
+    } catch (error) {
+      throw toTransactionError(error, "snooze Tenner", [
+        ["CONCURRENT_MODIFICATION", "The Tenner was modified by another request."],
+        ["CONCURRENT_MODIFICATION", "The Tenner was modified by another request."],
+      ]);
+    }
+  }
+
   async restore(tenantId: string, tennerId: string, expectedUpdatedAt: string, timestamp: string, actor: UserId): Promise<Tenner> {
     let attributes: Record<string, unknown> | undefined;
     try {
@@ -259,18 +305,19 @@ export class DynamoDbTennerRepository implements TennerRepository {
     return toTenner(attributes);
   }
 
-  /** Update of lastCompleted/nextDue/updatedAt/updatedBy, locked on the loaded Tenner state. */
+  /** Update of lastCompleted/nextDue/snoozedUntil/updatedAt/updatedBy, locked on the loaded Tenner state. */
   private scheduleUpdate(updated: Tenner, expected: Tenner) {
     const lastCompletedCondition =
       expected.lastCompleted === null ? "(attribute_not_exists(#lastCompleted) OR #lastCompleted = :null)" : "#lastCompleted = :expectedLastCompleted";
     return {
       TableName: this.tableName,
       Key: { tenantId: expected.tenantId, tennerId: expected.tennerId },
-      UpdateExpression: "SET #lastCompleted = :lastCompleted, #nextDue = :nextDue, #updatedAt = :updatedAt, #updatedBy = :updatedBy",
+      UpdateExpression: "SET #lastCompleted = :lastCompleted, #nextDue = :nextDue, #snoozedUntil = :snoozedUntil, #updatedAt = :updatedAt, #updatedBy = :updatedBy",
       ConditionExpression: ["#updatedAt = :expectedUpdatedAt", "#frequencyDays = :expectedFrequencyDays", "#active = :true", NOT_DELETED, lastCompletedCondition].join(" AND "),
       ExpressionAttributeNames: {
         "#lastCompleted": "lastCompleted",
         "#nextDue": "nextDue",
+        "#snoozedUntil": "snoozedUntil",
         "#updatedAt": "updatedAt",
         "#updatedBy": "updatedBy",
         "#frequencyDays": "frequencyDays",
@@ -280,6 +327,7 @@ export class DynamoDbTennerRepository implements TennerRepository {
       ExpressionAttributeValues: {
         ":lastCompleted": updated.lastCompleted,
         ":nextDue": updated.nextDue,
+        ":snoozedUntil": updated.snoozedUntil,
         ":updatedAt": updated.updatedAt,
         ":updatedBy": updated.updatedBy,
         ":expectedUpdatedAt": expected.updatedAt,

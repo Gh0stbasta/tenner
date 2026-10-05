@@ -102,6 +102,7 @@ function toItem(tenner: Tenner, extra: { overdueDays?: number; daysUntilDue?: nu
     assignedTo: tenner.assignedTo,
     estimatedMinutes: tenner.estimatedMinutes,
     nextDue: tenner.nextDue,
+    snoozedUntil: tenner.snoozedUntil,
     ...extra,
   };
 }

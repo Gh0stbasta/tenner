@@ -1145,6 +1145,18 @@ index.ts (routing, correlation, error mapping)
   `createdAt` date. Both writes happen in one `TransactWriteItems`, with conditions on "not yet reverted" and the
   loaded Tenner state. History per Tenner is read through the GSI `tennerId-completedAt-index`
   (`tenantTennerId = "<tenant>#<tenner>"`, newest first, no Scan).
+- **Snooze (SCHEDULING-003):** `POST /tenners/{tennerId}/snooze` with `until` or `days` sets `nextDue` and
+  `snoozedUntil` to the new date. Rules: after today (household timezone) and after the current `nextDue`, at most
+  one frequency interval or 30 days ahead (whichever is later); inactive or archived → 409. The next completion
+  clears `snoozedUntil`. One `TransactWriteItems` writes an audit event and the Tenner (optimistic lock on
+  `updatedAt`, active, not deleted).
+  - **Storage decision:** the audit event lives in `tenner-history` (`eventType = SNOOZE`, `historyId =
+    snooze#<id>`), not in a new table or a counter attribute. It has no `completedAt` and no `tenantTennerId`,
+    so the sparse GSIs `completedAt-index` and `tennerId-completedAt-index` never contain it: completion history,
+    undo and analytics ignore snoozes without code changes. `#` cannot occur in completion IDs (UUIDs), so keys
+    cannot collide. Considered: a separate table (more infrastructure for few items) and a snooze counter on the
+    Tenner (not auditable).
+  - Snooze events are not exposed through the API yet (TD-028).
 - **Dashboard read model (TICKET-016):** `GET /dashboard` returns due today, overdue, upcoming (next 7 days),
   a summary and actionable workload per user and category in one response. It is backed by one `nextDue-index`
   Query (`nextDue <= reference + 7`, active and not deleted). The reference date is "today" in the household timezone, or the `date` parameter.

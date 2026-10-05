@@ -6,6 +6,8 @@ import { PageHeader } from "../../components/PageHeader";
 import { CATEGORY_LABELS, USER_LABELS } from "../../types/domain";
 import { useToday } from "../household/api";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
+import { SnoozedBadge } from "../snooze/SnoozedBadge";
+import { SnoozeMenu } from "../snooze/SnoozeMenu";
 import type { Tenner } from "../tenners/schemas";
 import { tennerStatus } from "../tenners/status";
 import { TennerStatusBadge } from "../tenners/TennerStatusBadge";
@@ -36,6 +38,7 @@ export function TennerDetailHeader({ tenner, busy, onEdit, onArchive, onRestore 
           <Chip size="small" label={CATEGORY_LABELS[tenner.category]} />
           <span>{USER_LABELS[tenner.assignedTo]}</span>
           <TennerStatusBadge status={status} />
+          <SnoozedBadge snoozedUntil={tenner.snoozedUntil} />
         </Stack>
       }
       actions={
@@ -46,6 +49,9 @@ export function TennerDetailHeader({ tenner, busy, onEdit, onArchive, onRestore 
         ) : (
           <>
             <CompleteTennerButton tenner={tenner} disabled={busy || !tenner.active} />
+            {(status.kind === "overdue" || status.kind === "dueToday") && (
+              <SnoozeMenu tenner={tenner} disabled={busy} />
+            )}
             <Button startIcon={<EditOutlinedIcon />} onClick={onEdit} disabled={busy}>
               Bearbeiten
             </Button>
