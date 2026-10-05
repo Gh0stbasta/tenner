@@ -8,20 +8,20 @@
 |---|---|
 | **Project health** | 🟢 **Healthy**: every deploy to `main` is green and all automated tests pass |
 | **Current phase** | Phase 2 (V2, "daily usefulness"). Phase 1 (MVP) is live |
-| **Current focus** | Nothing in progress. Last finished: *Phone app* (installable, starts from cache, one-thumb navigation and swipe) |
+| **Current focus** | Nothing in progress. Phone app is live; the *Alexa & Echo Show* platform is planned (9 tickets, `docs/backlog/alexa/`) |
 | **Biggest blocker** | None. Secrets storage is decided (SSM Parameter Store); building it needs SSM permissions on the deploy role, which you add in AWS |
 | **Recommended next action** | Test the app on your phones, then start the *Reminders* block (SECURITY-006 → NOTIFICATION-001 → 002 → 003) |
 
 ## 📈 Progress
 
 ```text
-Overall   █████████░░░░░░░░░░░  46%   71 / 154 tickets
+Overall   █████████░░░░░░░░░░░  44%   71 / 163 tickets
 Phase 1   ████████████████████ 100%   46 / 46   MVP + hotfixes (live since 2026-10-02)
-Phase 2   ██████░░░░░░░░░░░░░░  32%   25 / 79   V2 (3 of 12 themes done, Mobile 3 of 5)
+Phase 2   ██████░░░░░░░░░░░░░░  28%   25 / 88   V2 (3 of 13 themes done, Mobile 3 of 5, Alexa planned)
 Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0 / 29   Long-Term
 ```
 
-✅ Completed: **71** · 🚧 In progress: **0** · 📋 Open: **83** · Total: **154**
+✅ Completed: **71** · 🚧 In progress: **0** · 📋 Open: **92** · Total: **163**
 
 ## 🧩 Feature Status
 
@@ -33,7 +33,7 @@ Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0
 | ✅ Calendar scheduling: weekdays, months, snooze, skip, pause, vacation | 🔲 **Alarms, backups tested, runbooks** |
 | ✅ Household setup: members, categories, shared and rotating Tenners, handover | 🔲 Data export, integrations (Strava, calendar), AI (opt-in) |
 | ✅ **Analytics page:** trends, life areas, household balance, neglected Tenners, habits, time | 🔲 Offline reading and completing |
-| ✅ **Phone app:** installable, starts from cache, bottom navigation, swipe to complete | |
+| ✅ **Phone app:** installable, starts from cache, bottom navigation, swipe to complete | 🔲 **Alexa & Echo Show:** voice, Echo Show dashboard, home-screen widget (planned) |
 | ✅ CI/CD, Terraform, cost alerts, smoke tests, security baseline | |
 
 ## 💰 Cost Overview
@@ -48,7 +48,7 @@ Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0
 | 100 (~50 households) | **~ $1–2** | needs multi-household support first |
 | 10,000 (~5,000 households) | **~ $150–200** | needs multi-household support and higher API limits |
 
-Opening the analytics page runs 7 small history queries; at household volume this stays within cents.
+Opening the analytics page runs 7 small history queries; at household volume this stays within cents. The planned Alexa skill (Lambda in eu-west-1, free Alexa APIs) adds no fixed cost.
 
 🛡 Budget: **$5 / month** with e-mail alerts. Under abuse, throttling caps the worst case at about **$2–3 per day**.
 
@@ -76,21 +76,21 @@ Opening the analytics page runs 7 small history queries; at household volume thi
 | | |
 |---|---|
 | **ADRs** | 3 accepted, **0 open** ([`docs/decisions/`](docs/decisions/)); smaller decisions (e.g. charts without a chart library) are recorded in `docs/architecture.md` |
-| **Pending decisions (yours)** | 1. Whether to keep open Google sign-up now that members are added in the app · 2. Delete the duplicate TICKET-003 file (TD-001). Decided: secrets in SSM Parameter Store (2026-10-05, ADR follows with SECURITY-006) |
+| **Pending decisions (yours)** | 1. Whether to keep open Google sign-up now that members are added in the app · 2. Delete the duplicate TICKET-003 file (TD-001) · 3. Accept the Alexa ADR when ALEXA-001 starts (skill Lambda in eu-west-1, development-stage skill). Decided: secrets in SSM Parameter Store (2026-10-05, ADR follows with SECURITY-006) |
 | **Open risks** | Production is the only environment (TICKET-021) · no alarm on API errors (OBSERVABILITY-002) · backup restore never tested (OPERATIONS-003) |
 
 ## 🎯 Recommended Next Actions
 
 1. **Test the app on your phones** after the deploy: install it, swipe to complete, start it offline (Android and iPhone).
 2. **Build the Reminders block:** SECURITY-006 (Parameter Store) → NOTIFICATION-001 → 002 → 003; then push (MOBILE-006).
-3. **10 minutes:** run the two manual security checks and confirm the AWS cost-alert e-mail.
-4. **Decide on sign-up exposure** (TD-020): keep it as is, or close sign-up once the household is complete.
-5. **Make it safe to run:** alarms (OBSERVABILITY-002) and a tested backup restore (OPERATIONS-003).
+3. **Alexa:** create an Amazon developer account and the "Tenner" skill, then build ALEXA-001 → 002 → 003 → 004 → 006 → 005; the Echo Show widget (ALEXA-007) follows the Reminders block.
+4. **10 minutes:** run the two manual security checks and confirm the AWS cost-alert e-mail.
+5. **Decide on sign-up exposure** (TD-020): keep it as is, or close sign-up once the household is complete.
 
 ---
 
 ## ℹ About this dashboard
 
 - **Sources:** the ticket files in `docs/backlog/` and `docs/hotfix/` (a ticket counts as done when it has an "Implementation Status" section), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/architecture.md`](docs/architecture.md) and GitHub Actions.
-- **Counting:** 155 ticket files minus one duplicate (TD-001) gives 154 tickets. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
+- **Counting:** 164 ticket files minus one duplicate (TD-001) gives 163 tickets; planning tickets with other file names (e.g. `alexaSkill/alexaFoundation.md`) are not counted. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).

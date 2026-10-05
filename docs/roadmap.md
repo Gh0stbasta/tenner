@@ -94,6 +94,7 @@ Platform:             TICKET-021, TICKET-022, SECURITY-008 – 013
 Experience:           UX-001, UX-003, UX-004, UX-007, UX-002, UX-006, FRONTEND-010
 Integrations:         INTEGRATION-001 → 006 → 002 → 003
 AI (opt-in):          AI-001 → 002 → 003
+Alexa & Echo Show:    ALEXA-001 → 002 → 003 → 004 → 006 → 005; SECURITY-006 + NOTIFICATION-001 → ALEXA-007 → 008; ALEXA-009 alongside
 ```
 
 ### Phase 3 — Long-Term
@@ -126,4 +127,5 @@ Several tickets need AWS services that are **not** on the allowed-services list 
 | X-Ray | OBSERVABILITY-004 |
 | CloudTrail trail | SECURITY-012 |
 | Bedrock or an external LLM API | AI-001 |
+| Alexa Skills Kit (custom skill, APL, Reminders, Proactive Events, Data Store), skill Lambda in eu-west-1 | ALEXA-001 |
 | AWS Budgets / Cost Anomaly Detection | OPERATIONS-001 (billing features, no runtime cost) |

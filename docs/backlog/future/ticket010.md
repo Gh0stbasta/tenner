@@ -73,6 +73,15 @@ Evaluation and decision
 
 ---
 
+# Owner Decision (2026-10-05)
+
+The household chose **Amazon Alexa with Echo Show** as its voice platform (`alexaSkill/alexaFoundation.md`). The
+Alexa part of this evaluation is answered by the `alexa/` backlog (ALEXA-001 – 009): account linking via Cognito
+OAuth (ALEXA-002); no certification is needed because the skill stays in development stage for the household's
+Amazon account (ALEXA-001). Still open here: the comparison with the Shortcuts approach and Google Assistant.
+
+---
+
 # Out of Scope
 
 - Implementation

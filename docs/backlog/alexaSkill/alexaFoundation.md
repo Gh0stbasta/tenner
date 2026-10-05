@@ -503,3 +503,47 @@ Do not implement:
 - Infrastructure
 
 This ticket is solely responsible for creating the Alexa implementation backlog.
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Alexa domain created: `docs/backlog/alexa/` (the repository keeps all tickets under `docs/backlog/`; the
+  ticket's `backlog/alexa/` maps to it), listed in `docs/backlog/README.md` and `docs/roadmap.md`
+- [x] Voice workflows covered: ALEXA-003 (today, overdue, suggestion, work left), ALEXA-004 (complete, undo),
+  ALEXA-005 (daily briefing)
+- [x] Echo Show dashboard covered: ALEXA-006 (APL views per Echo Show 5/8/10/15, touch completion)
+- [x] Authentication covered: ALEXA-002 (Cognito account linking with Google sign-in, access tokens in the API,
+  speaker → member mapping via voice profiles)
+- [x] Notifications covered: ALEXA-008 (Proactive Events, Reminders API, as a channel of NOTIFICATION-001)
+- [x] Operations covered: ALEXA-001 (CI/CD, Terraform), ALEXA-009 (logs, metrics, alarms, health check, runbooks)
+- [x] Home screen widget/card covered: ALEXA-007 (flagship: APL widgets with Data Store pushes, spike with
+  go/no-go, fallback plan)
+- [x] Ticket numbering consistent (ALEXA-001 – 009 = `ticket001.md` – `ticket009.md`) and format consistent with
+  the backlog (Type, Priority, Phase, Goal, Background, Dependencies, Scope, Architecture Considerations,
+  Deliverables, Testing Requirements, Validation, Acceptance Criteria, Definition of Done, Out of Scope)
+
+Platform facts behind the tickets (web research 2026-10-05; developer.amazon.com itself was not reachable from the
+build environment, so each ticket repeats the facts it relies on and asks to verify them before implementing):
+
+- Alexa Skills Kit Lambda trigger only in us-east-1, eu-west-1, us-west-2, ap-northeast-1; eu-west-1 recommended
+  for German → the skill Lambda runs in eu-west-1 and calls the API in eu-central-1 (ALEXA-001).
+- 8-second response limit; development-stage skills work on the developer account's devices; beta tests last at
+  most 90 days; the Routines Kit is discontinued since 2026-05-13; Alexa+ is in early access in Germany.
+- Cognito account linking with the authorization code grant; Alexa sends access tokens, so the API authorizer and
+  identity must accept them (ALEXA-002).
+- APL widgets on Echo Show 5/8/10/11/15/21 with the Data Store REST API; third-party widget availability for de-DE
+  is unconfirmed → spike in ALEXA-007.
+- Proactive Events allow predefined schemas only; Reminders API is active.
+
+Decisions and assumptions:
+
+- **ID clash:** this generation ticket's heading says "ALEXA-001", and the ticket also asks for a generated
+  "ALEXA-001: Alexa Platform Foundation". The generated tickets keep ALEXA-001 – 009 as requested; this file is
+  referred to as the Alexa backlog ticket (`alexaSkill/alexaFoundation.md`) and is not counted as ALEXA-001.
+- German (de-DE) only, matching the household and the web app; voice phrases in the tickets are German.
+- Development-stage skill for the household's Amazon account; no store publication or certification.
+- FUTURE-010 (voice assistant evaluation) got an owner-decision note pointing here.
+- Nothing was implemented (out of scope): no skill, UI, Lambda code or infrastructure.
