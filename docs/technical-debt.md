@@ -458,6 +458,9 @@ SECURITY-014, SECURITY-002, SECURITY-005, TD-003, `terraform/api.tf`
 
 ## TD-017: Frontend bundle is a single 780 kB chunk
 
+> Update 2026-10-05: the chunk has grown to about 1,006 kB (306 kB gzip) with Phase 2; the analytics page
+> (ANALYTICS-009) added 31 kB. Lazy-loading routes such as `/analytics` and `/settings` is the obvious first split.
+
 ### Description
 
 `npm run build` produces one JavaScript chunk of about 780 kB (240 kB gzip). Vite warns about chunks above 500 kB.

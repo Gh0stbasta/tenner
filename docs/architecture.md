@@ -295,6 +295,15 @@ Metric definitions: [`analytics.md`](analytics.md). New completions store `previ
 completion time) for the on-time rate and `actualMinutesSource` (`USER` or `DEFAULT`) for estimate accuracy; older
 completions are left out of both.
 
+**Decision — analytics charts without a chart library (ANALYTICS-009).** Context: the ticket prefers
+`@mui/x-charts`. Options: (a) `@mui/x-charts` (new dependency, several hundred kB before tree-shaking, on top of the
+single-chunk bundle of TD-017), (b) small HTML components on MUI `Box`. Decision: (b) — the page needs only columns,
+horizontal bars and 100 % stacked bars; together they cost +31 kB raw / +8.5 kB gzip. Consequences: theme-aware via
+MUI tokens, every mark focusable with a tooltip, a table view per chart; no axes library, so richer charts (lines,
+zoom) would need revisiting. Colors: a fixed categorical palette (`frontend/src/features/analytics/chartColors.ts`)
+validated for colorblind separation in light and dark mode; member swatch colors are user-chosen and failed those
+checks, so charts assign colors by member-list position instead.
+
 ---
 
 # Domain Model
