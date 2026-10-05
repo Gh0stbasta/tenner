@@ -1,0 +1,33 @@
+{
+  "name": "Tenner",
+  "short_name": "Tenner",
+  "description": "Kleine wiederkehrende Aufgaben in zehn Minuten.",
+  "lang": "de",
+  "id": "/",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f8fa",
+  "theme_color": "#1976d2",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Neuer Tenner",
+      "short_name": "Neu",
+      "description": "Schnell einen Tenner anlegen",
+      "url": "/dashboard?quickAdd=1",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Heute",
+      "short_name": "Heute",
+      "description": "Was heute fällig ist",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

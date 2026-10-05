@@ -9,7 +9,11 @@ import { AuthConfigMissing } from "./auth/AuthConfigMissing";
 import { buildLogoutUrl } from "./auth/session";
 import { createApiAuth, createUserManager } from "./auth/userManager";
 import { config } from "./config";
+import { initInstallPrompt } from "./features/install/installPrompt";
 import { AppRoutes } from "./routes/AppRoutes";
+
+// Capture the install prompt before any page is rendered (MOBILE-001).
+initInstallPrompt();
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element #root not found.");

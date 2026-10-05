@@ -137,6 +137,21 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   per-category and recent-activity sections when switched off (due today and overdue always show).
 - The current user is **not** selectable: it comes from the Google login (SECURITY-003/004).
 
+## Installable App (MOBILE-001)
+
+Tenner is a Progressive Web App: it can be added to the home screen and starts without browser UI.
+
+- `public/manifest.json`: name, `start_url` `/dashboard`, `display: standalone`, theme colors, icons (192, 512,
+  maskable 512) and the shortcuts "Neuer Tenner" (`/dashboard?quickAdd=1`, focuses Quick Add) and "Heute".
+- `index.html`: manifest link, Apple touch icon and the iOS home-screen meta tags.
+- Settings → "App": "App installieren" where the browser offers installation (Chrome, Edge, Android; the
+  `beforeinstallprompt` event is captured at startup in `src/features/install/installPrompt.ts`), step-by-step
+  instructions on iPhone/iPad ("Teilen → Zum Home-Bildschirm"), a confirmation once installed; hidden elsewhere
+  (e.g. Firefox desktop).
+- Icons in `public/icons/` were rendered from the favicon motif (white "10" on `#1976d2`); the maskable icon keeps the
+  motif inside the 80 % safe zone. To change them, render new PNGs of the same sizes.
+- No service worker is needed for installation in current browsers; offline caching follows in MOBILE-002.
+
 ## Theme
 
 `src/theme/theme.ts`: `createAppTheme("light" | "dark")` (FRONTEND-008; the preference "wie das Gerät" follows

@@ -1,6 +1,7 @@
 /** Quick Add widget (FRONTEND-006) for the dashboard and the Tenners page. */
 
 import { Card, CardContent } from "@mui/material";
+import { useSearchParams } from "react-router";
 import { useCategoryName } from "../categories/api";
 import { formatMinutes } from "../../utils/format";
 import { DuplicateWarningDialog } from "./DuplicateWarningDialog";
@@ -9,6 +10,8 @@ import { useQuickAddTenner } from "./useQuickAddTenner";
 
 export function QuickAddTenner() {
   const quickAdd = useQuickAddTenner();
+  // The home-screen shortcut "Neuer Tenner" opens /dashboard?quickAdd=1 (MOBILE-001).
+  const [params] = useSearchParams();
   const { defaults } = quickAdd;
   const categoryName = useCategoryName();
   const category = quickAdd.suggestedCategory ?? defaults.category;
@@ -24,6 +27,7 @@ export function QuickAddTenner() {
           busy={quickAdd.busy}
           onChange={quickAdd.setTitle}
           onSubmit={() => void quickAdd.submit()}
+          autoFocus={params.get("quickAdd") === "1"}
         />
       </CardContent>
       <DuplicateWarningDialog

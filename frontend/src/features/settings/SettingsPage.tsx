@@ -9,6 +9,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { CategoriesSettings } from "./CategoriesSettings";
 import { DashboardSettings } from "./DashboardSettings";
 import { HouseholdSettings } from "./HouseholdSettings";
+import { InstallAppSettings } from "../install/InstallAppSettings";
 import { PersonalSettings } from "./PersonalSettings";
 import { TennerDefaultsSettings } from "./TennerDefaultsSettings";
 import { MembersSettings } from "./MembersSettings";
@@ -28,6 +29,7 @@ export function SettingsPage() {
       </Typography>
       <ProfileSettings />
       <PersonalSettings />
+      <InstallAppSettings />
       <DashboardSettings />
       <Typography variant="overline" component="h2" color="text.secondary" sx={{ display: "block", mt: 3 }}>
         Für den ganzen Haushalt
