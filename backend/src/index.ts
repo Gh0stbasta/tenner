@@ -4,7 +4,7 @@
  * standard error response.
  */
 
-import { identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
+import { householdGroupName, identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
 import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
 import { loadConfig, type AppConfig } from "./config.js";
@@ -27,7 +27,18 @@ import {
 } from "./handlers/household.js";
 import { pauseTennerHandler, resumeTennerHandler, type PauseTenner, type ResumeTenner } from "./handlers/pause-tenner.js";
 import { createCategoryHandler, listCategoriesHandler, updateCategoryHandler, type CreateCategory, type ListCategories, type UpdateCategory } from "./handlers/categories.js";
-import { createMemberHandler, listMembersHandler, updateMemberHandler, type CreateMember, type ListMembers, type UpdateMember } from "./handlers/members.js";
+import {
+  createMemberHandler,
+  deactivateMemberHandler,
+  listMembersHandler,
+  reactivateMemberHandler,
+  updateMemberHandler,
+  type CreateMember,
+  type DeactivateMember,
+  type ListMembers,
+  type ReactivateMember,
+  type UpdateMember,
+} from "./handlers/members.js";
 import { historyHandler, tennerHistoryHandler, type GetHistory, type GetTennerHistory } from "./handlers/history.js";
 import { listTennersHandler, type ListTenners } from "./handlers/list-tenners.js";
 import { assignHouseholdMemberHandler, onboardingHandler, type AssignHouseholdMember, type GetOnboarding } from "./handlers/onboarding.js";
@@ -54,6 +65,7 @@ import {
   ListTennersService,
   RestoreTennerService,
   CategoryService,
+  MemberDeactivationService,
   MemberService,
   PauseTennerService,
   SkipTennerService,
@@ -89,6 +101,8 @@ export interface Dependencies {
   readonly listMembers: ListMembers;
   readonly createMember: CreateMember;
   readonly updateMember: UpdateMember;
+  readonly deactivateMember: DeactivateMember;
+  readonly reactivateMember: ReactivateMember;
   readonly listCategories: ListCategories;
   readonly createCategory: CreateCategory;
   readonly updateCategory: UpdateCategory;
@@ -156,6 +170,8 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /users": ({ deps, identity }) => listMembersHandler(identity.tenantId, deps.listMembers),
   "POST /users": ({ event, deps, logger, identity }) => createMemberHandler(event, identity, deps.createMember, logger),
   "PUT /users/{userId}": ({ event, deps, logger, identity }) => updateMemberHandler(event, identity, deps.updateMember, logger),
+  "POST /users/{userId}/deactivate": ({ event, deps, logger, identity }) => deactivateMemberHandler(event, identity, deps.deactivateMember, logger),
+  "POST /users/{userId}/reactivate": ({ event, deps, logger, identity }) => reactivateMemberHandler(event, identity, deps.reactivateMember, logger),
   "GET /categories": ({ deps, identity }) => listCategoriesHandler(identity.tenantId, deps.listCategories),
   "POST /categories": ({ event, deps, logger, identity }) => createCategoryHandler(event, identity, deps.createCategory, logger),
   "PUT /categories/{categoryId}": ({ event, deps, logger, identity }) => updateCategoryHandler(event, identity, deps.updateCategory, logger),
@@ -209,9 +225,13 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const pauseTennerService = tennerRepository ? new PauseTennerService(tennerRepository, systemClock, timezoneOf) : undefined;
   const vacationService = tennerRepository && householdRepository ? new VacationService(householdRepository, tennerRepository, systemClock, timezoneOf, logger) : undefined;
   const onboarding = config.onboarding;
-  const householdAssignmentService = onboarding
-    ? new HouseholdAssignmentService(new CognitoHouseholdMembershipRepository(getCognitoClient(), onboarding.userPoolId), onboarding.tenantId, membersOf)
-    : undefined;
+  const membershipRepository = onboarding ? new CognitoHouseholdMembershipRepository(getCognitoClient(), onboarding.userPoolId) : undefined;
+  const householdAssignmentService = onboarding && membershipRepository ? new HouseholdAssignmentService(membershipRepository, onboarding.tenantId, membersOf) : undefined;
+  // HOUSEHOLD-ADMIN-004: without Cognito configuration there are no groups to revoke.
+  const revokeAccess = (tenantId: string, userId: string): Promise<number> =>
+    membershipRepository?.removeAllMembers(householdGroupName(tenantId, userId)) ?? Promise.resolve(0);
+  const memberDeactivationService =
+    householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
 
   return {
     config,
@@ -241,6 +261,8 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     listMembers: memberService ? (tenantId) => memberService.listMembers(tenantId) : notConfigured,
     createMember: memberService ? (identity, request) => memberService.createMember(identity, request) : notConfigured,
     updateMember: memberService ? (identity, userId, request) => memberService.updateMember(identity, userId, request) : notConfigured,
+    deactivateMember: memberDeactivationService ? (identity, userId, request) => memberDeactivationService.deactivate(identity, userId, request) : notConfigured,
+    reactivateMember: memberDeactivationService ? (identity, userId) => memberDeactivationService.reactivate(identity, userId) : notConfigured,
     listCategories: categoryService ? (tenantId) => categoryService.listCategories(tenantId) : notConfigured,
     createCategory: categoryService ? (identity, request) => categoryService.createCategory(identity, request) : notConfigured,
     updateCategory: categoryService ? (identity, categoryId, request) => categoryService.updateCategory(identity, categoryId, request) : notConfigured,

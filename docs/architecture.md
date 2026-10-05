@@ -303,7 +303,7 @@ Version 1 supported manually configured users only. Since HOUSEHOLD-ADMIN-001, m
 | `userId` | stable, immutable uppercase slug (`^[A-Z][A-Z0-9_]{0,29}$`), derived from the name if omitted ("Lena" → `LENA`) |
 | `displayName` | 1–40 characters |
 | `color` | one of `BLUE`, `GREEN`, `ORANGE`, `PURPLE`, `RED`, `TEAL`, `PINK`, `GREY` |
-| `active` | always true until deactivation (HOUSEHOLD-ADMIN-004) |
+| `active` | false after deactivation (HOUSEHOLD-ADMIN-004); the member stays in the list so history keeps its name |
 | `createdAt`, `updatedAt` | UTC timestamps |
 
 - **Storage decision:** the member list is an attribute of the household item in `tenner-households` (with
@@ -318,6 +318,12 @@ Version 1 supported manually configured users only. Since HOUSEHOLD-ADMIN-001, m
   Identity no longer checks a hardcoded list: household groups are only assigned for existing members (onboarding).
 - **Cognito groups:** `STEFAN` and `JULIA` groups are managed by Terraform; groups of members added in the app are
   created by the API on their first assignment (`cognito-idp:CreateGroup`).
+- **Deactivation (HOUSEHOLD-ADMIN-004):** `POST /users/{userId}/deactivate` reassigns the member's non-archived
+  Tenners to `reassignTo` (required if any exist), marks the member inactive and removes every account from the
+  member's Cognito group (access ends with the next token refresh, at most 60 minutes). Not allowed for yourself or
+  the last active member. Inactive members cannot be assigned or complete Tenners and are not offered in onboarding;
+  `POST /users/{userId}/reactivate` makes them assignable again and their person re-claims them on the next login.
+  Rotations (HOUSEHOLD-001) do not exist yet.
 - No registration process beyond the Google self-assignment (HOTFIX-001).
 
 No self-service onboarding.

@@ -23,6 +23,7 @@ function store(initial: Record<string, string[]> = {}): Mocked<HouseholdMembersh
     addMember: vi.fn(async (username: string, group: string) => void members(group).add(username)),
     removeMember: vi.fn(async (username: string, group: string) => void members(group).delete(username)),
     ensureGroup: vi.fn(async () => undefined),
+    removeAllMembers: vi.fn(async () => 0),
   };
 }
 

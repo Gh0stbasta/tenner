@@ -51,6 +51,28 @@ export class CognitoHouseholdMembershipRepository implements HouseholdMembership
     }
   }
 
+  async removeAllMembers(group: string): Promise<number> {
+    let removed = 0;
+    let nextToken: string | undefined;
+    try {
+      do {
+        const page = (await this.client.send(
+          new ListUsersInGroupCommand({ UserPoolId: this.userPoolId, GroupName: group, Limit: GROUP_PAGE_LIMIT, NextToken: nextToken }),
+        )) as ListUsersInGroupCommandOutput;
+        for (const user of page.Users ?? []) {
+          if (!user.Username) continue;
+          await this.client.send(new AdminRemoveUserFromGroupCommand({ UserPoolId: this.userPoolId, Username: user.Username, GroupName: group }));
+          removed += 1;
+        }
+        nextToken = page.NextToken;
+      } while (nextToken);
+    } catch (error) {
+      if (errorName(error) === "ResourceNotFoundException") return removed;
+      throw toPersistenceError("revoke household access", error);
+    }
+    return removed;
+  }
+
   async ensureGroup(group: string): Promise<void> {
     try {
       await this.client.send(

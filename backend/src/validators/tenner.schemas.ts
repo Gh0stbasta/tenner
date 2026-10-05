@@ -14,6 +14,7 @@ import {
   type SkipTennerRequest,
   type PauseTennerRequest,
   type CreateMemberRequest,
+  type DeactivateMemberRequest,
   type CreateCategoryRequest,
   type UpdateCategoryRequest,
   type UpdateMemberRequest,
@@ -285,3 +286,6 @@ export const updateCategorySchema = z
     archived: z.boolean().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." }) satisfies z.ZodType<UpdateCategoryRequest>;
+
+/** POST /users/{userId}/deactivate (HOUSEHOLD-ADMIN-004). */
+export const deactivateMemberSchema = z.strictObject({ reassignTo: userIdSchema.optional() }) satisfies z.ZodType<DeactivateMemberRequest>;

@@ -108,7 +108,7 @@ describe("validation uses the stored members", () => {
   it("accepts household groups of new members and offers them in onboarding", async () => {
     const event = { requestContext: { authorizer: { jwt: { claims: { "cognito:groups": "[household:default:LENA_2]" } } } } } as never;
     expect(identityFromEvent(event)).toEqual({ tenantId: "default", userId: "LENA_2" });
-    const memberships = { groupsOf: vi.fn(async () => []), memberCount: vi.fn(async () => 0), addMember: vi.fn(), removeMember: vi.fn(), ensureGroup: vi.fn() };
+    const memberships = { groupsOf: vi.fn(async () => []), memberCount: vi.fn(async () => 0), addMember: vi.fn(), removeMember: vi.fn(), ensureGroup: vi.fn(), removeAllMembers: vi.fn() };
     const service = new HouseholdAssignmentService(memberships, "default", members);
     await expect(service.getOnboarding({ username: "google_1" })).resolves.toMatchObject({ members: [{ userId: "STEFAN" }, { userId: "JULIA" }, { userId: "LENA", displayName: "Lena" }] });
     await expect(service.assign({ username: "google_1" }, "BOB")).rejects.toBeInstanceOf(NotFoundError);

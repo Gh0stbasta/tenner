@@ -77,3 +77,51 @@ export function useUpdateMember() {
     apiClient.put(`/users/${encodeURIComponent(userId)}`, { schema: memberSchema, body: changes }),
   );
 }
+
+/** Number of non-archived Tenners (active and inactive) assigned to a member (HOUSEHOLD-ADMIN-004). */
+export function useAssignedTennerCount(userId: UserId | null) {
+  return useQuery({
+    queryKey: ["tenners", "assigned-count", userId],
+    enabled: userId !== null,
+    queryFn: async () => {
+      const list = z.array(z.unknown());
+      const [active, inactive] = await Promise.all([
+        apiClient.get("/tenners", { schema: list, query: { assignedTo: userId ?? "" } }),
+        apiClient.get("/tenners", { schema: list, query: { assignedTo: userId ?? "", active: false } }),
+      ]);
+      return active.length + inactive.length;
+    },
+  });
+}
+
+const deactivationSchema = z.object({
+  member: memberSchema,
+  reassigned: z.number(),
+  reassignedTo: z.string().nullable(),
+  revokedAccounts: z.number(),
+});
+export type Deactivation = z.infer<typeof deactivationSchema>;
+
+/** Deactivation moves Tenners, so lists and the dashboard are reloaded as well. */
+export function useDeactivateMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, reassignTo }: { readonly userId: UserId; readonly reassignTo: UserId | null }) =>
+      apiClient.post(`/users/${encodeURIComponent(userId)}/deactivate`, {
+        schema: deactivationSchema,
+        body: reassignTo === null ? {} : { reassignTo },
+      }),
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.members }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.tenners }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard }),
+      ]),
+  });
+}
+
+export function useReactivateMember() {
+  return useMemberMutation((userId: UserId) =>
+    apiClient.post(`/users/${encodeURIComponent(userId)}/reactivate`, { schema: memberSchema, body: {} }),
+  );
+}

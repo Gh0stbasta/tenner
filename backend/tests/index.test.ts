@@ -89,6 +89,8 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     listMembers: vi.fn(async () => [{ userId: "STEFAN", displayName: "Stefan", color: "BLUE" as const, active: true }]),
     createMember: vi.fn(async () => ({ userId: "LENA", displayName: "Lena", color: "GREEN" as const, active: true })),
     updateMember: vi.fn(async () => ({ userId: "STEFAN", displayName: "Steffen", color: "BLUE" as const, active: true })),
+    deactivateMember: vi.fn(async () => ({ member: { userId: "JULIA", displayName: "Julia", color: "PURPLE" as const, active: false }, reassigned: 2, reassignedTo: "STEFAN", revokedAccounts: 1 })),
+    reactivateMember: vi.fn(async () => ({ userId: "JULIA", displayName: "Julia", color: "PURPLE" as const, active: true })),
     listCategories: vi.fn(async () => [{ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: false }]),
     createCategory: vi.fn(async () => ({ categoryId: "GARDEN", name: "Garten", icon: "GARDEN" as const, color: "GREEN" as const, sortOrder: 6, archived: false })),
     updateCategory: vi.fn(async () => ({ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: true })),
@@ -355,6 +357,17 @@ describe("member routes (HOUSEHOLD-ADMIN-001)", () => {
     const put = { ...event("PUT /users/{userId}", {}, JSON.stringify({ displayName: "Steffen" })), pathParameters: { userId: "STEFAN" } } as APIGatewayProxyEventV2;
     expect((await route(put, d)).statusCode).toBe(200);
     expect(d.updateMember).toHaveBeenCalledWith(TEST_IDENTITY, "STEFAN", { displayName: "Steffen" });
+  });
+});
+
+describe("member deactivation routes (HOUSEHOLD-ADMIN-004)", () => {
+  it("deactivates and reactivates members", async () => {
+    const d = deps();
+    const withUser = (routeKey: string, body?: string) => ({ ...event(routeKey, {}, body), pathParameters: { userId: "JULIA" } }) as APIGatewayProxyEventV2;
+    expect((await route(withUser("POST /users/{userId}/deactivate", JSON.stringify({ reassignTo: "STEFAN" })), d)).statusCode).toBe(200);
+    expect(d.deactivateMember).toHaveBeenCalledWith(TEST_IDENTITY, "JULIA", { reassignTo: "STEFAN" });
+    expect((await route(withUser("POST /users/{userId}/reactivate"), d)).statusCode).toBe(200);
+    expect(d.reactivateMember).toHaveBeenCalledWith(TEST_IDENTITY, "JULIA");
   });
 });
 

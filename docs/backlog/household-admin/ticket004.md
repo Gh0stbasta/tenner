@@ -124,3 +124,30 @@ npm run test
 # Out of Scope
 
 - Erasure of personal data (DATA-005)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Members can be deactivated and reactivated: `POST /users/{userId}/deactivate` (`reassignTo`) and
+  `/reactivate`; settings show "deaktivieren" (with a reassignment step and summary) and "reaktivieren"
+- [x] Open Tenners are reassigned: all non-archived Tenners (active and inactive) of the member move to
+  `reassignTo`, which is required if any exist and must be another active member
+- [x] History preserved: the member stays in the list (inactive), history shows its name unchanged
+- [x] Last active member protected; deactivating yourself is rejected (you would lock yourself out)
+- [x] Deactivated members are rejected as assignee and as `completedBy`; onboarding does not offer them
+- [x] Access revoked: every account is removed from the member's Cognito group (no new IAM permission needed)
+- [x] Tests passing: backend 638 (deactivate with reassignment, reassignment required, last active member, validation
+  rejects deactivated member, history still shows name, reactivate, Cognito group cleanup), frontend 295, Terraform 51
+- [ ] Deploys through GitHub Actions: two new API routes; verified after merge
+
+Decisions and assumptions:
+
+- PRODUCTIVITY-005 (bulk operations) does not exist; reassignment uses sequential updates before the member is
+  deactivated, so a failure leaves the member active and a retry completes the move.
+- Rotations (HOUSEHOLD-001) do not exist yet; nothing to remove.
+- An already issued ID token of the deactivated member stays valid for up to 60 minutes (documented as residual risk
+  in `docs/security.md`).
+- Reactivation does not restore Cognito membership; the person picks the member again on the next login.

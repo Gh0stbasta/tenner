@@ -11,4 +11,6 @@ export interface HouseholdMembershipRepository {
   ensureGroup(group: string): Promise<void>;
   addMember(username: string, group: string): Promise<void>;
   removeMember(username: string, group: string): Promise<void>;
+  /** Remove every account from the group (member deactivation, HOUSEHOLD-ADMIN-004); returns how many were removed. */
+  removeAllMembers(group: string): Promise<number>;
 }
