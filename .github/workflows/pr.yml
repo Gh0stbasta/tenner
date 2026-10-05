@@ -54,7 +54,7 @@ jobs:
         if: hashFiles('terraform/**/*.tf') != ''
         run: terraform -chdir="$TF_DIR" test
 
-      - name: Tag checker unit tests
+      - name: Script unit tests (tag and npm audit checkers)
         if: hashFiles('terraform/**/*.tf') != ''
         run: python3 -m unittest discover -s scripts/tests
 
@@ -132,6 +132,14 @@ jobs:
       - name: Install dependencies
         if: hashFiles(format('{0}/package.json', matrix.project)) != ''
         run: npm ci
+
+      # SECURITY-007: high/critical vulnerabilities in production dependencies fail the build,
+      # unless a time-boxed exception exists in .github/npm-audit-allowlist.json.
+      - name: Audit production dependencies
+        if: hashFiles(format('{0}/package.json', matrix.project)) != ''
+        run: |
+          npm audit --omit=dev --json > "$RUNNER_TEMP/audit.json" || true
+          python3 ../scripts/check_npm_audit.py "$RUNNER_TEMP/audit.json" ../.github/npm-audit-allowlist.json
 
       - name: Lint
         if: hashFiles(format('{0}/package.json', matrix.project)) != ''

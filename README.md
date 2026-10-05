@@ -249,6 +249,25 @@ Password accounts created before FUTURE-011 can no longer sign in and can be del
 
 Never commit e-mail addresses, client secrets or tokens.
 
+### Dependency Scanning (SECURITY-007)
+
+- **Dependabot** (`.github/dependabot.yml`): weekly update PRs for `frontend/` and `backend/` npm packages
+  (minor and patch grouped) and GitHub Actions, monthly for the Terraform providers. At most 3 open PRs per
+  ecosystem. Each update PR runs the normal PR validation.
+- **CI audit** (PR validation and deploy build): `npm audit --omit=dev` for frontend and backend, evaluated by
+  `scripts/check_npm_audit.py`. High or critical vulnerabilities in **production** dependencies fail the build.
+  Dev-only tools (Vite, ESLint, Vitest) are not blocking.
+- **Exceptions** (`.github/npm-audit-allowlist.json`): only if no fix exists or the vulnerable code is not
+  reachable. Each entry needs the advisory ID (`GHSA-…`), the package, a reason and an expiry date (at most
+  90 days). Expired entries fail the build again; unused entries are reported. Example:
+
+  ```json
+  { "advisory": "GHSA-xxxx-xxxx-xxxx", "package": "example", "reason": "No fix released; only used at build time", "expires": "2026-12-31" }
+  ```
+
+- **Repository settings (manual, once):** GitHub → Settings → Code security → enable **Dependabot alerts** and
+  **Dependabot security updates**. These settings are not stored in the repository.
+
 ### API Throttling
 
 The API stage is throttled to protect against cost spikes (SECURITY-014): burst 20 and
