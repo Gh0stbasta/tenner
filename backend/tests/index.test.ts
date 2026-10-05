@@ -43,6 +43,10 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       tenner: tennerResponse,
       snooze: { snoozeId: "s-1", snoozedBy: "STEFAN" as const, snoozedAt: "2026-10-01T18:30:00Z", previousNextDue: "2026-10-01", snoozedUntil: "2026-10-04" },
     })),
+    skipTenner: vi.fn(async () => ({
+      tenner: tennerResponse,
+      skip: { skipId: "k-1", skippedBy: "STEFAN" as const, skippedAt: "2026-10-01T18:30:00Z", skippedDue: "2026-10-01", nextDue: "2026-10-15", reason: null },
+    })),
     getDashboard: vi.fn(async () => emptyDashboard),
     getTenner: vi.fn(async () => tennerResponse),
     getHistory: vi.fn(async () => ({ items: [], nextCursor: null })),
@@ -288,6 +292,15 @@ describe("POST /tenners/{tennerId}/snooze (SCHEDULING-003)", () => {
     const response = await route({ ...event("POST /tenners/{tennerId}/snooze", {}, JSON.stringify({ days: 3, until: "2026-10-08" })), pathParameters: { tennerId: "t-1" } } as APIGatewayProxyEventV2, d);
     expect(response.statusCode).toBe(400);
     expect(d.snoozeTenner).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /tenners/{tennerId}/skip (SCHEDULING-004)", () => {
+  it("skips and returns 200", async () => {
+    const d = deps();
+    const response = await route({ ...event("POST /tenners/{tennerId}/skip"), pathParameters: { tennerId: "t-1" } } as APIGatewayProxyEventV2, d);
+    expect(response.statusCode).toBe(200);
+    expect(d.skipTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", {});
   });
 });
 

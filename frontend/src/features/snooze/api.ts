@@ -1,4 +1,4 @@
-/** Snooze API (SCHEDULING-003). */
+/** Snooze and skip API (SCHEDULING-003, SCHEDULING-004). */
 
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
@@ -34,6 +34,39 @@ export function useSnoozeTenner() {
       snoozeTenner(tennerId, request),
     onSuccess: (response) =>
       trackEvent("TennerSnoozed", { tennerId: response.tenner.tennerId, snoozedUntil: response.snooze.snoozedUntil }),
+    onSettled: invalidate,
+  });
+}
+
+/** Skip one occurrence (SCHEDULING-004). */
+export const skipResponseSchema = z.object({
+  tenner: tennerSchema,
+  skip: z.object({
+    skipId: z.string(),
+    skippedBy: userIdSchema,
+    skippedAt: z.string(),
+    skippedDue: z.string(),
+    nextDue: z.string(),
+    reason: z.string().nullable(),
+  }),
+});
+export type SkipResponse = z.infer<typeof skipResponseSchema>;
+
+export function skipTenner(tennerId: string, reason: string): Promise<SkipResponse> {
+  const trimmed = reason.trim();
+  return apiClient.post(`/tenners/${encodeURIComponent(tennerId)}/skip`, {
+    schema: skipResponseSchema,
+    body: trimmed === "" ? {} : { reason: trimmed },
+  });
+}
+
+export function useSkipTenner() {
+  const invalidate = useInvalidateTenners();
+  return useMutation({
+    mutationFn: ({ tennerId, reason }: { readonly tennerId: string; readonly reason: string }) =>
+      skipTenner(tennerId, reason),
+    onSuccess: (response) =>
+      trackEvent("TennerSkipped", { tennerId: response.tenner.tennerId, nextDue: response.skip.nextDue }),
     onSettled: invalidate,
   });
 }

@@ -1,4 +1,4 @@
-import type { Category, SnoozeEvent, Tenner, UserId } from "../models/index.js";
+import type { Category, SkipEvent, SnoozeEvent, Tenner, UserId } from "../models/index.js";
 import type { CompletionRecord } from "./completion.repository.js";
 
 /**
@@ -80,6 +80,9 @@ export interface TennerRepository {
    * Errors: ConflictError CONCURRENT_MODIFICATION if the Tenner changed, PersistenceError otherwise.
    */
   snoozeTenner(updated: Tenner, event: SnoozeEvent, expected: Tenner): Promise<void>;
+
+  /** Like snoozeTenner, for a skipped occurrence (SCHEDULING-004). */
+  skipTenner(updated: Tenner, event: SkipEvent, expected: Tenner): Promise<void>;
   /**
    * Undo a soft delete (TICKET-015): active = true, deletedAt = null, updatedAt = timestamp, updatedBy = actor.
    * Schedule fields are untouched. Optimistic lock on `expectedUpdatedAt`;

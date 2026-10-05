@@ -9,3 +9,4 @@ export * from "./history.dto.js";
 export * from "./onboarding.dto.js";
 export * from "./household.dto.js";
 export * from "./snooze.dto.js";
+export * from "./skip.dto.js";

@@ -287,6 +287,20 @@ The next completion sets `snoozedUntil` back to `null`. Logged as `TennerSnoozed
 
 Response: `200 { success: true, data: { tenner: TennerResponse, snooze: { snoozeId, snoozedBy, snoozedAt, previousNextDue, snoozedUntil } } }`.
 
+### POST /tenners/{tennerId}/skip
+
+Skips one occurrence without completing it (SCHEDULING-004). Body optional: `{ "reason": "Not needed this week" }`
+(trimmed, 1–200 characters; unknown fields rejected). An empty body is allowed.
+
+Effect: `nextDue = calculateNextDue(max(today, nextDue), frequencyUnit, frequencyInterval, weekdays)` (so a Tenner
+that is not due yet moves one cycle past its due date), `lastCompleted` unchanged, `snoozedUntil = null`, plus a
+`SKIP` event in `tenner-history` (`historyId: "skip#<id>"`, `skippedDue`, `nextDue`, `reason`, `skippedBy`,
+`skippedAt`) in one transaction. Skips never appear in history, undo or analytics. Inactive or archived → 409
+`TENNER_INACTIVE`; unknown → 404; concurrent change → 409 `CONCURRENT_MODIFICATION`. Logged as `TennerSkipped`
+(without the reason text).
+
+Response: `200 { success: true, data: { tenner: TennerResponse, skip: { skipId, skippedBy, skippedAt, skippedDue, nextDue, reason } } }`.
+
 ### POST /tenners/{tennerId}/restore
 
 ```json
@@ -412,6 +426,7 @@ and a Tenner fixture.
 | `POST /tenners/{tennerId}/complete` | `200 { success: true, data: { tenner, completion } }` (TICKET-013). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | `POST /tenners/{tennerId}/undo-completion` | `200 { success: true, data: { tenner, revertedCompletion } }` (TICKET-014). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `NO_COMPLETION_TO_UNDO`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | `POST /tenners/{tennerId}/snooze` | `200 { success: true, data: { tenner, snooze } }` (SCHEDULING-003). Returns `400`, `404`, or `409` with `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
+| `POST /tenners/{tennerId}/skip` | `200 { success: true, data: { tenner, skip } }` (SCHEDULING-004). Returns `400`, `404`, or `409` with `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
 | `POST /tenners/{tennerId}/restore` | `200 { success: true, data: { tennerId, active, deletedAt } }` (TICKET-015, idempotent). Returns `400`, `404`, or `409` with `TENNER_NOT_DELETED` or `CONCURRENT_MODIFICATION` |
 | `GET /dashboard` | `200 { success: true, data: DashboardResponse }` (TICKET-016). Returns `400 VALIDATION_ERROR` "Invalid dashboard query." |
 | `GET /household` | `200 { success: true, data: { timezone } }` (SCHEDULING-008). Falls back to `APPLICATION_TIMEZONE` |

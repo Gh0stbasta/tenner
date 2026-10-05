@@ -4,7 +4,7 @@
  * tennerId-completedAt-index (TICKET-014).
  */
 
-import type { Completion, SnoozeEvent, UserId } from "../../models/index.js";
+import type { Completion, SkipEvent, SnoozeEvent, UserId } from "../../models/index.js";
 import type { CompletionRecord } from "../completion.repository.js";
 
 export function tenantTennerId(tenantId: string, tennerId: string): string {
@@ -50,6 +50,24 @@ export function toSnoozeItem(event: SnoozeEvent): Record<string, unknown> {
     snoozedAt: event.snoozedAt,
     previousNextDue: event.previousNextDue,
     snoozedUntil: event.snoozedUntil,
+  };
+}
+
+/** historyId prefix of skip events (SCHEDULING-004). */
+export const SKIP_HISTORY_PREFIX = "skip#";
+
+/** Skip audit event; like snoozes without completedAt/tenantTennerId, so completion readers never see it. */
+export function toSkipItem(event: SkipEvent): Record<string, unknown> {
+  return {
+    tenantId: event.tenantId,
+    historyId: `${SKIP_HISTORY_PREFIX}${event.skipId}`,
+    eventType: "SKIP",
+    tennerId: event.tennerId,
+    skippedBy: event.skippedBy,
+    skippedAt: event.skippedAt,
+    skippedDue: event.skippedDue,
+    nextDue: event.nextDue,
+    reason: event.reason,
   };
 }
 

@@ -14,10 +14,10 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import type { DocumentSender } from "../../clients/dynamodb.js";
 import { ConflictError, NotFoundError, PersistenceError } from "../../exceptions/index.js";
-import type { SnoozeEvent, Tenner, UserId } from "../../models/index.js";
+import type { SkipEvent, SnoozeEvent, Tenner, UserId } from "../../models/index.js";
 import type { CompletionRecord } from "../completion.repository.js";
 import type { SoftDeleteResult, TennerCriteria, TennerRepository, TennerUpdate } from "../tenner.repository.js";
-import { toCompletionItem, toSnoozeItem } from "./completion.mapper.js";
+import { toCompletionItem, toSkipItem, toSnoozeItem } from "./completion.mapper.js";
 import { isConditionalCheckFailed, toConflictOrPersistenceError, toNotFoundOrPersistenceError, toPersistenceError } from "./errors.js";
 import { toTenner } from "./tenner.mapper.js";
 import { buildTennerQuery, NOT_DELETED } from "./tenner.query.js";
@@ -242,11 +242,21 @@ export class DynamoDbTennerRepository implements TennerRepository {
    * snoozedUntil (Tenner must still match `expected`: updatedAt, active, not deleted). SCHEDULING-003.
    */
   async snoozeTenner(updated: Tenner, event: SnoozeEvent, expected: Tenner): Promise<void> {
+    await this.writeScheduleEvent(updated, toSnoozeItem(event), expected, "snooze Tenner");
+  }
+
+  /** Same transaction shape as snoozeTenner, with a SKIP event (SCHEDULING-004). */
+  async skipTenner(updated: Tenner, event: SkipEvent, expected: Tenner): Promise<void> {
+    await this.writeScheduleEvent(updated, toSkipItem(event), expected, "skip Tenner");
+  }
+
+  /** [0] put the audit event (must not exist), [1] set nextDue/snoozedUntil locked on updatedAt, active, not deleted. */
+  private async writeScheduleEvent(updated: Tenner, eventItem: Record<string, unknown>, expected: Tenner, operation: string): Promise<void> {
     try {
       await this.client.send(
         new TransactWriteCommand({
           TransactItems: [
-            { Put: { TableName: this.historyTableName, Item: toSnoozeItem(event), ConditionExpression: "attribute_not_exists(historyId)" } },
+            { Put: { TableName: this.historyTableName, Item: eventItem, ConditionExpression: "attribute_not_exists(historyId)" } },
             {
               Update: {
                 TableName: this.tableName,
@@ -276,7 +286,7 @@ export class DynamoDbTennerRepository implements TennerRepository {
         }),
       );
     } catch (error) {
-      throw toTransactionError(error, "snooze Tenner", [
+      throw toTransactionError(error, operation, [
         ["CONCURRENT_MODIFICATION", "The Tenner was modified by another request."],
         ["CONCURRENT_MODIFICATION", "The Tenner was modified by another request."],
       ]);

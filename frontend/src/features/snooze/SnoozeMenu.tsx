@@ -1,9 +1,10 @@
-/** "Verschieben" action with quick options and a date picker (SCHEDULING-003). */
+/** "Verschieben" action: quick snooze options, a date picker (SCHEDULING-003) and "skip this time" (SCHEDULING-004). */
 
 import SnoozeIcon from "@mui/icons-material/Snooze";
 import {
   Button,
   Dialog,
+  Divider,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -19,6 +20,7 @@ import { useNotify } from "../../components/NotificationProvider";
 import { formatShortDate } from "../../utils/format";
 import { useToday } from "../household/api";
 import { useSnoozeTenner } from "./api";
+import { SkipDialog } from "./SkipDialog";
 import { addDaysIso, snoozeOptions, type SnoozeRequest } from "./snoozeOptions";
 
 export interface SnoozeMenuProps {
@@ -36,6 +38,7 @@ export function SnoozeMenu({ tenner, variant = "button", disabled = false }: Sno
   const snooze = useSnoozeTenner();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [picking, setPicking] = useState(false);
+  const [skipping, setSkipping] = useState(false);
   const tomorrow = addDaysIso(today, 1);
   const [date, setDate] = useState("");
 
@@ -98,7 +101,17 @@ export function SnoozeMenu({ tenner, variant = "button", disabled = false }: Sno
           </MenuItem>
         ))}
         <MenuItem onClick={openPicker}>Datum wählen …</MenuItem>
+        <Divider />
+        <MenuItem
+          onClick={() => {
+            setAnchor(null);
+            setSkipping(true);
+          }}
+        >
+          Diesmal überspringen …
+        </MenuItem>
       </Menu>
+      <SkipDialog tenner={tenner} open={skipping} onClose={() => setSkipping(false)} />
       <Dialog open={picking} onClose={() => setPicking(false)} aria-labelledby={dialogTitleId} fullWidth maxWidth="xs">
         <form
           onSubmit={(event) => {

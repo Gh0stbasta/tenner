@@ -1163,6 +1163,16 @@ index.ts (routing, correlation, error mapping)
     cannot collide. Considered: a separate table (more infrastructure for few items) and a snooze counter on the
     Tenner (not auditable).
   - Snooze events are not exposed through the API yet (TD-028).
+- **Skip (SCHEDULING-004):** `POST /tenners/{tennerId}/skip` (optional `reason`, ≤ 200 characters) drops the current
+  occurrence: `nextDue = calculateNextDue(max(today, nextDue), unit, interval, weekdays)`, `lastCompleted` unchanged,
+  `snoozedUntil` cleared, inactive/archived → 409. Same transaction and storage pattern as snooze (`eventType = SKIP`,
+  `historyId = skip#<id>`, fields `skippedDue`, `nextDue`, `reason`), so skips never count as completions.
+  - For a Tenner that is not due yet the next cycle counts from its due date (the ticket says "today"), so a skip
+    never moves a Tenner earlier.
+  - Analytics: a skipped occurrence is neither fulfilled nor neglected. Today only completion-based views exist
+    (consistency on the detail page), which ignore skips automatically. ANALYTICS-006/008 must exclude skipped
+    cycles from expected completions (noted in those tickets).
+  - The reason is free text and is not logged.
 - **Dashboard read model (TICKET-016):** `GET /dashboard` returns due today, overdue, upcoming (next 7 days),
   a summary and actionable workload per user and category in one response. It is backed by one `nextDue-index`
   Query (`nextDue <= reference + 7`, active and not deleted). The reference date is "today" in the household timezone, or the `date` parameter.

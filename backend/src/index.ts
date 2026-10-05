@@ -20,6 +20,7 @@ import { historyHandler, tennerHistoryHandler, type GetHistory, type GetTennerHi
 import { listTennersHandler, type ListTenners } from "./handlers/list-tenners.js";
 import { assignHouseholdMemberHandler, onboardingHandler, type AssignHouseholdMember, type GetOnboarding } from "./handlers/onboarding.js";
 import { restoreTennerHandler, type RestoreTenner } from "./handlers/restore-tenner.js";
+import { skipTennerHandler, type SkipTenner } from "./handlers/skip-tenner.js";
 import { snoozeTennerHandler, type SnoozeTenner } from "./handlers/snooze-tenner.js";
 import { undoCompletionHandler, type UndoCompletion } from "./handlers/undo-completion.js";
 import { updateTennerHandler, type UpdateTenner } from "./handlers/update-tenner.js";
@@ -40,6 +41,7 @@ import {
   HouseholdService,
   ListTennersService,
   RestoreTennerService,
+  SkipTennerService,
   SnoozeTennerService,
   UndoCompletionService,
   UpdateTennerService,
@@ -62,6 +64,7 @@ export interface Dependencies {
   readonly undoCompletion: UndoCompletion;
   readonly restoreTenner: RestoreTenner;
   readonly snoozeTenner: SnoozeTenner;
+  readonly skipTenner: SkipTenner;
   readonly getDashboard: GetDashboard;
   readonly getTenner: GetTenner;
   readonly getHistory: GetHistory;
@@ -118,6 +121,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "POST /tenners/{tennerId}/undo-completion": ({ event, deps, logger, identity }) => undoCompletionHandler(event, identity, deps.undoCompletion, logger),
   "POST /tenners/{tennerId}/restore": ({ event, deps, logger, identity }) => restoreTennerHandler(event, identity, deps.restoreTenner, logger),
   "POST /tenners/{tennerId}/snooze": ({ event, deps, logger, identity }) => snoozeTennerHandler(event, identity, deps.snoozeTenner, logger),
+  "POST /tenners/{tennerId}/skip": ({ event, deps, logger, identity }) => skipTennerHandler(event, identity, deps.skipTenner, logger),
   "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
   "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
   "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHouseholdTimezone, logger),
@@ -156,6 +160,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator, timezoneOf) : undefined;
   const undoCompletionService = tennerRepository && completionRepository ? new UndoCompletionService(tennerRepository, completionRepository, systemClock, timezoneOf) : undefined;
   const snoozeTennerService = tennerRepository ? new SnoozeTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf) : undefined;
+  const skipTennerService = tennerRepository ? new SkipTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf) : undefined;
   const onboarding = config.onboarding;
   const householdAssignmentService = onboarding
     ? new HouseholdAssignmentService(new CognitoHouseholdMembershipRepository(getCognitoClient(), onboarding.userPoolId), onboarding.tenantId)
@@ -181,6 +186,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
       ? (identity, id, request, key) => undoCompletionService.undoLatestCompletion(identity, id, request, key)
       : notConfigured,
     snoozeTenner: snoozeTennerService ? (identity, id, request) => snoozeTennerService.snoozeTenner(identity, id, request) : notConfigured,
+    skipTenner: skipTennerService ? (identity, id, request) => skipTennerService.skipTenner(identity, id, request) : notConfigured,
     getHousehold: householdService ? (tenantId) => householdService.getHousehold(tenantId) : notConfigured,
     updateHouseholdTimezone: householdService ? (identity, timezone) => householdService.updateTimezone(identity, timezone) : notConfigured,
     getOnboarding: householdAssignmentService ? (principal) => householdAssignmentService.getOnboarding(principal) : notConfigured,

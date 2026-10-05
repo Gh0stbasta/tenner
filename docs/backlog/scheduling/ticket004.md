@@ -139,3 +139,29 @@ npm run test
 # Out of Scope
 
 - Undo skip (may follow if needed)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Occurrences can be skipped: `POST /tenners/{tennerId}/skip` with optional reason (≤ 200 characters);
+  "Diesmal überspringen …" in the "Verschieben" menu (dashboard due/overdue items, detail header) with a reason dialog
+- [x] Skip does not count as completion: `lastCompleted` unchanged; `SKIP` event in `tenner-history` without
+  `completedAt`, so history, undo and the consistency indicator never see it
+- [x] Analytics treat skips correctly: current analytics are completion-based and ignore skips; ANALYTICS-006 and
+  ANALYTICS-008 now require excluding skipped cycles from expected completions (both are not implemented yet)
+- [x] Tests passing: backend 544 (advances due date, last completed unchanged, event recorded, reason length,
+  inactive/archived rejected, concurrent modification, not-due-yet base), frontend 263 (dialog, reason, limit,
+  error), Terraform 51 (new route); lint, build, `terraform fmt`/`validate` clean
+- [ ] Deploys through GitHub Actions: new API route only (no new IAM permissions); verified after merge
+
+Decisions and assumptions:
+
+- Base date: `max(today, nextDue)` instead of always today, so skipping a Tenner that is not due yet moves it past
+  its upcoming occurrence instead of possibly earlier. For due and overdue Tenners this equals the ticket's rule.
+- Skip also clears an active snooze (the occurrence is dropped).
+- The skip action is offered where snooze is (due and overdue Tenners).
+- The reason is stored but never logged (free text may contain personal information).
+- No undo for skips (out of scope); recorded in TD-028.

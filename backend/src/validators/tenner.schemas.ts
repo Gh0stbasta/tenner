@@ -11,6 +11,7 @@ import {
   type ListTennersRequest,
   type RestoreTennerRequest,
   type SnoozeTennerRequest,
+  type SkipTennerRequest,
   type UndoCompletionRequest,
   type UpdateTennerRequest,
 } from "../dto/index.js";
@@ -214,3 +215,8 @@ export const snoozeTennerSchema = z
   .refine((value) => (value.until === undefined) !== (value.days === undefined), {
     message: "Provide either until or days.",
   }) satisfies z.ZodType<SnoozeTennerRequest>;
+
+/** Skip (SCHEDULING-004): optional reason, trimmed, 1–200 characters. */
+export const skipTennerSchema = z.strictObject({
+  reason: z.string().trim().min(1, "Reason must not be blank.").max(200).optional(),
+}) satisfies z.ZodType<SkipTennerRequest>;
