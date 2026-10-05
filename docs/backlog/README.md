@@ -31,6 +31,8 @@ docs/backlog/
 ├── data-management/    DATA-0xx
 ├── mobile/             MOBILE-0xx
 ├── integrations/       INTEGRATION-0xx
+├── alexa/              ALEXA-0xx  (Alexa skill and Echo Show)
+├── alexaSkill/         Alexa backlog generation ticket (alexaFoundation.md)
 ├── ai/                 AI-0xx
 └── future/             FUTURE-0xx
 ```
@@ -256,6 +258,23 @@ docs/backlog/
 | [MOBILE-004](mobile/ticket004.md) | Implement Offline Completion Queue | Low | Long-Term |
 | [MOBILE-005](mobile/ticket005.md) | Optimize Mobile Navigation and Touch Interaction | Medium | V2 |
 | [MOBILE-006](mobile/ticket006.md) | Implement Push Notification Subscription | Medium | V2 |
+
+### Alexa & Echo Show (`alexa/`, prefix `ALEXA-`)
+
+Generated from the owner's Alexa backlog ticket (`alexaSkill/alexaFoundation.md`, 2026-10-05). German (de-DE)
+custom skill in development stage; skill Lambda in eu-west-1 calling the Tenner API with the linked user's token.
+
+| ID | Title | Priority | Phase |
+|---|---|---|---|
+| [ALEXA-001](alexa/ticket001.md) | Establish Alexa Platform Foundation | High | V2 |
+| [ALEXA-002](alexa/ticket002.md) | Implement Account Linking and Household Authorization | High | V2 |
+| [ALEXA-003](alexa/ticket003.md) | Implement Today's Tenners Voice Experience | High | V2 |
+| [ALEXA-004](alexa/ticket004.md) | Implement Voice Completion Workflow | High | V2 |
+| [ALEXA-005](alexa/ticket005.md) | Implement Daily Briefing | Medium | V2 |
+| [ALEXA-006](alexa/ticket006.md) | Implement Echo Show Dashboard (APL) | High | V2 |
+| [ALEXA-007](alexa/ticket007.md) | Implement Echo Show Home Screen Widget (Flagship) | High | V2 |
+| [ALEXA-008](alexa/ticket008.md) | Implement Alexa Notifications and Reminders | Medium | V2 |
+| [ALEXA-009](alexa/ticket009.md) | Implement Alexa Operations and Monitoring | Medium | V2 |
 
 ### Integrations (`integrations/`, prefix `INTEGRATION-`)
 
