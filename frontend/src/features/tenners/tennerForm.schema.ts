@@ -6,7 +6,9 @@ import {
   CATEGORIES,
   FREQUENCY_UNITS,
   USER_IDS,
+  WEEKDAYS,
   type FrequencyUnit,
+  type Weekday,
 } from "../../types/domain";
 
 export const LIMITS = {
@@ -42,6 +44,8 @@ export const tennerFormSchema = z
     ),
     frequencyInterval: integerBetween(LIMITS.frequencyMin, LIMITS.frequencyMax, "Bitte eine Zahl ab 1 eingeben."),
     frequencyUnit: z.enum(FREQUENCY_UNITS, { error: "Bitte eine Einheit wählen." }),
+    /** Only used with "Wochen" (SCHEDULING-002); empty = every n weeks after the last completion. */
+    weekdays: z.array(z.enum(WEEKDAYS)),
     active: z.boolean(),
   })
   // Same upper bound as the backend: at most 3650 (approximate) days.
@@ -70,3 +74,10 @@ export const FREQUENCY_PRESETS: readonly FrequencyPreset[] = [
   { label: "Vierteljährlich", unit: "MONTH", interval: 3 },
   { label: "Jährlich", unit: "YEAR", interval: 1 },
 ];
+
+/** Weekdays as the API expects them: ISO order for WEEK, otherwise (or when none is selected) null. */
+export function weekdaysForApi(values: Pick<TennerFormValues, "frequencyUnit" | "weekdays">): Weekday[] | null {
+  if (values.frequencyUnit !== "WEEK") return null;
+  const selected = WEEKDAYS.filter((day) => values.weekdays.includes(day));
+  return selected.length > 0 ? selected : null;
+}

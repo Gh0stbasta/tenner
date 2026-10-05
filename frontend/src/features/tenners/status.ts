@@ -1,6 +1,6 @@
 /** Display status of a Tenner (FRONTEND-003). */
 
-import { FREQUENCY_UNIT_LABELS } from "../../types/domain";
+import { FREQUENCY_UNIT_LABELS, WEEKDAY_LABELS } from "../../types/domain";
 import { daysBetween } from "../../utils/dates";
 import { formatDueIn, formatOverdue } from "../../utils/format";
 import type { Tenner } from "./schemas";
@@ -15,11 +15,16 @@ const NAMED_FREQUENCIES: Readonly<Record<string, string>> = {
   "YEAR:1": "Jährlich",
 };
 
-/** Human-readable frequency (SCHEDULING-001): "Täglich", "Alle 14 Tage", "Monatlich", "Alle 2 Jahre". */
+/** Human-readable frequency (SCHEDULING-001/002): "Täglich", "Alle 14 Tage", "Monatlich", "Wöchentlich (Di, Fr)". */
 export function frequencyLabel({
   frequencyUnit,
   frequencyInterval,
-}: Pick<Tenner, "frequencyUnit" | "frequencyInterval">): string {
+  weekdays = null,
+}: Pick<Tenner, "frequencyUnit" | "frequencyInterval"> & Partial<Pick<Tenner, "weekdays">>): string {
+  if (frequencyUnit === "WEEK" && weekdays !== null && weekdays.length > 0) {
+    const days = weekdays.map((day) => WEEKDAY_LABELS[day]).join(", ");
+    return frequencyInterval === 1 ? `Wöchentlich (${days})` : `Alle ${frequencyInterval} Wochen (${days})`;
+  }
   const named = NAMED_FREQUENCIES[`${frequencyUnit}:${frequencyInterval}`];
   if (named !== undefined) return named;
   // Every interval of 1 is named above.

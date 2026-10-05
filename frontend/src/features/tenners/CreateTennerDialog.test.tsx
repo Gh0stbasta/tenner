@@ -88,6 +88,44 @@ describe("CreateTennerDialog", () => {
     expect(await screen.findByText("Die Häufigkeit darf höchstens 3650 Tage (10 Jahre) betragen.")).toBeInTheDocument();
   });
 
+  it("offers weekday chips for weekly frequencies and sends them in ISO order (SCHEDULING-002)", async () => {
+    const fetchMock = mockFetch({ "POST /tenners": ok(tenner({ title: "Mülltonnen raus" }), 201) });
+    const { onClose } = renderDialog();
+    await userEvent.type(screen.getByRole("textbox", { name: "Titel" }), "Mülltonnen raus");
+    expect(screen.queryByRole("group", { name: "An Wochentagen (optional)" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Wöchentlich" }));
+    const weekdays = screen.getByRole("group", { name: "An Wochentagen (optional)" });
+    await userEvent.click(within(weekdays).getByRole("button", { name: "Fr" }));
+    await userEvent.click(within(weekdays).getByRole("button", { name: "Di" }));
+    expect(within(weekdays).getByRole("button", { name: "Di" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Wöchentlich" })).toHaveAttribute("aria-pressed", "false");
+    await waitFor(() => expect(submitButton()).toBeEnabled());
+    await userEvent.click(submitButton());
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(fetchMock.calls()[0]?.body).toMatchObject({
+      frequencyUnit: "WEEK",
+      frequencyInterval: 1,
+      weekdays: ["TUE", "FRI"],
+    });
+  });
+
+  it("drops weekdays when the unit is not weeks", async () => {
+    const fetchMock = mockFetch({ "POST /tenners": ok(tenner(), 201) });
+    const { onClose } = renderDialog();
+    await userEvent.type(screen.getByRole("textbox", { name: "Titel" }), "Gießen");
+    await userEvent.click(screen.getByRole("button", { name: "Wöchentlich" }));
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "An Wochentagen (optional)" })).getByRole("button", { name: "Sa" }),
+    );
+    await userEvent.click(screen.getByRole("combobox", { name: "Einheit" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Tage" }));
+    await waitFor(() => expect(submitButton()).toBeEnabled());
+    await userEvent.click(submitButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(fetchMock.calls()[0]?.body).toMatchObject({ frequencyUnit: "DAY", weekdays: null });
+  });
+
   it("creates the Tenner, closes, notifies and refreshes dashboard and lists", async () => {
     const fetchMock = mockFetch({ "POST /tenners": ok(tenner({ title: "Fenster putzen" }), 201) });
     const { queryClient, onClose } = renderDialog();
@@ -110,6 +148,7 @@ describe("CreateTennerDialog", () => {
       estimatedMinutes: 10,
       frequencyUnit: "MONTH",
       frequencyInterval: 3,
+      weekdays: null,
     });
     expect(await screen.findByText("✅ „Fenster putzen“ angelegt.")).toBeInTheDocument();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.dashboard });

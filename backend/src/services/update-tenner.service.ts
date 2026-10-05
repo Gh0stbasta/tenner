@@ -24,6 +24,7 @@ export class UpdateTennerService {
       frequencyDays: request.frequencyDays,
       frequencyUnit: request.frequencyUnit,
       frequencyInterval: request.frequencyInterval,
+      weekdays: request.weekdays,
       assignedTo: request.assignedTo,
       active: request.active,
       updatedAt: toUtcTimestamp(this.clock()),

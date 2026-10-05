@@ -42,3 +42,17 @@ export const APPROXIMATE_DAYS_PER_UNIT: Readonly<Record<FrequencyUnit, number>> 
   MONTH: 30,
   YEAR: 365,
 };
+
+/** Weekdays (SCHEDULING-002), Monday first. Mirrors backend/src/models/enums.ts. */
+export const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
+export type Weekday = (typeof WEEKDAYS)[number];
+
+export const WEEKDAY_LABELS: Readonly<Record<Weekday, string>> = {
+  MON: "Mo",
+  TUE: "Di",
+  WED: "Mi",
+  THU: "Do",
+  FRI: "Fr",
+  SAT: "Sa",
+  SUN: "So",
+};

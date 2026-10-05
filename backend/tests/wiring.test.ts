@@ -44,6 +44,7 @@ describe("createDependencies wiring", () => {
       frequencyDays: 14,
       frequencyUnit: "DAY",
       frequencyInterval: 14,
+      weekdays: null,
       assignedTo: "STEFAN",
     });
     const command = send.mock.calls.map(([c]) => c).find((c) => c instanceof PutCommand) as PutCommand;

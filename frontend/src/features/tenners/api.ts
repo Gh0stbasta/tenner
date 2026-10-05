@@ -4,7 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { z } from "zod";
 import { apiClient } from "../../api/client";
 import { queryKeys } from "../../api/queryKeys";
-import type { Category, FrequencyUnit, UserId } from "../../types/domain";
+import type { Category, FrequencyUnit, UserId, Weekday } from "../../types/domain";
 import { trackEvent } from "../../utils/telemetry";
 import { useCurrentUser } from "../completions/CurrentUserProvider";
 import { tennerSchema, type Tenner } from "./schemas";
@@ -114,6 +114,8 @@ interface TennerFields {
 export interface FrequencyFields {
   readonly frequencyUnit: FrequencyUnit;
   readonly frequencyInterval: number;
+  /** WEEK only (SCHEDULING-002); null otherwise. */
+  readonly weekdays: readonly Weekday[] | null;
 }
 
 /** Frequency in days only (DAY unit) or as unit + interval; the API accepts either, never both. */

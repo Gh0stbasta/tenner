@@ -84,8 +84,8 @@ describe("frequency validation", () => {
   });
 
   it("normalizes frequency changes in updates", () => {
-    expect(validate(updateTennerSchema, { frequencyUnit: "MONTH" })).toEqual({ frequencyUnit: "MONTH", frequencyInterval: 1, frequencyDays: 30 });
-    expect(validate(updateTennerSchema, { frequencyUnit: "WEEK", frequencyInterval: 2 })).toEqual({ frequencyUnit: "WEEK", frequencyInterval: 2, frequencyDays: 14 });
+    expect(validate(updateTennerSchema, { frequencyUnit: "MONTH" })).toEqual({ frequencyUnit: "MONTH", frequencyInterval: 1, frequencyDays: 30, weekdays: null });
+    expect(validate(updateTennerSchema, { frequencyUnit: "WEEK", frequencyInterval: 2 })).toEqual({ frequencyUnit: "WEEK", frequencyInterval: 2, frequencyDays: 14, weekdays: null });
     expect(fieldsOf(() => validate(updateTennerSchema, { frequencyInterval: 2 }))).toEqual(["frequencyUnit"]);
   });
 });

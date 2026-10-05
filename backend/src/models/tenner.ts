@@ -1,4 +1,4 @@
-import type { Category, FrequencyUnit, UserId } from "./enums.js";
+import type { Category, FrequencyUnit, UserId, Weekday } from "./enums.js";
 
 /** A recurring responsibility (stored in tenner-tenners). */
 export interface Tenner {
@@ -16,6 +16,11 @@ export interface Tenner {
   readonly frequencyUnit: FrequencyUnit;
   /** Number of units between due dates (≥ 1). Items stored before have none and are read as frequencyDays. */
   readonly frequencyInterval: number;
+  /**
+   * Weekdays the Tenner is due on (SCHEDULING-002), ISO order, only with frequencyUnit WEEK; null otherwise.
+   * Items stored before have none and are read as null.
+   */
+  readonly weekdays: readonly Weekday[] | null;
   readonly assignedTo: UserId;
   /** ISO 8601 UTC timestamp of the last completion, or null if never completed. */
   readonly lastCompleted: string | null;

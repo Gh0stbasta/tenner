@@ -17,7 +17,7 @@ function detailsOf(fn: () => unknown): { field: string; message: string }[] {
 
 describe("createTennerSchema", () => {
   it("accepts a valid request and trims the title", () => {
-    expect(validate(createTennerSchema, { ...valid, title: "  Vacuum Office  " })).toEqual({ ...valid, frequencyUnit: "DAY", frequencyInterval: 14 });
+    expect(validate(createTennerSchema, { ...valid, title: "  Vacuum Office  " })).toEqual({ ...valid, frequencyUnit: "DAY", frequencyInterval: 14, weekdays: null });
   });
 
   it.each([
@@ -55,7 +55,7 @@ describe("createTennerSchema", () => {
 
 describe("updateTennerSchema", () => {
   it("accepts a partial update", () => {
-    expect(validate(updateTennerSchema, { frequencyDays: 7 })).toEqual({ frequencyDays: 7, frequencyUnit: "DAY", frequencyInterval: 7 });
+    expect(validate(updateTennerSchema, { frequencyDays: 7 })).toEqual({ frequencyDays: 7, frequencyUnit: "DAY", frequencyInterval: 7, weekdays: null });
     expect(validate(updateTennerSchema, { title: "Vacuum" })).toEqual({ title: "Vacuum" });
   });
 

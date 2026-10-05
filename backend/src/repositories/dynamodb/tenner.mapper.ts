@@ -1,6 +1,6 @@
 /** Maps DynamoDB items to Tenner domain objects (explicit fields only; storage metadata is dropped). */
 
-import { FREQUENCY_UNITS, type Category, type FrequencyUnit, type Tenner, type UserId } from "../../models/index.js";
+import { FREQUENCY_UNITS, WEEKDAYS, type Category, type FrequencyUnit, type Tenner, type UserId, type Weekday } from "../../models/index.js";
 
 export type TennerItem = Record<string, unknown>;
 
@@ -9,6 +9,13 @@ const userIdOrNull = (value: unknown): UserId | null => (typeof value === "strin
 /** Items stored before SCHEDULING-001 have no unit: read them as DAY with interval = frequencyDays. */
 function frequencyUnitOf(value: unknown): FrequencyUnit {
   return (FREQUENCY_UNITS as readonly unknown[]).includes(value) ? (value as FrequencyUnit) : "DAY";
+}
+
+/** Stored weekdays in ISO order; null unless the unit is WEEK and at least one valid weekday is stored (SCHEDULING-002). */
+function weekdaysOf(value: unknown, unit: FrequencyUnit): Weekday[] | null {
+  if (unit !== "WEEK" || !Array.isArray(value)) return null;
+  const weekdays = WEEKDAYS.filter((day) => value.includes(day));
+  return weekdays.length > 0 ? weekdays : null;
 }
 
 export function toTenner(item: TennerItem): Tenner {
@@ -23,6 +30,7 @@ export function toTenner(item: TennerItem): Tenner {
     frequencyDays,
     frequencyUnit,
     frequencyInterval: item.frequencyUnit === frequencyUnit && typeof item.frequencyInterval === "number" ? item.frequencyInterval : frequencyDays,
+    weekdays: weekdaysOf(item.weekdays, frequencyUnit),
     assignedTo: item.assignedTo as UserId,
     lastCompleted: typeof item.lastCompleted === "string" ? item.lastCompleted : null,
     nextDue: String(item.nextDue),

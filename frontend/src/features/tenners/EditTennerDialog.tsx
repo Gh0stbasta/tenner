@@ -23,7 +23,7 @@ import { applyServerErrors } from "./applyServerErrors";
 import { DiscardChangesDialog } from "./DiscardChangesDialog";
 import type { Tenner } from "./schemas";
 import { TennerForm } from "./TennerForm";
-import { tennerFormSchema, type TennerFormValues } from "./tennerForm.schema";
+import { tennerFormSchema, weekdaysForApi, type TennerFormValues } from "./tennerForm.schema";
 
 export interface EditTennerDialogProps {
   /** The Tenner to edit; null closes the dialog. */
@@ -38,12 +38,22 @@ const FIELDS = [
   "estimatedMinutes",
   "frequencyInterval",
   "frequencyUnit",
+  "weekdays",
   "active",
 ] as const;
 
 function toFormValues(tenner: Tenner): TennerFormValues {
   const { title, category, assignedTo, estimatedMinutes, frequencyUnit, frequencyInterval, active } = tenner;
-  return { title, category, assignedTo, estimatedMinutes, frequencyUnit, frequencyInterval, active };
+  return {
+    title,
+    category,
+    assignedTo,
+    estimatedMinutes,
+    frequencyUnit,
+    frequencyInterval,
+    weekdays: [...(tenner.weekdays ?? [])],
+    active,
+  };
 }
 
 function formatTimestamp(value: string | null): string {
@@ -105,10 +115,11 @@ function EditTennerForm({ tenner, onClose }: { readonly tenner: Tenner; readonly
     for (const field of FIELDS) {
       if (dirtyFields[field]) changes[field] = values[field];
     }
-    // The API needs the unit with every interval change (SCHEDULING-001), so the frequency is sent as a pair.
-    if (dirtyFields.frequencyUnit || dirtyFields.frequencyInterval) {
+    // The API needs unit, interval and weekdays together (SCHEDULING-001/002), so the frequency is sent as a group.
+    if (dirtyFields.frequencyUnit || dirtyFields.frequencyInterval || dirtyFields.weekdays) {
       changes.frequencyUnit = values.frequencyUnit;
       changes.frequencyInterval = values.frequencyInterval;
+      changes.weekdays = weekdaysForApi(values);
     }
     update.mutate(
       { tennerId: tenner.tennerId, update: changes as TennerUpdate },

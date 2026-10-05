@@ -114,5 +114,5 @@ export class CompleteTennerService {
  * Tenner's frequency via calculateNextDue (SCHEDULING-001). Calendar arithmetic is DST-safe.
  */
 export function nextDueAfter(completedAt: string, frequency: Frequency, timezone: string): string {
-  return calculateNextDue(dateInTimeZone(new Date(completedAt), timezone), frequency.frequencyUnit, frequency.frequencyInterval);
+  return calculateNextDue(dateInTimeZone(new Date(completedAt), timezone), frequency.frequencyUnit, frequency.frequencyInterval, frequency.weekdays);
 }

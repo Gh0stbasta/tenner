@@ -8,7 +8,7 @@ import { mockLogger, mockTennerRepository, TEST_IDENTITY, testIdentity } from ".
 const NOW = new Date("2026-10-01T18:30:15.123Z");
 const ID = "5c2bfd9b-c8d1-4ab7-af57-b1dfe6ddbf05";
 /** Validated (normalized) request as the service receives it. */
-const request = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14, frequencyUnit: "DAY", frequencyInterval: 14, assignedTo: "STEFAN" } as const;
+const request = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14, frequencyUnit: "DAY", frequencyInterval: 14, weekdays: null, assignedTo: "STEFAN" } as const;
 
 function service() {
   const repository = mockTennerRepository();

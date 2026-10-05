@@ -80,6 +80,7 @@ describe("EditTennerDialog", () => {
       title: "Büro gründlich saugen",
       frequencyUnit: "MONTH",
       frequencyInterval: 1,
+      weekdays: null,
     });
     expect(await screen.findByText("✅ Tenner aktualisiert.")).toBeInTheDocument();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.dashboard });
@@ -95,7 +96,29 @@ describe("EditTennerDialog", () => {
     await waitFor(() => expect(saveButton()).toBeEnabled());
     await userEvent.click(saveButton());
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls()[0]?.body).toEqual({ frequencyUnit: "DAY", frequencyInterval: 21 });
+    expect(fetchMock.calls()[0]?.body).toEqual({ frequencyUnit: "DAY", frequencyInterval: 21, weekdays: null });
+  });
+
+  it("loads and changes weekdays of a weekday-bound Tenner (SCHEDULING-002)", async () => {
+    const fetchMock = mockFetch({ "PUT /tenners/t-9": ok({ ...EXISTING, weekdays: ["SAT", "SUN"] }) });
+    const { onClose } = renderDialog({
+      ...EXISTING,
+      frequencyUnit: "WEEK",
+      frequencyInterval: 1,
+      frequencyDays: 7,
+      weekdays: ["SAT"],
+    });
+    const weekdays = screen.getByRole("group", { name: "An Wochentagen (optional)" });
+    expect(within(weekdays).getByRole("button", { name: "Sa" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(within(weekdays).getByRole("button", { name: "So" }));
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(fetchMock.calls()[0]?.body).toEqual({
+      frequencyUnit: "WEEK",
+      frequencyInterval: 1,
+      weekdays: ["SAT", "SUN"],
+    });
   });
 
   it("deactivates through the Active toggle", async () => {

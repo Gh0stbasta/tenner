@@ -55,8 +55,8 @@ export class SnoozeTennerService {
 }
 
 /** Latest allowed snooze date: one frequency interval or 30 days from today, whichever is later. */
-export function maxSnoozeDate(today: string, tenner: Pick<Tenner, "frequencyUnit" | "frequencyInterval">): string {
-  const oneInterval = calculateNextDue(today, tenner.frequencyUnit, tenner.frequencyInterval);
+export function maxSnoozeDate(today: string, tenner: Pick<Tenner, "frequencyUnit" | "frequencyInterval"> & Partial<Pick<Tenner, "weekdays">>): string {
+  const oneInterval = calculateNextDue(today, tenner.frequencyUnit, tenner.frequencyInterval, tenner.weekdays);
   const minimum = addDays(today, MIN_MAX_SNOOZE_DAYS);
   return oneInterval > minimum ? oneInterval : minimum;
 }

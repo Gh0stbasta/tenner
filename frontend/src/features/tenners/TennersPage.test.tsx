@@ -270,4 +270,15 @@ describe("frequencyLabel", () => {
   ] as const)("labels %s × %i as %s (SCHEDULING-001)", (frequencyUnit, frequencyInterval, label) => {
     expect(frequencyLabel({ frequencyUnit, frequencyInterval })).toBe(label);
   });
+
+  it("lists weekdays for weekday-bound frequencies (SCHEDULING-002)", () => {
+    expect(frequencyLabel({ frequencyUnit: "WEEK", frequencyInterval: 1, weekdays: ["SAT"] })).toBe("Wöchentlich (Sa)");
+    expect(frequencyLabel({ frequencyUnit: "WEEK", frequencyInterval: 1, weekdays: ["TUE", "FRI"] })).toBe(
+      "Wöchentlich (Di, Fr)",
+    );
+    expect(frequencyLabel({ frequencyUnit: "WEEK", frequencyInterval: 2, weekdays: ["FRI"] })).toBe(
+      "Alle 2 Wochen (Fr)",
+    );
+    expect(frequencyLabel({ frequencyUnit: "WEEK", frequencyInterval: 1, weekdays: null })).toBe("Wöchentlich");
+  });
 });

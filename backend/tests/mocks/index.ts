@@ -106,6 +106,7 @@ export function tennerFixture(overrides: Partial<Tenner> = {}): Tenner {
     frequencyDays: 14,
     frequencyUnit: "DAY",
     frequencyInterval: 14,
+    weekdays: null,
     assignedTo: "STEFAN",
     lastCompleted: null,
     nextDue: "2026-10-01",

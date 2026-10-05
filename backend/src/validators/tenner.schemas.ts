@@ -23,12 +23,14 @@ import {
   frequencyDaysSchema,
   frequencyIntervalSchema,
   frequencyUnitSchema,
+  weekdaysSchema,
   titleSchema,
   userIdSchema,
   utcTimestampSchema,
 } from "./common.js";
 import { isValidTimeZone } from "../utils/timezone.js";
 import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
+import { WEEKDAYS, type Weekday } from "../models/index.js";
 
 const tennerFields = {
   title: titleSchema,
@@ -37,6 +39,7 @@ const tennerFields = {
   frequencyDays: frequencyDaysSchema.optional(),
   frequencyUnit: frequencyUnitSchema.optional(),
   frequencyInterval: frequencyIntervalSchema.optional(),
+  weekdays: weekdaysSchema.nullable().optional(),
   assignedTo: userIdSchema,
 };
 
@@ -44,17 +47,25 @@ interface FrequencyInput {
   readonly frequencyDays?: number | undefined;
   readonly frequencyUnit?: Frequency["frequencyUnit"] | undefined;
   readonly frequencyInterval?: number | undefined;
+  readonly weekdays?: readonly Weekday[] | null | undefined;
 }
 
-type NormalizedFrequency = Frequency & { readonly frequencyDays: number };
+type NormalizedFrequency = Required<Frequency> & { readonly frequencyDays: number };
 
 /**
  * Normalize the frequency fields (SCHEDULING-001): `frequencyDays` alone → DAY with interval = days (requests
  * from before SCHEDULING-001 stay valid); `frequencyUnit` (+ `frequencyInterval`, default 1) → derived
  * frequencyDays. Mixing both forms is rejected so a client can never send contradicting values.
+ * `weekdays` (SCHEDULING-002) is only valid with frequencyUnit WEEK in the same request; every frequency change
+ * without weekdays resets them to null.
  */
 function normalizeFrequency(value: FrequencyInput, ctx: z.RefinementCtx): NormalizedFrequency | undefined {
   const { frequencyDays, frequencyUnit, frequencyInterval } = value;
+  const weekdays = value.weekdays ? WEEKDAYS.filter((day) => value.weekdays?.includes(day)) : null;
+  if ((weekdays !== null && frequencyUnit !== "WEEK") || (value.weekdays !== undefined && frequencyUnit === undefined)) {
+    ctx.addIssue({ code: "custom", path: ["weekdays"], message: "weekdays require frequencyUnit WEEK in the same request." });
+    return undefined;
+  }
   if (frequencyDays !== undefined && (frequencyUnit !== undefined || frequencyInterval !== undefined)) {
     ctx.addIssue({ code: "custom", path: ["frequencyDays"], message: "Use either frequencyDays or frequencyUnit with frequencyInterval." });
     return undefined;
@@ -63,15 +74,14 @@ function normalizeFrequency(value: FrequencyInput, ctx: z.RefinementCtx): Normal
     ctx.addIssue({ code: "custom", path: ["frequencyUnit"], message: "frequencyUnit is required with frequencyInterval." });
     return undefined;
   }
-  if (frequencyDays !== undefined) return { frequencyDays, frequencyUnit: "DAY", frequencyInterval: frequencyDays };
+  if (frequencyDays !== undefined) return { frequencyDays, frequencyUnit: "DAY", frequencyInterval: frequencyDays, weekdays: null };
   if (frequencyUnit === undefined) return undefined;
   const interval = frequencyInterval ?? 1;
-  const days = approximateFrequencyDays(frequencyUnit, interval);
-  if (days > MAX_FREQUENCY_DAYS) {
+  if (approximateFrequencyDays(frequencyUnit, interval) > MAX_FREQUENCY_DAYS) {
     ctx.addIssue({ code: "custom", path: ["frequencyInterval"], message: `The frequency must not exceed ${MAX_FREQUENCY_DAYS} days.` });
     return undefined;
   }
-  return { frequencyDays: days, frequencyUnit, frequencyInterval: interval };
+  return { frequencyDays: approximateFrequencyDays(frequencyUnit, interval, weekdays), frequencyUnit, frequencyInterval: interval, weekdays };
 }
 
 /** The request without the raw frequency fields (they are replaced by the normalized ones). */
@@ -80,6 +90,7 @@ function omitFrequency<T extends FrequencyInput>(value: T): Omit<T, keyof Freque
   delete rest.frequencyDays;
   delete rest.frequencyUnit;
   delete rest.frequencyInterval;
+  delete rest.weekdays;
   return rest as Omit<T, keyof FrequencyInput>;
 }
 

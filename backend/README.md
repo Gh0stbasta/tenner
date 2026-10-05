@@ -100,7 +100,7 @@ The assignment is logged as `HouseholdMemberAssigned` with the Cognito username,
 
 | Model | Fields |
 |---|---|
-| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `frequencyUnit`, `frequencyInterval`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `snoozedUntil` (YYYY-MM-DD or null, SCHEDULING-003), `active`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy` |
+| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `frequencyUnit`, `frequencyInterval`, `weekdays`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `snoozedUntil` (YYYY-MM-DD or null, SCHEDULING-003), `active`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy` |
 | `Completion` | `tenantId`, `completionId` (stored as `historyId`), `tennerId`, `completedBy`, `recordedBy`, `completedAt`, `actualMinutes` |
 
 `createdBy`, `updatedBy` and `recordedBy` are set from the authenticated user (SECURITY-004). Records written before
@@ -123,11 +123,14 @@ Zod schemas are in `src/validators/`. The limits are centralized in `LIMITS`:
 | `frequencyDays` | integer, 1–3650. Alone it means unit `DAY` with that interval |
 | `frequencyUnit` | `DAY`, `WEEK`, `MONTH`, `YEAR` (SCHEDULING-001) |
 | `frequencyInterval` | integer ≥ 1, default 1; only with `frequencyUnit`; at most 3650 approximate days (e.g. 10 years) |
+| `weekdays` | `null` or 1–7 distinct values of `MON`..`SUN` (SCHEDULING-002); only with `frequencyUnit: "WEEK"` in the same request. Normalized to ISO order |
 
 Send either `frequencyDays` or `frequencyUnit` (+ `frequencyInterval`), not both (400 otherwise). The validator
 normalizes every request to all three fields; for `MONTH`/`YEAR`, `frequencyDays` is an approximation (30/365 per
 unit) for analytics only. Due dates come from `calculateNextDue` (`src/utils/schedule.ts`): months and years keep
-the calendar day and clamp to the month end (31 Jan + 1 month → 28/29 Feb).
+the calendar day and clamp to the month end (31 Jan + 1 month → 28/29 Feb). With `weekdays`, the next due date is
+the first listed weekday after `completed date + (interval − 1) weeks` (every Saturday, completed Monday → that
+Saturday); `frequencyDays` is then the average gap.
 | `actualMinutes` | integer, 1–1440 |
 | `completedAt` | ISO 8601 UTC timestamp (`Z`, no offset) |
 | `category`, `assignedTo`, `completedBy` | enumeration values |

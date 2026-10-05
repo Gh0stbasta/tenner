@@ -446,10 +446,16 @@ Any interval up to 10 years is allowed (e.g. every 2 weeks, every 6 months).
   `scripts/backfill_frequency_unit.py` optionally writes these values (dry run by default, conditional and
   idempotent).
 - Changing the frequency does not move `nextDue`; it applies from the next completion.
+- **Weekdays (SCHEDULING-002):** WEEK frequencies may list `weekdays` (`MON`..`SUN`, stored in ISO order). Then
+  `nextDue` is the first date after `completedDate + (interval − 1) weeks` whose weekday is listed: every Saturday,
+  completed Mon 2026-10-05 → Sat 2026-10-10; every Tue + Fri, completed Tue 2026-10-06 → Fri 2026-10-09;
+  every second Friday, completed Fri 2026-10-02 → Fri 2026-10-16. It stays completion-based.
+  `frequencyDays` becomes the average gap (7 × interval / number of weekdays, e.g. Tue + Fri → 4).
+  `weekdays` is only valid with `WEEK` in the same request; any frequency change without it resets it to `null`.
 
 No cron expressions.
 
-No weekday rules (SCHEDULING-002) and no fixed-schedule (non-completion-based) recurrence.
+No "nth weekday of month" rules and no fixed-schedule (non-completion-based) recurrence.
 
 ---
 

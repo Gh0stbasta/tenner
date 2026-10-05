@@ -1,6 +1,6 @@
 /** API contracts for Tenners. Requests are produced by validators (see validators/). */
 
-import type { Category, FrequencyUnit, Tenner, UserId } from "../models/index.js";
+import type { Category, FrequencyUnit, Tenner, UserId, Weekday } from "../models/index.js";
 
 /**
  * Validated create request. The frequency is normalized by the validator (SCHEDULING-001): clients send either
@@ -13,6 +13,8 @@ export interface CreateTennerRequest {
   readonly frequencyDays: number;
   readonly frequencyUnit: FrequencyUnit;
   readonly frequencyInterval: number;
+  /** WEEK only (SCHEDULING-002); null for every other frequency. */
+  readonly weekdays: readonly Weekday[] | null;
   readonly assignedTo: UserId;
 }
 
@@ -35,6 +37,7 @@ export interface TennerResponse {
   readonly frequencyDays: number;
   readonly frequencyUnit: FrequencyUnit;
   readonly frequencyInterval: number;
+  readonly weekdays: readonly Weekday[] | null;
   readonly assignedTo: UserId;
   readonly lastCompleted: string | null;
   readonly nextDue: string;
@@ -75,6 +78,7 @@ export function toTennerResponse(tenner: Tenner): TennerResponse {
     frequencyDays: tenner.frequencyDays,
     frequencyUnit: tenner.frequencyUnit,
     frequencyInterval: tenner.frequencyInterval,
+    weekdays: tenner.weekdays,
     assignedTo: tenner.assignedTo,
     lastCompleted: tenner.lastCompleted,
     nextDue: tenner.nextDue,

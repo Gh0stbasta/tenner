@@ -28,7 +28,7 @@ export interface SoftDeleteResult {
 
 /** Fields that may change through an update, plus the new updatedAt timestamp (TICKET-011). */
 export type TennerUpdate = {
-  readonly [K in "title" | "category" | "estimatedMinutes" | "frequencyDays" | "frequencyUnit" | "frequencyInterval" | "assignedTo" | "active"]?: Tenner[K] | undefined;
+  readonly [K in "title" | "category" | "estimatedMinutes" | "frequencyDays" | "frequencyUnit" | "frequencyInterval" | "weekdays" | "assignedTo" | "active"]?: Tenner[K] | undefined;
 } & { readonly updatedAt: string; readonly updatedBy: UserId };
 
 /**
