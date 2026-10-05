@@ -73,3 +73,17 @@ One entry per household member from the member list (single source of truth, dea
 | `assignedOverdue` | Of those, overdue *now* (not paused) |
 | `completedForOthers` | Completions by the member of Tenners *now* assigned to another member (shared and deleted Tenners do not count) |
 | `shared.assignedActive`, `shared.assignedOverdue` | The same counts for shared Tenners (`HOUSEHOLD`), which belong to nobody |
+
+## Categories — `GET /analytics/categories` (ANALYTICS-004)
+
+Every household category (HOUSEHOLD-ADMIN-002) in display order, archived ones included (`archived: true`), also
+without activity. Completions count for the Tenner's *current* category; completions of deleted Tenners have no
+category and are left out.
+
+| Metric | Definition |
+|---|---|
+| `activeTenners` | Active Tenners in the category *now* |
+| `completions`, `actualMinutes` | Completions in the period and their minutes |
+| `shareOfMinutes` | Category minutes ÷ minutes of all categories (the shares sum to 1); `null` without minutes |
+| `overdueNow` | Active Tenners overdue *now* (not paused) |
+| `healthScore` | `1 − overdueNow ÷ activeTenners`; `null` without active Tenners |

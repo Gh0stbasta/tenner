@@ -2,7 +2,7 @@
  * Pure analytics aggregations (ANALYTICS-001 ff.): no I/O, no clock. Metric definitions: docs/analytics.md.
  */
 
-import { SHARED_ASSIGNEE, type Category, type HouseholdMember, type Tenner, type UserId, type Vacation, type WeekStart } from "../models/index.js";
+import { SHARED_ASSIGNEE, type Category, type HouseholdCategory, type HouseholdMember, type Tenner, type UserId, type Vacation, type WeekStart } from "../models/index.js";
 import { addDays } from "../utils/clock.js";
 import { addMonths } from "../utils/schedule.js";
 import { isPaused } from "../utils/pause.js";
@@ -199,5 +199,63 @@ export function userMetrics(
       };
     }),
     shared: { assignedActive: assigned(SHARED_ASSIGNEE).length, assignedOverdue: overdue(assigned(SHARED_ASSIGNEE)) },
+  };
+}
+
+export interface CategoryMetrics {
+  readonly category: Category;
+  readonly name: string;
+  readonly archived: boolean;
+  readonly activeTenners: number;
+  readonly completions: number;
+  readonly actualMinutes: number;
+  /** Category minutes ÷ minutes of all categories; null without minutes. */
+  readonly shareOfMinutes: number | null;
+  readonly overdueNow: number;
+  /** 1 − overdue ÷ active Tenners; null without active Tenners. */
+  readonly healthScore: number | null;
+}
+
+export interface CategoriesMetrics {
+  readonly period: { readonly from: string; readonly to: string };
+  readonly categories: readonly CategoryMetrics[];
+}
+
+/**
+ * GET /analytics/categories (ANALYTICS-004): every household category in display order (archived ones too), grouped
+ * by the Tenner's current category. Completions of deleted Tenners have no category and are left out.
+ */
+export function categoryMetrics(
+  completions: readonly AnalyticsCompletion[],
+  tenners: readonly Tenner[],
+  categories: readonly HouseholdCategory[],
+  period: Period,
+  context: AnalyticsContext,
+): CategoriesMetrics {
+  const categoryOf = new Map(tenners.map((tenner) => [tenner.tennerId, tenner.category]));
+  const minutesOf = (category: Category) => sumMinutes(completions.filter((completion) => categoryOf.get(completion.tennerId) === category));
+  const known = new Set(categories.map((category) => category.categoryId));
+  const totalMinutes = sumMinutes(completions.filter((completion) => known.has(categoryOf.get(completion.tennerId) ?? "")));
+  return {
+    period: { from: period.from, to: period.to },
+    categories: [...categories]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((category) => {
+        const id = category.categoryId;
+        const active = tenners.filter((tenner) => isActiveTenner(tenner) && tenner.category === id);
+        const overdue = active.filter((tenner) => isOverdue(tenner, context)).length;
+        const minutes = minutesOf(id);
+        return {
+          category: id,
+          name: category.name,
+          archived: category.archived,
+          activeTenners: active.length,
+          completions: completions.filter((completion) => categoryOf.get(completion.tennerId) === id).length,
+          actualMinutes: minutes,
+          shareOfMinutes: ratio(minutes, totalMinutes),
+          overdueNow: overdue,
+          healthScore: active.length === 0 ? null : ratio(active.length - overdue, active.length),
+        };
+      }),
   };
 }

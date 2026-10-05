@@ -96,6 +96,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     endHandover: vi.fn(async () => ({ returned: 3 })),
     analyticsTrends: vi.fn(async () => ({ granularity: "week" as const, period: { from: "a", to: "b" }, buckets: [], comparison: { previousPeriod: { from: "a", to: "b" }, previousPeriodCompletions: 0, changePercent: null } })),
     analyticsUsers: vi.fn(async () => ({ period: { from: "a", to: "b" }, users: [], shared: { assignedActive: 0, assignedOverdue: 0 } })),
+    analyticsCategories: vi.fn(async () => ({ period: { from: "a", to: "b" }, categories: [] })),
     analyticsSummary: vi.fn(async () => ({ period: { from: "2026-09-06", to: "2026-10-05" }, completions: 0, totalActualMinutes: 0, activeTenners: 0, distinctTennersCompleted: 0, overdueNow: 0, onTimeRate: null, onTimeSamples: 0 })),
     listCategories: vi.fn(async () => [{ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: false }]),
     createCategory: vi.fn(async () => ({ categoryId: "GARDEN", name: "Garten", icon: "GARDEN" as const, color: "GREEN" as const, sortOrder: 6, archived: false })),
@@ -692,5 +693,11 @@ describe("analytics routes (ANALYTICS-001)", () => {
     expect((await route(event("GET /analytics/users", {}, undefined, { period: "month" }), d)).statusCode).toBe(200);
     expect(d.analyticsUsers).toHaveBeenCalledWith("default", { period: "month" });
     expect((await route(event("GET /analytics/users", {}, undefined, { granularity: "day" }), d)).statusCode).toBe(400);
+  });
+
+  it("serves category metrics (ANALYTICS-004)", async () => {
+    const d = deps();
+    expect((await route(event("GET /analytics/categories", {}, undefined, { period: "year" }), d)).statusCode).toBe(200);
+    expect(d.analyticsCategories).toHaveBeenCalledWith("default", { period: "year" });
   });
 });

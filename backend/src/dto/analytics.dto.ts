@@ -1,7 +1,7 @@
 /** GET /analytics/* contracts (ANALYTICS-001 ff.). Metric definitions: docs/analytics.md. */
 
 import type { PeriodRequest } from "../analytics/period.js";
-import type { Granularity, SummaryMetrics, TennerFilter, TrendMetrics, UsersMetrics } from "../analytics/aggregations.js";
+import type { CategoriesMetrics, Granularity, SummaryMetrics, TennerFilter, TrendMetrics, UsersMetrics } from "../analytics/aggregations.js";
 
 /** Query of every period-based analytics endpoint. */
 export type AnalyticsPeriodRequest = PeriodRequest;
@@ -17,3 +17,6 @@ export type AnalyticsTrendsResponse = TrendMetrics;
 
 /** GET /analytics/users (ANALYTICS-003). */
 export type AnalyticsUsersResponse = UsersMetrics;
+
+/** GET /analytics/categories (ANALYTICS-004). */
+export type AnalyticsCategoriesResponse = CategoriesMetrics;

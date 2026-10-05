@@ -87,7 +87,7 @@ import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
 import { SEED_CATEGORIES, SEED_MEMBERS, type Handover, type HouseholdCategory, type HouseholdMember, type Vacation } from "./models/index.js";
 import { createLogger, errorFields, type Logger } from "./utils/logger.js";
-import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, HouseholdResponse } from "./dto/index.js";
+import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, HouseholdResponse } from "./dto/index.js";
 import { analyticsPeriodSchema, analyticsTrendsSchema } from "./validators/index.js";
 
 /** Dependencies shared by all handlers; replaced in tests. */
@@ -129,6 +129,7 @@ export interface Dependencies {
   readonly analyticsSummary: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsSummaryResponse>;
   readonly analyticsTrends: AnalyticsQuery<AnalyticsTrendsRequest, AnalyticsTrendsResponse>;
   readonly analyticsUsers: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsUsersResponse>;
+  readonly analyticsCategories: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsCategoriesResponse>;
 }
 
 /** Per-request context passed to route handlers. */
@@ -198,6 +199,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /analytics/summary": ({ event, deps, logger, identity }) => analyticsHandler("summary", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsSummary, logger),
   "GET /analytics/trends": ({ event, deps, logger, identity }) => analyticsHandler("trends", analyticsTrendsSchema, event, identity.tenantId, deps.analyticsTrends, logger),
   "GET /analytics/users": ({ event, deps, logger, identity }) => analyticsHandler("users", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsUsers, logger),
+  "GET /analytics/categories": ({ event, deps, logger, identity }) => analyticsHandler("categories", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsCategories, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -251,7 +253,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   // ANALYTICS-001: effective settings (timezone, week start, vacation); defaults without the households table.
   const settingsOf = (tenantId: string): Promise<HouseholdResponse> =>
     householdService?.settingsOf(tenantId) ?? Promise.resolve(toHouseholdResponse(undefined, config.timezone));
-  const analyticsService = tennerRepository && completionRepository ? new AnalyticsService(tennerRepository, completionRepository, settingsOf, systemClock, membersOf) : undefined;
+  const analyticsService = tennerRepository && completionRepository ? new AnalyticsService(tennerRepository, completionRepository, settingsOf, systemClock, membersOf, categoriesOf) : undefined;
   const onboarding = config.onboarding;
   const membershipRepository = onboarding ? new CognitoHouseholdMembershipRepository(getCognitoClient(), onboarding.userPoolId) : undefined;
   const householdAssignmentService = onboarding && membershipRepository ? new HouseholdAssignmentService(membershipRepository, onboarding.tenantId, membersOf) : undefined;
@@ -303,6 +305,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     analyticsSummary: analyticsService ? (tenantId, request) => analyticsService.summary(tenantId, request) : notConfigured,
     analyticsTrends: analyticsService ? (tenantId, request) => analyticsService.trends(tenantId, request) : notConfigured,
     analyticsUsers: analyticsService ? (tenantId, request) => analyticsService.users(tenantId, request) : notConfigured,
+    analyticsCategories: analyticsService ? (tenantId, request) => analyticsService.categories(tenantId, request) : notConfigured,
   };
 }
 
