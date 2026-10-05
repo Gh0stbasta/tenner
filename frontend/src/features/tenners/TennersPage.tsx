@@ -10,7 +10,7 @@ import { NoTennersFound } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
-import { todayIsoDate } from "../../utils/dates";
+import { useToday } from "../household/api";
 import { formatMinutes } from "../../utils/format";
 import { trackEvent } from "../../utils/telemetry";
 import { DEFAULT_LIST_PARAMS, useArchiveTenner, useRestoreTenner, useTenners, type TennerListParams } from "./api";
@@ -40,7 +40,7 @@ export function TennersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Tenner | null>(null);
   const debouncedSearch = useDebouncedValue(search.trim().toLocaleLowerCase("de-DE"), SEARCH_DEBOUNCE_MS);
-  const today = todayIsoDate();
+  const today = useToday();
 
   const tenners = useTenners(params);
   const archive = useArchiveTenner();

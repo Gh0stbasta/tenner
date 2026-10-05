@@ -156,3 +156,36 @@ npm run test
 
 - Per-user timezones (notifications use user timezone, NOTIFICATION-002)
 - Time-of-day due times
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Due dates computed in household local time: create (`nextDue` = local today), complete
+  (`local date(completedAt) + frequencyDays`), undo (restored dates local), `GET /tenners?due|overdue`
+- [x] Dashboard "today" follows local midnight of the household timezone
+- [x] DST transitions handled: dates come from `Intl` (IANA rules), day arithmetic is calendar-only
+- [x] Timezone configurable: `GET`/`PUT /household`, Settings → "Zeitzone des Haushalts" (Autocomplete of
+  `Intl.supportedValuesOf("timeZone")`); unknown or malformed names → 400
+- [x] Date semantics documented (`docs/architecture.md` → "Date semantics"); TD-005 resolved
+- [x] Tests passing: backend 462 (incl. just after/before local midnight, DST start/end, dashboard today boundary,
+  non-default timezone, invalid timezone rejected), frontend 229, Terraform 51; lint and build clean
+- [ ] Deploys through GitHub Actions: requires the deploy role to manage the new table `tenner-households`
+  (README → "CI Permissions"), verified after merge
+
+Decisions and assumptions:
+
+- Storage: new DynamoDB table `tenner-households` (PK `tenantId`), because HOUSEHOLD-ADMIN-003 does not exist
+  and an environment variable could not be edited from Settings. Same protections as the other tables
+  (SSE, PITR, deletion protection, `prevent_destroy`). Cost: on-demand, negligible.
+- Central access: `TimeZoneSource = (tenantId) => Promise<string>` (`HouseholdService.timezoneOf`); without a stored
+  value `APPLICATION_TIMEZONE` (default `Europe/Berlin`) applies. One extra GetItem per scheduling request.
+- Date library: none. The platform `Intl` API carries the IANA database in Node.js 22 and browsers; the only
+  operation needed is "calendar date of an instant in a zone", so a dependency adds no value.
+- Any household member may change the timezone (no admin role exists yet); changes are logged as
+  `HouseholdTimezoneChanged`. Stored `nextDue` values are not recomputed.
+- Migration: none; pre-change values may be one day early (see architecture).
+
+Technical debt: TD-026 (history date filters still use UTC days).

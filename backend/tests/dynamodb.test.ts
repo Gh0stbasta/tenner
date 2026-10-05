@@ -2,17 +2,17 @@ import { GetCommand } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it, vi } from "vitest";
 import { getDocumentClient, PROBE_KEY, probeTables, type DocumentSender } from "../src/clients/dynamodb.js";
 
-const tables = { tenners: "tenner-tenners", history: "tenner-history" };
+const tables = { tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" };
 
 function sender(impl: DocumentSender["send"]): DocumentSender & { send: ReturnType<typeof vi.fn> } {
   return { send: vi.fn(impl) };
 }
 
 describe("probeTables", () => {
-  it("returns true when both tables answer", async () => {
+  it("returns true when all tables answer", async () => {
     const client = sender(async () => ({}));
     await expect(probeTables(client, tables)).resolves.toBe(true);
-    expect(client.send).toHaveBeenCalledTimes(2);
+    expect(client.send).toHaveBeenCalledTimes(3);
   });
 
   it("reads a non-existent probe key from each configured table", async () => {
@@ -22,6 +22,7 @@ describe("probeTables", () => {
     expect(inputs).toEqual([
       { TableName: "tenner-tenners", Key: { ...PROBE_KEY, tennerId: "__healthcheck__" } },
       { TableName: "tenner-history", Key: { ...PROBE_KEY, historyId: "__healthcheck__" } },
+      { TableName: "tenner-households", Key: { ...PROBE_KEY } },
     ]);
   });
 

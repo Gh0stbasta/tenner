@@ -36,6 +36,6 @@ describe("health", () => {
   it("passes the configured table names to the probe", async () => {
     const probe = vi.fn(async () => true);
     await health(config, probe, logger());
-    expect(probe).toHaveBeenCalledWith({ tenners: "tenner-tenners", history: "tenner-history" });
+    expect(probe).toHaveBeenCalledWith({ tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" });
   });
 });

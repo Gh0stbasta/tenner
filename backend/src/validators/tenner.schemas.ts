@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   TENNER_SORT_FIELDS,
   type AssignHouseholdMemberRequest,
+  type UpdateHouseholdRequest,
   type CompleteTennerRequest,
   type DashboardRequest,
   type HistoryRequest,
@@ -23,6 +24,7 @@ import {
   userIdSchema,
   utcTimestampSchema,
 } from "./common.js";
+import { isValidTimeZone } from "../utils/timezone.js";
 
 export const createTennerSchema = z.strictObject({
   title: titleSchema,
@@ -116,3 +118,13 @@ export const tennerHistoryQuerySchema = z.strictObject({
 
 /** POST /onboarding/assignment (HOTFIX-001). */
 export const assignHouseholdMemberSchema = z.strictObject({ userId: userIdSchema }) satisfies z.ZodType<AssignHouseholdMemberRequest>;
+
+/** PUT /household (SCHEDULING-008): an IANA timezone the runtime knows; unknown fields rejected. */
+export const updateHouseholdSchema = z.strictObject({
+  timezone: z
+    .string()
+    .trim()
+    .min(1)
+    .max(64)
+    .refine((value) => /^[A-Za-z0-9_+\-/]+$/.test(value) && isValidTimeZone(value), { message: "Unknown timezone." }),
+}) satisfies z.ZodType<UpdateHouseholdRequest>;

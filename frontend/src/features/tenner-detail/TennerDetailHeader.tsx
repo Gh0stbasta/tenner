@@ -4,7 +4,7 @@ import UnarchiveOutlinedIcon from "@mui/icons-material/UnarchiveOutlined";
 import { Button, Chip, Stack } from "@mui/material";
 import { PageHeader } from "../../components/PageHeader";
 import { CATEGORY_LABELS, USER_LABELS } from "../../types/domain";
-import { todayIsoDate } from "../../utils/dates";
+import { useToday } from "../household/api";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
 import type { Tenner } from "../tenners/schemas";
 import { tennerStatus } from "../tenners/status";
@@ -19,7 +19,8 @@ export interface TennerDetailHeaderProps {
 }
 
 export function TennerDetailHeader({ tenner, busy, onEdit, onArchive, onRestore }: TennerDetailHeaderProps) {
-  const status = tennerStatus(tenner, todayIsoDate());
+  const today = useToday();
+  const status = tennerStatus(tenner, today);
   const archived = status.kind === "archived";
   return (
     <PageHeader

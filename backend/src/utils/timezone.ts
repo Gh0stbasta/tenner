@@ -19,6 +19,12 @@ export function dateInTimeZone(instant: Date, timeZone: string): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+/**
+ * Household timezone of a tenant (SCHEDULING-008). Every "today" and every completion date is a calendar date in
+ * this timezone. Resolved per request; falls back to the configured default when the household has none.
+ */
+export type TimeZoneSource = (tenantId: string) => Promise<string>;
+
 /** Whole days from `from` to `to` (both YYYY-MM-DD); negative if `to` is earlier. */
 export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);

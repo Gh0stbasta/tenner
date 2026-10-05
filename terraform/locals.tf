@@ -52,6 +52,8 @@ locals {
     "GET /tenners/{tennerId}/history",          # TICKET-020
     "GET /onboarding",                          # HOTFIX-001 (signed in, no household needed)
     "POST /onboarding/assignment",              # HOTFIX-001
+    "GET /household",                           # SCHEDULING-008
+    "PUT /household",                           # SCHEDULING-008
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.
@@ -93,6 +95,8 @@ locals {
   # Persistence layer (TICKET-006).
   tenners_table_name = "${local.name_prefix}-tenners"
   history_table_name = "${local.name_prefix}-history"
+  # Household settings, one item per tenant (SCHEDULING-008; extended by HOUSEHOLD-ADMIN-003).
+  households_table_name = "${local.name_prefix}-households"
 
   # Frontend hosting (TICKET-017).
   frontend_bucket_name       = "${local.name_prefix}-frontend-${var.environment}"

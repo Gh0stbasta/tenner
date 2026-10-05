@@ -27,7 +27,7 @@ const mixed = [
 function setup(candidates: Tenner[] = mixed, now = new Date("2026-10-01T08:00:00Z"), timezone = "Europe/Berlin") {
   const repository = mockTennerRepository();
   repository.getDashboardCandidates.mockResolvedValue(candidates);
-  return { repository, service: new DashboardService(repository, () => now, timezone) };
+  return { repository, service: new DashboardService(repository, () => now, async () => timezone) };
 }
 
 const ids = (items: { tennerId: string }[]) => items.map((i) => i.tennerId);

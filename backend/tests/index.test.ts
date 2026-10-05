@@ -61,6 +61,8 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       replayed: false,
     })),
     deleteTenner: vi.fn(async () => ({ response: { tennerId: "t-1", deleted: true as const }, outcome: { status: "DELETED" as const, tenner: tennerFixture() } })),
+    getHousehold: vi.fn(async () => ({ timezone: "Europe/Berlin" })),
+    updateHouseholdTimezone: vi.fn(async (_identity, timezone: string) => ({ timezone })),
     getOnboarding: vi.fn(async () => ({ assignedTo: null, members: [] })),
     assignHouseholdMember: vi.fn(async () => ({ response: { userId: "JULIA" as const }, group: "household:default:JULIA" })),
     ...overrides,
@@ -501,7 +503,7 @@ describe("createDependencies", () => {
       environment: "prod",
       application: "Tenner",
       timezone: "Europe/Berlin",
-      tables: { tenners: "tenner-tenners", history: "tenner-history" },
+      tables: { tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" },
       onboarding: { userPoolId: "eu-central-1_TEST", tenantId: "default" },
     });
   });
@@ -514,5 +516,24 @@ describe("handler", () => {
     const response = await handler(event("GET /health"));
     expect(response.statusCode).toBe(503);
     expect(JSON.parse(response.body ?? "").database).toBe("misconfigured");
+  });
+});
+
+describe("household routes (SCHEDULING-008)", () => {
+  it("GET /household uses the tenant from the claims; PUT passes the identity", async () => {
+    const d = deps();
+    const get = await route({ routeKey: "GET /household", headers: {}, requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
+    expect(get.statusCode).toBe(200);
+    expect(d.getHousehold).toHaveBeenCalledWith("default");
+    const put = await route({ routeKey: "PUT /household", headers: {}, body: JSON.stringify({ timezone: "Europe/Vienna" }), requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
+    expect(put.statusCode).toBe(200);
+    expect(d.updateHouseholdTimezone).toHaveBeenCalledWith(TEST_IDENTITY, "Europe/Vienna");
+  });
+
+  it("rejects an unknown timezone with 400", async () => {
+    const d = deps();
+    const put = await route({ routeKey: "PUT /household", headers: {}, body: JSON.stringify({ timezone: "Mars/Olympus" }), requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
+    expect(put.statusCode).toBe(400);
+    expect(d.updateHouseholdTimezone).not.toHaveBeenCalled();
   });
 });

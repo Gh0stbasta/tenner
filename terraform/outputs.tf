@@ -68,6 +68,11 @@ output "history_table_arn" {
   value       = aws_dynamodb_table.history.arn
 }
 
+output "households_table_name" {
+  description = "Name of the household settings table (SCHEDULING-008)."
+  value       = aws_dynamodb_table.households.name
+}
+
 output "api_lambda_role_arn" {
   description = "ARN of the Tenner API Lambda execution role."
   value       = aws_iam_role.api.arn

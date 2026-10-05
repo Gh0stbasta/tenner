@@ -4,6 +4,7 @@ import { ConflictError, NotFoundError, PersistenceError, ValidationError } from 
 import { undoCompletionHandler } from "../src/handlers/undo-completion.js";
 import type { CompletionRecord } from "../src/repositories/index.js";
 import { restoreSchedule, UndoCompletionService } from "../src/services/index.js";
+import { addDays } from "../src/utils/clock.js";
 import { completionFixture, mockCompletionRepository, mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY, testIdentity } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-01T19:00:00.700Z");
@@ -26,7 +27,7 @@ function setup(completions = [latest, previous], tenner = loaded) {
   tenners.undoCompletion.mockResolvedValue(undefined);
   history.getLatestActiveCompletions.mockResolvedValue(completions);
   history.findByRevertIdempotencyKey.mockResolvedValue(undefined);
-  return { tenners, history, service: new UndoCompletionService(tenners, history, () => NOW) };
+  return { tenners, history, service: new UndoCompletionService(tenners, history, () => NOW, async () => "UTC") };
 }
 
 describe("UndoCompletionService", () => {
@@ -162,11 +163,17 @@ describe("UndoCompletionService", () => {
 
 describe("restoreSchedule", () => {
   it("falls back to today when createdAt is not a valid date", () => {
-    expect(restoreSchedule({ ...loaded, createdAt: "unknown" }, undefined, NOW, TS).nextDue).toBe("2026-10-01");
+    expect(restoreSchedule({ ...loaded, createdAt: "unknown" }, undefined, NOW, TS, "UTC").nextDue).toBe("2026-10-01");
   });
 
   it("allows a restored nextDue in the past (overdue again)", () => {
-    expect(restoreSchedule(loaded, previous, NOW, TS).nextDue).toBe("2026-09-15");
+    expect(restoreSchedule(loaded, previous, NOW, TS, "UTC").nextDue).toBe("2026-09-15");
+  });
+
+  it("restores dates in the household timezone (SCHEDULING-008)", () => {
+    const lateCompletion = { ...previous, completedAt: "2026-09-01T22:30:00Z" }; // 2 Sep 00:30 in Berlin
+    expect(restoreSchedule(loaded, lateCompletion, NOW, TS, "Europe/Berlin").nextDue).toBe(addDays("2026-09-02", loaded.frequencyDays));
+    expect(restoreSchedule({ ...loaded, createdAt: "2026-08-19T23:30:00Z" }, undefined, NOW, TS, "Europe/Berlin").nextDue).toBe("2026-08-20");
   });
 });
 

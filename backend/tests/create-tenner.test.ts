@@ -11,7 +11,7 @@ const request = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinute
 
 function service() {
   const repository = mockTennerRepository();
-  return { repository, service: new CreateTennerService(repository, () => NOW, () => ID) };
+  return { repository, service: new CreateTennerService(repository, () => NOW, () => ID, async () => "UTC") };
 }
 
 describe("CreateTennerService", () => {
@@ -52,10 +52,14 @@ describe("CreateTennerService", () => {
     expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "household-2", createdBy: "JULIA", updatedBy: "JULIA" }));
   });
 
-  it("uses the UTC date for nextDue just before midnight UTC", async () => {
+  it("uses today in the household timezone for nextDue (SCHEDULING-008)", async () => {
     const repository = mockTennerRepository();
-    const svc = new CreateTennerService(repository, () => new Date("2026-10-01T23:59:59Z"), () => ID);
-    expect((await svc.createTenner(TEST_IDENTITY, request)).nextDue).toBe("2026-10-01");
+    const late = () => new Date("2026-10-01T23:59:59Z");
+    expect((await new CreateTennerService(repository, late, () => ID, async () => "UTC").createTenner(TEST_IDENTITY, request)).nextDue).toBe("2026-10-01");
+    const timezoneOf = vi.fn(async () => "Europe/Berlin");
+    const svc = new CreateTennerService(repository, late, () => ID, timezoneOf);
+    expect((await svc.createTenner(TEST_IDENTITY, request)).nextDue).toBe("2026-10-02");
+    expect(timezoneOf).toHaveBeenCalledWith("default");
   });
 
   it("propagates repository failures", async () => {

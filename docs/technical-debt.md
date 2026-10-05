@@ -114,7 +114,11 @@ SECURITY-006, NOTIFICATION-005, OBSERVABILITY-002, TICKET-022, OBSERVABILITY-004
 
 ---
 
-## TD-005: Due dates are calculated in UTC instead of household local time
+## TD-005: Due dates are calculated in UTC instead of household local time (resolved)
+
+> Resolved by SCHEDULING-008 (2026-10-05): create, complete, undo, list and dashboard use the household timezone.
+> `nextDue` values computed before the change may be one day early for completions between local midnight and
+> 01:00/02:00; they correct themselves with the next completion.
 
 ### Description
 
@@ -707,3 +711,27 @@ Custom domain with ACM certificate and `TLSv1.2_2021` (TICKET-022).
 ### Related Work
 
 SECURITY-005, TICKET-022, `terraform/frontend-hosting.tf`
+
+## TD-026: History date filters use UTC days
+
+### Description
+
+`GET /history?from=…&to=…` filters `completedAt` by inclusive UTC days, while due dates and "today" use the
+household timezone since SCHEDULING-008.
+
+### Reason
+
+SCHEDULING-008 covers due-date calculation; the history filter is a read-only view and was kept unchanged to limit scope.
+
+### Impact
+
+Completions between local midnight and 01:00/02:00 (Europe/Berlin) appear under the previous day when filtering
+history by date. No data is wrong.
+
+### Suggested Improvement
+
+Convert `from`/`to` into UTC instants of the household's local day boundaries before querying `completedAt-index`.
+
+### Related Work
+
+SCHEDULING-008, TICKET-020, `backend/src/services/history.service.ts`.

@@ -10,7 +10,7 @@ import type {
 import type { Tenner } from "../models/index.js";
 import type { TennerRepository } from "../repositories/index.js";
 import { addDays, type Clock } from "../utils/clock.js";
-import { dateInTimeZone, daysBetween } from "../utils/timezone.js";
+import { dateInTimeZone, daysBetween, type TimeZoneSource } from "../utils/timezone.js";
 
 /** Upcoming window: referenceDate < nextDue <= referenceDate + UPCOMING_DAYS. */
 export const UPCOMING_DAYS = 7;
@@ -37,11 +37,12 @@ export class DashboardService {
   constructor(
     private readonly repository: Pick<TennerRepository, "getDashboardCandidates">,
     private readonly clock: Clock,
-    private readonly timezone: string,
+    private readonly timezoneOf: TimeZoneSource,
   ) {}
 
   async getDashboard(tenantId: string, request: DashboardRequest = {}): Promise<DashboardResponse> {
-    const referenceDate = request.date ?? dateInTimeZone(this.clock(), this.timezone);
+    const timezone = await this.timezoneOf(tenantId);
+    const referenceDate = request.date ?? dateInTimeZone(this.clock(), timezone);
     const endDate = addDays(referenceDate, UPCOMING_DAYS);
     const candidates = (await this.repository.getDashboardCandidates(tenantId, endDate)).filter(
       (t) =>
@@ -58,7 +59,7 @@ export class DashboardService {
 
     return {
       referenceDate,
-      timezone: this.timezone,
+      timezone,
       summary: summarize(dueToday, overdue, upcoming),
       dueToday: dueToday.map((t) => toItem(t)),
       overdue: overdue.map((t) => toItem(t, { overdueDays: daysBetween(t.nextDue, referenceDate) })),

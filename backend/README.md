@@ -1,7 +1,7 @@
 # Tenner Backend
 
 TypeScript code for the `tenner-api` Lambda function (Node.js 22, arm64), behind an
-API Gateway HTTP API. Data is stored in DynamoDB (`tenner-tenners`, `tenner-history`).
+API Gateway HTTP API. Data is stored in DynamoDB (`tenner-tenners`, `tenner-history`, `tenner-households`).
 
 ## Commands
 
@@ -136,7 +136,7 @@ Unknown fields are rejected (`strictObject`). An update must contain at least on
 | `category` | category values | category |
 | `active` | `true` (default), `false` | active or inactive Tenners. No default together with `deleted=true` |
 | `deleted` | `true`, `false` | `true`: only soft-deleted (archived) Tenners (TICKET-024). Default: deleted Tenners are excluded |
-| `due` | `true`, `false` | `true`: `nextDue <= today` (UTC). `false` does not filter |
+| `due` | `true`, `false` | `true`: `nextDue <= today` (household timezone, SCHEDULING-008). `false` does not filter |
 | `overdue` | `true`, `false` | `true`: `nextDue < today` (wins over `due`). `false` does not filter |
 | `sort` | `nextDue` (default), `title`, `createdAt`, `updatedAt` | sort field (ties broken by title, then ID) |
 | `order` | `asc` (default), `desc` | sort direction |
@@ -193,7 +193,7 @@ Effects on other endpoints:
 | `actualMinutes` | optional, 1–1440. Default: the Tenner's `estimatedMinutes` |
 | `completedAt` | optional UTC timestamp. Default: now. It must not be in the future (60 s clock-skew tolerance) or earlier than `lastCompleted` |
 
-**Recurrence (completion-based):** `nextDue = UTC date(completedAt) + frequencyDays` for early, on-time and overdue
+**Recurrence (completion-based):** `nextDue = local date(completedAt) + frequencyDays` (household timezone, SCHEDULING-008) for early, on-time and overdue
 completions alike. `lastCompleted = completedAt`, `updatedAt = now` and `updatedBy` = authenticated user.
 
 **Atomicity:** a single `TransactWriteItems`:
@@ -236,8 +236,8 @@ There is no Scan. If no active completion exists, the result is `409 NO_COMPLETI
 
 | Case | `lastCompleted` | `nextDue` |
 |---|---|---|
-| A previous active completion exists | its `completedAt` | UTC date(`completedAt`) + `frequencyDays` (may be in the past) |
-| The first completion was reverted | `null` | `createdAt` date (fallback: today) |
+| A previous active completion exists | its `completedAt` | local date(`completedAt`) + `frequencyDays` (may be in the past) |
+| The first completion was reverted | `null` | local `createdAt` date (fallback: today) |
 
 `updatedAt` is set to now and `updatedBy` to the authenticated user in both cases.
 
@@ -285,10 +285,11 @@ This is the dashboard read model: one request, one DynamoDB Query.
 |---|---|
 | `assignedTo` | `STEFAN`, `JULIA`. Filters all sections |
 | `category` | category values. Filters all sections |
-| `date` | `YYYY-MM-DD`, a real calendar date (`2026-02-30` → 400). Default: today in `APPLICATION_TIMEZONE`. Future dates are allowed |
+| `date` | `YYYY-MM-DD`, a real calendar date (`2026-02-30` → 400). Default: today in the household timezone. Future dates are allowed |
 
-**Application timezone:** `APPLICATION_TIMEZONE` (default `Europe/Berlin`, invalid values fall back to the default).
-The reference date is computed with `Intl`, independent of the Lambda runtime timezone.
+**Household timezone (SCHEDULING-008):** stored per household (`GET`/`PUT /household`); without a stored value
+`APPLICATION_TIMEZONE` applies (default `Europe/Berlin`, invalid values fall back to the default). The response
+includes `timezone`. Dates are computed with `Intl`, independent of the Lambda runtime timezone.
 
 **Classification** (`nextDue` as `YYYY-MM-DD`; inactive and deleted Tenners excluded):
 
@@ -382,6 +383,8 @@ and a Tenner fixture.
 | `POST /tenners/{tennerId}/undo-completion` | `200 { success: true, data: { tenner, revertedCompletion } }` (TICKET-014). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `NO_COMPLETION_TO_UNDO`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | `POST /tenners/{tennerId}/restore` | `200 { success: true, data: { tennerId, active, deletedAt } }` (TICKET-015, idempotent). Returns `400`, `404`, or `409` with `TENNER_NOT_DELETED` or `CONCURRENT_MODIFICATION` |
 | `GET /dashboard` | `200 { success: true, data: DashboardResponse }` (TICKET-016). Returns `400 VALIDATION_ERROR` "Invalid dashboard query." |
+| `GET /household` | `200 { success: true, data: { timezone } }` (SCHEDULING-008). Falls back to `APPLICATION_TIMEZONE` |
+| `PUT /household` | Body `{ "timezone": "<IANA name>" }` → `200 { success: true, data: { timezone } }`. Unknown or malformed timezones → `400 VALIDATION_ERROR`. Affects every household member; logged as `HouseholdTimezoneChanged` |
 | `GET /history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `400` for invalid filters or cursor |
 | `GET /tenners/{tennerId}/history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `404` for an unknown Tenner |
 | unknown route | `404 NOT_FOUND` |
@@ -399,7 +402,7 @@ Request (all fields required, unknown fields rejected):
 ```
 
 The service generates `tennerId` (UUID v4), `tenantId` (from the identity), `createdBy` = `updatedBy` = authenticated user, `active = true`,
-`lastCompleted = null`, `nextDue` = today (UTC date) and `createdAt` = `updatedAt` = now (UTC, seconds precision).
+`lastCompleted = null`, `nextDue` = today in the household timezone and `createdAt` = `updatedAt` = now (UTC, seconds precision).
 The repository writes with `attribute_not_exists(tennerId)`, so it never overwrites an existing item.
 
 ## Dependencies

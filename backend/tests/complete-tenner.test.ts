@@ -16,7 +16,7 @@ function setup(tenner = tennerFixture({ tennerId: "tenner-001", nextDue: "2026-1
   tenners.getById.mockResolvedValue(tenner);
   tenners.completeTenner.mockResolvedValue(undefined);
   completions.getById.mockResolvedValue(undefined);
-  return { tenners, completions, tenner, service: new CompleteTennerService(tenners, completions, () => NOW, () => NEW_ID) };
+  return { tenners, completions, tenner, service: new CompleteTennerService(tenners, completions, () => NOW, () => NEW_ID, async () => "UTC") };
 }
 
 describe("CompleteTennerService", () => {
@@ -205,9 +205,36 @@ describe("CompleteTennerService", () => {
 });
 
 describe("nextDueAfter", () => {
-  it("adds frequencyDays to the UTC completion date", () => {
-    expect(nextDueAfter("2026-10-01T18:30:00Z", 14)).toBe("2026-10-15");
-    expect(nextDueAfter("2026-10-01T23:59:59Z", 1)).toBe("2026-10-02");
+  it("adds frequencyDays to the completion date in the given timezone", () => {
+    expect(nextDueAfter("2026-10-01T18:30:00Z", 14, "UTC")).toBe("2026-10-15");
+    expect(nextDueAfter("2026-10-01T23:59:59Z", 1, "UTC")).toBe("2026-10-02");
+  });
+
+  // SCHEDULING-008: Europe/Berlin is UTC+2 in summer, UTC+1 in winter.
+  it("completion just after local midnight counts for the new local day", () => {
+    // 2 Oct 00:30 in Berlin = 1 Oct 22:30 UTC
+    expect(nextDueAfter("2026-10-01T22:30:00Z", 14, "Europe/Berlin")).toBe("2026-10-16");
+    expect(nextDueAfter("2026-10-01T22:30:00Z", 14, "UTC")).toBe("2026-10-15");
+  });
+
+  it("completion just before local midnight counts for the old local day", () => {
+    // 1 Oct 23:59 in Berlin = 1 Oct 21:59 UTC
+    expect(nextDueAfter("2026-10-01T21:59:00Z", 1, "Europe/Berlin")).toBe("2026-10-02");
+  });
+
+  it("handles the DST start (last Sunday in March) and end (last Sunday in October)", () => {
+    // 29 Mar 2026: 02:00 CET -> 03:00 CEST. 00:30 local = 28 Mar 23:30 UTC; 03:30 local = 01:30 UTC
+    expect(nextDueAfter("2026-03-28T23:30:00Z", 1, "Europe/Berlin")).toBe("2026-03-30");
+    expect(nextDueAfter("2026-03-29T01:30:00Z", 7, "Europe/Berlin")).toBe("2026-04-05");
+    // 25 Oct 2026: 03:00 CEST -> 02:00 CET. 00:30 local = 24 Oct 22:30 UTC; 23:30 local = 25 Oct 22:30 UTC
+    expect(nextDueAfter("2026-10-24T22:30:00Z", 1, "Europe/Berlin")).toBe("2026-10-26");
+    expect(nextDueAfter("2026-10-25T22:30:00Z", 1, "Europe/Berlin")).toBe("2026-10-26");
+  });
+
+  it("supports non-default timezones", () => {
+    // 1 Oct 20:00 in New York = 2 Oct 00:00 UTC
+    expect(nextDueAfter("2026-10-02T00:00:00Z", 1, "America/New_York")).toBe("2026-10-02");
+    expect(nextDueAfter("2026-10-01T15:30:00Z", 1, "Asia/Tokyo")).toBe("2026-10-03");
   });
 });
 

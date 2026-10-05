@@ -15,13 +15,19 @@ import { dashboardHandler, type GetDashboard } from "./handlers/dashboard.js";
 import { deleteTennerHandler, type DeleteTenner } from "./handlers/delete-tenner.js";
 import { getTennerHandler, type GetTenner } from "./handlers/get-tenner.js";
 import { health, type DatabaseProbe } from "./handlers/health.js";
+import { getHouseholdHandler, updateHouseholdHandler, type GetHousehold, type UpdateHouseholdTimezone } from "./handlers/household.js";
 import { historyHandler, tennerHistoryHandler, type GetHistory, type GetTennerHistory } from "./handlers/history.js";
 import { listTennersHandler, type ListTenners } from "./handlers/list-tenners.js";
 import { assignHouseholdMemberHandler, onboardingHandler, type AssignHouseholdMember, type GetOnboarding } from "./handlers/onboarding.js";
 import { restoreTennerHandler, type RestoreTenner } from "./handlers/restore-tenner.js";
 import { undoCompletionHandler, type UndoCompletion } from "./handlers/undo-completion.js";
 import { updateTennerHandler, type UpdateTenner } from "./handlers/update-tenner.js";
-import { CognitoHouseholdMembershipRepository, DynamoDbCompletionRepository, DynamoDbTennerRepository } from "./repositories/index.js";
+import {
+  CognitoHouseholdMembershipRepository,
+  DynamoDbCompletionRepository,
+  DynamoDbHouseholdRepository,
+  DynamoDbTennerRepository,
+} from "./repositories/index.js";
 import {
   CompleteTennerService,
   CreateTennerService,
@@ -30,6 +36,7 @@ import {
   GetTennerService,
   HistoryService,
   HouseholdAssignmentService,
+  HouseholdService,
   ListTennersService,
   RestoreTennerService,
   UndoCompletionService,
@@ -57,6 +64,8 @@ export interface Dependencies {
   readonly getHistory: GetHistory;
   readonly getTennerHistory: GetTennerHistory;
   readonly getOnboarding: GetOnboarding;
+  readonly getHousehold: GetHousehold;
+  readonly updateHouseholdTimezone: UpdateHouseholdTimezone;
   readonly assignHouseholdMember: AssignHouseholdMember;
 }
 
@@ -106,6 +115,8 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "POST /tenners/{tennerId}/undo-completion": ({ event, deps, logger, identity }) => undoCompletionHandler(event, identity, deps.undoCompletion, logger),
   "POST /tenners/{tennerId}/restore": ({ event, deps, logger, identity }) => restoreTennerHandler(event, identity, deps.restoreTenner, logger),
   "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
+  "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
+  "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHouseholdTimezone, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -126,17 +137,20 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   };
   const tennerRepository = tables ? new DynamoDbTennerRepository(getDocumentClient(), tables.tenners, tables.history) : undefined;
   const completionRepository = tables ? new DynamoDbCompletionRepository(getDocumentClient(), tables.history) : undefined;
-  const createTennerService = tennerRepository ? new CreateTennerService(tennerRepository, systemClock, uuidGenerator) : undefined;
-  const listTennersService = tennerRepository ? new ListTennersService(tennerRepository, systemClock) : undefined;
+  const householdService = tables ? new HouseholdService(new DynamoDbHouseholdRepository(getDocumentClient(), tables.households), systemClock, config.timezone) : undefined;
+  // SCHEDULING-008: the one place that resolves a household's timezone for all date calculations.
+  const timezoneOf = (tenantId: string): Promise<string> => householdService?.timezoneOf(tenantId) ?? Promise.resolve(config.timezone);
+  const createTennerService = tennerRepository ? new CreateTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf) : undefined;
+  const listTennersService = tennerRepository ? new ListTennersService(tennerRepository, systemClock, timezoneOf) : undefined;
   const getTennerService = tennerRepository ? new GetTennerService(tennerRepository) : undefined;
   const historyService = tennerRepository && completionRepository ? new HistoryService(completionRepository, tennerRepository) : undefined;
   const updateTennerService = tennerRepository ? new UpdateTennerService(tennerRepository, systemClock) : undefined;
   const deleteTennerService = tennerRepository ? new DeleteTennerService(tennerRepository, systemClock) : undefined;
   const restoreTennerService = tennerRepository ? new RestoreTennerService(tennerRepository, systemClock) : undefined;
-  const dashboardService = tennerRepository ? new DashboardService(tennerRepository, systemClock, config.timezone) : undefined;
+  const dashboardService = tennerRepository ? new DashboardService(tennerRepository, systemClock, timezoneOf) : undefined;
   const completeTennerService =
-    tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator) : undefined;
-  const undoCompletionService = tennerRepository && completionRepository ? new UndoCompletionService(tennerRepository, completionRepository, systemClock) : undefined;
+    tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator, timezoneOf) : undefined;
+  const undoCompletionService = tennerRepository && completionRepository ? new UndoCompletionService(tennerRepository, completionRepository, systemClock, timezoneOf) : undefined;
   const onboarding = config.onboarding;
   const householdAssignmentService = onboarding
     ? new HouseholdAssignmentService(new CognitoHouseholdMembershipRepository(getCognitoClient(), onboarding.userPoolId), onboarding.tenantId)
@@ -161,6 +175,8 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     undoCompletion: undoCompletionService
       ? (identity, id, request, key) => undoCompletionService.undoLatestCompletion(identity, id, request, key)
       : notConfigured,
+    getHousehold: householdService ? (tenantId) => householdService.getHousehold(tenantId) : notConfigured,
+    updateHouseholdTimezone: householdService ? (identity, timezone) => householdService.updateTimezone(identity, timezone) : notConfigured,
     getOnboarding: householdAssignmentService ? (principal) => householdAssignmentService.getOnboarding(principal) : notConfigured,
     assignHouseholdMember: householdAssignmentService ? (principal, userId) => householdAssignmentService.assign(principal, userId) : notConfigured,
   };

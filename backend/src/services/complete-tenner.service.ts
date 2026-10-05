@@ -5,7 +5,8 @@ import { toCompletionResponse, toTennerResponse, type CompleteTennerRequest, typ
 import { ConflictError, NotFoundError, ValidationError } from "../exceptions/index.js";
 import type { Completion, Tenner } from "../models/index.js";
 import type { CompletionRecord, CompletionRepository, TennerRepository } from "../repositories/index.js";
-import { addDays, toUtcDate, toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
+import { addDays, toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
+import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
 import { sha256Json, uuidV5 } from "../utils/uuid.js";
 
 /** Tolerated client clock skew for explicit completedAt values. */
@@ -23,6 +24,7 @@ export class CompleteTennerService {
     private readonly completions: Pick<CompletionRepository, "getById">,
     private readonly clock: Clock,
     private readonly newId: IdGenerator,
+    private readonly timezoneOf: TimeZoneSource,
   ) {}
 
   /**
@@ -63,7 +65,7 @@ export class CompleteTennerService {
     const updated: Tenner = {
       ...tenner,
       lastCompleted: completedAt,
-      nextDue: nextDueAfter(completedAt, tenner.frequencyDays),
+      nextDue: nextDueAfter(completedAt, tenner.frequencyDays, await this.timezoneOf(tenantId)),
       updatedAt: toUtcTimestamp(now),
       updatedBy: identity.userId,
     };
@@ -105,7 +107,10 @@ export class CompleteTennerService {
   }
 }
 
-/** Next due date: UTC calendar date of the completion plus frequencyDays (completion-based recurrence). */
-export function nextDueAfter(completedAt: string, frequencyDays: number): string {
-  return addDays(toUtcDate(new Date(completedAt)), frequencyDays);
+/**
+ * Next due date: the completion's calendar date in the household timezone plus frequencyDays
+ * (completion-based recurrence, SCHEDULING-008). Day arithmetic on calendar dates is DST-safe.
+ */
+export function nextDueAfter(completedAt: string, frequencyDays: number, timezone: string): string {
+  return addDays(dateInTimeZone(new Date(completedAt), timezone), frequencyDays);
 }

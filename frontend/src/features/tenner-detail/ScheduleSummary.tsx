@@ -2,25 +2,31 @@ import { Box, Typography } from "@mui/material";
 import { formatDaysAgo, formatMinutes, formatShortDate } from "../../utils/format";
 import { daysBetween, todayIsoDate } from "../../utils/dates";
 import { formatDueIn, formatOverdue } from "../../utils/format";
+import { useHouseholdTimezone } from "../household/api";
 import { frequencyLabel } from "../tenners/status";
 import type { Tenner } from "../tenners/schemas";
 
-function lastCompletedLabel(timestamp: string): string {
+function lastCompletedLabel(timestamp: string, timeZone: string | undefined): string {
   const date = new Date(timestamp);
-  return `${date.toLocaleDateString("de-DE", { dateStyle: "medium" })} (${formatDaysAgo(daysBetween(todayIsoDate(date), todayIsoDate()))})`;
+  const label = date.toLocaleDateString("de-DE", { dateStyle: "medium", ...(timeZone ? { timeZone } : {}) });
+  return `${label} (${formatDaysAgo(daysBetween(todayIsoDate(date, timeZone), todayIsoDate(new Date(), timeZone)))})`;
 }
 
-function relativeDue(nextDue: string): string {
-  const days = daysBetween(todayIsoDate(), nextDue);
+function relativeDue(nextDue: string, timeZone: string | undefined): string {
+  const days = daysBetween(todayIsoDate(new Date(), timeZone), nextDue);
   return days < 0 ? formatOverdue(-days) : formatDueIn(days);
 }
 
 /** Frequency, last completion, next due date and duration (FRONTEND-009). */
 export function ScheduleSummary({ tenner }: { readonly tenner: Tenner }) {
+  const timeZone = useHouseholdTimezone();
   const rows: [string, string][] = [
     ["Häufigkeit", frequencyLabel(tenner.frequencyDays)],
-    ["Zuletzt erledigt", tenner.lastCompleted === null ? "Noch nie" : lastCompletedLabel(tenner.lastCompleted)],
-    ["Nächste Fälligkeit", `${formatShortDate(tenner.nextDue)} (${relativeDue(tenner.nextDue)})`],
+    [
+      "Zuletzt erledigt",
+      tenner.lastCompleted === null ? "Noch nie" : lastCompletedLabel(tenner.lastCompleted, timeZone),
+    ],
+    ["Nächste Fälligkeit", `${formatShortDate(tenner.nextDue)} (${relativeDue(tenner.nextDue, timeZone)})`],
     ["Geschätzte Dauer", formatMinutes(tenner.estimatedMinutes)],
   ];
   return (

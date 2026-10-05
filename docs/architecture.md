@@ -990,8 +990,9 @@ Introduced by TICKET-006 (`terraform/dynamodb.tf`).
 |---|---|---|---|
 | `tenner-tenners` | `tenantId` (PK), `tennerId` (SK) | `nextDue-index` (`tenantId`, `nextDue`), `assignedTo-index` (`tenantId`, `assignedTo`) | Current state of Tenners |
 | `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`), `tennerId-completedAt-index` (`tenantTennerId`, `completedAt`, TICKET-014) | Immutable completion history |
+| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone`, `updatedAt`, `updatedBy` (SCHEDULING-008) |
 
-Both tables use:
+All tables use:
 - `PAY_PER_REQUEST` billing
 - SSE with the AWS managed KMS key (`aws/dynamodb`)
 - point-in-time recovery (35 days)
@@ -1032,6 +1033,7 @@ API Gateway → Lambda tenner-api ──(AWS SDK v3 DocumentClient)──> tenne
 |---|---|---|
 | `TENNERS_TABLE` | `aws_dynamodb_table.tenners.name` | table name (never hardcoded in code) |
 | `HISTORY_TABLE` | `aws_dynamodb_table.history.name` | table name |
+| `HOUSEHOLDS_TABLE` | `aws_dynamodb_table.households.name` | table name (SCHEDULING-008) |
 | `ENVIRONMENT` | `var.environment` | environment label |
 | `APPLICATION_NAME` | `local.common_tags.Application` | application label |
 | `LOG_LEVEL` | `var.api_log_level` | logger threshold |
@@ -1114,7 +1116,7 @@ index.ts (routing, correlation, error mapping)
   `DeleteItem` is never used by the code (TD-013). Restore (TICKET-015) reverses a soft delete (`active = true`,
   `deletedAt = null`) with an `updatedAt` lock. It never changes the schedule or the history.
 - **Completion workflow (TICKET-013):** completing a Tenner appends an immutable history record and moves the Tenner
-  into its next cycle (`nextDue = UTC date(completedAt) + frequencyDays`) in one `TransactWriteItems`. Optimistic
+  into its next cycle (`nextDue = local date(completedAt) + frequencyDays`, SCHEDULING-008) in one `TransactWriteItems`. Optimistic
   locking checks the loaded state (`updatedAt`, `lastCompleted`, `frequencyDays`, active and not deleted), and
   a conflict returns `409 CONCURRENT_MODIFICATION`. The optional `Idempotency-Key` maps to a deterministic UUID v5
   completion ID. Retries return the original result, and conflicting reuse returns 409. Transactions need no extra
@@ -1127,10 +1129,22 @@ index.ts (routing, correlation, error mapping)
   (`tenantTennerId = "<tenant>#<tenner>"`, newest first, no Scan).
 - **Dashboard read model (TICKET-016):** `GET /dashboard` returns due today, overdue, upcoming (next 7 days),
   a summary and actionable workload per user and category in one response. It is backed by one `nextDue-index`
-  Query (`nextDue <= reference + 7`, active and not deleted). The reference date is "today" in `APPLICATION_TIMEZONE`
-  (default `Europe/Berlin`, Terraform `var.application_timezone`), or the `date` parameter.
+  Query (`nextDue <= reference + 7`, active and not deleted). The reference date is "today" in the household timezone, or the `date` parameter.
 - **Time and IDs:** services receive a `Clock` and an `IdGenerator` (`utils/clock.ts`), so tests are deterministic.
-  Dates are UTC until SCHEDULING-008 (TD-005).
+  Calendar dates are household-local (see "Date Semantics").
+- **Date semantics (SCHEDULING-008):** `nextDue` is a calendar date (`YYYY-MM-DD`) in the **household timezone**.
+  - The household timezone (IANA, e.g. `Europe/Berlin`) is stored in `tenner-households` and edited in Settings
+    (`GET`/`PUT /household`). Without a stored value, `APPLICATION_TIMEZONE` (default `Europe/Berlin`) applies.
+  - All services get it through one function, `TimeZoneSource = (tenantId) => Promise<string>`.
+  - `today = localDate(now, tz)`; `nextDue = localDate(completedAt, tz) + frequencyDays`; a new Tenner is due on
+    its local creation date. Timestamps (`completedAt`, `createdAt`, …) stay UTC ISO strings.
+  - Local dates come from the platform `Intl` API (`utils/timezone.ts`), which carries the IANA database and DST
+    rules. Adding days is pure calendar arithmetic, so DST changes never shift a date. No date library is needed.
+  - The frontend computes "today" for due/overdue labels in the household timezone too (`useToday()`).
+  - Migration: none. Values computed before 2026-10-05 were UTC dates and may be one day early for completions
+    between local midnight and 01:00/02:00; the next completion corrects them.
+  - Changing the timezone does not rewrite stored `nextDue` values; it only changes how future dates and "today"
+    are computed.
 
 ---
 
