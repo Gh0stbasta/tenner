@@ -5,7 +5,7 @@ import type { Identity } from "../../src/auth/index.js";
 import type { AppConfig } from "../../src/config.js";
 import type { Completion, HouseholdSettings, Tenner } from "../../src/models/index.js";
 import type { CompletionRepository, TennerRepository } from "../../src/repositories/index.js";
-import type { AnalyticsService, TennerService } from "../../src/services/index.js";
+import type { TennerService } from "../../src/services/index.js";
 import type { ApiEvent } from "../../src/types/api.js";
 import type { Logger } from "../../src/utils/logger.js";
 
@@ -69,16 +69,13 @@ export function mockTennerRepository(): Mocked<TennerRepository> {
 }
 
 export function mockCompletionRepository(): Mocked<CompletionRepository> {
-  return { getById: vi.fn(), getLatestActiveCompletions: vi.fn(), findByRevertIdempotencyKey: vi.fn(), getHistory: vi.fn(), getByTenner: vi.fn() };
+  return { getById: vi.fn(), getLatestActiveCompletions: vi.fn(), findByRevertIdempotencyKey: vi.fn(), getHistory: vi.fn(), getByTenner: vi.fn(), listCompletions: vi.fn() };
 }
 
 export function mockTennerService(): Mocked<TennerService> {
   return { createTenner: vi.fn(), updateTenner: vi.fn(), completeTenner: vi.fn(), listDueTenners: vi.fn() };
 }
 
-export function mockAnalyticsService(): Mocked<AnalyticsService> {
-  return { getDashboard: vi.fn(), getCompletionMetrics: vi.fn() };
-}
 
 export function completionFixture(overrides: Partial<Completion> = {}): Completion {
   return {

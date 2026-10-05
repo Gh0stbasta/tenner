@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PERIOD_SHORTCUTS } from "../analytics/period.js";
 import {
   TENNER_SORT_FIELDS,
   type AssignHouseholdMemberRequest,
@@ -16,6 +17,7 @@ import {
   type CreateMemberRequest,
   type DeactivateMemberRequest,
   type StartHandoverRequest,
+  type AnalyticsPeriodRequest,
   type CreateCategoryRequest,
   type UpdateCategoryRequest,
   type UpdateMemberRequest,
@@ -340,3 +342,13 @@ export const startHandoverSchema = z.strictObject({
     .refine((values) => new Set(values).size === values.length, "Categories must be distinct.")
     .optional(),
 }) satisfies z.ZodType<StartHandoverRequest>;
+
+/** Period query of the analytics endpoints (ANALYTICS-001); range rules are checked by resolvePeriod. */
+export const analyticsPeriodShape = {
+  period: z.enum(PERIOD_SHORTCUTS).optional(),
+  from: isoDateSchema.optional(),
+  to: isoDateSchema.optional(),
+};
+
+/** GET /analytics/summary. */
+export const analyticsPeriodSchema = z.strictObject(analyticsPeriodShape) satisfies z.ZodType<AnalyticsPeriodRequest, Record<string, string | undefined>>;

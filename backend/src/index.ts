@@ -4,6 +4,8 @@
  * standard error response.
  */
 
+import { AnalyticsService } from "./analytics/index.js";
+import { analyticsHandler, type AnalyticsQuery } from "./handlers/analytics.js";
 import { householdGroupName, identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
 import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
@@ -67,6 +69,7 @@ import {
   HouseholdAssignmentService,
   HouseholdService,
   HandoverService,
+  toHouseholdResponse,
   ListTennersService,
   RestoreTennerService,
   CategoryService,
@@ -84,6 +87,8 @@ import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
 import { SEED_CATEGORIES, SEED_MEMBERS, type Handover, type HouseholdCategory, type HouseholdMember, type Vacation } from "./models/index.js";
 import { createLogger, errorFields, type Logger } from "./utils/logger.js";
+import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, HouseholdResponse } from "./dto/index.js";
+import { analyticsPeriodSchema } from "./validators/index.js";
 
 /** Dependencies shared by all handlers; replaced in tests. */
 export interface Dependencies {
@@ -121,6 +126,7 @@ export interface Dependencies {
   readonly getHousehold: GetHousehold;
   readonly updateHousehold: UpdateHousehold;
   readonly assignHouseholdMember: AssignHouseholdMember;
+  readonly analyticsSummary: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsSummaryResponse>;
 }
 
 /** Per-request context passed to route handlers. */
@@ -187,6 +193,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
   "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
   "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHousehold, logger),
+  "GET /analytics/summary": ({ event, deps, logger, identity }) => analyticsHandler("summary", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsSummary, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -237,6 +244,10 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const skipTennerService = tennerRepository ? new SkipTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf, vacationOf) : undefined;
   const pauseTennerService = tennerRepository ? new PauseTennerService(tennerRepository, systemClock, timezoneOf) : undefined;
   const vacationService = tennerRepository && householdRepository ? new VacationService(householdRepository, tennerRepository, systemClock, timezoneOf, logger) : undefined;
+  // ANALYTICS-001: effective settings (timezone, week start, vacation); defaults without the households table.
+  const settingsOf = (tenantId: string): Promise<HouseholdResponse> =>
+    householdService?.settingsOf(tenantId) ?? Promise.resolve(toHouseholdResponse(undefined, config.timezone));
+  const analyticsService = tennerRepository && completionRepository ? new AnalyticsService(tennerRepository, completionRepository, settingsOf, systemClock) : undefined;
   const onboarding = config.onboarding;
   const membershipRepository = onboarding ? new CognitoHouseholdMembershipRepository(getCognitoClient(), onboarding.userPoolId) : undefined;
   const householdAssignmentService = onboarding && membershipRepository ? new HouseholdAssignmentService(membershipRepository, onboarding.tenantId, membersOf) : undefined;
@@ -285,6 +296,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     updateHousehold: householdService ? (identity, request) => householdService.updateSettings(identity, request) : notConfigured,
     getOnboarding: householdAssignmentService ? (principal) => householdAssignmentService.getOnboarding(principal) : notConfigured,
     assignHouseholdMember: householdAssignmentService ? (principal, userId) => householdAssignmentService.assign(principal, userId) : notConfigured,
+    analyticsSummary: analyticsService ? (tenantId, request) => analyticsService.summary(tenantId, request) : notConfigured,
   };
 }
 

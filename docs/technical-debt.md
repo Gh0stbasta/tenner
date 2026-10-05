@@ -907,3 +907,32 @@ debt entries and a small script (or CI job) that regenerates the numbers; record
 ### Related Work
 
 REPORTING-001, REPORTING-002, `dashboard.md`, `CLAUDE.md` ("Executive Dashboard").
+
+## TD-033: Analytics compute on the fly from current state
+
+### Description
+
+The analytics endpoints (ANALYTICS-001 ff.) read the whole period from `tenner-history` and all current Tenners on
+every request and aggregate in the Lambda. Known gaps:
+
+- Completions written before ANALYTICS-001 have no `previousNextDue`; they are left out of `onTimeRate`.
+- Metrics that group by assignee or category use the Tenner's *current* values, not the values at completion time.
+- Read cost and latency grow with the period length (at most 366 days); every view re-reads the same data.
+
+### Reason
+
+Household volume is small (a few thousand completions per year), so on-the-fly aggregation is the simplest and
+cheapest option (ANALYTICS-001); history snapshots were out of scope.
+
+### Impact
+
+Slightly skewed historical breakdowns after reassignments or category changes; on-time rate only for new data.
+
+### Suggested Improvement
+
+Store `category` and `assignedTo` on new completion records; add pre-aggregation (ANALYTICS-010) or a short-lived
+cache only if measurements show slow responses.
+
+### Related Work
+
+ANALYTICS-001 – 009, `backend/src/analytics/`, `docs/analytics.md`.

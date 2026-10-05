@@ -277,8 +277,14 @@ POST   /tenners/{id}/complete
 
 GET    /dashboard
 
-GET    /analytics
+GET    /analytics/summary      (ANALYTICS-001)
 ```
+
+Analytics are computed on the fly per request from `tenner-history` (Query on `completedAt-index`, never a Scan) and
+the current Tenners, using pure aggregation functions in `backend/src/analytics/`. At household volume (a few
+thousand completions per year) this needs no pre-aggregated tables (ANALYTICS-010 if measurements require it).
+Metric definitions: [`analytics.md`](analytics.md). New completions store `previousNextDue` (the due date at
+completion time) for the on-time rate; older completions are left out of it.
 
 ---
 

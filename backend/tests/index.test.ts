@@ -94,6 +94,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     reactivateMember: vi.fn(async () => ({ userId: "JULIA", displayName: "Julia", color: "PURPLE" as const, active: true })),
     startHandover: vi.fn(async () => ({ handover: { from: "JULIA", to: "STEFAN", until: "2026-10-12", categories: null }, handedOver: 3 })),
     endHandover: vi.fn(async () => ({ returned: 3 })),
+    analyticsSummary: vi.fn(async () => ({ period: { from: "2026-09-06", to: "2026-10-05" }, completions: 0, totalActualMinutes: 0, activeTenners: 0, distinctTennersCompleted: 0, overdueNow: 0, onTimeRate: null, onTimeSamples: 0 })),
     listCategories: vi.fn(async () => [{ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: false }]),
     createCategory: vi.fn(async () => ({ categoryId: "GARDEN", name: "Garten", icon: "GARDEN" as const, color: "GREEN" as const, sortOrder: 6, archived: false })),
     updateCategory: vi.fn(async () => ({ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: true })),
@@ -661,5 +662,17 @@ describe("household routes (SCHEDULING-008)", () => {
     const put = await route({ routeKey: "PUT /household", headers: {}, body: JSON.stringify({ timezone: "Mars/Olympus" }), requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
     expect(put.statusCode).toBe(400);
     expect(d.updateHousehold).not.toHaveBeenCalled();
+  });
+});
+
+describe("analytics routes (ANALYTICS-001)", () => {
+  it("validates the period query and returns the summary", async () => {
+    const d = deps();
+    const ok = await route(event("GET /analytics/summary", {}, undefined, { period: "last90" }), d);
+    expect(ok.statusCode).toBe(200);
+    expect(d.analyticsSummary).toHaveBeenCalledWith("default", { period: "last90" });
+    expect((await route(event("GET /analytics/summary", {}, undefined, { period: "decade" }), d)).statusCode).toBe(400);
+    expect((await route(event("GET /analytics/summary", {}, undefined, { from: "1.10.2026" }), d)).statusCode).toBe(400);
+    expect((await route(event("GET /analytics/summary", {}, undefined, { foo: "x" }), d)).statusCode).toBe(400);
   });
 });

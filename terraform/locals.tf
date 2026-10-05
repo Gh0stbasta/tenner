@@ -54,6 +54,7 @@ locals {
     "POST /onboarding/assignment",              # HOTFIX-001
     "GET /household",                           # SCHEDULING-008
     "PUT /household",                           # SCHEDULING-008
+    "GET /analytics/summary",                   # ANALYTICS-001
     "POST /tenners/{tennerId}/snooze",          # SCHEDULING-003
     "POST /tenners/{tennerId}/skip",            # SCHEDULING-004
     "POST /tenners/{tennerId}/pause",           # SCHEDULING-005

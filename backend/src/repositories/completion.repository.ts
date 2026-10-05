@@ -50,4 +50,9 @@ export interface CompletionRepository {
   getHistory(tenantId: string, query: HistoryQuery): Promise<HistoryPage>;
   /** History of one Tenner, newest first (tennerId-completedAt-index). */
   getByTenner(tenantId: string, tennerId: string, query: HistoryQuery): Promise<HistoryPage>;
+  /**
+   * All non-reverted completions with `from <= completedAt <= to` (ISO 8601 bounds), every page of the
+   * completedAt-index, oldest first (ANALYTICS-001). Never a Scan.
+   */
+  listCompletions(tenantId: string, from: string, to: string): Promise<Completion[]>;
 }

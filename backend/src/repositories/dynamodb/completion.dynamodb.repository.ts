@@ -13,6 +13,9 @@ export const INDEX_COMPLETED_AT = "completedAt-index";
 /** Condition matching completions that were not reverted. */
 export const NOT_REVERTED = "(attribute_not_exists(#revertedAt) OR #revertedAt = :null)";
 
+/** Attributes read for analytics (ANALYTICS-001); keys and revertedAt are needed by the mapper and the filter. */
+const ANALYTICS_ATTRIBUTES = ["tenantId", "historyId", "tennerId", "completedBy", "recordedBy", "completedAt", "actualMinutes", "revertedAt", "previousNextDue"] as const;
+
 /** Items per page when filtering; filters apply after DynamoDB's Limit, so we page until enough matches. */
 const PAGE_SIZE = 25;
 
@@ -52,6 +55,33 @@ export class DynamoDbCompletionRepository implements CompletionRepository {
 
   async getByTenner(tenantId: string, tennerId: string, query: HistoryQuery): Promise<HistoryPage> {
     return this.queryPage(INDEX_TENNER_COMPLETED_AT, "tenantTennerId", tenantTennerId(tenantId, tennerId), query, ["tenantId", "historyId", "tenantTennerId", "completedAt"]);
+  }
+
+  async listCompletions(tenantId: string, from: string, to: string): Promise<Completion[]> {
+    const items: Record<string, unknown>[] = [];
+    let exclusiveStartKey: Record<string, unknown> | undefined;
+    try {
+      do {
+        const result = (await this.client.send(
+          new QueryCommand({
+            TableName: this.tableName,
+            IndexName: INDEX_COMPLETED_AT,
+            KeyConditionExpression: "#tenantId = :tenantId AND #completedAt BETWEEN :from AND :to",
+            FilterExpression: NOT_REVERTED,
+            // Only what analytics needs (smaller responses; not fewer read units).
+            ProjectionExpression: ANALYTICS_ATTRIBUTES.map((name) => `#${name}`).join(", "),
+            ExpressionAttributeNames: Object.fromEntries(ANALYTICS_ATTRIBUTES.map((name) => [`#${name}`, name])),
+            ExpressionAttributeValues: { ":tenantId": tenantId, ":from": from, ":to": to, ":null": null },
+            ...(exclusiveStartKey ? { ExclusiveStartKey: exclusiveStartKey } : {}),
+          }),
+        )) as QueryCommandOutput;
+        items.push(...(result.Items ?? []));
+        exclusiveStartKey = result.LastEvaluatedKey;
+      } while (exclusiveStartKey);
+    } catch (error) {
+      throw toPersistenceError("load completions for analytics", error);
+    }
+    return items.map(toCompletion);
   }
 
   /**

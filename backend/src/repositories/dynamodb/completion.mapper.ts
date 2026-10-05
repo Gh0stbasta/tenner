@@ -29,6 +29,7 @@ export function toCompletionItem(record: CompletionRecord): Record<string, unkno
     revertReason: completion.revertReason,
     ...optional("assignedToBefore", completion.assignedToBefore),
     ...optional("originalAssigneeBefore", completion.originalAssigneeBefore),
+    ...optional("previousNextDue", completion.previousNextDue),
     ...optional("idempotencyKey", record.idempotencyKey),
     ...optional("requestHash", record.requestHash),
   };
@@ -90,6 +91,7 @@ export function toCompletion(item: Record<string, unknown>): Completion {
     revertReason: stringOrNull(item.revertReason),
     ...(typeof item.assignedToBefore === "string" ? { assignedToBefore: item.assignedToBefore } : {}),
     ...(typeof item.originalAssigneeBefore === "string" ? { originalAssigneeBefore: item.originalAssigneeBefore } : {}),
+    ...(typeof item.previousNextDue === "string" ? { previousNextDue: item.previousNextDue } : {}),
   };
 }
 

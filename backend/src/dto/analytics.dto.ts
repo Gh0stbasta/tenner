@@ -1,11 +1,9 @@
-/**
- * Analytics contracts used by the AnalyticsService interface. The dashboard contracts live in
- * dashboard.dto.ts (TICKET-016); completion metrics are finalized by the ANALYTICS domain.
- */
+/** GET /analytics/* contracts (ANALYTICS-001 ff.). Metric definitions: docs/analytics.md. */
 
-export interface CompletionMetrics {
-  readonly from: string;
-  readonly to: string;
-  readonly completions: number;
-  readonly totalActualMinutes: number;
-}
+import type { PeriodRequest } from "../analytics/period.js";
+import type { SummaryMetrics } from "../analytics/aggregations.js";
+
+/** Query of every period-based analytics endpoint. */
+export type AnalyticsPeriodRequest = PeriodRequest;
+
+export type AnalyticsSummaryResponse = SummaryMetrics;

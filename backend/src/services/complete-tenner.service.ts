@@ -70,6 +70,8 @@ export class CompleteTennerService {
       revertedAt: null,
       revertedBy: null,
       revertReason: null,
+      // ANALYTICS-001: the due date at completion time, for the on-time rate.
+      previousNextDue: tenner.nextDue,
       // HOUSEHOLD-001/004: remembered so that undo can restore the assignee and the handover state.
       ...(tenner.assignmentMode === "ROTATING" ? { assignedToBefore: tenner.assignedTo } : {}),
       ...(tenner.assignmentMode === "ROTATING" && tenner.originalAssignee !== null ? { originalAssigneeBefore: tenner.originalAssignee } : {}),

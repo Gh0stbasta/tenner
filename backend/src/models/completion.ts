@@ -22,4 +22,9 @@ export interface Completion {
   readonly assignedToBefore?: UserId | undefined;
   /** Handover state before the completion (HOUSEHOLD-004), set only with assignedToBefore when not null. */
   readonly originalAssigneeBefore?: UserId | undefined;
+  /**
+   * Due date (household-local YYYY-MM-DD) the Tenner had when it was completed (ANALYTICS-001), for the on-time
+   * rate. Records written before have none.
+   */
+  readonly previousNextDue?: string | undefined;
 }
