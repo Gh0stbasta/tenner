@@ -6,6 +6,7 @@
 variables {
   google_client_id     = "123456789012-abcdefghijklmnop.apps.googleusercontent.com"
   google_client_secret = "placeholder-secret"
+  budget_alert_email   = "owner@example.com"
 }
 
 
@@ -86,10 +87,9 @@ run "dynamodb_policy_is_scoped_to_tenner_tables" {
 
   assert {
     condition = toset(data.aws_iam_policy_document.api_dynamodb.statement[0].actions) == toset([
-      "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem",
-      "dynamodb:DeleteItem", "dynamodb:Query", "dynamodb:Scan",
+      "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:Query",
     ])
-    error_message = "DynamoDB actions must match the TICKET-007 allow list."
+    error_message = "DynamoDB actions must be the used ones only (SECURITY-005: no Scan, no DeleteItem)."
   }
 
   assert {

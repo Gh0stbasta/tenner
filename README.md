@@ -81,6 +81,7 @@ For the managed resources so far:
   API Gateway authorizers (`apigateway:*` on `tenner-api-gateway` already covers them) and `sts:GetCallerIdentity`
   (always allowed)
 - IAM: create and manage `tenner-api-role` and its inline policy, plus `iam:PassRole` for that role to Lambda
+- Cost monitoring (OPERATIONS-001): AWS Budgets and Cost Explorer anomaly permissions, see "Cost Monitoring"
 
 For the state backend:
 
@@ -152,6 +153,8 @@ These must exist before the workflows can authenticate. This repository does not
 2. **Repository secret `AWS_ROLE_ARN`** containing the ARN of that role.
 3. **Repository variable `GOOGLE_CLIENT_ID` and secret `GOOGLE_CLIENT_SECRET`** for Google sign-in
    (FUTURE-011, see "Google Sign-In and User Accounts"). `terraform plan` fails in both workflows without them.
+4. **Repository secret `BUDGET_ALERT_EMAIL`** (and optionally the variable `COST_ANOMALY_MONITOR_ARN`) for cost
+   alerts (OPERATIONS-001, see "Cost Monitoring").
 
 If the PR subject is not trusted, `pr.yml` fails at "Configure AWS credentials".
 
@@ -249,12 +252,88 @@ Password accounts created before FUTURE-011 can no longer sign in and can be del
 
 Never commit e-mail addresses, client secrets or tokens.
 
+### Cost Monitoring (OPERATIONS-001)
+
+`terraform/costs.tf` creates a monthly AWS Budget (default 5 USD, `monthly_budget_usd`) with e-mail alerts at
+50 % and 80 % of actual and 100 % of forecasted spend, and Cost Anomaly Detection with a daily e-mail summary for
+anomalies of at least 1 USD ([ADR 0003](docs/decisions/0003-cost-monitoring.md)). Expected cost: under 0.10 USD
+per month (table in `docs/architecture.md`).
+
+Before the first deployment with OPERATIONS-001:
+
+1. GitHub → Settings → Secrets and variables → Actions → **Secret** `BUDGET_ALERT_EMAIL` = your e-mail address.
+   `terraform plan` fails without it. AWS sends a confirmation e-mail for the anomaly subscription.
+2. Extend `GitHubActionsDeployRole` (see "CI Permissions"): `budgets:ViewBudget`, `budgets:ModifyBudget`,
+   `budgets:ListTagsForResource`, `budgets:TagResource`, `budgets:UntagResource` on
+   `arn:aws:budgets::<account-id>:budget/tenner-monthly-*`, and `ce:CreateAnomalyMonitor`,
+   `ce:GetAnomalyMonitors`, `ce:UpdateAnomalyMonitor`, `ce:DeleteAnomalyMonitor`, `ce:CreateAnomalySubscription`,
+   `ce:GetAnomalySubscriptions`, `ce:UpdateAnomalySubscription`, `ce:DeleteAnomalySubscription`,
+   `ce:TagResource`, `ce:UntagResource`, `ce:ListTagsForResource` (resource `*`; Cost Explorer has no
+   resource-level permissions for creation).
+3. Check for an existing AWS-services anomaly monitor (only one per account is allowed):
+
+   ```bash
+   aws ce get-anomaly-monitors --query "AnomalyMonitors[?MonitorType=='DIMENSIONAL'].[MonitorName, MonitorArn]" --output table
+   ```
+
+   If one exists, set the GitHub **variable** `COST_ANOMALY_MONITOR_ARN` to its ARN; Terraform then reuses it.
+
+Optional: activate the `Application` cost allocation tag (Billing console → Cost allocation tags), wait up to
+24 hours, then set `budget_filter_by_application_tag = true` to count only Tenner resources. Without activation
+the filtered budget would see no cost, so the default covers the whole account.
+
+### Security Baseline (SECURITY-005)
+
+Controls, trust boundaries, the IAM review and residual risks are summarized in
+[`docs/security.md`](docs/security.md), including two manual checks (account-level S3 Block Public Access and a
+short throttling burst test). Request bodies above 16 KiB are rejected with 413.
+
+### Dependency Scanning (SECURITY-007)
+
+- **Dependabot** (`.github/dependabot.yml`): weekly update PRs for `frontend/` and `backend/` npm packages
+  (minor and patch grouped) and GitHub Actions, monthly for the Terraform providers. At most 3 open PRs per
+  ecosystem. Each update PR runs the normal PR validation.
+- **CI audit** (PR validation and deploy build): `npm audit --omit=dev` for frontend and backend, evaluated by
+  `scripts/check_npm_audit.py`. High or critical vulnerabilities in **production** dependencies fail the build.
+  Dev-only tools (Vite, ESLint, Vitest) are not blocking.
+- **Exceptions** (`.github/npm-audit-allowlist.json`): only if no fix exists or the vulnerable code is not
+  reachable. Each entry needs the advisory ID (`GHSA-…`), the package, a reason and an expiry date (at most
+  90 days). Expired entries fail the build again; unused entries are reported. Example:
+
+  ```json
+  { "advisory": "GHSA-xxxx-xxxx-xxxx", "package": "example", "reason": "No fix released; only used at build time", "expires": "2026-12-31" }
+  ```
+
+- **Repository settings (manual, once):** GitHub → Settings → Code security → enable **Dependabot alerts** and
+  **Dependabot security updates**. These settings are not stored in the repository.
+
 ### API Throttling
 
 The API stage is throttled to protect against cost spikes (SECURITY-014): burst 20 and
 10 requests per second by default, shared by all clients. Excess requests get HTTP 429.
 Change the limits through the Terraform variables `api_throttling_burst_limit` and
 `api_throttling_rate_limit` (`terraform/variables.tf`), then merge to `main`.
+
+### Smoke Tests (OPERATIONS-006)
+
+After every deployment, `deploy.yml` runs `scripts/smoke-test.sh <frontend_url> <api_endpoint>`. It only sends
+GET requests and never touches household data:
+
+| Check | Expected |
+|---|---|
+| Frontend `/` | 200, app root element, `Content-Security-Policy` header |
+| Frontend `/dashboard` | 200 (SPA routing through CloudFront) |
+| API `/health` | 200, `"status":"ok"`, `"database":"connected"` |
+| API `/dashboard`, `/onboarding` without a token | 401 (the JWT authorizer protects the API) |
+
+Transient errors (refused connections, timeouts, 429, 5xx) are retried 3 times. Any failure fails the run with a
+GitHub error annotation and points to the rollback section below. Signed-in requests are not covered (TD-024).
+Run it locally with the Terraform outputs:
+
+```bash
+scripts/smoke-test.sh "$(terraform -chdir=terraform output -raw frontend_url)" \
+  "$(terraform -chdir=terraform output -raw api_endpoint)"
+```
 
 ### Rollback
 

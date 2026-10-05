@@ -50,6 +50,14 @@ jobs:
         if: hashFiles(format('{0}/package.json', matrix.project)) != ''
         run: npm ci
 
+      # SECURITY-007: high/critical vulnerabilities in production dependencies fail the build,
+      # unless a time-boxed exception exists in .github/npm-audit-allowlist.json.
+      - name: Audit production dependencies
+        if: hashFiles(format('{0}/package.json', matrix.project)) != ''
+        run: |
+          npm audit --omit=dev --json > "$RUNNER_TEMP/audit.json" || true
+          python3 ../scripts/check_npm_audit.py "$RUNNER_TEMP/audit.json" ../.github/npm-audit-allowlist.json
+
       - name: Build
         if: hashFiles(format('{0}/package.json', matrix.project)) != ''
         run: npm run build
@@ -106,6 +114,9 @@ jobs:
           # runner (plan file and plan.json are never uploaded).
           TF_VAR_google_client_id: ${{ vars.GOOGLE_CLIENT_ID }}
           TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          # Cost alerts (OPERATIONS-001): e-mail is a secret (personal data); the monitor ARN is optional.
+          TF_VAR_budget_alert_email: ${{ secrets.BUDGET_ALERT_EMAIL }}
+          TF_VAR_cost_anomaly_monitor_arn: ${{ vars.COST_ANOMALY_MONITOR_ARN }}
         run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m -out=tfplan
 
       - name: Enforce mandatory tags
@@ -152,6 +163,14 @@ jobs:
           scripts/deploy-frontend.sh frontend/dist \
             "$(terraform -chdir="$TF_DIR" output -raw frontend_bucket_name)" \
             "$(terraform -chdir="$TF_DIR" output -raw cloudfront_distribution_id)"
+
+      # OPERATIONS-006: read-only checks of the live system; a failure fails the deployment run.
+      - name: Smoke tests
+        if: hashFiles('terraform/**/*.tf') != '' && hashFiles('frontend/package.json') != ''
+        run: |
+          scripts/smoke-test.sh \
+            "$(terraform -chdir="$TF_DIR" output -raw frontend_url)" \
+            "$(terraform -chdir="$TF_DIR" output -raw api_endpoint)"
 
       - name: Report skipped frontend deployment
         if: hashFiles('frontend/package.json') == ''

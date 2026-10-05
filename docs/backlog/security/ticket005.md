@@ -129,10 +129,10 @@ terraform plan
 
 # Acceptance Criteria
 
-- API throttling (SECURITY-014) verified
-- IAM policies reviewed and least privilege
-- Storage protections verified
-- Security documentation created
+- [ ] API throttling (SECURITY-014) verified — configuration verified by tests; live burst test is a manual step
+- [x] IAM policies reviewed and least privilege
+- [x] Storage protections verified
+- [x] Security documentation created
 
 ---
 
@@ -147,3 +147,30 @@ terraform plan
 
 - AWS WAF (cost ~5+ USD/month; reconsider for Public SaaS, FUTURE-003)
 - GuardDuty / Security Hub (cost evaluation needed; may become separate ticket)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- IAM review (`docs/security.md`): `tenner-api-role` loses `dynamodb:Scan` and `dynamodb:DeleteItem` (never used;
+  soft deletes only). Every remaining wildcard is justified (log streams, GSI ARNs). The deploy role is outside
+  the repository; its broad grants are listed.
+- CloudFront: `minimum_protocol_version = "TLSv1"`. With the default certificate CloudFront always uses TLSv1 and
+  ignored `TLSv1.2_2021` (the permanent plan diff). TLS 1.2+ needs a custom domain (TD-025, TICKET-022).
+- API: access logging verified (JSON, no headers/tokens/bodies). Request bodies > 16 KiB → 413
+  `PAYLOAD_TOO_LARGE` before parsing (`parseJsonBody`).
+- Lambda: Node.js 22, no secrets in environment variables (new Terraform test).
+- DynamoDB/S3/Cognito: encryption, PITR, deletion protection, Block Public Access, TLS-only policies verified by
+  existing Terraform tests.
+- Docs: `docs/security.md` (trust boundaries, controls, IAM review, manual checks, residual risks), README,
+  architecture link, TD-025.
+
+Validation: Terraform `fmt -check`, `validate`, `test` (45 passed); backend lint, build, 438 tests.
+
+Open (manual, outside Terraform):
+
+- Account-level S3 Block Public Access: verify with the command in `docs/security.md` (not managed by Terraform,
+  because the account may hold other projects).
+- Throttling burst test (≤ 100 requests) in CloudShell; the sandbox used for implementation cannot reach the API.

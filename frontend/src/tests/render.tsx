@@ -7,6 +7,7 @@ import { MemoryRouter } from "react-router";
 import { AppProviders } from "../AppProviders";
 import { CompletionProvider } from "../features/completions/CompletionProvider";
 import { CurrentUserProvider } from "../features/completions/CurrentUserProvider";
+import type { UserPreferences } from "../features/settings/preferences";
 import type { UserId } from "../types/domain";
 
 export function createTestQueryClient(): QueryClient {
@@ -23,6 +24,8 @@ export interface RenderOptions {
   readonly logout?: () => void;
   /** Skip the session providers (for components that render before login, e.g. the AuthGate). */
   readonly withoutSession?: boolean;
+  /** User preferences (FRONTEND-008); default: from localStorage (empty in tests → defaults). */
+  readonly preferences?: UserPreferences;
 }
 
 export function renderWithProviders(
@@ -33,6 +36,7 @@ export function renderWithProviders(
     user = "STEFAN",
     logout = () => undefined,
     withoutSession = false,
+    preferences,
   }: RenderOptions = {},
 ): RenderResult & { queryClient: QueryClient } {
   const content = withoutSession ? (
@@ -43,7 +47,7 @@ export function renderWithProviders(
     </CurrentUserProvider>
   );
   const result = render(
-    <AppProviders queryClient={queryClient}>
+    <AppProviders queryClient={queryClient} preferences={preferences}>
       <MemoryRouter initialEntries={[route]}>{content}</MemoryRouter>
     </AppProviders>,
   );

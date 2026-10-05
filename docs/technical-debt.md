@@ -651,3 +651,59 @@ and keep the main API role without them; or store claims in DynamoDB with a cond
 ### Related Work
 
 HOTFIX-001, `terraform/iam.tf` (`api_cognito`), `backend/src/services/household-assignment.service.ts`
+
+---
+
+## TD-024: Smoke tests cover only unauthenticated requests
+
+### Description
+
+`scripts/smoke-test.sh` (OPERATIONS-006) checks the frontend, `/health` and that protected routes return 401. It
+does not sign in, so a broken household route (e.g. a Lambda error that only occurs with a valid token) passes
+the smoke tests.
+
+### Reason
+
+Sign-in is Google only (ADR 0002). A non-interactive test user would need a password login or a separate app
+client, which reopens a second way into the user pool.
+
+### Impact
+
+Authenticated regressions are found by unit tests and by the household, not by the pipeline.
+
+### Suggested Improvement
+
+A dedicated, read-only smoke-test app client with a client-credentials flow and a resource server scope that the
+backend accepts only for `GET /health`-like read routes, or a synthetic canary with a stored refresh token
+(SECURITY-006 for the secret).
+
+### Related Work
+
+OPERATIONS-006, ADR 0002, `scripts/smoke-test.sh`
+
+---
+
+## TD-025: CloudFront accepts TLS 1.0/1.1 with the default certificate
+
+### Description
+
+The frontend uses the default `*.cloudfront.net` certificate. With it, CloudFront always applies the `TLSv1`
+security policy; the configured `TLSv1.2_2021` was ignored and only caused a permanent plan diff. SECURITY-005
+set the value to `TLSv1` so the code matches reality.
+
+### Reason
+
+A minimum of TLS 1.2 requires a custom domain with an ACM certificate (owner decision: no own domain for now).
+
+### Impact
+
+Clients could negotiate TLS 1.0/1.1. Current browsers do not; the risk is limited to outdated clients. The API
+(API Gateway) already requires TLS 1.2.
+
+### Suggested Improvement
+
+Custom domain with ACM certificate and `TLSv1.2_2021` (TICKET-022).
+
+### Related Work
+
+SECURITY-005, TICKET-022, `terraform/frontend-hosting.tf`

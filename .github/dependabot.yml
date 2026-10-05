@@ -1,0 +1,36 @@
+# Dependency updates (SECURITY-007). Minor and patch updates are grouped per ecosystem to keep
+# review effort low; major updates arrive as single PRs. Security updates are separate (repository setting).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      frontend-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      backend-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: terraform
+    directory: /terraform
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1

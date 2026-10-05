@@ -1,0 +1,4 @@
+{
+  "_comment": "Time-boxed exceptions for scripts/check_npm_audit.py (SECURITY-007). Each entry: advisory (GHSA ID), package, reason, expires (YYYY-MM-DD, at most 90 days ahead). Expired entries fail the build.",
+  "exceptions": []
+}

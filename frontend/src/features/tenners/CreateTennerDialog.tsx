@@ -15,7 +15,7 @@ import { useId } from "react";
 import { useForm } from "react-hook-form";
 import { errorMessage } from "../../api/errorMessages";
 import { useNotify } from "../../components/NotificationProvider";
-import { useCurrentUser } from "../completions/CurrentUserProvider";
+import { useNewTennerDefaults } from "../settings/useNewTennerDefaults";
 import { useCreateTenner } from "./api";
 import { applyServerErrors } from "./applyServerErrors";
 import { TennerForm } from "./TennerForm";
@@ -33,7 +33,7 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
   const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const titleId = useId();
   const notify = useNotify();
-  const currentUser = useCurrentUser();
+  const defaults = useNewTennerDefaults();
   const create = useCreateTenner();
 
   const form = useForm<TennerFormValues>({
@@ -41,10 +41,10 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
     mode: "onChange",
     defaultValues: {
       title: "",
-      category: "HOUSEHOLD",
-      assignedTo: currentUser,
-      estimatedMinutes: 10,
-      frequencyDays: 14,
+      category: defaults.category,
+      assignedTo: defaults.assignedTo,
+      estimatedMinutes: defaults.estimatedMinutes,
+      frequencyDays: defaults.frequencyDays,
       active: true,
     },
   });

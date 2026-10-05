@@ -4,14 +4,14 @@ import { Card, CardContent } from "@mui/material";
 import { CATEGORY_LABELS } from "../../types/domain";
 import { formatMinutes } from "../../utils/format";
 import { DuplicateWarningDialog } from "./DuplicateWarningDialog";
-import { QUICK_ADD_DEFAULTS } from "./quickAdd";
 import { QuickAddInput } from "./QuickAddInput";
 import { useQuickAddTenner } from "./useQuickAddTenner";
 
 export function QuickAddTenner() {
   const quickAdd = useQuickAddTenner();
-  const category = quickAdd.suggestedCategory ?? QUICK_ADD_DEFAULTS.category;
-  const hint = `${CATEGORY_LABELS[category]}${quickAdd.suggestedCategory ? " (vorgeschlagen)" : ""} · ${formatMinutes(QUICK_ADD_DEFAULTS.estimatedMinutes)} · alle ${QUICK_ADD_DEFAULTS.frequencyDays} Tage – später änderbar`;
+  const { defaults } = quickAdd;
+  const category = quickAdd.suggestedCategory ?? defaults.category;
+  const hint = `${CATEGORY_LABELS[category]}${quickAdd.suggestedCategory ? " (vorgeschlagen)" : ""} · ${formatMinutes(defaults.estimatedMinutes)} · alle ${defaults.frequencyDays} Tage – später änderbar`;
 
   return (
     <Card sx={{ mb: 3 }}>

@@ -38,8 +38,9 @@ resource "aws_iam_role_policy" "api_logging" {
 }
 
 # Data access to the Tenner tables and their indexes only (TICKET-007).
-# Action list as specified by TICKET-007. TransactWriteItems (TICKET-013) needs no separate IAM action:
-# DynamoDB authorizes each transaction item with its own action (PutItem, UpdateItem), granted here.
+# TransactWriteItems (TICKET-013) needs no separate IAM action: DynamoDB authorizes each transaction item with
+# its own action (PutItem, UpdateItem), granted here. SECURITY-005 removed Scan and DeleteItem from the
+# TICKET-007 list: the code never scans and only soft-deletes (TICKET-012).
 data "aws_iam_policy_document" "api_dynamodb" {
   statement {
     sid = "TennerTableAccess"
@@ -47,9 +48,7 @@ data "aws_iam_policy_document" "api_dynamodb" {
       "dynamodb:GetItem",
       "dynamodb:PutItem",
       "dynamodb:UpdateItem",
-      "dynamodb:DeleteItem",
       "dynamodb:Query",
-      "dynamodb:Scan",
     ]
     resources = [
       aws_dynamodb_table.tenners.arn,

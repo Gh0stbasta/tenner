@@ -4,6 +4,7 @@
 variables {
   google_client_id     = "123456789012-abcdefghijklmnop.apps.googleusercontent.com"
   google_client_secret = "placeholder-secret"
+  budget_alert_email   = "owner@example.com"
 }
 
 
@@ -208,4 +209,20 @@ run "invalid_rate_limit_rejected" {
   }
 
   expect_failures = [var.api_throttling_rate_limit]
+}
+
+run "lambda_environment_contains_no_secrets" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      for name in keys(aws_lambda_function.api.environment[0].variables) : length(regexall("(?i)secret|password|token|key", name)) == 0
+    ])
+    error_message = "Lambda environment variables must not carry secrets (SECURITY-005)."
+  }
+
+  assert {
+    condition     = aws_lambda_function.api.runtime == "nodejs22.x"
+    error_message = "The Lambda runtime must be a supported Node.js version."
+  }
 }

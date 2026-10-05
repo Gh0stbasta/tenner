@@ -3,12 +3,12 @@
 This roadmap was produced by the backlog gap analysis in [META-001](meta-ticket.md).
 The full ticket index is in [`backlog/README.md`](backlog/README.md).
 
-> **Status (2026-10-02):** The gap analysis below was written when the repository contained ticket
-> definitions only ("existing" means "a ticket defines it"). Since then, Phase 1 is largely implemented and
-> deployed: CI/CD, Terraform, backend API (TICKET-001 – 020, 023, 024), API throttling (SECURITY-014) and the
-> German web app (FRONTEND-001 – 007, 009, UX-005). Open in Phase 1: authentication (SECURITY-001 – 004),
-> FRONTEND-008, SECURITY-005, SECURITY-007, OPERATIONS-001, OPERATIONS-006. Each ticket file has an
-> "Implementation Status" section.
+> **Status (2026-10-05):** Phase 1 is implemented. Deployed since 2026-10-02: CI/CD, Terraform, backend API
+> (TICKET-001 – 020, 023, 024), API throttling (SECURITY-014), the German web app (FRONTEND-001 – 007, 009, UX-005)
+> and authentication (SECURITY-001 – 004; Google sign-in FUTURE-011 pulled forward; first-login self-assignment
+> HOTFIX-001). Completed on 2026-10-05: SECURITY-005, SECURITY-007, OPERATIONS-001, OPERATIONS-006, FRONTEND-008.
+> Manual follow-ups: the throttling burst test and the account-level S3 check (`docs/security.md`), confirming the
+> AWS cost alert e-mail. Each ticket file has an "Implementation Status" section. Next: Phase 2.
 
 ---
 

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { completeResponse, dashboard } from "../../tests/fixtures";
 import { fail, mockFetch, ok } from "../../tests/fetchMock";
 import { renderWithProviders } from "../../tests/render";
+import { DEFAULT_PREFERENCES } from "../settings/preferences";
 import { DashboardPage } from "./DashboardPage";
 
 function section(name: string): HTMLElement {
@@ -100,5 +101,24 @@ describe("DashboardPage", () => {
     ).toBeInTheDocument();
     // The optimistic removal is rolled back.
     expect(await screen.findByRole("button", { name: "„Haustür putzen“ erledigen" })).toBeInTheDocument();
+  });
+
+  it("honors the dashboard preferences (FRONTEND-008)", async () => {
+    mockFetch({ "GET /dashboard": ok(dashboard()), "GET /history": ok({ items: [], nextCursor: null }) });
+    renderWithProviders(<DashboardPage />, {
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        showUpcoming: false,
+        showUserSummary: false,
+        showCategorySummary: false,
+        showRecentActivity: false,
+      },
+    });
+    expect(await screen.findByRole("heading", { level: 1, name: "Heute" })).toBeInTheDocument();
+    expect(section("Heute fällig")).toBeInTheDocument();
+    expect(section("Überfällig")).toBeInTheDocument();
+    for (const hidden of [/^Demnächst/, /^Nach Person/, /^Nach Kategorie/, /^Zuletzt erledigt/]) {
+      expect(screen.queryByRole("region", { name: hidden })).not.toBeInTheDocument();
+    }
   });
 });

@@ -93,9 +93,9 @@ README / docs/security.md update
 
 # Acceptance Criteria
 
-- Dependabot configured for all ecosystems
-- CI fails on high/critical production vulnerabilities
-- Exception process documented
+- [x] Dependabot configured for all ecosystems
+- [x] CI fails on high/critical production vulnerabilities
+- [x] Exception process documented
 
 ---
 
@@ -109,3 +109,22 @@ README / docs/security.md update
 
 - Supply-chain hardening (SECURITY-008)
 - Container scanning (no containers in architecture)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- `.github/dependabot.yml`: npm (frontend, backend; weekly, minor/patch grouped, max 3 PRs), GitHub Actions
+  (weekly, grouped, max 2), Terraform (monthly, max 1).
+- `scripts/check_npm_audit.py` evaluates `npm audit --omit=dev --json`: high/critical advisories fail unless
+  listed in `.github/npm-audit-allowlist.json` with reason and expiry; expired entries fail; unused ones are
+  reported. Runs in the PR validation and in the deploy build gate for frontend and backend.
+- Tests: `scripts/tests/test_check_npm_audit.py` (12 tests; 27 script tests in total), `actionlint`.
+- Validation: a throwaway project with `lodash@4.17.11` fails the check (4 high/critical advisories, exit 1);
+  frontend and backend pass (0 vulnerabilities on 2026-10-05).
+- Docs: README "Dependency Scanning" (process, example, repository settings).
+
+Deviation: no separate `docs/security.md`; the process is in the README next to the other operations topics.
+Manual follow-up: enable Dependabot alerts and security updates in the repository settings.

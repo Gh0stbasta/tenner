@@ -1,4 +1,4 @@
-/** Navigation entries (FRONTEND-001). Analytics and Settings are placeholders for now. */
+/** Navigation entries (FRONTEND-001). Analytics is a placeholder for now; Settings since FRONTEND-008. */
 
 export interface NavigationItem {
   readonly label: string;

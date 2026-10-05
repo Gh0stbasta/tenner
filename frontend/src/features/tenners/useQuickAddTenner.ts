@@ -6,9 +6,9 @@ import { queryKeys } from "../../api/queryKeys";
 import { errorMessage } from "../../api/errorMessages";
 import { useNotify } from "../../components/NotificationProvider";
 import type { Category } from "../../types/domain";
-import { useCurrentUser } from "../completions/CurrentUserProvider";
+import { useNewTennerDefaults } from "../settings/useNewTennerDefaults";
 import { DEFAULT_LIST_PARAMS, listTenners, useCreateTenner } from "./api";
-import { findSimilarTenner, QUICK_ADD_DEFAULTS, suggestCategory } from "./quickAdd";
+import { findSimilarTenner, suggestCategory } from "./quickAdd";
 import type { Tenner } from "./schemas";
 import { LIMITS } from "./tennerForm.schema";
 
@@ -23,7 +23,7 @@ export function validateQuickTitle(title: string): string | undefined {
 export function useQuickAddTenner() {
   const queryClient = useQueryClient();
   const notify = useNotify();
-  const assignedTo = useCurrentUser();
+  const defaults = useNewTennerDefaults();
   const create = useCreateTenner();
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | undefined>();
@@ -36,9 +36,8 @@ export function useQuickAddTenner() {
     const trimmed = title.trim();
     create.mutate(
       {
-        ...QUICK_ADD_DEFAULTS,
-        category: suggestCategory(trimmed) ?? QUICK_ADD_DEFAULTS.category,
-        assignedTo,
+        ...defaults,
+        category: suggestCategory(trimmed) ?? defaults.category,
         title: trimmed,
       },
       {
@@ -75,6 +74,7 @@ export function useQuickAddTenner() {
   };
 
   return {
+    defaults,
     title,
     setTitle: (value: string) => {
       setTitle(value);

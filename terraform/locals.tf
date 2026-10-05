@@ -75,6 +75,17 @@ locals {
   household_members      = ["STEFAN", "JULIA"]
   household_groups       = { for member in local.household_members : member => "household:${local.household_tenant_id}:${member}" }
 
+  # Cost monitoring (OPERATIONS-001): 50 % and 80 % of actual spend, 100 % of forecasted spend.
+  cost_budget_name               = "${local.name_prefix}-monthly-${var.environment}"
+  cost_anomaly_monitor_name      = "${local.name_prefix}-services-${var.environment}"
+  cost_anomaly_subscription_name = "${local.name_prefix}-anomalies-${var.environment}"
+  cost_budget_alerts = [
+    { percent = 50, type = "ACTUAL" },
+    { percent = 80, type = "ACTUAL" },
+    { percent = 100, type = "FORECASTED" },
+  ]
+  cost_anomaly_monitor_arn = var.cost_anomaly_monitor_arn != "" ? var.cost_anomaly_monitor_arn : aws_ce_anomaly_monitor.services[0].arn
+
   # Lambda bundle built by `npm run build` in backend/ (dist/index.mjs).
   api_source_dir  = "${path.module}/../backend/dist"
   api_package_zip = "${path.module}/../.build/tenner-api.zip"

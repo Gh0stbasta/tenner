@@ -47,6 +47,13 @@ export class NotFoundError extends ApplicationError {
   }
 }
 
+/** 413: request body above the accepted size (SECURITY-005). */
+export class PayloadTooLargeError extends ApplicationError {
+  constructor(message = "Request body is too large.") {
+    super("PAYLOAD_TOO_LARGE", 413, message);
+  }
+}
+
 /** 409 Conflict. The code can be specialized, e.g. TENNER_INACTIVE or CONCURRENT_MODIFICATION. */
 export class ConflictError extends ApplicationError {
   constructor(message = "Conflict.", code = "CONFLICT") {

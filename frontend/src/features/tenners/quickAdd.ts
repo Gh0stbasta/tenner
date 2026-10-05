@@ -3,6 +3,7 @@
 import type { Category } from "../../types/domain";
 import type { Tenner } from "./schemas";
 
+/** Built-in defaults; the user preferences (FRONTEND-008) override them at runtime. */
 export const QUICK_ADD_DEFAULTS = {
   category: "HOUSEHOLD",
   estimatedMinutes: 10,

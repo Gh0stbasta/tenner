@@ -78,9 +78,9 @@ demonstrates failure handling.
 
 # Acceptance Criteria
 
-- Smoke tests run after every deployment
-- Failures fail the pipeline
-- No data modified by smoke tests
+- [x] Smoke tests run after every deployment
+- [x] Failures fail the pipeline
+- [x] No data modified by smoke tests
 
 ---
 
@@ -93,3 +93,24 @@ demonstrates failure handling.
 # Out of Scope
 
 - Full end-to-end UI tests
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- `scripts/smoke-test.sh <frontend-url> <api-endpoint>`: GET only. Frontend `/` (200, root element, CSP header),
+  `/dashboard` (200, SPA routing), API `/health` (200, ok, database connected), `/dashboard` and `/onboarding`
+  without token (401). Retries transient failures only; prints GitHub error annotations and the rollback pointer.
+- `deploy.yml`: step "Smoke tests" after the frontend publish (outputs `frontend_url`, `api_endpoint`).
+- Validation: `shellcheck`, `actionlint`; against a local stub: healthy → exit 0; broken (no CSP, 503 health,
+  unprotected API) → 4 failures, exit 1; unreachable host → 5 failures, exit 1.
+- Docs: README "Smoke Tests", TD-024.
+
+Deviations:
+
+- No authenticated checks: sign-in is Google only, so there is no non-interactive smoke-test user (TD-024). The
+  401 checks replace "200 or 401" and cover the open live check of SECURITY-002.
+- `/health` has no version field yet (OPERATIONS-004).
+- The run against the deployed environment happens on the next merge to `main`.

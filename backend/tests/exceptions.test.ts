@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   ApplicationError,
   ConflictError,
+  ForbiddenError,
   NotFoundError,
+  PayloadTooLargeError,
   PersistenceError,
   UnauthorizedError,
   ValidationError,
@@ -12,7 +14,9 @@ describe("application errors", () => {
   it.each([
     [new ValidationError(), "VALIDATION_ERROR", 400, "ValidationError"],
     [new UnauthorizedError(), "UNAUTHORIZED", 401, "UnauthorizedError"],
+    [new ForbiddenError(), "FORBIDDEN", 403, "ForbiddenError"],
     [new NotFoundError(), "NOT_FOUND", 404, "NotFoundError"],
+    [new PayloadTooLargeError(), "PAYLOAD_TOO_LARGE", 413, "PayloadTooLargeError"],
     [new ConflictError(), "CONFLICT", 409, "ConflictError"],
     [new ConflictError("Modified.", "CONCURRENT_MODIFICATION"), "CONCURRENT_MODIFICATION", 409, "ConflictError"],
     [new PersistenceError(), "PERSISTENCE_ERROR", 500, "PersistenceError"],
