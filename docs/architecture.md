@@ -471,6 +471,9 @@ Longest Overdue Tenners
 
 # Security
 
+The consolidated baseline (controls, trust boundaries, IAM review, residual risks) is in
+[`security.md`](security.md) (SECURITY-005).
+
 ## Authentication (ADR 0001)
 
 Decided in [`decisions/0001-authentication.md`](decisions/0001-authentication.md) (SECURITY-001), amended by

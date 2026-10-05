@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../src/exceptions/index.js";
-import { completeTennerSchema, createTennerSchema, parseJsonBody, updateTennerSchema, validate } from "../src/validators/index.js";
+import { PayloadTooLargeError } from "../src/exceptions/index.js";
+import { completeTennerSchema, createTennerSchema, MAX_BODY_BYTES, parseJsonBody, updateTennerSchema, validate } from "../src/validators/index.js";
 
 const valid = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14, assignedTo: "STEFAN" };
 
@@ -91,5 +92,14 @@ describe("parseJsonBody", () => {
 
   it.each([undefined, "", "{not json"])("rejects %j", (input) => {
     expect(() => parseJsonBody(input)).toThrow(ValidationError);
+  });
+
+  it("rejects bodies above the size limit with 413 before parsing (SECURITY-005)", () => {
+    const atLimit = JSON.stringify({ a: "x".repeat(MAX_BODY_BYTES - 8) });
+    expect(Buffer.byteLength(atLimit)).toBe(MAX_BODY_BYTES);
+    expect(parseJsonBody(atLimit)).toEqual({ a: "x".repeat(MAX_BODY_BYTES - 8) });
+    const tooLarge = JSON.stringify({ a: "ü".repeat(MAX_BODY_BYTES / 2) });
+    expect(() => parseJsonBody(tooLarge)).toThrow(PayloadTooLargeError);
+    expect(() => parseJsonBody(Buffer.from(tooLarge).toString("base64"), true)).toThrow(expect.objectContaining({ statusCode: 413, code: "PAYLOAD_TOO_LARGE" }));
   });
 });

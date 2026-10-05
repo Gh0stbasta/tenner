@@ -680,3 +680,30 @@ backend accepts only for `GET /health`-like read routes, or a synthetic canary w
 ### Related Work
 
 OPERATIONS-006, ADR 0002, `scripts/smoke-test.sh`
+
+---
+
+## TD-025: CloudFront accepts TLS 1.0/1.1 with the default certificate
+
+### Description
+
+The frontend uses the default `*.cloudfront.net` certificate. With it, CloudFront always applies the `TLSv1`
+security policy; the configured `TLSv1.2_2021` was ignored and only caused a permanent plan diff. SECURITY-005
+set the value to `TLSv1` so the code matches reality.
+
+### Reason
+
+A minimum of TLS 1.2 requires a custom domain with an ACM certificate (owner decision: no own domain for now).
+
+### Impact
+
+Clients could negotiate TLS 1.0/1.1. Current browsers do not; the risk is limited to outdated clients. The API
+(API Gateway) already requires TLS 1.2.
+
+### Suggested Improvement
+
+Custom domain with ACM certificate and `TLSv1.2_2021` (TICKET-022).
+
+### Related Work
+
+SECURITY-005, TICKET-022, `terraform/frontend-hosting.tf`

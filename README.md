@@ -249,6 +249,12 @@ Password accounts created before FUTURE-011 can no longer sign in and can be del
 
 Never commit e-mail addresses, client secrets or tokens.
 
+### Security Baseline (SECURITY-005)
+
+Controls, trust boundaries, the IAM review and residual risks are summarized in
+[`docs/security.md`](docs/security.md), including two manual checks (account-level S3 Block Public Access and a
+short throttling burst test). Request bodies above 16 KiB are rejected with 413.
+
 ### Dependency Scanning (SECURITY-007)
 
 - **Dependabot** (`.github/dependabot.yml`): weekly update PRs for `frontend/` and `backend/` npm packages
