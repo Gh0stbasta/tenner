@@ -112,3 +112,13 @@ output "cognito_login_url" {
   description = "Base URL of the Cognito managed login domain (logout endpoint)."
   value       = "https://${local.auth_login_domain}"
 }
+
+output "cognito_google_redirect_uri" {
+  description = "Authorized redirect URI to enter in the Google OAuth client (FUTURE-011)."
+  value       = "https://${local.auth_login_domain}/oauth2/idpresponse"
+}
+
+output "cognito_household_groups" {
+  description = "Cognito groups that grant household membership (FUTURE-011)."
+  value       = values(local.household_groups)
+}

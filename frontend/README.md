@@ -105,19 +105,20 @@ The completion workflow lives in `features/completions/CompletionProvider.tsx` a
 
 Success messages use the global snackbar (`components/NotificationProvider.tsx`, `useNotify()`).
 
-## Authentication (SECURITY-003)
+## Authentication (SECURITY-003, FUTURE-011)
 
 - `src/auth/`: `oidc-client-ts` `UserManager` (Authorization Code flow with PKCE against Cognito, scopes
-  `openid email`, German login page via `lang=de`) and `react-oidc-context` for React state.
-- **Login:** `AuthGate` wraps every page except `/auth/callback`. Without a session it redirects to the
-  Cognito managed login and remembers the page; `/auth/callback` finishes the code exchange and returns there.
+  `openid email`, `lang=de`, `identity_provider=Google`) and `react-oidc-context` for React state.
+- **Login:** `AuthGate` wraps every page except `/auth/callback`. Without a session it redirects through Cognito
+  directly to Google sign-in and remembers the page; `/auth/callback` finishes the code exchange and returns there.
 - **Tokens:** stored in `localStorage` (owner decision, ADR 0001): a device stays logged in for up to 30 days
   (refresh token). Trade-off: injected scripts could read them; mitigated by the strict CSP (`script-src 'self'`)
   and no third-party scripts.
 - **API:** `src/api/client.ts` sends `Authorization: Bearer <ID token>` (ADR 0001). On `401` it refreshes the
   session once and retries; if that fails, it redirects to the login.
-- **Current user:** `custom:userId` from the ID token (Stefan/Julia), shown in the header with "Abmelden".
-  Accounts without a valid `custom:userId` see "Konto nicht eingerichtet". The former "Ich bin" selector is gone.
+- **Current user:** the household group `household:<tenantId>:<userId>` in `cognito:groups` of the ID token
+  (Stefan/Julia), shown in the header with "Abmelden". Google users without exactly one valid household group
+  see "Konto nicht eingerichtet" (with instructions) and make no API calls. The former "Ich bin" selector is gone.
 - **Logout:** clears the tokens and opens the Cognito logout endpoint, which returns to the app.
 
 ## Theme

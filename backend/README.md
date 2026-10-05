@@ -55,20 +55,23 @@ clients/            infrastructure clients (shared DynamoDB DocumentClient)
 Everything may use `models`, `dto`, `exceptions` and `utils`. Wiring happens in `index.ts`
 (`createDependencies`), so tests can swap any dependency.
 
-## Authentication and Authorization (SECURITY-004)
+## Authentication and Authorization (SECURITY-004, FUTURE-011)
 
 API Gateway's JWT authorizer verifies the Cognito ID token before the Lambda runs (SECURITY-002). `src/index.ts`
-then builds the identity once per request with `identityFromEvent` (`src/auth/identity.ts`):
+then builds the identity once per request with `identityFromEvent` (`src/auth/identity.ts`) from the household
+group in the `cognito:groups` claim (users sign in with Google; ADR 0002):
 
 | Claim | Becomes | Rule |
 |---|---|---|
-| `custom:tenantId` | `identity.tenantId`, used for **every** repository call | `[A-Za-z0-9_-]{1,64}` |
-| `custom:userId` | `identity.userId`, the acting user | `STEFAN` or `JULIA` |
+| `cognito:groups` contains `household:<tenantId>:<userId>` | `identity.tenantId` (used for **every** repository call) and `identity.userId` (the acting user) | exactly one such group; tenant `[A-Za-z0-9_-]{1,64}`, user `STEFAN` or `JULIA` |
+
+The HTTP API passes the array claim as one string (`"[group1 group2]"`); `groupsOf` accepts that and real arrays.
+Other groups (e.g. Cognito's `<pool>_Google`) are ignored.
 
 | Situation | Response |
 |---|---|
 | Protected route without verified claims (no authorizer context) | `401 UNAUTHORIZED` |
-| Valid token, but the account lacks a claim or has an unknown user / malformed tenant | `403 FORBIDDEN` |
+| Signed in, but no household group, several, or an invalid one | `403 FORBIDDEN` |
 | `GET /health` | public, no identity |
 
 - There is **no default tenant** and no tenant parameter. A `tenantId` in the query or body is rejected with 400
@@ -368,7 +371,7 @@ and a Tenner fixture.
 | unknown route | `404 NOT_FOUND` |
 
 Every route except `GET /health` additionally returns `401 UNAUTHORIZED` (from API Gateway or, without claims, from
-the Lambda) and `403 FORBIDDEN` for accounts without household attributes (SECURITY-004). `TennerResponse` includes
+the Lambda) and `403 FORBIDDEN` for accounts without a household group (SECURITY-004, FUTURE-011). `TennerResponse` includes
 `createdBy` and `updatedBy`.
 
 ### POST /tenners

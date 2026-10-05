@@ -1,5 +1,12 @@
 # Offline tests for authentication (SECURITY-002, ADR 0001).
 
+# Placeholder Google OAuth client (FUTURE-011); the real values come from GitHub in CI.
+variables {
+  google_client_id     = "123456789012-abcdefghijklmnop.apps.googleusercontent.com"
+  google_client_secret = "placeholder-secret"
+}
+
+
 mock_provider "archive" {
   mock_data "archive_file" {
     defaults = {
@@ -97,11 +104,6 @@ run "app_client_is_public_pkce_and_cannot_write_identity" {
   }
 
   assert {
-    condition     = contains(aws_cognito_user_pool_client.web.read_attributes, "custom:tenantId") && contains(aws_cognito_user_pool_client.web.read_attributes, "custom:userId")
-    error_message = "The ID token must carry the identity attributes."
-  }
-
-  assert {
     condition     = aws_cognito_user_pool_client.web.callback_urls == toset(["https://d111111abcdef8.cloudfront.net/auth/callback"])
     error_message = "The callback URL must be the CloudFront domain."
   }
@@ -162,4 +164,67 @@ run "csp_allows_cognito_endpoints" {
     )
     error_message = "connect-src must allow the Cognito discovery and token endpoints."
   }
+}
+
+run "sign_in_is_google_only" {
+  command = plan
+
+  assert {
+    condition     = aws_cognito_user_pool_client.web.supported_identity_providers == toset(["Google"])
+    error_message = "The app client must offer Google only (no password login)."
+  }
+
+  assert {
+    condition     = aws_cognito_user_pool_client.web.explicit_auth_flows == toset(["ALLOW_REFRESH_TOKEN_AUTH"])
+    error_message = "Password-based auth flows (SRP, USER_PASSWORD) must be disabled."
+  }
+
+  assert {
+    condition     = aws_cognito_identity_provider.google.provider_type == "Google" && aws_cognito_identity_provider.google.provider_details["authorize_scopes"] == "openid email profile"
+    error_message = "Google must be configured with the openid, email and profile scopes."
+  }
+
+  assert {
+    condition     = aws_cognito_identity_provider.google.provider_details["client_id"] == "123456789012-abcdefghijklmnop.apps.googleusercontent.com"
+    error_message = "The Google client ID must come from var.google_client_id."
+  }
+
+  assert {
+    condition     = aws_cognito_identity_provider.google.attribute_mapping == tomap({ email = "email", username = "sub" })
+    error_message = "Only the e-mail may be mapped from Google (username = Google subject)."
+  }
+
+  assert {
+    condition     = output.cognito_google_redirect_uri == "https://tenner-prod-${substr(sha1("123456789012"), 0, 8)}.auth.eu-central-1.amazoncognito.com/oauth2/idpresponse"
+    error_message = "The Google redirect URI output must point to the Cognito domain."
+  }
+}
+
+run "household_groups_exist" {
+  command = plan
+
+  assert {
+    condition     = toset([for group in aws_cognito_user_group.household : group.name]) == toset(["household:default:STEFAN", "household:default:JULIA"])
+    error_message = "There must be one household group per member (household:<tenantId>:<userId>)."
+  }
+}
+
+run "google_client_id_is_validated" {
+  command = plan
+
+  variables {
+    google_client_id = "not-a-google-client"
+  }
+
+  expect_failures = [var.google_client_id]
+}
+
+run "google_client_secret_is_required" {
+  command = plan
+
+  variables {
+    google_client_secret = "  "
+  }
+
+  expect_failures = [var.google_client_secret]
 }

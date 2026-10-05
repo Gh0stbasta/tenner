@@ -1,6 +1,7 @@
 # ADR 0001: Authentication with a Cognito User Pool and One Account per Household Member
 
-- **Status:** Accepted (2026-10-02)
+- **Status:** Accepted (2026-10-02); sign-up, login UI and identity attributes amended by
+  [ADR 0002](0002-google-sign-in.md) (Google sign-in, household groups)
 - **Ticket:** SECURITY-001
 - **Deciders:** repository owner (Stefan)
 
@@ -78,7 +79,8 @@ If more APIs or third-party clients appear, switch to access tokens with a pre-t
 - `completedBy`, `revertedBy` and `restoredBy` default to the logged-in user; covering for someone else stays
   possible and is recorded as `recordedBy` (SECURITY-004).
 - The "Ich bin" selector is removed; the current user is shown read-only (TD-018 resolved).
-- Two accounts must be created once after the deployment (README → "User Accounts").
+- Two accounts must be created once after the deployment (superseded by ADR 0002: Google sign-in plus a
+  household group per member).
 - `GithubActionsDeployRole` needs Cognito permissions (`cognito-idp:*` on the pool, or a scoped list).
 - The CloudFront CSP must allow `connect-src` to the Cognito endpoints.
 

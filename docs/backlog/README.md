@@ -299,4 +299,4 @@ docs/backlog/
 | [FUTURE-008](future/ticket008.md) | Evaluate Billing and Subscriptions | Low | Long-Term |
 | [FUTURE-009](future/ticket009.md) | Evaluate WhatsApp Notifications | Low | Long-Term |
 | [FUTURE-010](future/ticket010.md) | Evaluate Voice Assistant Integration | Low | Long-Term |
-| [FUTURE-011](future/ticket011.md) | Add Social Login | Low | Long-Term |
+| [FUTURE-011](future/ticket011.md) | Add Social Login (Google) | High | MVP (pulled forward) |
