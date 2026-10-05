@@ -308,3 +308,4 @@ Urgent changes outside the regular backlog live in `docs/hotfix/` (owner decisio
 | ID | Title | Priority | Phase |
 |---|---|---|---|
 | [HOTFIX-001](../hotfix/ticket001.md) | First Login & Household Assignment Flow | High | MVP |
+| [HOTFIX-002](../hotfix/ticket002.md) | Make Dependabot Pull Requests Pass Validation | High | MVP |
