@@ -147,3 +147,20 @@ Tenners only (details: any non-deleted Tenner). Constants are in `backend/src/an
 - **Streak window:** streaks look back at most 366 days to keep history reads bounded.
 - Undone completions are not in the history reads, so undoing a completion shortens or breaks a streak.
 - Items are sorted by `consistencyScore` (highest first, `null` last), then title.
+
+## Time Investment — `GET /analytics/time` (ANALYTICS-005)
+
+| Metric | Definition |
+|---|---|
+| `totalActualMinutes` | Sum of `actualMinutes` in the period |
+| `averageMinutesPerWeek` | `totalActualMinutes ÷ (period days ÷ 7)`, rounded |
+| `projectedMinutesPerWeek` | Σ over active Tenners of `estimatedMinutes × 7 ÷ frequencyDays`, rounded |
+| `estimationAccuracy` | Σ estimated ÷ Σ actual over completions with user-reported minutes; `null` without any (< 1: Tenners take longer than estimated) |
+| `reportedSamples` | Completions with user-reported minutes in the period |
+| `tennersExceedingEstimate` | Tenners whose median user-reported minutes exceed `estimatedMinutes × 1.5`, at least 3 samples; largest overrun first |
+| `tennersExceedingTenMinutes` | Active Tenners with `estimatedMinutes` above 10 ("Ten-Minute First") |
+
+**User-reported vs. defaulted minutes:** since ANALYTICS-005, completions store `actualMinutesSource`: `USER` when the
+request sent `actualMinutes`, `DEFAULT` when the server used the estimate. Older records count as `DEFAULT`. The web
+app does not send minutes (it has no input for them yet), so accuracy stays `null` until minutes can be entered
+(TD-033). Estimates are the Tenners' current values.

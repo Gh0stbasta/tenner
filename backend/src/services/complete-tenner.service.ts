@@ -67,6 +67,7 @@ export class CompleteTennerService {
       recordedBy: identity.userId,
       completedAt,
       actualMinutes: request.actualMinutes ?? tenner.estimatedMinutes,
+      actualMinutesSource: request.actualMinutes === undefined ? "DEFAULT" : "USER",
       revertedAt: null,
       revertedBy: null,
       revertReason: null,

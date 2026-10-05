@@ -82,7 +82,7 @@ describe("DashboardPage", () => {
 
     await waitFor(() => expect(screen.queryByText("Büro saugen")).not.toBeInTheDocument());
     const post = fetchMock.calls().find((call) => call.key === "POST /tenners/t-1/complete");
-    expect(post?.body).toEqual({ completedBy: "STEFAN", actualMinutes: 10 });
+    expect(post?.body).toEqual({ completedBy: "STEFAN" });
     expect(post?.headers["Idempotency-Key"]).toMatch(/^[0-9a-f-]{36}$/);
     expect(dashboardCalls).toBe(2);
   });

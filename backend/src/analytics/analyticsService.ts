@@ -3,13 +3,13 @@
  * current Tenners. Household volume is small; pre-aggregation is ANALYTICS-010.
  */
 
-import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, AnalyticsBalanceResponse, AnalyticsHabitResponse, AnalyticsHabitsResponse, HouseholdResponse } from "../dto/index.js";
+import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, AnalyticsBalanceResponse, AnalyticsHabitResponse, AnalyticsHabitsResponse, AnalyticsTimeResponse, HouseholdResponse } from "../dto/index.js";
 import { SEED_CATEGORIES, SEED_MEMBERS, type HouseholdCategory, type HouseholdMember, type Tenner } from "../models/index.js";
 import type { CompletionRepository, TennerRepository } from "../repositories/index.js";
 import { addDays, type Clock } from "../utils/clock.js";
 import { NotFoundError } from "../exceptions/index.js";
 import { dateInTimeZone } from "../utils/timezone.js";
-import { balance, categoryMetrics, filterCompletions, summarize, trends, userMetrics, type AnalyticsContext } from "./aggregations.js";
+import { balance, categoryMetrics, filterCompletions, summarize, timeInvestment, trends, userMetrics, type AnalyticsContext } from "./aggregations.js";
 import { loadCompletions } from "./historyLoader.js";
 import { habitDetail, habits, STREAK_WINDOW_DAYS, type HabitInput } from "./habits.js";
 import { DEFAULT_NEGLECTED_LIMIT, neglectedTenners } from "./neglect.js";
@@ -108,6 +108,13 @@ export class AnalyticsService {
       this.categoriesOf(tenantId),
     ]);
     return balance(completions, tenners, members, categories, period);
+  }
+
+  /** Real and projected time investment and estimate accuracy (ANALYTICS-005). */
+  async time(tenantId: string, request: AnalyticsPeriodRequest): Promise<AnalyticsTimeResponse> {
+    const { settings, period } = await this.scope(tenantId, request);
+    const [completions, tenners] = await Promise.all([loadCompletions(this.completions, tenantId, period, settings.timezone), this.tenners.list(tenantId)]);
+    return timeInvestment(completions, tenners, period);
   }
 
   /** Streaks, consistency and trend of every active Tenner (ANALYTICS-008); default period last90. */

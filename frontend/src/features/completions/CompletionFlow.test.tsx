@@ -119,7 +119,6 @@ describe("completion and undo", () => {
     await waitFor(() =>
       expect(fetchMock.calls().find((c) => c.key === "POST /tenners/t-1/complete")?.body).toEqual({
         completedBy: "JULIA",
-        actualMinutes: 10,
       }),
     );
   });

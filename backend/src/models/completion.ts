@@ -1,5 +1,7 @@
 import type { UserId } from "./enums.js";
 
+export type ActualMinutesSource = "USER" | "DEFAULT";
+
 /** One execution of a Tenner (immutable, stored in tenner-history; completionId = historyId). */
 export interface Completion {
   readonly tenantId: string;
@@ -27,4 +29,9 @@ export interface Completion {
    * rate. Records written before have none.
    */
   readonly previousNextDue?: string | undefined;
+  /**
+   * Where actualMinutes came from (ANALYTICS-005): USER = sent with the request, DEFAULT = the estimate. Records
+   * written before have none and count as DEFAULT.
+   */
+  readonly actualMinutesSource?: ActualMinutesSource | undefined;
 }

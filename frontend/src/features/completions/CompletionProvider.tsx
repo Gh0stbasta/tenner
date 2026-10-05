@@ -21,8 +21,6 @@ const COMPLETE_KEY = ["complete"] as const;
 export interface CompleteRequest {
   readonly tennerId: string;
   readonly title: string;
-  /** Default effort: the Tenner's estimated minutes. */
-  readonly estimatedMinutes: number;
 }
 
 export interface UndoRequest {
@@ -74,8 +72,10 @@ export function CompletionProvider({ children }: { readonly children: ReactNode 
 
   const completeMutation = useMutation({
     mutationKey: COMPLETE_KEY,
-    mutationFn: ({ tennerId, estimatedMinutes, idempotencyKey }: Keyed<CompleteRequest>) =>
-      completeTenner({ tennerId, completedBy: user, actualMinutes: estimatedMinutes, idempotencyKey }),
+    // No actualMinutes: the server records the estimate as a default, so analytics can tell it from a
+    // user-reported value (ANALYTICS-005).
+    mutationFn: ({ tennerId, idempotencyKey }: Keyed<CompleteRequest>) =>
+      completeTenner({ tennerId, completedBy: user, idempotencyKey }),
     onMutate: async ({ tennerId }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.dashboard });
       const previous = queryClient.getQueryData<Dashboard>(queryKeys.dashboard);

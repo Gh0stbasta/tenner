@@ -161,7 +161,6 @@ describe("TennersPage", () => {
     await waitFor(() => expect(listCallsCount).toBe(2));
     expect(fetchMock.calls().find((c) => c.key === "POST /tenners/t-1/complete")?.body).toEqual({
       completedBy: "STEFAN",
-      actualMinutes: 10,
     });
   });
 

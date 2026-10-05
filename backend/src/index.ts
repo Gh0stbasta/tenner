@@ -87,7 +87,7 @@ import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
 import { SEED_CATEGORIES, SEED_MEMBERS, type Handover, type HouseholdCategory, type HouseholdMember, type Vacation } from "./models/index.js";
 import { createLogger, errorFields, type Logger } from "./utils/logger.js";
-import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, AnalyticsBalanceResponse, AnalyticsHabitResponse, AnalyticsHabitsResponse, HouseholdResponse } from "./dto/index.js";
+import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, AnalyticsBalanceResponse, AnalyticsHabitResponse, AnalyticsHabitsResponse, AnalyticsTimeResponse, HouseholdResponse } from "./dto/index.js";
 import { analyticsNeglectedSchema, analyticsPeriodSchema, analyticsTrendsSchema, tennerIdSchema, validate } from "./validators/index.js";
 
 /** Dependencies shared by all handlers; replaced in tests. */
@@ -133,6 +133,7 @@ export interface Dependencies {
   readonly analyticsNeglected: AnalyticsQuery<AnalyticsNeglectedRequest, AnalyticsNeglectedResponse>;
   readonly analyticsBalance: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsBalanceResponse>;
   readonly analyticsHabits: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsHabitsResponse>;
+  readonly analyticsTime: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsTimeResponse>;
   readonly analyticsHabit: (tenantId: string, tennerId: string, request: AnalyticsPeriodRequest) => Promise<AnalyticsHabitResponse>;
 }
 
@@ -206,6 +207,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /analytics/categories": ({ event, deps, logger, identity }) => analyticsHandler("categories", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsCategories, logger),
   "GET /analytics/neglected": ({ event, deps, logger, identity }) => analyticsHandler("neglected", analyticsNeglectedSchema, event, identity.tenantId, deps.analyticsNeglected, logger),
   "GET /analytics/balance": ({ event, deps, logger, identity }) => analyticsHandler("balance", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsBalance, logger),
+  "GET /analytics/time": ({ event, deps, logger, identity }) => analyticsHandler("time", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsTime, logger),
   "GET /analytics/habits": ({ event, deps, logger, identity }) => analyticsHandler("habits", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsHabits, logger),
   "GET /analytics/habits/{tennerId}": ({ event, deps, logger, identity }) => {
     const tennerId = validate(tennerIdSchema, event.pathParameters?.tennerId);
@@ -319,6 +321,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     analyticsCategories: analyticsService ? (tenantId, request) => analyticsService.categories(tenantId, request) : notConfigured,
     analyticsNeglected: analyticsService ? (tenantId, request) => analyticsService.neglected(tenantId, request) : notConfigured,
     analyticsBalance: analyticsService ? (tenantId, request) => analyticsService.balance(tenantId, request) : notConfigured,
+    analyticsTime: analyticsService ? (tenantId, request) => analyticsService.time(tenantId, request) : notConfigured,
     analyticsHabits: analyticsService ? (tenantId, request) => analyticsService.habits(tenantId, request) : notConfigured,
     analyticsHabit: analyticsService ? (tenantId, tennerId, request) => analyticsService.habit(tenantId, tennerId, request) : notConfigured,
   };

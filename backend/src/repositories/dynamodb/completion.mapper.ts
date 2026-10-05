@@ -30,6 +30,7 @@ export function toCompletionItem(record: CompletionRecord): Record<string, unkno
     ...optional("assignedToBefore", completion.assignedToBefore),
     ...optional("originalAssigneeBefore", completion.originalAssigneeBefore),
     ...optional("previousNextDue", completion.previousNextDue),
+    ...optional("actualMinutesSource", completion.actualMinutesSource),
     ...optional("idempotencyKey", record.idempotencyKey),
     ...optional("requestHash", record.requestHash),
   };
@@ -92,6 +93,7 @@ export function toCompletion(item: Record<string, unknown>): Completion {
     ...(typeof item.assignedToBefore === "string" ? { assignedToBefore: item.assignedToBefore } : {}),
     ...(typeof item.originalAssigneeBefore === "string" ? { originalAssigneeBefore: item.originalAssigneeBefore } : {}),
     ...(typeof item.previousNextDue === "string" ? { previousNextDue: item.previousNextDue } : {}),
+    ...(item.actualMinutesSource === "USER" || item.actualMinutesSource === "DEFAULT" ? { actualMinutesSource: item.actualMinutesSource } : {}),
   };
 }
 

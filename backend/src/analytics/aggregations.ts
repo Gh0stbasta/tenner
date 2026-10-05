@@ -330,3 +330,69 @@ export function balance(
     balanceIndex: totalMinutes === 0 ? null : ratio(1 - (Math.max(...shares) - Math.min(...shares)), 1),
   };
 }
+
+/** A Tenner's median exceeds its estimate by this factor (ANALYTICS-005). */
+export const ESTIMATE_EXCEEDED_FACTOR = 1.5;
+/** Minimum user-reported completions before a Tenner can exceed its estimate. */
+export const MIN_ESTIMATE_SAMPLES = 3;
+/** "Ten-Minute First": estimates above this count as long Tenners. */
+export const TEN_MINUTES = 10;
+
+export interface TennerExceedingEstimate {
+  readonly tennerId: string;
+  readonly title: string;
+  readonly estimatedMinutes: number;
+  readonly medianActualMinutes: number;
+  readonly samples: number;
+}
+
+export interface TimeMetrics {
+  readonly period: { readonly from: string; readonly to: string };
+  readonly totalActualMinutes: number;
+  /** totalActualMinutes ÷ (period days ÷ 7), rounded. */
+  readonly averageMinutesPerWeek: number;
+  /** Σ projected weekly minutes of active Tenners, rounded. */
+  readonly projectedMinutesPerWeek: number;
+  /** Σ estimated ÷ Σ actual over user-reported completions; null without any. */
+  readonly estimationAccuracy: number | null;
+  /** Completions with user-reported minutes in the period. */
+  readonly reportedSamples: number;
+  readonly tennersExceedingEstimate: readonly TennerExceedingEstimate[];
+  readonly tennersExceedingTenMinutes: number;
+}
+
+export function median(values: readonly number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? (sorted[middle] as number) : ((sorted[middle - 1] as number) + (sorted[middle] as number)) / 2;
+}
+
+/**
+ * GET /analytics/time (ANALYTICS-005). Accuracy and exceeding estimates use only user-reported minutes
+ * (`actualMinutesSource = USER`); defaults and older records are left out. Estimates are the Tenners' current ones.
+ */
+export function timeInvestment(completions: readonly AnalyticsCompletion[], tenners: readonly Tenner[], period: Period): TimeMetrics {
+  const byId = new Map(tenners.map((tenner) => [tenner.tennerId, tenner]));
+  const reported = completions.filter((completion) => completion.actualMinutesSource === "USER" && byId.has(completion.tennerId));
+  const estimated = reported.reduce((sum, completion) => sum + (byId.get(completion.tennerId)?.estimatedMinutes ?? 0), 0);
+  const active = tenners.filter(isActiveTenner);
+  const exceeding = [...new Set(reported.map((completion) => completion.tennerId))].flatMap((tennerId): TennerExceedingEstimate[] => {
+    const tenner = byId.get(tennerId) as Tenner;
+    const samples = reported.filter((completion) => completion.tennerId === tennerId).map((completion) => completion.actualMinutes);
+    const medianActual = median(samples);
+    return samples.length >= MIN_ESTIMATE_SAMPLES && medianActual > tenner.estimatedMinutes * ESTIMATE_EXCEEDED_FACTOR
+      ? [{ tennerId, title: tenner.title, estimatedMinutes: tenner.estimatedMinutes, medianActualMinutes: medianActual, samples: samples.length }]
+      : [];
+  });
+  const total = sumMinutes(completions);
+  return {
+    period: { from: period.from, to: period.to },
+    totalActualMinutes: total,
+    averageMinutesPerWeek: Math.round(total / (period.days / 7)),
+    projectedMinutesPerWeek: Math.round(active.reduce((sum, tenner) => sum + projectedWeeklyMinutes(tenner), 0)),
+    estimationAccuracy: ratio(estimated, sumMinutes(reported)),
+    reportedSamples: reported.length,
+    tennersExceedingEstimate: exceeding.sort((a, b) => b.medianActualMinutes / b.estimatedMinutes - a.medianActualMinutes / a.estimatedMinutes),
+    tennersExceedingTenMinutes: active.filter((tenner) => tenner.estimatedMinutes > TEN_MINUTES).length,
+  };
+}

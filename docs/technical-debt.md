@@ -921,6 +921,8 @@ every request and aggregate in the Lambda. Known gaps:
 - Completions written before ANALYTICS-001 have no `previousNextDue`; they are left out of `onTimeRate`.
 - Metrics that group by assignee or category use the Tenner's *current* values, not the values at completion time.
 - Read cost and latency grow with the period length (at most 366 days); every view re-reads the same data.
+- The web app has no input for actual minutes, so every new completion is `DEFAULT` and the estimate accuracy of
+  ANALYTICS-005 stays empty until such an input exists.
 
 ### Reason
 
@@ -933,7 +935,8 @@ Slightly skewed historical breakdowns after reassignments or category changes; o
 
 ### Suggested Improvement
 
-Store `category` and `assignedTo` on new completion records; add pre-aggregation (ANALYTICS-010) or a short-lived
+Add an optional "actual minutes" input to the completion flow; store `category` and `assignedTo` on new completion
+records; add pre-aggregation (ANALYTICS-010) or a short-lived
 cache only if measurements show slow responses.
 
 ### Related Work

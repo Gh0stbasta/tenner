@@ -460,6 +460,7 @@ and a Tenner fixture.
 | `GET /analytics/balance` | Period query → `200 { success: true, data: { period, byUser: [{ userId, displayName, shareOfMinutes, shareOfAssignedLoad }], byCategory: [{ category, name, shares }], balanceIndex } }` (ANALYTICS-007). Members in list order, no ranking |
 | `GET /analytics/habits` | Period query (default `last90`) → `200 { success: true, data: { period, householdConsistency, items: [{ tennerId, title, currentStreak, longestStreak, consistencyScore, trend }] } }` (ANALYTICS-008). `consistencyScore`/`trend` are `null` with too little data |
 | `GET /analytics/habits/{tennerId}` | Period query → `200` with the item fields plus `period`, `frequencyDays`, `expectedCompletions`, `actualCompletions`, `completionDates`, `intervals`; 404 for unknown or deleted Tenners |
+| `GET /analytics/time` | Period query → `200 { success: true, data: { period, totalActualMinutes, averageMinutesPerWeek, projectedMinutesPerWeek, estimationAccuracy, reportedSamples, tennersExceedingEstimate: [{ tennerId, title, estimatedMinutes, medianActualMinutes, samples }], tennersExceedingTenMinutes } }` (ANALYTICS-005) |
 | `GET /history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `400` for invalid filters or cursor |
 | `GET /tenners/{tennerId}/history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `404` for an unknown Tenner |
 | unknown route | `404 NOT_FOUND` |

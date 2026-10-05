@@ -101,6 +101,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     analyticsBalance: vi.fn(async () => ({ period: { from: "a", to: "b" }, byUser: [], byCategory: [], balanceIndex: null })),
     analyticsHabits: vi.fn(async () => ({ period: { from: "a", to: "b" }, householdConsistency: null, items: [] })),
     analyticsHabit: vi.fn(async () => ({ period: { from: "a", to: "b" }, tennerId: "t-1", title: "x", currentStreak: 0, longestStreak: 0, consistencyScore: null, trend: null, frequencyDays: 7, expectedCompletions: 0, actualCompletions: 0, completionDates: [], intervals: [] })),
+    analyticsTime: vi.fn(async () => ({ period: { from: "a", to: "b" }, totalActualMinutes: 0, averageMinutesPerWeek: 0, projectedMinutesPerWeek: 0, estimationAccuracy: null, reportedSamples: 0, tennersExceedingEstimate: [], tennersExceedingTenMinutes: 0 })),
     analyticsSummary: vi.fn(async () => ({ period: { from: "2026-09-06", to: "2026-10-05" }, completions: 0, totalActualMinutes: 0, activeTenners: 0, distinctTennersCompleted: 0, overdueNow: 0, onTimeRate: null, onTimeSamples: 0 })),
     listCategories: vi.fn(async () => [{ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: false }]),
     createCategory: vi.fn(async () => ({ categoryId: "GARDEN", name: "Garten", icon: "GARDEN" as const, color: "GREEN" as const, sortOrder: 6, archived: false })),
@@ -719,6 +720,12 @@ describe("analytics routes (ANALYTICS-001)", () => {
     expect(d.analyticsHabit).toHaveBeenCalledWith("default", "5c2bfd9b-c8d1-4ab7-af57-b1dfe6ddbf05", { period: "month" });
     const bad = { ...event("GET /analytics/habits/{tennerId}"), pathParameters: { tennerId: "../x" } } as APIGatewayProxyEventV2;
     expect((await route(bad, d)).statusCode).toBe(400);
+  });
+
+  it("serves time investment (ANALYTICS-005)", async () => {
+    const d = deps();
+    expect((await route(event("GET /analytics/time", {}, undefined, { period: "last30" }), d)).statusCode).toBe(200);
+    expect(d.analyticsTime).toHaveBeenCalledWith("default", { period: "last30" });
   });
 
   it("validates the neglected limit (ANALYTICS-006)", async () => {

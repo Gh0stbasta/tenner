@@ -60,6 +60,7 @@ locals {
     "GET /analytics/categories",                # ANALYTICS-004
     "GET /analytics/neglected",                 # ANALYTICS-006
     "GET /analytics/balance",                   # ANALYTICS-007
+    "GET /analytics/time",                      # ANALYTICS-005
     "GET /analytics/habits",                    # ANALYTICS-008
     "GET /analytics/habits/{tennerId}",         # ANALYTICS-008
     "POST /tenners/{tennerId}/snooze",          # SCHEDULING-003

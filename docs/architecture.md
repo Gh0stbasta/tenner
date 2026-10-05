@@ -283,6 +283,7 @@ GET    /analytics/users        (ANALYTICS-003)
 GET    /analytics/categories   (ANALYTICS-004)
 GET    /analytics/neglected    (ANALYTICS-006)
 GET    /analytics/balance      (ANALYTICS-007)
+GET    /analytics/time         (ANALYTICS-005)
 GET    /analytics/habits       (ANALYTICS-008)
 GET    /analytics/habits/{id}  (ANALYTICS-008)
 ```
@@ -291,7 +292,8 @@ Analytics are computed on the fly per request from `tenner-history` (Query on `c
 the current Tenners, using pure aggregation functions in `backend/src/analytics/`. At household volume (a few
 thousand completions per year) this needs no pre-aggregated tables (ANALYTICS-010 if measurements require it).
 Metric definitions: [`analytics.md`](analytics.md). New completions store `previousNextDue` (the due date at
-completion time) for the on-time rate; older completions are left out of it.
+completion time) for the on-time rate and `actualMinutesSource` (`USER` or `DEFAULT`) for estimate accuracy; older
+completions are left out of both.
 
 ---
 

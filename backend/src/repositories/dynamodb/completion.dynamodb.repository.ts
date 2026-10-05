@@ -14,7 +14,7 @@ export const INDEX_COMPLETED_AT = "completedAt-index";
 export const NOT_REVERTED = "(attribute_not_exists(#revertedAt) OR #revertedAt = :null)";
 
 /** Attributes read for analytics (ANALYTICS-001); keys and revertedAt are needed by the mapper and the filter. */
-const ANALYTICS_ATTRIBUTES = ["tenantId", "historyId", "tennerId", "completedBy", "recordedBy", "completedAt", "actualMinutes", "revertedAt", "previousNextDue"] as const;
+const ANALYTICS_ATTRIBUTES = ["tenantId", "historyId", "tennerId", "completedBy", "recordedBy", "completedAt", "actualMinutes", "revertedAt", "previousNextDue", "actualMinutesSource"] as const;
 
 /** Items per page when filtering; filters apply after DynamoDB's Limit, so we page until enough matches. */
 const PAGE_SIZE = 25;

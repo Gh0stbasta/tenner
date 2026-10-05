@@ -3,7 +3,7 @@
 import type { HabitDetail, HabitsMetrics } from "../analytics/habits.js";
 import type { NeglectedTenner } from "../analytics/neglect.js";
 import type { PeriodRequest } from "../analytics/period.js";
-import type { BalanceMetrics, CategoriesMetrics, Granularity, SummaryMetrics, TennerFilter, TrendMetrics, UsersMetrics } from "../analytics/aggregations.js";
+import type { BalanceMetrics, CategoriesMetrics, TimeMetrics, Granularity, SummaryMetrics, TennerFilter, TrendMetrics, UsersMetrics } from "../analytics/aggregations.js";
 
 /** Query of every period-based analytics endpoint. */
 export type AnalyticsPeriodRequest = PeriodRequest;
@@ -44,3 +44,6 @@ export type AnalyticsHabitsResponse = HabitsMetrics;
 export interface AnalyticsHabitResponse extends HabitDetail {
   readonly period: { readonly from: string; readonly to: string };
 }
+
+/** GET /analytics/time (ANALYTICS-005). */
+export type AnalyticsTimeResponse = TimeMetrics;
