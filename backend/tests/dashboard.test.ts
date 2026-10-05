@@ -174,7 +174,7 @@ describe("dashboardHandler", () => {
 
   it.each([
     ["invalid user", { assignedTo: "bob" }],
-    ["invalid category", { category: "GARDEN" }],
+    ["invalid category", { category: "garden" }],
     ["invalid date format", { date: "2026/10/01" }],
     ["invalid calendar date", { date: "2026-02-30" }],
   ])("rejects %s with 'Invalid dashboard query.'", async (_name, query) => {

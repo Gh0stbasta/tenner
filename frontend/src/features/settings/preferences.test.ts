@@ -43,7 +43,7 @@ describe("preferences model", () => {
       parsePreferences({
         defaultEstimatedMinutes: 30,
         defaultFrequencyDays: 99999,
-        defaultCategory: "GARDEN",
+        defaultCategory: "garden",
         theme: "LIGHT",
         extra: 1,
       }),

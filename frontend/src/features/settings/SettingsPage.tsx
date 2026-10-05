@@ -1,10 +1,11 @@
-/** Settings (FRONTEND-008): profile, defaults for new Tenners, dashboard sections, app preferences, members. */
+/** Settings (FRONTEND-008): profile, defaults for new Tenners, dashboard sections, app preferences, members, categories. */
 
 import { Box, Button, Typography } from "@mui/material";
 import { useState } from "react";
 import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
 import { ApplicationSettings } from "./ApplicationSettings";
+import { CategoriesSettings } from "./CategoriesSettings";
 import { DashboardSettings } from "./DashboardSettings";
 import { MembersSettings } from "./MembersSettings";
 import { ProfileSettings } from "./ProfileSettings";
@@ -24,6 +25,7 @@ export function SettingsPage() {
       <DashboardSettings />
       <ApplicationSettings />
       <MembersSettings />
+      <CategoriesSettings />
       <Box
         sx={{
           mt: 3,

@@ -87,7 +87,7 @@ run "http_api_routes_health" {
   }
 
   assert {
-    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners", "GET /tenners", "PUT /tenners/{tennerId}", "DELETE /tenners/{tennerId}", "POST /tenners/{tennerId}/complete", "POST /tenners/{tennerId}/undo-completion", "POST /tenners/{tennerId}/restore", "GET /dashboard", "GET /tenners/{tennerId}", "GET /history", "GET /tenners/{tennerId}/history", "GET /onboarding", "POST /onboarding/assignment", "GET /household", "PUT /household", "POST /tenners/{tennerId}/snooze", "POST /tenners/{tennerId}/skip", "POST /tenners/{tennerId}/pause", "POST /tenners/{tennerId}/resume", "PUT /household/vacation", "DELETE /household/vacation", "GET /users", "POST /users", "PUT /users/{userId}"])
+    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners", "GET /tenners", "PUT /tenners/{tennerId}", "DELETE /tenners/{tennerId}", "POST /tenners/{tennerId}/complete", "POST /tenners/{tennerId}/undo-completion", "POST /tenners/{tennerId}/restore", "GET /dashboard", "GET /tenners/{tennerId}", "GET /history", "GET /tenners/{tennerId}/history", "GET /onboarding", "POST /onboarding/assignment", "GET /household", "PUT /household", "POST /tenners/{tennerId}/snooze", "POST /tenners/{tennerId}/skip", "POST /tenners/{tennerId}/pause", "POST /tenners/{tennerId}/resume", "PUT /household/vacation", "DELETE /household/vacation", "GET /users", "POST /users", "PUT /users/{userId}", "GET /categories", "POST /categories", "PUT /categories/{categoryId}"])
     error_message = "API routes must match the implemented endpoints."
   }
 

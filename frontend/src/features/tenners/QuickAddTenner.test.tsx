@@ -66,7 +66,7 @@ describe("QuickAddTenner", () => {
     expect(screen.getByText("Der Titel braucht mindestens 3 Zeichen.")).toBeInTheDocument();
     await userEvent.type(input(), "c");
     expect(screen.queryByText("Der Titel braucht mindestens 3 Zeichen.")).not.toBeInTheDocument();
-    expect(fetchMock.calls()).toHaveLength(0);
+    expect(fetchMock.calls().filter((call) => !call.key.startsWith("GET "))).toHaveLength(0);
   });
 
   it("rejects titles longer than 100 characters", async () => {

@@ -2,7 +2,8 @@
 
 import { MenuItem, TextField } from "@mui/material";
 import Grid from "@mui/material/Grid";
-import { CATEGORIES, CATEGORY_LABELS, type Category, type UserId } from "../../types/domain";
+import type { Category, UserId } from "../../types/domain";
+import { useCategoryOptions } from "../categories/useCategoryOptions";
 import { useAssignees } from "../members/useAssignees";
 import { SORT_FIELDS, type SortField, type SortOrder, type StatusFilter, type TennerListParams } from "./api";
 
@@ -51,6 +52,7 @@ function Select<T extends string>({ label, value, options, labels, onChange }: S
 export function TennerFilters({ value, onChange }: TennerFiltersProps) {
   const set = (patch: Partial<TennerListParams>) => onChange({ ...value, ...patch });
   const assignees = useAssignees(value.assignedTo);
+  const categoryOptions = useCategoryOptions(value.category);
   return (
     <Grid container spacing={1.5} component="section" aria-label="Filter">
       <Grid size={{ xs: 6, md: 2.4 }}>
@@ -78,8 +80,11 @@ export function TennerFilters({ value, onChange }: TennerFiltersProps) {
         <Select<Category | typeof ALL>
           label="Kategorie"
           value={value.category ?? ALL}
-          options={[ALL, ...CATEGORIES]}
-          labels={{ ALL: "Alle", ...CATEGORY_LABELS }}
+          options={[ALL, ...categoryOptions.map((category) => category.categoryId)]}
+          labels={{
+            ALL: "Alle",
+            ...Object.fromEntries(categoryOptions.map((category) => [category.categoryId, category.name])),
+          }}
           onChange={(category) => set({ category: category === ALL ? undefined : category })}
         />
       </Grid>

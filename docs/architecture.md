@@ -324,6 +324,26 @@ No self-service onboarding.
 
 ---
 
+## Category
+
+Since HOUSEHOLD-ADMIN-002, categories are managed per household (Settings → "Kategorien"), stored like members in
+the household item of `tenner-households` (`categories` + `categoriesVersion`, same decision and locking).
+
+| Field | Rule |
+|---|---|
+| `categoryId` | immutable uppercase slug, derived from the name if omitted ("Garten" → `GARTEN`) |
+| `name` | 1–40 characters |
+| `icon` | one of `HOME`, `CLEANING`, `FITNESS`, `FAMILY`, `PERSON`, `MONEY`, `GARDEN`, `PET`, `CAR`, `HEALTH`, `WORK`, `STAR` |
+| `color` | member color palette |
+| `sortOrder` | display position, renumbered on every move |
+| `archived` | archived categories stay valid on existing Tenners, filters and analytics, but cannot be chosen for new or changed Tenners |
+
+- Seed: the six original categories (`HOUSEHOLD`, `FITNESS`, `FAMILY`, `HOME`, `PERSONAL`, `FINANCE`) apply until a
+  household saves its own list. No deletion (archive instead); at most 30 categories.
+- Validation: schemas check the ID format; create and category changes on update require an existing, non-archived
+  category. Dashboard and analytics group by whatever category a Tenner has.
+- Quick Add keyword suggestions cover the six seed categories only (TD-030).
+
 ## Tenner
 
 Represents a recurring responsibility.
@@ -1035,7 +1055,7 @@ Introduced by TICKET-006 (`terraform/dynamodb.tf`).
 |---|---|---|---|
 | `tenner-tenners` | `tenantId` (PK), `tennerId` (SK) | `nextDue-index` (`tenantId`, `nextDue`), `assignedTo-index` (`tenantId`, `assignedTo`) | Current state of Tenners |
 | `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`), `tennerId-completedAt-index` (`tenantTennerId`, `completedAt`, TICKET-014) | Immutable completion history |
-| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `members` + `membersVersion` (HOUSEHOLD-ADMIN-001), `updatedAt`, `updatedBy` |
+| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `members` + `membersVersion` (HOUSEHOLD-ADMIN-001), `categories` + `categoriesVersion` (HOUSEHOLD-ADMIN-002), `updatedAt`, `updatedBy` |
 
 All tables use:
 - `PAY_PER_REQUEST` billing

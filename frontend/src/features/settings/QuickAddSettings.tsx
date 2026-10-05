@@ -2,7 +2,8 @@
 
 import { MenuItem, Stack, TextField } from "@mui/material";
 import { useState } from "react";
-import { CATEGORIES, CATEGORY_LABELS, type Category } from "../../types/domain";
+import type { Category } from "../../types/domain";
+import { useCategoryOptions } from "../categories/useCategoryOptions";
 import { useAssignees } from "../members/useAssignees";
 import { FREQUENCY_RANGE, MINUTES_RANGE, type DefaultAssignee } from "./preferences";
 import { SettingsSection } from "./SettingsSection";
@@ -52,6 +53,7 @@ function NumberSetting({ label, value, range, onSave }: NumberSettingProps) {
 
 export function QuickAddSettings() {
   const { preferences, update } = useSettings();
+  const categoryOptions = useCategoryOptions(preferences.defaultCategory);
   const assignees = useAssignees(preferences.defaultAssignedTo === "SELF" ? undefined : preferences.defaultAssignedTo);
   return (
     <SettingsSection
@@ -66,9 +68,9 @@ export function QuickAddSettings() {
           onChange={(event) => update({ defaultCategory: event.target.value as Category })}
           fullWidth
         >
-          {CATEGORIES.map((category) => (
-            <MenuItem key={category} value={category}>
-              {CATEGORY_LABELS[category]}
+          {categoryOptions.map((category) => (
+            <MenuItem key={category.categoryId} value={category.categoryId}>
+              {category.name}
             </MenuItem>
           ))}
         </TextField>

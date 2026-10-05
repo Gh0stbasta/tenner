@@ -77,7 +77,7 @@ describe("updateTennerHandler", () => {
   });
 
   it.each([
-    ["invalid category", { category: "GARDEN" }],
+    ["invalid category", { category: "garden" }],
     ["invalid assigned user", { assignedTo: "bob" }],
     ["invalid duration", { estimatedMinutes: 481 }],
     ["invalid active flag", { active: "no" }],

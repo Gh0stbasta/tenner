@@ -14,6 +14,8 @@ import {
   type SkipTennerRequest,
   type PauseTennerRequest,
   type CreateMemberRequest,
+  type CreateCategoryRequest,
+  type UpdateCategoryRequest,
   type UpdateMemberRequest,
   type VacationRequest,
   type UndoCompletionRequest,
@@ -30,6 +32,7 @@ import {
   frequencyUnitSchema,
   weekdaysSchema,
   displayNameSchema,
+  categoryIconSchema,
   memberColorSchema,
   titleSchema,
   userIdSchema,
@@ -254,3 +257,22 @@ export const createMemberSchema = z.strictObject({
 export const updateMemberSchema = z
   .strictObject({ displayName: displayNameSchema.optional(), color: memberColorSchema.optional() })
   .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." }) satisfies z.ZodType<UpdateMemberRequest>;
+
+/** POST /categories (HOUSEHOLD-ADMIN-002). */
+export const createCategorySchema = z.strictObject({
+  categoryId: categorySchema.optional(),
+  name: displayNameSchema,
+  icon: categoryIconSchema,
+  color: memberColorSchema,
+}) satisfies z.ZodType<CreateCategoryRequest>;
+
+/** PUT /categories/{categoryId}: rename, icon, color, position, archive; categoryId is immutable. */
+export const updateCategorySchema = z
+  .strictObject({
+    name: displayNameSchema.optional(),
+    icon: categoryIconSchema.optional(),
+    color: memberColorSchema.optional(),
+    sortOrder: z.number().int().min(0).max(99).optional(),
+    archived: z.boolean().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." }) satisfies z.ZodType<UpdateCategoryRequest>;

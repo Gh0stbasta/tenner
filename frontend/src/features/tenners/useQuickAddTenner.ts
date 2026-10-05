@@ -11,6 +11,7 @@ import { DEFAULT_LIST_PARAMS, listTenners, useCreateTenner } from "./api";
 import { findSimilarTenner, suggestCategory } from "./quickAdd";
 import type { Tenner } from "./schemas";
 import { LIMITS } from "./tennerForm.schema";
+import { useCategories } from "../categories/api";
 
 export function validateQuickTitle(title: string): string | undefined {
   const trimmed = title.trim();
@@ -30,14 +31,17 @@ export function useQuickAddTenner() {
   const [duplicate, setDuplicate] = useState<Tenner | null>(null);
   const [checking, setChecking] = useState(false);
 
-  const suggestedCategory: Category | undefined = suggestCategory(title);
+  const categories = useCategories();
+  // Only suggest categories that can still be chosen (HOUSEHOLD-ADMIN-002); unknown while loading.
+  const selectable = categories.data?.filter((category) => !category.archived).map((category) => category.categoryId);
+  const suggestedCategory: Category | undefined = suggestCategory(title, selectable);
 
   const createNow = () => {
     const trimmed = title.trim();
     create.mutate(
       {
         ...defaults,
-        category: suggestCategory(trimmed) ?? defaults.category,
+        category: suggestCategory(trimmed, selectable) ?? defaults.category,
         title: trimmed,
       },
       {

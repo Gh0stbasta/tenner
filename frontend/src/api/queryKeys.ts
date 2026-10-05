@@ -11,4 +11,5 @@ export const queryKeys = {
   onboarding: ["onboarding"] as const,
   household: ["household"] as const,
   members: ["members"] as const,
+  categories: ["categories"] as const,
 };

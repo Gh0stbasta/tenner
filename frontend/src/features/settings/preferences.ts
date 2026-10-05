@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { CATEGORIES, USER_ID_PATTERN, type Category, type UserId } from "../../types/domain";
+import { CATEGORY_ID_PATTERN, USER_ID_PATTERN, type Category, type UserId } from "../../types/domain";
 
 export const PREFERENCES_STORAGE_KEY = "tenner.preferences";
 export const PREFERENCES_VERSION = 1;
@@ -47,7 +47,7 @@ const integerIn = (range: { min: number; max: number }) => z.number().int().min(
 
 /** Field schemas; invalid stored fields fall back to their default individually. */
 const FIELD_SCHEMAS: { readonly [K in keyof UserPreferences]: z.ZodType<UserPreferences[K]> } = {
-  defaultCategory: z.enum(CATEGORIES),
+  defaultCategory: z.string().regex(CATEGORY_ID_PATTERN),
   defaultAssignedTo: z.union([z.literal("SELF"), z.string().regex(USER_ID_PATTERN)]),
   defaultEstimatedMinutes: integerIn(MINUTES_RANGE),
   defaultFrequencyDays: integerIn(FREQUENCY_RANGE),

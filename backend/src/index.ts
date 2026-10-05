@@ -26,6 +26,7 @@ import {
   type UpdateHouseholdTimezone,
 } from "./handlers/household.js";
 import { pauseTennerHandler, resumeTennerHandler, type PauseTenner, type ResumeTenner } from "./handlers/pause-tenner.js";
+import { createCategoryHandler, listCategoriesHandler, updateCategoryHandler, type CreateCategory, type ListCategories, type UpdateCategory } from "./handlers/categories.js";
 import { createMemberHandler, listMembersHandler, updateMemberHandler, type CreateMember, type ListMembers, type UpdateMember } from "./handlers/members.js";
 import { historyHandler, tennerHistoryHandler, type GetHistory, type GetTennerHistory } from "./handlers/history.js";
 import { listTennersHandler, type ListTenners } from "./handlers/list-tenners.js";
@@ -52,6 +53,7 @@ import {
   HouseholdService,
   ListTennersService,
   RestoreTennerService,
+  CategoryService,
   MemberService,
   PauseTennerService,
   SkipTennerService,
@@ -63,7 +65,7 @@ import {
 import { systemClock, uuidGenerator } from "./utils/clock.js";
 import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
-import { SEED_MEMBERS, type HouseholdMember, type Vacation } from "./models/index.js";
+import { SEED_CATEGORIES, SEED_MEMBERS, type HouseholdCategory, type HouseholdMember, type Vacation } from "./models/index.js";
 import { createLogger, errorFields, type Logger } from "./utils/logger.js";
 
 /** Dependencies shared by all handlers; replaced in tests. */
@@ -87,6 +89,9 @@ export interface Dependencies {
   readonly listMembers: ListMembers;
   readonly createMember: CreateMember;
   readonly updateMember: UpdateMember;
+  readonly listCategories: ListCategories;
+  readonly createCategory: CreateCategory;
+  readonly updateCategory: UpdateCategory;
   readonly getDashboard: GetDashboard;
   readonly getTenner: GetTenner;
   readonly getHistory: GetHistory;
@@ -151,6 +156,9 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /users": ({ deps, identity }) => listMembersHandler(identity.tenantId, deps.listMembers),
   "POST /users": ({ event, deps, logger, identity }) => createMemberHandler(event, identity, deps.createMember, logger),
   "PUT /users/{userId}": ({ event, deps, logger, identity }) => updateMemberHandler(event, identity, deps.updateMember, logger),
+  "GET /categories": ({ deps, identity }) => listCategoriesHandler(identity.tenantId, deps.listCategories),
+  "POST /categories": ({ event, deps, logger, identity }) => createCategoryHandler(event, identity, deps.createCategory, logger),
+  "PUT /categories/{categoryId}": ({ event, deps, logger, identity }) => updateCategoryHandler(event, identity, deps.updateCategory, logger),
   "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
   "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
   "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHouseholdTimezone, logger),
@@ -182,11 +190,14 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   // HOUSEHOLD-ADMIN-001: managed members; without the households table only the seed members exist.
   const memberService = householdRepository ? new MemberService(householdRepository, systemClock) : undefined;
   const membersOf = (tenantId: string): Promise<readonly HouseholdMember[]> => memberService?.membersOf(tenantId) ?? Promise.resolve(SEED_MEMBERS);
-  const createTennerService = tennerRepository ? new CreateTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf, membersOf) : undefined;
+  // HOUSEHOLD-ADMIN-002: managed categories; without the households table only the seed categories exist.
+  const categoryService = householdRepository ? new CategoryService(householdRepository, systemClock) : undefined;
+  const categoriesOf = (tenantId: string): Promise<readonly HouseholdCategory[]> => categoryService?.categoriesOf(tenantId) ?? Promise.resolve(SEED_CATEGORIES);
+  const createTennerService = tennerRepository ? new CreateTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf, membersOf, categoriesOf) : undefined;
   const listTennersService = tennerRepository ? new ListTennersService(tennerRepository, systemClock, timezoneOf) : undefined;
   const getTennerService = tennerRepository ? new GetTennerService(tennerRepository) : undefined;
   const historyService = tennerRepository && completionRepository ? new HistoryService(completionRepository, tennerRepository) : undefined;
-  const updateTennerService = tennerRepository ? new UpdateTennerService(tennerRepository, systemClock, membersOf) : undefined;
+  const updateTennerService = tennerRepository ? new UpdateTennerService(tennerRepository, systemClock, membersOf, categoriesOf) : undefined;
   const deleteTennerService = tennerRepository ? new DeleteTennerService(tennerRepository, systemClock) : undefined;
   const restoreTennerService = tennerRepository ? new RestoreTennerService(tennerRepository, systemClock) : undefined;
   const dashboardService = tennerRepository ? new DashboardService(tennerRepository, systemClock, timezoneOf, vacationOf) : undefined;
@@ -230,6 +241,9 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     listMembers: memberService ? (tenantId) => memberService.listMembers(tenantId) : notConfigured,
     createMember: memberService ? (identity, request) => memberService.createMember(identity, request) : notConfigured,
     updateMember: memberService ? (identity, userId, request) => memberService.updateMember(identity, userId, request) : notConfigured,
+    listCategories: categoryService ? (tenantId) => categoryService.listCategories(tenantId) : notConfigured,
+    createCategory: categoryService ? (identity, request) => categoryService.createCategory(identity, request) : notConfigured,
+    updateCategory: categoryService ? (identity, categoryId, request) => categoryService.updateCategory(identity, categoryId, request) : notConfigured,
     getHousehold: householdService ? (tenantId) => householdService.getHousehold(tenantId) : notConfigured,
     updateHouseholdTimezone: householdService ? (identity, timezone) => householdService.updateTimezone(identity, timezone) : notConfigured,
     getOnboarding: householdAssignmentService ? (principal) => householdAssignmentService.getOnboarding(principal) : notConfigured,

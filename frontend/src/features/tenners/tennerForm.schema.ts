@@ -3,7 +3,6 @@
 import { z } from "zod";
 import {
   APPROXIMATE_DAYS_PER_UNIT,
-  CATEGORIES,
   FREQUENCY_UNITS,
   WEEKDAYS,
   type FrequencyUnit,
@@ -34,7 +33,7 @@ export const tennerFormSchema = z
       .min(1, "Titel ist erforderlich.")
       .min(LIMITS.titleMin, `Der Titel braucht mindestens ${LIMITS.titleMin} Zeichen.`)
       .max(LIMITS.titleMax, `Der Titel darf höchstens ${LIMITS.titleMax} Zeichen haben.`),
-    category: z.enum(CATEGORIES, { error: "Bitte eine Kategorie wählen." }),
+    category: z.string({ error: "Bitte eine Kategorie wählen." }).min(1, "Bitte eine Kategorie wählen."),
     assignedTo: z.string({ error: "Bitte eine Person wählen." }).min(1, "Bitte eine Person wählen."),
     estimatedMinutes: integerBetween(
       LIMITS.minutesMin,

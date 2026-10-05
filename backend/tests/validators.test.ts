@@ -23,7 +23,7 @@ describe("createTennerSchema", () => {
   it.each([
     ["title too short", { title: "ab" }, "title"],
     ["title too long", { title: "x".repeat(101) }, "title"],
-    ["unknown category", { category: "GARDEN" }, "category"],
+    ["unknown category", { category: "garden" }, "category"],
     ["estimatedMinutes below range", { estimatedMinutes: 0 }, "estimatedMinutes"],
     ["estimatedMinutes above range", { estimatedMinutes: 481 }, "estimatedMinutes"],
     ["estimatedMinutes not integer", { estimatedMinutes: 2.5 }, "estimatedMinutes"],

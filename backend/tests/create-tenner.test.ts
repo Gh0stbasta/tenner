@@ -96,7 +96,7 @@ describe("createTennerHandler", () => {
   it.each([
     ["invalid title", { ...body, title: "ab" }],
     ["invalid frequency days", { ...body, frequencyDays: 4000 }],
-    ["invalid category", { ...body, category: "GARDEN" }],
+    ["invalid category", { ...body, category: "garden" }],
     ["invalid assigned user", { ...body, assignedTo: "bob" }],
     ["malformed JSON", "{"],
     ["missing body", ""],

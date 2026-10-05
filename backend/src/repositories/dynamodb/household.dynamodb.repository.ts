@@ -3,7 +3,19 @@
 import { GetCommand, UpdateCommand, type GetCommandOutput, type UpdateCommandOutput } from "@aws-sdk/lib-dynamodb";
 import type { DocumentSender } from "../../clients/dynamodb.js";
 import { PersistenceError } from "../../exceptions/index.js";
-import { CATEGORIES, MEMBER_COLORS, USER_ID_PATTERN, type Category, type HouseholdMember, type HouseholdSettings, type MemberColor, type UserId, type Vacation } from "../../models/index.js";
+import {
+  CATEGORY_ICONS,
+  CATEGORY_ID_PATTERN,
+  MEMBER_COLORS,
+  USER_ID_PATTERN,
+  type CategoryIcon,
+  type HouseholdCategory,
+  type HouseholdMember,
+  type HouseholdSettings,
+  type MemberColor,
+  type UserId,
+  type Vacation,
+} from "../../models/index.js";
 import type { HouseholdRepository } from "../household.repository.js";
 import { toConflictOrPersistenceError, toPersistenceError } from "./errors.js";
 
@@ -11,7 +23,7 @@ function toVacation(value: unknown): Vacation | null {
   if (typeof value !== "object" || value === null) return null;
   const { from, until, categories } = value as Record<string, unknown>;
   if (typeof from !== "string" || typeof until !== "string") return null;
-  const valid = Array.isArray(categories) ? CATEGORIES.filter((category: Category) => categories.includes(category)) : null;
+  const valid = Array.isArray(categories) ? categories.filter((category): category is string => typeof category === "string" && CATEGORY_ID_PATTERN.test(category)) : null;
   return { from, until, categories: valid !== null && valid.length > 0 ? valid : null };
 }
 
@@ -26,8 +38,32 @@ function toMembers(value: unknown): HouseholdMember[] | null {
       {
         userId,
         displayName,
-        color: (MEMBER_COLORS as readonly unknown[]).includes(color) ? (color as MemberColor) : "GREY",
+        color: colorOf(color),
         active: active !== false,
+        createdAt: typeof createdAt === "string" ? createdAt : "",
+        updatedAt: typeof updatedAt === "string" ? updatedAt : "",
+      },
+    ];
+  });
+}
+
+const colorOf = (value: unknown): MemberColor => ((MEMBER_COLORS as readonly unknown[]).includes(value) ? (value as MemberColor) : "GREY");
+
+/** Stored categories; malformed entries are dropped, unknown icons read as STAR. */
+function toCategories(value: unknown): HouseholdCategory[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.flatMap((entry, index): HouseholdCategory[] => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const { categoryId, name, icon, color, sortOrder, archived, createdAt, updatedAt } = entry as Record<string, unknown>;
+    if (typeof categoryId !== "string" || !CATEGORY_ID_PATTERN.test(categoryId) || typeof name !== "string") return [];
+    return [
+      {
+        categoryId,
+        name,
+        icon: (CATEGORY_ICONS as readonly unknown[]).includes(icon) ? (icon as CategoryIcon) : "STAR",
+        color: colorOf(color),
+        sortOrder: typeof sortOrder === "number" ? sortOrder : index,
+        archived: archived === true,
         createdAt: typeof createdAt === "string" ? createdAt : "",
         updatedAt: typeof updatedAt === "string" ? updatedAt : "",
       },
@@ -42,6 +78,8 @@ function toSettings(item: Record<string, unknown>): HouseholdSettings {
     vacation: toVacation(item.vacation),
     members: toMembers(item.members),
     membersVersion: typeof item.membersVersion === "number" ? item.membersVersion : 0,
+    categories: toCategories(item.categories),
+    categoriesVersion: typeof item.categoriesVersion === "number" ? item.categoriesVersion : 0,
     updatedAt: String(item.updatedAt),
     updatedBy: typeof item.updatedBy === "string" ? (item.updatedBy as UserId) : null,
   };
@@ -74,17 +112,34 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
 
   /** Replace the member list with optimistic locking on membersVersion (HOUSEHOLD-ADMIN-001). */
   async saveMembers(tenantId: string, members: readonly HouseholdMember[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+    return this.saveVersionedList(tenantId, "members", members, expectedVersion, actor, timestamp);
+  }
+
+  /** Replace the category list with optimistic locking on categoriesVersion (HOUSEHOLD-ADMIN-002). */
+  async saveCategories(tenantId: string, categories: readonly HouseholdCategory[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+    return this.saveVersionedList(tenantId, "categories", categories, expectedVersion, actor, timestamp);
+  }
+
+  /** SET <list> and <list>Version = expected + 1, if the stored version still equals `expectedVersion` (0 = none). */
+  private async saveVersionedList(
+    tenantId: string,
+    name: "members" | "categories",
+    list: readonly unknown[],
+    expectedVersion: number,
+    actor: UserId,
+    timestamp: string,
+  ): Promise<HouseholdSettings> {
     let attributes: Record<string, unknown> | undefined;
     try {
       const result = (await this.client.send(
         new UpdateCommand({
           TableName: this.tableName,
           Key: { tenantId },
-          UpdateExpression: "SET #members = :members, #membersVersion = :nextVersion, #updatedAt = :timestamp, #updatedBy = :actor",
-          ConditionExpression: expectedVersion === 0 ? "attribute_not_exists(#membersVersion)" : "#membersVersion = :expectedVersion",
-          ExpressionAttributeNames: { "#members": "members", "#membersVersion": "membersVersion", "#updatedAt": "updatedAt", "#updatedBy": "updatedBy" },
+          UpdateExpression: "SET #list = :list, #version = :nextVersion, #updatedAt = :timestamp, #updatedBy = :actor",
+          ConditionExpression: expectedVersion === 0 ? "attribute_not_exists(#version)" : "#version = :expectedVersion",
+          ExpressionAttributeNames: { "#list": name, "#version": `${name}Version`, "#updatedAt": "updatedAt", "#updatedBy": "updatedBy" },
           ExpressionAttributeValues: {
-            ":members": members,
+            ":list": list,
             ":nextVersion": expectedVersion + 1,
             ":timestamp": timestamp,
             ":actor": actor,
@@ -95,9 +150,9 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
       )) as UpdateCommandOutput;
       attributes = result.Attributes;
     } catch (error) {
-      throw toConflictOrPersistenceError("save household members", "The household members were changed by another request.", error, "CONCURRENT_MODIFICATION");
+      throw toConflictOrPersistenceError(`save household ${name}`, `The household ${name} were changed by another request.`, error, "CONCURRENT_MODIFICATION");
     }
-    if (!attributes) throw new PersistenceError("Failed to save household members.");
+    if (!attributes) throw new PersistenceError(`Failed to save household ${name}.`);
     return toSettings(attributes);
   }
 

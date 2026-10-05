@@ -31,7 +31,7 @@ describe("DashboardPage", () => {
 
     const dueToday = section("Heute fällig");
     expect(within(dueToday).getByText("Büro saugen")).toBeInTheDocument();
-    expect(within(dueToday).getByText("Haushalt")).toBeInTheDocument();
+    expect(await within(dueToday).findByText("Haushalt")).toBeInTheDocument();
     expect(within(dueToday).getByText("Stefan · 10 Min.")).toBeInTheDocument();
 
     expect(within(section("Überfällig")).getByText("seit 12 Tagen überfällig")).toBeInTheDocument();

@@ -177,10 +177,10 @@ TICKET-001, SECURITY-001
 
 ---
 
-## TD-007: Several tickets mark the user list and categories as hardcoded (users resolved)
+## TD-007: Several tickets mark the user list and categories as hardcoded (resolved)
 
 > Household members resolved by HOUSEHOLD-ADMIN-001 (2026-10-05): members are managed data in `tenner-households`;
-> only the seed members (STEFAN, JULIA) remain as one constant. Categories follow with HOUSEHOLD-ADMIN-002.
+> only the seed members (STEFAN, JULIA) remain as one constant. Categories resolved by HOUSEHOLD-ADMIN-002 the same way.
 
 ### Description
 
@@ -820,3 +820,27 @@ pause history when analytics needs it (ANALYTICS-006/008).
 ### Related Work
 
 SCHEDULING-005, `backend/src/utils/pause.ts`, `backend/src/services/vacation.service.ts`.
+
+## TD-030: Quick Add category suggestions know only the seed categories
+
+### Description
+
+`suggestCategory` (FRONTEND-006) maps German/English keywords to the six seed categories. Categories added in the
+settings never get suggested; archived ones are skipped.
+
+### Reason
+
+HOUSEHOLD-ADMIN-002 made categories managed data; keywords per category were not part of the ticket.
+
+### Impact
+
+New categories must be picked manually in the create dialog; Quick Add uses the default category.
+
+### Suggested Improvement
+
+Store optional keywords per category (or match the category name) and build the suggestion table from
+`GET /categories`.
+
+### Related Work
+
+HOUSEHOLD-ADMIN-002, FRONTEND-006, `frontend/src/features/tenners/quickAdd.ts`.

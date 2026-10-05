@@ -17,12 +17,12 @@ const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GRE
 
 function repository(stored?: Partial<HouseholdSettings>) {
   const settings: HouseholdSettings | undefined = stored
-    ? { tenantId: "default", timezone: null, vacation: null, members: null, membersVersion: 0, updatedAt: "t", updatedBy: null, ...stored }
+    ? { tenantId: "default", timezone: null, vacation: null, members: null, membersVersion: 0, categories: null, categoriesVersion: 0, updatedAt: "t", updatedBy: null, ...stored }
     : undefined;
   return {
     get: vi.fn(async () => settings),
     saveMembers: vi.fn(async (tenantId: string, members: readonly HouseholdMember[], version: number) => ({
-      ...(settings ?? { tenantId, timezone: null, vacation: null, updatedAt: TS, updatedBy: null }),
+      ...(settings ?? { tenantId, timezone: null, vacation: null, categories: null, categoriesVersion: 0, updatedAt: TS, updatedBy: null }),
       members,
       membersVersion: version + 1,
     })),
@@ -133,9 +133,9 @@ describe("DynamoDbHouseholdRepository members", () => {
     const c = client(async () => ({ Attributes: { tenantId: "default", members: [LENA], membersVersion: 1 } }));
     const repo = new DynamoDbHouseholdRepository(c, "tenner-households");
     await repo.saveMembers("default", [LENA], 0, "STEFAN", TS);
-    expect((c.send.mock.calls[0]?.[0] as UpdateCommand).input).toMatchObject({ ConditionExpression: "attribute_not_exists(#membersVersion)", ExpressionAttributeValues: { ":nextVersion": 1 } });
+    expect((c.send.mock.calls[0]?.[0] as UpdateCommand).input).toMatchObject({ ConditionExpression: "attribute_not_exists(#version)", ExpressionAttributeNames: { "#list": "members", "#version": "membersVersion" }, ExpressionAttributeValues: { ":nextVersion": 1 } });
     await repo.saveMembers("default", [LENA], 4, "STEFAN", TS);
-    expect((c.send.mock.calls[1]?.[0] as UpdateCommand).input).toMatchObject({ ConditionExpression: "#membersVersion = :expectedVersion", ExpressionAttributeValues: { ":expectedVersion": 4, ":nextVersion": 5 } });
+    expect((c.send.mock.calls[1]?.[0] as UpdateCommand).input).toMatchObject({ ConditionExpression: "#version = :expectedVersion", ExpressionAttributeValues: { ":expectedVersion": 4, ":nextVersion": 5 } });
   });
 
   it("maps conflicts and failures", async () => {

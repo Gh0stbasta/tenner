@@ -1,7 +1,7 @@
 /** Reusable field schemas. Limits are centralized here. */
 
 import { z } from "zod";
-import { CATEGORIES, FREQUENCY_UNITS, MEMBER_COLORS, USER_ID_PATTERN, WEEKDAYS } from "../models/index.js";
+import { CATEGORY_ICONS, CATEGORY_ID_PATTERN, FREQUENCY_UNITS, MEMBER_COLORS, USER_ID_PATTERN, WEEKDAYS } from "../models/index.js";
 
 export const LIMITS = {
   titleMin: 3,
@@ -15,7 +15,9 @@ export const LIMITS = {
 } as const;
 
 export const titleSchema = z.string().trim().min(LIMITS.titleMin).max(LIMITS.titleMax);
-export const categorySchema = z.enum(CATEGORIES);
+/** Category ID format only; existence and archive state are checked by the services (HOUSEHOLD-ADMIN-002). */
+export const categorySchema = z.string().regex(CATEGORY_ID_PATTERN, "Invalid category.");
+export const categoryIconSchema = z.enum(CATEGORY_ICONS);
 /** Member ID format only; whether the member exists is checked by the services (HOUSEHOLD-ADMIN-001). */
 export const userIdSchema = z.string().regex(USER_ID_PATTERN, "Invalid household member ID.");
 export const memberColorSchema = z.enum(MEMBER_COLORS);

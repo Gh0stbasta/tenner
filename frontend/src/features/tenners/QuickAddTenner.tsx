@@ -1,7 +1,7 @@
 /** Quick Add widget (FRONTEND-006) for the dashboard and the Tenners page. */
 
 import { Card, CardContent } from "@mui/material";
-import { CATEGORY_LABELS } from "../../types/domain";
+import { useCategoryName } from "../categories/api";
 import { formatMinutes } from "../../utils/format";
 import { DuplicateWarningDialog } from "./DuplicateWarningDialog";
 import { QuickAddInput } from "./QuickAddInput";
@@ -10,8 +10,9 @@ import { useQuickAddTenner } from "./useQuickAddTenner";
 export function QuickAddTenner() {
   const quickAdd = useQuickAddTenner();
   const { defaults } = quickAdd;
+  const categoryName = useCategoryName();
   const category = quickAdd.suggestedCategory ?? defaults.category;
-  const hint = `${CATEGORY_LABELS[category]}${quickAdd.suggestedCategory ? " (vorgeschlagen)" : ""} · ${formatMinutes(defaults.estimatedMinutes)} · alle ${defaults.frequencyDays} Tage – später änderbar`;
+  const hint = `${categoryName(category)}${quickAdd.suggestedCategory ? " (vorgeschlagen)" : ""} · ${formatMinutes(defaults.estimatedMinutes)} · alle ${defaults.frequencyDays} Tage – später änderbar`;
 
   return (
     <Card sx={{ mb: 3 }}>

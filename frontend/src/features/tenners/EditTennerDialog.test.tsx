@@ -76,7 +76,7 @@ describe("EditTennerDialog", () => {
     await userEvent.click(saveButton());
 
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({
+    expect(fetchMock.calls().find((call) => !call.key.startsWith("GET "))?.body).toEqual({
       title: "Büro gründlich saugen",
       frequencyUnit: "MONTH",
       frequencyInterval: 1,
@@ -96,7 +96,7 @@ describe("EditTennerDialog", () => {
     await waitFor(() => expect(saveButton()).toBeEnabled());
     await userEvent.click(saveButton());
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({
+    expect(fetchMock.calls().find((call) => !call.key.startsWith("GET "))?.body).toEqual({
       frequencyUnit: "DAY",
       frequencyInterval: 21,
       weekdays: null,
@@ -118,7 +118,7 @@ describe("EditTennerDialog", () => {
     await waitFor(() => expect(saveButton()).toBeEnabled());
     await userEvent.click(saveButton());
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({
+    expect(fetchMock.calls().find((call) => !call.key.startsWith("GET "))?.body).toEqual({
       frequencyUnit: "WEEK",
       frequencyInterval: 1,
       weekdays: ["SAT", "SUN"],
@@ -132,7 +132,7 @@ describe("EditTennerDialog", () => {
     expect(screen.getByRole("switch", { name: "Inaktiv" })).not.toBeChecked();
     await userEvent.click(saveButton());
     await waitFor(() =>
-      expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({ active: false }),
+      expect(fetchMock.calls().find((call) => !call.key.startsWith("GET "))?.body).toEqual({ active: false }),
     );
   });
 
@@ -142,7 +142,7 @@ describe("EditTennerDialog", () => {
     await userEvent.click(screen.getByRole("switch", { name: "Inaktiv" }));
     await userEvent.click(saveButton());
     await waitFor(() =>
-      expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({ active: true }),
+      expect(fetchMock.calls().find((call) => !call.key.startsWith("GET "))?.body).toEqual({ active: true }),
     );
   });
 

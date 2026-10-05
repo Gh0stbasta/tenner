@@ -63,6 +63,9 @@ locals {
     "GET /users",                               # HOUSEHOLD-ADMIN-001
     "POST /users",                              # HOUSEHOLD-ADMIN-001
     "PUT /users/{userId}",                      # HOUSEHOLD-ADMIN-001
+    "GET /categories",                          # HOUSEHOLD-ADMIN-002
+    "POST /categories",                         # HOUSEHOLD-ADMIN-002
+    "PUT /categories/{categoryId}",             # HOUSEHOLD-ADMIN-002
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.

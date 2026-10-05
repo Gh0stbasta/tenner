@@ -2,7 +2,8 @@
 
 import { toTennerResponse, type UpdateTennerRequest, type UpdateTennerResponse } from "../dto/index.js";
 import type { Identity } from "../auth/index.js";
-import { SEED_MEMBERS } from "../models/index.js";
+import { SEED_CATEGORIES, SEED_MEMBERS } from "../models/index.js";
+import { requireSelectableCategory, type CategorySource } from "./category.service.js";
 import type { TennerRepository, TennerUpdate } from "../repositories/index.js";
 import { requireMember, type MemberSource } from "./member.service.js";
 import { toUtcTimestamp, type Clock } from "../utils/clock.js";
@@ -12,6 +13,7 @@ export class UpdateTennerService {
     private readonly repository: Pick<TennerRepository, "update">,
     private readonly clock: Clock,
     private readonly membersOf: MemberSource = async () => SEED_MEMBERS,
+    private readonly categoriesOf: CategorySource = async () => SEED_CATEGORIES,
   ) {}
 
   /**
@@ -21,6 +23,8 @@ export class UpdateTennerService {
    */
   async updateTenner(identity: Identity, tennerId: string, request: UpdateTennerRequest): Promise<UpdateTennerResponse> {
     if (request.assignedTo !== undefined) requireMember(await this.membersOf(identity.tenantId), request.assignedTo, "assignedTo");
+    // An archived category stays on existing Tenners; it can only not be chosen anew (HOUSEHOLD-ADMIN-002).
+    if (request.category !== undefined) requireSelectableCategory(await this.categoriesOf(identity.tenantId), request.category);
     const changes: TennerUpdate = {
       title: request.title,
       category: request.category,

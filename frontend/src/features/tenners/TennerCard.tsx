@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { TennerLink } from "../../components/TennerLink";
-import { CATEGORY_LABELS } from "../../types/domain";
+import { useCategoryName } from "../categories/api";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
 import { formatMinutes, formatShortDate } from "../../utils/format";
 import { useToday } from "../household/api";
@@ -60,6 +60,7 @@ export function TennerCard({
   onPause,
   onResume,
 }: TennerCardProps) {
+  const categoryName = useCategoryName();
   const memberName = useMemberName();
   const theme = useTheme();
   const compact = useMediaQuery(theme.breakpoints.down("sm"));
@@ -103,7 +104,7 @@ export function TennerCard({
           <TennerStatusBadge status={status} />
         </Box>
         <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1, flexWrap: "wrap", alignItems: "center" }}>
-          <Chip size="small" label={CATEGORY_LABELS[tenner.category]} />
+          <Chip size="small" label={categoryName(tenner.category)} />
           <Typography variant="body2" color="text.secondary">
             {memberName(tenner.assignedTo)} · {formatMinutes(tenner.estimatedMinutes)}
           </Typography>

@@ -1,9 +1,10 @@
 /** Zod schemas for Tenner API payloads. They mirror backend/src/dto. */
 
 import { z } from "zod";
-import { CATEGORIES, FREQUENCY_UNITS, WEEKDAYS } from "../../types/domain";
+import { FREQUENCY_UNITS, WEEKDAYS } from "../../types/domain";
 
-export const categorySchema = z.enum(CATEGORIES);
+/** Category IDs are managed data (HOUSEHOLD-ADMIN-002); names come from features/categories. */
+export const categorySchema = z.string();
 /** Member IDs are managed data (HOUSEHOLD-ADMIN-001); names come from features/members. */
 export const userIdSchema = z.string();
 

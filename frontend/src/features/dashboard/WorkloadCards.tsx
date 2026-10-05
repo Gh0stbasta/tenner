@@ -1,7 +1,7 @@
 /** Actionable workload grouped by user and by category (FRONTEND-002). */
 
 import { Card, CardContent, List, ListItem, ListItemText, Typography } from "@mui/material";
-import { CATEGORIES, CATEGORY_LABELS } from "../../types/domain";
+import { useCategoryName, useCategories } from "../categories/api";
 import { useActiveMembers, useMemberName } from "../members/api";
 import { formatMinutes, formatTennerCount } from "../../utils/format";
 import type { GroupSummary } from "./api";
@@ -54,10 +54,11 @@ export function UserSummaryCard({ byUser }: { readonly byUser: Partial<Record<st
   return <WorkloadCard title="Nach Person" keys={keys} labels={labels} groups={byUser} />;
 }
 
-export function CategorySummaryCard({
-  byCategory,
-}: {
-  readonly byCategory: WorkloadCardProps<(typeof CATEGORIES)[number]>["groups"];
-}) {
-  return <WorkloadCard title="Nach Kategorie" keys={CATEGORIES} labels={CATEGORY_LABELS} groups={byCategory} />;
+/** Categories in display order (archived included, they may still have Tenners), then any other category. */
+export function CategorySummaryCard({ byCategory }: { readonly byCategory: Partial<Record<string, GroupSummary>> }) {
+  const categoryName = useCategoryName();
+  const ordered = (useCategories().data ?? []).map((category) => category.categoryId);
+  const keys = [...ordered, ...Object.keys(byCategory).filter((categoryId) => !ordered.includes(categoryId))];
+  const labels = Object.fromEntries(keys.map((categoryId) => [categoryId, categoryName(categoryId)]));
+  return <WorkloadCard title="Nach Kategorie" keys={keys} labels={labels} groups={byCategory} />;
 }

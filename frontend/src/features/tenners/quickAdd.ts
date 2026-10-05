@@ -62,14 +62,18 @@ export const CATEGORY_KEYWORDS: readonly (readonly [Category, readonly string[]]
   ["PERSONAL", ["lesen", "arzt", "friseur", "zahnarzt", "meditation"]],
 ];
 
-/** Suggested category for a title, or undefined if no keyword matches. */
-export function suggestCategory(title: string): Category | undefined {
+/**
+ * Suggested category for a title, or undefined if no keyword matches. The keywords cover the six seed categories
+ * (HOUSEHOLD-ADMIN-002); with `selectable` given, only categories in that list are suggested (archived ones not).
+ */
+export function suggestCategory(title: string, selectable?: readonly Category[]): Category | undefined {
   const words = title
     .toLocaleLowerCase("de-DE")
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);
   const text = words.join(" ");
   for (const [category, keywords] of CATEGORY_KEYWORDS) {
+    if (selectable !== undefined && !selectable.includes(category)) continue;
     if (keywords.some((keyword) => words.includes(keyword) || (keyword.length >= 5 && text.includes(keyword))))
       return category;
   }

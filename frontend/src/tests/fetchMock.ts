@@ -32,8 +32,22 @@ export const DEFAULT_MEMBERS = [
   { userId: "JULIA", displayName: "Julia", color: "PURPLE", active: true },
 ];
 
+/** The household categories every app screen loads (HOUSEHOLD-ADMIN-002); tests can override "GET /categories". */
+export const DEFAULT_CATEGORIES = [
+  { categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING", color: "BLUE", sortOrder: 0, archived: false },
+  { categoryId: "FITNESS", name: "Fitness", icon: "FITNESS", color: "GREEN", sortOrder: 1, archived: false },
+  { categoryId: "FAMILY", name: "Familie", icon: "FAMILY", color: "PINK", sortOrder: 2, archived: false },
+  { categoryId: "HOME", name: "Haus & Garten", icon: "HOME", color: "ORANGE", sortOrder: 3, archived: false },
+  { categoryId: "PERSONAL", name: "Persönlich", icon: "PERSON", color: "PURPLE", sortOrder: 4, archived: false },
+  { categoryId: "FINANCE", name: "Finanzen", icon: "MONEY", color: "TEAL", sortOrder: 5, archived: false },
+];
+
 export function mockFetch(routes: Record<string, MockHandler>): FetchMock {
-  const handlers: Record<string, MockHandler> = { "GET /users": ok(DEFAULT_MEMBERS), ...routes };
+  const handlers: Record<string, MockHandler> = {
+    "GET /users": ok(DEFAULT_MEMBERS),
+    "GET /categories": ok(DEFAULT_CATEGORIES),
+    ...routes,
+  };
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(typeof input === "string" ? input : input.toString());
     const method = init?.method ?? "GET";

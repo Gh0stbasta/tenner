@@ -7,13 +7,14 @@ import { Alert, Box, Button, Chip, Stack, TextField, Typography } from "@mui/mat
 import { useId, useState } from "react";
 import { errorMessage } from "../../api/errorMessages";
 import { useNotify } from "../../components/NotificationProvider";
-import { CATEGORIES, CATEGORY_LABELS, type Category } from "../../types/domain";
+import type { Category } from "../../types/domain";
+import { useCategoryName, useSelectableCategories } from "../categories/api";
 import { formatShortDate } from "../../utils/format";
 import { useEndVacation, useHousehold, useSetVacation, useToday, type Vacation } from "../household/api";
 
-function describe(vacation: Vacation): string {
+function describe(vacation: Vacation, categoryName: (categoryId: Category) => string): string {
   const categories =
-    vacation.categories === null ? "alle Kategorien" : vacation.categories.map((c) => CATEGORY_LABELS[c]).join(", ");
+    vacation.categories === null ? "alle Kategorien" : vacation.categories.map(categoryName).join(", ");
   return `${formatShortDate(vacation.from)} – ${formatShortDate(vacation.until)} · ${categories}`;
 }
 
@@ -27,6 +28,10 @@ function VacationForm({ vacation }: { readonly vacation: Vacation | null }) {
   const [from, setFrom] = useState(vacation?.from ?? "");
   const [until, setUntil] = useState(vacation?.until ?? "");
   const [categories, setCategories] = useState<readonly Category[]>(vacation?.categories ?? []);
+  const categoryName = useCategoryName();
+  // Selectable categories in display order, plus stored vacation categories that are archived meanwhile.
+  const selectable = useSelectableCategories().map((category) => category.categoryId);
+  const allCategories = [...selectable, ...(vacation?.categories ?? []).filter((c) => !selectable.includes(c))];
   const busy = setVacation.isPending || endVacation.isPending;
   const invalidRange = from !== "" && until !== "" && until < from;
   const inPast = until !== "" && until < today;
@@ -42,7 +47,7 @@ function VacationForm({ vacation }: { readonly vacation: Vacation | null }) {
       {
         from,
         until,
-        ...(categories.length > 0 ? { categories: CATEGORIES.filter((c) => categories.includes(c)) } : {}),
+        ...(categories.length > 0 ? { categories: allCategories.filter((c) => categories.includes(c)) } : {}),
       },
       {
         onSuccess: (result) =>
@@ -61,7 +66,7 @@ function VacationForm({ vacation }: { readonly vacation: Vacation | null }) {
       </Typography>
       {vacation && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Geplant: {describe(vacation)}
+          Geplant: {describe(vacation, categoryName)}
         </Alert>
       )}
       {failure && (
@@ -91,10 +96,10 @@ function VacationForm({ vacation }: { readonly vacation: Vacation | null }) {
         Pausierte Kategorien (ohne Auswahl: alle)
       </Typography>
       <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }} role="group" aria-labelledby={groupId}>
-        {CATEGORIES.map((category) => (
+        {allCategories.map((category) => (
           <Chip
             key={category}
-            label={CATEGORY_LABELS[category]}
+            label={categoryName(category)}
             color={categories.includes(category) ? "primary" : "default"}
             variant={categories.includes(category) ? "filled" : "outlined"}
             aria-pressed={categories.includes(category)}

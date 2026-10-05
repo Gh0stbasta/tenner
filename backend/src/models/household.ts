@@ -1,4 +1,5 @@
 import type { UserId } from "./enums.js";
+import type { HouseholdCategory } from "./category.js";
 import type { HouseholdMember } from "./user.js";
 import type { Vacation } from "./vacation.js";
 
@@ -13,6 +14,9 @@ export interface HouseholdSettings {
   readonly members: readonly HouseholdMember[] | null;
   /** Optimistic-lock version of `members` (0 = never saved). */
   readonly membersVersion: number;
+  /** Household categories (HOUSEHOLD-ADMIN-002); null = never saved, the seed categories apply. */
+  readonly categories: readonly HouseholdCategory[] | null;
+  readonly categoriesVersion: number;
   readonly updatedAt: string;
   readonly updatedBy: UserId | null;
 }

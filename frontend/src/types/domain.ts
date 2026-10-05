@@ -3,8 +3,41 @@
  * Household members are managed data since HOUSEHOLD-ADMIN-001 (see features/members).
  */
 
-export const CATEGORIES = ["HOUSEHOLD", "FITNESS", "FAMILY", "HOME", "PERSONAL", "FINANCE"] as const;
-export type Category = (typeof CATEGORIES)[number];
+/** Category ID: immutable uppercase slug, e.g. "HOUSEHOLD". Categories are managed data (HOUSEHOLD-ADMIN-002). */
+export type Category = string;
+export const CATEGORY_ID_PATTERN = /^[A-Z][A-Z0-9_]{0,29}$/;
+
+/** Fixed category icon set; mirrors backend CATEGORY_ICONS. */
+export const CATEGORY_ICONS = [
+  "HOME",
+  "CLEANING",
+  "FITNESS",
+  "FAMILY",
+  "PERSON",
+  "MONEY",
+  "GARDEN",
+  "PET",
+  "CAR",
+  "HEALTH",
+  "WORK",
+  "STAR",
+] as const;
+export type CategoryIcon = (typeof CATEGORY_ICONS)[number];
+
+export const CATEGORY_ICON_LABELS: Readonly<Record<CategoryIcon, string>> = {
+  HOME: "Haus",
+  CLEANING: "Putzen",
+  FITNESS: "Sport",
+  FAMILY: "Familie",
+  PERSON: "Person",
+  MONEY: "Geld",
+  GARDEN: "Garten",
+  PET: "Haustier",
+  CAR: "Auto",
+  HEALTH: "Gesundheit",
+  WORK: "Arbeit",
+  STAR: "Stern",
+};
 
 /** Household member ID: immutable uppercase slug, e.g. "STEFAN" (HOUSEHOLD-ADMIN-001). */
 export type UserId = string;
@@ -35,15 +68,6 @@ export const MEMBER_COLOR_VALUES: Readonly<Record<MemberColor, string>> = {
   TEAL: "#13868f",
   PINK: "#c2357f",
   GREY: "#6b7280",
-};
-
-export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
-  HOUSEHOLD: "Haushalt",
-  FITNESS: "Fitness",
-  FAMILY: "Familie",
-  HOME: "Haus & Garten",
-  PERSONAL: "Persönlich",
-  FINANCE: "Finanzen",
 };
 
 /** Frequency units (SCHEDULING-001). Mirrors backend/src/models/enums.ts. */

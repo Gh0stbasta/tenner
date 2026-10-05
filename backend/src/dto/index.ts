@@ -11,3 +11,4 @@ export * from "./household.dto.js";
 export * from "./snooze.dto.js";
 export * from "./skip.dto.js";
 export * from "./member.dto.js";
+export * from "./category.dto.js";

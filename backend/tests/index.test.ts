@@ -79,6 +79,9 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     listMembers: vi.fn(async () => [{ userId: "STEFAN", displayName: "Stefan", color: "BLUE" as const, active: true }]),
     createMember: vi.fn(async () => ({ userId: "LENA", displayName: "Lena", color: "GREEN" as const, active: true })),
     updateMember: vi.fn(async () => ({ userId: "STEFAN", displayName: "Steffen", color: "BLUE" as const, active: true })),
+    listCategories: vi.fn(async () => [{ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: false }]),
+    createCategory: vi.fn(async () => ({ categoryId: "GARDEN", name: "Garten", icon: "GARDEN" as const, color: "GREEN" as const, sortOrder: 6, archived: false })),
+    updateCategory: vi.fn(async () => ({ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: true })),
     getOnboarding: vi.fn(async () => ({ assignedTo: null, members: [] })),
     assignHouseholdMember: vi.fn(async () => ({ response: { userId: "JULIA" as const }, group: "household:default:JULIA" })),
     ...overrides,
@@ -345,6 +348,17 @@ describe("member routes (HOUSEHOLD-ADMIN-001)", () => {
   });
 });
 
+describe("category routes (HOUSEHOLD-ADMIN-002)", () => {
+  it("lists, creates and updates categories", async () => {
+    const d = deps();
+    expect((await route(event("GET /categories"), d)).statusCode).toBe(200);
+    expect((await route(event("POST /categories", {}, JSON.stringify({ name: "Garten", icon: "GARDEN", color: "GREEN" })), d)).statusCode).toBe(201);
+    const put = { ...event("PUT /categories/{categoryId}", {}, JSON.stringify({ archived: true })), pathParameters: { categoryId: "HOUSEHOLD" } } as APIGatewayProxyEventV2;
+    expect((await route(put, d)).statusCode).toBe(200);
+    expect(d.updateCategory).toHaveBeenCalledWith(TEST_IDENTITY, "HOUSEHOLD", { archived: true });
+  });
+});
+
 describe("PUT /tenners/{tennerId}", () => {
   const put = (id: string | undefined, payload: unknown): APIGatewayProxyEventV2 =>
     ({
@@ -503,7 +517,7 @@ describe("GET /dashboard", () => {
     expect(d.getDashboard).toHaveBeenCalledWith("default", { assignedTo: "STEFAN", category: "HOUSEHOLD", date: "2026-10-01" });
   });
 
-  it.each([{ assignedTo: "bob" }, { category: "GARDEN" }, { date: "01.10.2026" }, { date: "2026-02-30" }])("rejects %j with 400 Invalid dashboard query.", async (query) => {
+  it.each([{ assignedTo: "bob" }, { category: "garden" }, { date: "01.10.2026" }, { date: "2026-02-30" }])("rejects %j with 400 Invalid dashboard query.", async (query) => {
     const d = deps();
     const response = await route(event("GET /dashboard", {}, undefined, query), d);
     expect(response.statusCode).toBe(400);

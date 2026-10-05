@@ -21,8 +21,10 @@ async function fillValid() {
 describe("CreateTennerDialog", () => {
   beforeEach(() => vi.spyOn(console, "info").mockImplementation(() => undefined));
 
-  it("opens with defaults and a disabled submit button", () => {
+  it("opens with defaults and a disabled submit button", async () => {
+    mockFetch({});
     renderDialog();
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Kategorie" })).toHaveTextContent("Haushalt"));
     expect(screen.getByRole("textbox", { name: "Titel" })).toHaveValue("");
     expect(screen.getByRole("spinbutton", { name: "Geschätzte Minuten" })).toHaveValue(10);
     expect(screen.getByRole("spinbutton", { name: "Wiederholen alle" })).toHaveValue(14);
@@ -103,7 +105,7 @@ describe("CreateTennerDialog", () => {
     await userEvent.click(submitButton());
 
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toMatchObject({
+    expect(fetchMock.calls().find((call) => !call.key.startsWith("GET "))?.body).toMatchObject({
       frequencyUnit: "WEEK",
       frequencyInterval: 1,
       weekdays: ["TUE", "FRI"],
@@ -123,7 +125,7 @@ describe("CreateTennerDialog", () => {
     await waitFor(() => expect(submitButton()).toBeEnabled());
     await userEvent.click(submitButton());
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toMatchObject({
+    expect(fetchMock.calls().find((call) => !call.key.startsWith("GET "))?.body).toMatchObject({
       frequencyUnit: "DAY",
       weekdays: null,
     });
@@ -144,7 +146,7 @@ describe("CreateTennerDialog", () => {
     await userEvent.click(submitButton());
 
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-    expect(fetchMock.calls().find((call) => call.key !== "GET /users")?.body).toEqual({
+    expect(fetchMock.calls().find((call) => !call.key.startsWith("GET "))?.body).toEqual({
       title: "Fenster putzen",
       category: "HOME",
       assignedTo: "JULIA",

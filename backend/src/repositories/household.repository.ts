@@ -1,4 +1,4 @@
-import type { HouseholdMember, HouseholdSettings, UserId, Vacation } from "../models/index.js";
+import type { HouseholdCategory, HouseholdMember, HouseholdSettings, UserId, Vacation } from "../models/index.js";
 
 /** Persistence of household settings (SCHEDULING-008). Storage failures become PersistenceError. */
 export interface HouseholdRepository {
@@ -13,4 +13,6 @@ export interface HouseholdRepository {
    * (HOUSEHOLD-ADMIN-001). Errors: ConflictError CONCURRENT_MODIFICATION, PersistenceError.
    */
   saveMembers(tenantId: string, members: readonly HouseholdMember[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
+  /** Same as saveMembers for the category list (HOUSEHOLD-ADMIN-002). */
+  saveCategories(tenantId: string, categories: readonly HouseholdCategory[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
 }

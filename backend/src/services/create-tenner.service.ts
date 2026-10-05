@@ -3,7 +3,8 @@
 import type { CreateTennerRequest, TennerResponse } from "../dto/index.js";
 import { toTennerResponse } from "../dto/index.js";
 import type { Identity } from "../auth/index.js";
-import { SEED_MEMBERS, type Tenner } from "../models/index.js";
+import { SEED_CATEGORIES, SEED_MEMBERS, type Tenner } from "../models/index.js";
+import { requireSelectableCategory, type CategorySource } from "./category.service.js";
 import type { TennerRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
 import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
@@ -16,6 +17,7 @@ export class CreateTennerService {
     private readonly newId: IdGenerator,
     private readonly timezoneOf: TimeZoneSource,
     private readonly membersOf: MemberSource = async () => SEED_MEMBERS,
+    private readonly categoriesOf: CategorySource = async () => SEED_CATEGORIES,
   ) {}
 
   /**
@@ -25,6 +27,7 @@ export class CreateTennerService {
    */
   async createTenner(identity: Identity, request: CreateTennerRequest): Promise<TennerResponse> {
     requireMember(await this.membersOf(identity.tenantId), request.assignedTo, "assignedTo");
+    requireSelectableCategory(await this.categoriesOf(identity.tenantId), request.category);
     const now = this.clock();
     const timestamp = toUtcTimestamp(now);
     const tenner: Tenner = {

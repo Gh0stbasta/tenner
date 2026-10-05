@@ -47,7 +47,7 @@ export const dashboardSchema = z.object({
   upcoming: z.array(dashboardTennerSchema),
   paused: z.array(pausedTennerSchema).default([]),
   byUser: z.partialRecord(z.string(), groupSummarySchema),
-  byCategory: z.partialRecord(categorySchema, groupSummarySchema),
+  byCategory: z.partialRecord(z.string(), groupSummarySchema),
 });
 export type Dashboard = z.infer<typeof dashboardSchema>;
 

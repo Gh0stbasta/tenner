@@ -2,15 +2,8 @@
 
 import { Box, Chip, FormControlLabel, MenuItem, Stack, Switch, TextField, Typography } from "@mui/material";
 import { Controller, type UseFormReturn } from "react-hook-form";
-import {
-  CATEGORIES,
-  CATEGORY_LABELS,
-  FREQUENCY_UNITS,
-  FREQUENCY_UNIT_LABELS,
-  WEEKDAYS,
-  WEEKDAY_LABELS,
-  type Weekday,
-} from "../../types/domain";
+import { FREQUENCY_UNITS, FREQUENCY_UNIT_LABELS, WEEKDAYS, WEEKDAY_LABELS, type Weekday } from "../../types/domain";
+import { useCategoryOptions } from "../categories/useCategoryOptions";
 import { useAssignees } from "../members/useAssignees";
 import { FREQUENCY_PRESETS, type TennerFormValues } from "./tennerForm.schema";
 
@@ -30,6 +23,7 @@ export function TennerForm({ form, showActive = false, disabled = false }: Tenne
     formState: { errors },
   } = form;
   const assignees = useAssignees(watch("assignedTo"));
+  const categoryOptions = useCategoryOptions(watch("category"));
   const [unit, interval, weekdays] = watch(["frequencyUnit", "frequencyInterval", "weekdays"]);
   const isPreset = (preset: (typeof FREQUENCY_PRESETS)[number]) =>
     preset.unit === unit && preset.interval === interval && (unit !== "WEEK" || weekdays.length === 0);
@@ -64,9 +58,10 @@ export function TennerForm({ form, showActive = false, disabled = false }: Tenne
               helperText={errors.category?.message}
               {...field}
             >
-              {CATEGORIES.map((category) => (
-                <MenuItem key={category} value={category}>
-                  {CATEGORY_LABELS[category]}
+              {categoryOptions.map((category) => (
+                <MenuItem key={category.categoryId} value={category.categoryId} disabled={category.archived === true}>
+                  {category.name}
+                  {category.archived === true ? " (archiviert)" : ""}
                 </MenuItem>
               ))}
             </TextField>
