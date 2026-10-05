@@ -23,7 +23,7 @@ import {
   type EndVacation,
   type GetHousehold,
   type SetVacation,
-  type UpdateHouseholdTimezone,
+  type UpdateHousehold,
 } from "./handlers/household.js";
 import { pauseTennerHandler, resumeTennerHandler, type PauseTenner, type ResumeTenner } from "./handlers/pause-tenner.js";
 import { createCategoryHandler, listCategoriesHandler, updateCategoryHandler, type CreateCategory, type ListCategories, type UpdateCategory } from "./handlers/categories.js";
@@ -98,7 +98,7 @@ export interface Dependencies {
   readonly getTennerHistory: GetTennerHistory;
   readonly getOnboarding: GetOnboarding;
   readonly getHousehold: GetHousehold;
-  readonly updateHouseholdTimezone: UpdateHouseholdTimezone;
+  readonly updateHousehold: UpdateHousehold;
   readonly assignHouseholdMember: AssignHouseholdMember;
 }
 
@@ -161,7 +161,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "PUT /categories/{categoryId}": ({ event, deps, logger, identity }) => updateCategoryHandler(event, identity, deps.updateCategory, logger),
   "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
   "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
-  "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHouseholdTimezone, logger),
+  "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHousehold, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -183,7 +183,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const tennerRepository = tables ? new DynamoDbTennerRepository(getDocumentClient(), tables.tenners, tables.history) : undefined;
   const completionRepository = tables ? new DynamoDbCompletionRepository(getDocumentClient(), tables.history) : undefined;
   const householdRepository = tables ? new DynamoDbHouseholdRepository(getDocumentClient(), tables.households) : undefined;
-  const householdService = householdRepository ? new HouseholdService(householdRepository, systemClock, config.timezone) : undefined;
+  const householdService = householdRepository ? new HouseholdService(householdRepository, systemClock, config.timezone, (tenantId) => categoriesOf(tenantId)) : undefined;
   // SCHEDULING-008: the one place that resolves a household's timezone for all date calculations.
   const timezoneOf = (tenantId: string): Promise<string> => householdService?.timezoneOf(tenantId) ?? Promise.resolve(config.timezone);
   const vacationOf = (tenantId: string): Promise<Vacation | null> => householdService?.vacationOf(tenantId) ?? Promise.resolve(null);
@@ -245,7 +245,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     createCategory: categoryService ? (identity, request) => categoryService.createCategory(identity, request) : notConfigured,
     updateCategory: categoryService ? (identity, categoryId, request) => categoryService.updateCategory(identity, categoryId, request) : notConfigured,
     getHousehold: householdService ? (tenantId) => householdService.getHousehold(tenantId) : notConfigured,
-    updateHouseholdTimezone: householdService ? (identity, timezone) => householdService.updateTimezone(identity, timezone) : notConfigured,
+    updateHousehold: householdService ? (identity, request) => householdService.updateSettings(identity, request) : notConfigured,
     getOnboarding: householdAssignmentService ? (principal) => householdAssignmentService.getOnboarding(principal) : notConfigured,
     assignHouseholdMember: householdAssignmentService ? (principal, userId) => householdAssignmentService.assign(principal, userId) : notConfigured,
   };

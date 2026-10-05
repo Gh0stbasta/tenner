@@ -112,23 +112,22 @@ describe("QuickAddTenner", () => {
     await waitFor(() => expect(posts(fetchMock)).toHaveLength(1));
   });
 
-  it("uses the quick add defaults from the settings (FRONTEND-008)", async () => {
+  it("uses the household defaults and the personal default assignee (HOUSEHOLD-ADMIN-003)", async () => {
     const fetchMock = mockFetch({
       "GET /tenners": ok([]),
+      "GET /household": ok({
+        timezone: "Europe/Berlin",
+        defaults: { category: "FINANCE", estimatedMinutes: 25, frequencyDays: 30 },
+        defaultsSource: "HOUSEHOLD",
+      }),
       "POST /tenners": ok(tenner({ tennerId: "new", title: "Xylofon stimmen" }), 201),
     });
     renderWithProviders(<QuickAddTenner />, {
       user: "STEFAN",
-      preferences: {
-        ...DEFAULT_PREFERENCES,
-        defaultCategory: "FINANCE",
-        defaultAssignedTo: "JULIA",
-        defaultEstimatedMinutes: 25,
-        defaultFrequencyDays: 30,
-      },
+      preferences: { ...DEFAULT_PREFERENCES, defaultAssignedTo: "JULIA" },
     });
     await userEvent.type(input(), "Xylofon stimmen");
-    expect(screen.getByText("Finanzen · 25 Min. · alle 30 Tage – später änderbar")).toBeInTheDocument();
+    expect(await screen.findByText("Finanzen · 25 Min. · alle 30 Tage – später änderbar")).toBeInTheDocument();
     await userEvent.type(input(), "{Enter}");
     await waitFor(() => expect(posts(fetchMock)).toHaveLength(1));
     expect(posts(fetchMock)[0]?.body).toEqual({

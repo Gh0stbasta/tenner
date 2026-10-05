@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiClient } from "../../api/client";
 import { queryKeys } from "../../api/queryKeys";
-import type { Category } from "../../types/domain";
+import { WEEKDAYS, type Category, type Weekday } from "../../types/domain";
 import { todayIsoDate } from "../../utils/dates";
 import { trackEvent } from "../../utils/telemetry";
 import { categorySchema } from "../tenners/schemas";
@@ -16,8 +16,38 @@ const vacationSchema = z.object({
 });
 export type Vacation = z.infer<typeof vacationSchema>;
 
-const householdSchema = z.object({ timezone: z.string().min(1), vacation: vacationSchema.nullable().default(null) });
+export const WEEK_STARTS = ["MONDAY", "SUNDAY"] as const;
+export type WeekStart = (typeof WEEK_STARTS)[number];
+
+/** Built-in defaults, also used while the household settings load (mirror the backend defaults). */
+export const BUILT_IN_TENNER_DEFAULTS = { category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14 } as const;
+
+const tennerDefaultsSchema = z.object({
+  category: z.string(),
+  estimatedMinutes: z.number(),
+  frequencyDays: z.number(),
+});
+export type HouseholdTennerDefaults = z.infer<typeof tennerDefaultsSchema>;
+
+/** Household-wide settings (SCHEDULING-008, SCHEDULING-005, HOUSEHOLD-ADMIN-003); missing fields get the defaults. */
+const householdSchema = z.object({
+  name: z.string().default("Unser Haushalt"),
+  timezone: z.string().min(1),
+  weekStartsOn: z.enum(WEEK_STARTS).default("MONDAY"),
+  workdays: z.array(z.enum(WEEKDAYS)).default(["MON", "TUE", "WED", "THU", "FRI"]),
+  defaults: tennerDefaultsSchema.default(BUILT_IN_TENNER_DEFAULTS),
+  defaultsSource: z.enum(["DEFAULT", "HOUSEHOLD"]).default("DEFAULT"),
+  vacation: vacationSchema.nullable().default(null),
+});
 export type Household = z.infer<typeof householdSchema>;
+
+export interface HouseholdChanges {
+  readonly name?: string;
+  readonly timezone?: string;
+  readonly weekStartsOn?: WeekStart;
+  readonly workdays?: readonly Weekday[];
+  readonly defaults?: HouseholdTennerDefaults;
+}
 
 const vacationUpdateSchema = z.object({ household: householdSchema, rescheduled: z.number(), conflicts: z.number() });
 export type VacationUpdate = z.infer<typeof vacationUpdateSchema>;
@@ -37,11 +67,11 @@ export function useHousehold() {
   });
 }
 
-/** Saving a new timezone changes "today" for every list, so all date-dependent data is reloaded. */
-export function useUpdateHouseholdTimezone() {
+/** Household settings are shared; a new timezone changes "today", so date-dependent data is reloaded too. */
+export function useUpdateHousehold() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (timezone: string) => apiClient.put("/household", { schema: householdSchema, body: { timezone } }),
+    mutationFn: (changes: HouseholdChanges) => apiClient.put("/household", { schema: householdSchema, body: changes }),
     onSuccess: (household) => {
       queryClient.setQueryData(queryKeys.household, household);
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
@@ -110,4 +140,9 @@ export function useEndVacation() {
     },
     (result) => result,
   );
+}
+
+/** Household defaults for new Tenners (built-in values while loading). */
+export function useHouseholdTennerDefaults(): HouseholdTennerDefaults {
+  return useHousehold().data?.defaults ?? BUILT_IN_TENNER_DEFAULTS;
 }

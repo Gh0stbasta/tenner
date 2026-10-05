@@ -324,6 +324,21 @@ No self-service onboarding.
 
 ---
 
+## Household Settings (HOUSEHOLD-ADMIN-003)
+
+Household-wide settings are server-side, one item per tenant in `tenner-households`: `name`, `timezone`,
+`weekStartsOn` (`MONDAY`/`SUNDAY`), `workdays` and `defaults` for new Tenners (category, estimated minutes,
+frequency in days), next to `vacation`, `members` and `categories`. Missing values fall back to defaults
+(`toHouseholdResponse`); backend code reads the effective values through `HouseholdService.settingsOf`.
+
+Personal preferences stay in the browser (FRONTEND-008): default assignee ("Ich selbst" or a member), dashboard
+sections and theme. The settings page shows both groups separately ("Für mich" / "Für den ganzen Haushalt").
+Quick Add defaults that a device stored before are offered once for upload while the household still uses the
+built-in defaults; accepting or dismissing removes them from the device.
+
+Consumers: the timezone is used by all date calculations; the defaults by Quick Add and the create dialog. Week
+start and workdays are stored for ANALYTICS-002 and SCHEDULING-007, which do not exist yet.
+
 ## Category
 
 Since HOUSEHOLD-ADMIN-002, categories are managed per household (Settings → "Kategorien"), stored like members in
@@ -1055,7 +1070,7 @@ Introduced by TICKET-006 (`terraform/dynamodb.tf`).
 |---|---|---|---|
 | `tenner-tenners` | `tenantId` (PK), `tennerId` (SK) | `nextDue-index` (`tenantId`, `nextDue`), `assignedTo-index` (`tenantId`, `assignedTo`) | Current state of Tenners |
 | `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`), `tennerId-completedAt-index` (`tenantTennerId`, `completedAt`, TICKET-014) | Immutable completion history |
-| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `members` + `membersVersion` (HOUSEHOLD-ADMIN-001), `categories` + `categoriesVersion` (HOUSEHOLD-ADMIN-002), `updatedAt`, `updatedBy` |
+| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `members` + `membersVersion` (HOUSEHOLD-ADMIN-001), `categories` + `categoriesVersion` (HOUSEHOLD-ADMIN-002), `name`, `weekStartsOn`, `workdays`, `defaults` (HOUSEHOLD-ADMIN-003), `updatedAt`, `updatedBy` |
 
 All tables use:
 - `PAY_PER_REQUEST` billing

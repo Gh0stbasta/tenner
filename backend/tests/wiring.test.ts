@@ -99,15 +99,15 @@ describe("createDependencies wiring", () => {
 
   it("reads and saves the household timezone in the households table (SCHEDULING-008)", async () => {
     send.mockImplementation(async (command: unknown) => (command instanceof GetCommand ? { Item: { tenantId: "default", timezone: "Asia/Tokyo", updatedAt: "x" } } : { Attributes: { tenantId: "default", timezone: "UTC", updatedAt: "y", updatedBy: "STEFAN" } }));
-    await expect(deps().getHousehold("default")).resolves.toEqual({ timezone: "Asia/Tokyo", vacation: null });
+    await expect(deps().getHousehold("default")).resolves.toMatchObject({ timezone: "Asia/Tokyo", vacation: null, name: "Unser Haushalt" });
     expect((send.mock.calls[0]?.[0] as GetCommand).input).toEqual({ TableName: "tenner-households", Key: { tenantId: "default" } });
-    await expect(deps().updateHouseholdTimezone(TEST_IDENTITY, "UTC")).resolves.toEqual({ timezone: "UTC", vacation: null });
+    await expect(deps().updateHousehold(TEST_IDENTITY, { timezone: "UTC" })).resolves.toMatchObject({ timezone: "UTC", vacation: null });
     expect((send.mock.calls.at(-1)?.[0] as UpdateCommand).input.TableName).toBe("tenner-households");
   });
 
   it("falls back to the configured timezone when the household has none", async () => {
     send.mockResolvedValue({});
-    await expect(deps().getHousehold("default")).resolves.toEqual({ timezone: "Europe/Berlin", vacation: null });
+    await expect(deps().getHousehold("default")).resolves.toMatchObject({ timezone: "Europe/Berlin", vacation: null });
   });
 
   it("reads a single Tenner with GetItem", async () => {

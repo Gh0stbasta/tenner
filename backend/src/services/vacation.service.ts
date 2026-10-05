@@ -9,6 +9,7 @@ import { addDays, toUtcTimestamp, type Clock } from "../utils/clock.js";
 import { affectedByVacation, averageDailyLoad, distributeResume, RESUME_LOAD_FACTOR } from "../utils/pause.js";
 import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
 import type { Logger } from "../utils/logger.js";
+import { toHouseholdResponse } from "./household.service.js";
 
 export class VacationService {
   constructor(
@@ -50,18 +51,13 @@ export class VacationService {
         this.logger.warn("Vacation reschedule skipped", { tennerId: tenner.tennerId, errorCode: error.code });
       }
     }
-    return { household: toHousehold(saved.timezone ?? timezone, saved.vacation), rescheduled: moved.length - conflicts, conflicts };
+    return { household: toHouseholdResponse(saved, timezone), rescheduled: moved.length - conflicts, conflicts };
   }
 
   /** End the vacation. Moved due dates stay as they are (no Tenner becomes due earlier than planned). */
   async endVacation(identity: Identity): Promise<HouseholdResponse> {
     const timezone = await this.timezoneOf(identity.tenantId);
     const saved = await this.households.saveVacation(identity.tenantId, null, identity.userId, toUtcTimestamp(this.clock()));
-    return toHousehold(saved.timezone ?? timezone, null);
+    return toHouseholdResponse(saved, timezone);
   }
 }
-
-function toHousehold(timezone: string, vacation: Vacation | null): HouseholdResponse {
-  return { timezone, vacation };
-}
-

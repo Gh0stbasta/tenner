@@ -9,7 +9,7 @@ import { createMemberHandler, listMembersHandler, updateMemberHandler } from "..
 import { SEED_MEMBERS, type HouseholdMember, type HouseholdSettings } from "../src/models/index.js";
 import { DynamoDbHouseholdRepository } from "../src/repositories/index.js";
 import { CompleteTennerService, CreateTennerService, HouseholdAssignmentService, MemberService, slugify, UpdateTennerService } from "../src/services/index.js";
-import { mockCompletionRepository, mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
+import { householdSettings, mockCompletionRepository, mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-05T08:00:00Z");
 const TS = "2026-10-05T08:00:00Z";
@@ -17,12 +17,12 @@ const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GRE
 
 function repository(stored?: Partial<HouseholdSettings>) {
   const settings: HouseholdSettings | undefined = stored
-    ? { tenantId: "default", timezone: null, vacation: null, members: null, membersVersion: 0, categories: null, categoriesVersion: 0, updatedAt: "t", updatedBy: null, ...stored }
+    ? householdSettings(stored)
     : undefined;
   return {
     get: vi.fn(async () => settings),
     saveMembers: vi.fn(async (tenantId: string, members: readonly HouseholdMember[], version: number) => ({
-      ...(settings ?? { tenantId, timezone: null, vacation: null, categories: null, categoriesVersion: 0, updatedAt: TS, updatedBy: null }),
+      ...(settings ?? householdSettings({ tenantId, updatedAt: TS })),
       members,
       membersVersion: version + 1,
     })),

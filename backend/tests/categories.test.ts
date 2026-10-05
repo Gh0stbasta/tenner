@@ -8,7 +8,7 @@ import { createCategoryHandler, listCategoriesHandler, updateCategoryHandler } f
 import { SEED_CATEGORIES, type HouseholdCategory, type HouseholdSettings } from "../src/models/index.js";
 import { DynamoDbHouseholdRepository } from "../src/repositories/index.js";
 import { CategoryService, CreateTennerService, DashboardService, UpdateTennerService } from "../src/services/index.js";
-import { mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
+import { householdSettings, mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-05T08:00:00Z");
 const TS = "2026-10-05T08:00:00Z";
@@ -16,21 +16,13 @@ const GARDEN: HouseholdCategory = { categoryId: "GARDEN", name: "Garten", icon: 
 
 function repository(stored?: Partial<HouseholdSettings>) {
   const settings: HouseholdSettings | undefined = stored
-    ? { tenantId: "default", timezone: null, vacation: null, members: null, membersVersion: 0, categories: null, categoriesVersion: 0, updatedAt: "t", updatedBy: null, ...stored }
+    ? householdSettings(stored)
     : undefined;
   return {
     get: vi.fn(async () => settings),
-    saveCategories: vi.fn(async (tenantId: string, categories: readonly HouseholdCategory[], version: number) => ({
-      tenantId,
-      timezone: null,
-      vacation: null,
-      members: null,
-      membersVersion: 0,
-      updatedAt: TS,
-      updatedBy: null,
-      categories,
-      categoriesVersion: version + 1,
-    })),
+    saveCategories: vi.fn(async (tenantId: string, categories: readonly HouseholdCategory[], version: number) =>
+      householdSettings({ tenantId, updatedAt: TS, categories, categoriesVersion: version + 1 }),
+    ),
   };
 }
 

@@ -161,3 +161,32 @@ npm run test
 
 - Personal settings sync across devices (UX domain, future)
 - Multiple households (FUTURE-001)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Household settings stored server-side: `name`, `timezone`, `weekStartsOn`, `workdays`, `defaults` in the
+  household item of `tenner-households` (single item per tenant); `GET /household` returns effective values,
+  `PUT /household` accepts any subset with validation (timezone, workdays, default ranges, selectable category)
+- [x] All devices see the same household settings: the settings page reads and writes them through the API;
+  Quick Add and the create dialog use the household defaults
+- [x] Backend jobs can read settings: `HouseholdService.settingsOf(tenantId)` returns the effective settings
+  (timezone is already used everywhere; week start and workdays have no consumer yet — ANALYTICS-002, SCHEDULING-007)
+- [x] Personal preferences remain local: default assignee, dashboard sections and theme (localStorage)
+- [x] Local Storage migration offer: Quick Add defaults stored on a device are offered once ("Übernehmen" /
+  "Verwerfen") while the household still uses the built-in defaults
+- [x] Tests passing: backend 627 (defaults, update, validation, consumers read settings), frontend 291 (personal vs.
+  household split, defaults saved on the server, migration offer accept/dismiss, name/week start/workdays),
+  Terraform 51; lint and build clean
+- [ ] Deploys through GitHub Actions: no infrastructure change; verified after merge
+
+Decisions and assumptions:
+
+- No new table: the existing household item already holds timezone, vacation, members and categories.
+- `defaultsSource` (`DEFAULT`/`HOUSEHOLD`) tells the frontend whether to offer the migration.
+- Numbers and the household name are saved when the field is left (not per keystroke) to avoid many writes.
+- The default assignee stays personal ("Ich selbst" differs per person).
+- Week start options: Monday or Sunday.

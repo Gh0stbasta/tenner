@@ -40,7 +40,7 @@ import {
 } from "./common.js";
 import { isValidTimeZone } from "../utils/timezone.js";
 import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
-import { WEEKDAYS, type Weekday } from "../models/index.js";
+import { WEEK_STARTS, WEEKDAYS, type Weekday } from "../models/index.js";
 
 const tennerFields = {
   title: titleSchema,
@@ -206,14 +206,23 @@ export const tennerHistoryQuerySchema = z.strictObject({
 export const assignHouseholdMemberSchema = z.strictObject({ userId: userIdSchema }) satisfies z.ZodType<AssignHouseholdMemberRequest>;
 
 /** PUT /household (SCHEDULING-008): an IANA timezone the runtime knows; unknown fields rejected. */
-export const updateHouseholdSchema = z.strictObject({
-  timezone: z
-    .string()
-    .trim()
-    .min(1)
-    .max(64)
-    .refine((value) => /^[A-Za-z0-9_+\-/]+$/.test(value) && isValidTimeZone(value), { message: "Unknown timezone." }),
-}) satisfies z.ZodType<UpdateHouseholdRequest>;
+export const updateHouseholdSchema = z
+  .strictObject({
+    name: z.string().trim().min(1).max(60).optional(),
+    timezone: z
+      .string()
+      .trim()
+      .min(1)
+      .max(64)
+      .refine((value) => /^[A-Za-z0-9_+\-/]+$/.test(value) && isValidTimeZone(value), { message: "Unknown timezone." })
+      .optional(),
+    weekStartsOn: z.enum(WEEK_STARTS).optional(),
+    workdays: weekdaysSchema.transform((days) => WEEKDAYS.filter((day) => days.includes(day))).optional(),
+    defaults: z
+      .strictObject({ category: categorySchema, estimatedMinutes: estimatedMinutesSchema, frequencyDays: frequencyDaysSchema })
+      .optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." }) satisfies z.ZodType<UpdateHouseholdRequest>;
 
 /** Snooze (SCHEDULING-003): exactly one of `until` (real calendar date) or `days` (1–3650). */
 export const snoozeTennerSchema = z

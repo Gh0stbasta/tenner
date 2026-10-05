@@ -8,11 +8,16 @@ import {
   CATEGORY_ID_PATTERN,
   MEMBER_COLORS,
   USER_ID_PATTERN,
+  WEEK_STARTS,
+  WEEKDAYS,
   type CategoryIcon,
   type HouseholdCategory,
   type HouseholdMember,
   type HouseholdSettings,
+  type HouseholdSettingsChange,
   type MemberColor,
+  type NewTennerDefaults,
+  type WeekStart,
   type UserId,
   type Vacation,
 } from "../../models/index.js";
@@ -71,10 +76,22 @@ function toCategories(value: unknown): HouseholdCategory[] | null {
   });
 }
 
+function toDefaults(value: unknown): NewTennerDefaults | null {
+  if (typeof value !== "object" || value === null) return null;
+  const { category, estimatedMinutes, frequencyDays } = value as Record<string, unknown>;
+  if (typeof category !== "string" || !CATEGORY_ID_PATTERN.test(category) || typeof estimatedMinutes !== "number" || typeof frequencyDays !== "number") return null;
+  return { category, estimatedMinutes, frequencyDays };
+}
+
 function toSettings(item: Record<string, unknown>): HouseholdSettings {
+  const workdays = Array.isArray(item.workdays) ? WEEKDAYS.filter((day) => (item.workdays as unknown[]).includes(day)) : null;
   return {
     tenantId: String(item.tenantId),
+    name: typeof item.name === "string" ? item.name : null,
     timezone: typeof item.timezone === "string" ? item.timezone : null,
+    weekStartsOn: (WEEK_STARTS as readonly unknown[]).includes(item.weekStartsOn) ? (item.weekStartsOn as WeekStart) : null,
+    workdays: workdays !== null && workdays.length > 0 ? workdays : null,
+    defaults: toDefaults(item.defaults),
     vacation: toVacation(item.vacation),
     members: toMembers(item.members),
     membersVersion: typeof item.membersVersion === "number" ? item.membersVersion : 0,
@@ -100,14 +117,15 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
     }
   }
 
-  /** Upsert of the timezone only, so other settings (vacation, HOUSEHOLD-ADMIN-003) are never overwritten. */
-  async saveTimezone(tenantId: string, timezone: string, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
-    return this.saveAttribute(tenantId, "timezone", timezone, actor, timestamp);
+  /** Upsert of the given settings only, so other attributes (vacation, members, categories) are never overwritten. */
+  async saveSettings(tenantId: string, changes: HouseholdSettingsChange, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+    const entries = Object.entries(changes).filter(([, value]) => value !== undefined);
+    return this.saveAttributes(tenantId, Object.fromEntries(entries), actor, timestamp);
   }
 
   /** Upsert of the vacation only (SCHEDULING-005); null ends it. */
   async saveVacation(tenantId: string, vacation: Vacation | null, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
-    return this.saveAttribute(tenantId, "vacation", vacation, actor, timestamp);
+    return this.saveAttributes(tenantId, { vacation }, actor, timestamp);
   }
 
   /** Replace the member list with optimistic locking on membersVersion (HOUSEHOLD-ADMIN-001). */
@@ -156,16 +174,17 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
     return toSettings(attributes);
   }
 
-  private async saveAttribute(tenantId: string, name: "timezone" | "vacation", value: unknown, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+  private async saveAttributes(tenantId: string, values: Record<string, unknown>, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+    const names = Object.keys(values);
     let attributes: Record<string, unknown> | undefined;
     try {
       const result = (await this.client.send(
         new UpdateCommand({
           TableName: this.tableName,
           Key: { tenantId },
-          UpdateExpression: "SET #value = :value, #updatedAt = :timestamp, #updatedBy = :actor",
-          ExpressionAttributeNames: { "#value": name, "#updatedAt": "updatedAt", "#updatedBy": "updatedBy" },
-          ExpressionAttributeValues: { ":value": value, ":timestamp": timestamp, ":actor": actor },
+          UpdateExpression: `SET ${[...names.map((name) => `#${name} = :${name}`), "#updatedAt = :timestamp", "#updatedBy = :actor"].join(", ")}`,
+          ExpressionAttributeNames: { ...Object.fromEntries(names.map((name) => [`#${name}`, name])), "#updatedAt": "updatedAt", "#updatedBy": "updatedBy" },
+          ExpressionAttributeValues: { ...Object.fromEntries(names.map((name) => [`:${name}`, values[name]])), ":timestamp": timestamp, ":actor": actor },
           ReturnValues: "ALL_NEW",
         }),
       )) as UpdateCommandOutput;

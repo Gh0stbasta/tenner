@@ -29,3 +29,7 @@ export type FrequencyUnit = (typeof FREQUENCY_UNITS)[number];
 /** Weekdays for weekday-bound weekly frequencies (SCHEDULING-002), Monday first (ISO order). */
 export const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
 export type Weekday = (typeof WEEKDAYS)[number];
+
+/** First day of the week for week-based views and analytics (HOUSEHOLD-ADMIN-003). */
+export const WEEK_STARTS = ["MONDAY", "SUNDAY"] as const;
+export type WeekStart = (typeof WEEK_STARTS)[number];

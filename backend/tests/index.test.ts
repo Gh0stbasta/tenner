@@ -25,6 +25,16 @@ function event(routeKey: string, headers: Record<string, string> = {}, body?: st
   return { routeKey, headers, body, queryStringParameters: query, requestContext: { requestId: "req-1" } } as unknown as APIGatewayProxyEventV2;
 }
 
+const household = {
+  name: "Unser Haushalt",
+  timezone: "Europe/Berlin",
+  weekStartsOn: "MONDAY" as const,
+  workdays: ["MON", "TUE", "WED", "THU", "FRI"] as const,
+  defaults: { category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14 },
+  defaultsSource: "DEFAULT" as const,
+  vacation: null,
+};
+
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
   return {
     config: testConfig(),
@@ -70,12 +80,12 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       replayed: false,
     })),
     deleteTenner: vi.fn(async () => ({ response: { tennerId: "t-1", deleted: true as const }, outcome: { status: "DELETED" as const, tenner: tennerFixture() } })),
-    getHousehold: vi.fn(async () => ({ timezone: "Europe/Berlin", vacation: null })),
-    updateHouseholdTimezone: vi.fn(async (_identity, timezone: string) => ({ timezone, vacation: null })),
+    getHousehold: vi.fn(async () => household),
+    updateHousehold: vi.fn(async () => household),
     pauseTenner: vi.fn(async () => tennerResponse),
     resumeTenner: vi.fn(async () => tennerResponse),
-    setVacation: vi.fn(async () => ({ household: { timezone: "Europe/Berlin", vacation: { from: "2026-10-10", until: "2026-10-24", categories: null } }, rescheduled: 2, conflicts: 0 })),
-    endVacation: vi.fn(async () => ({ timezone: "Europe/Berlin", vacation: null })),
+    setVacation: vi.fn(async () => ({ household: { ...household, vacation: { from: "2026-10-10", until: "2026-10-24", categories: null } }, rescheduled: 2, conflicts: 0 })),
+    endVacation: vi.fn(async () => household),
     listMembers: vi.fn(async () => [{ userId: "STEFAN", displayName: "Stefan", color: "BLUE" as const, active: true }]),
     createMember: vi.fn(async () => ({ userId: "LENA", displayName: "Lena", color: "GREEN" as const, active: true })),
     updateMember: vi.fn(async () => ({ userId: "STEFAN", displayName: "Steffen", color: "BLUE" as const, active: true })),
@@ -615,13 +625,13 @@ describe("household routes (SCHEDULING-008)", () => {
     expect(d.getHousehold).toHaveBeenCalledWith("default");
     const put = await route({ routeKey: "PUT /household", headers: {}, body: JSON.stringify({ timezone: "Europe/Vienna" }), requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
     expect(put.statusCode).toBe(200);
-    expect(d.updateHouseholdTimezone).toHaveBeenCalledWith(TEST_IDENTITY, "Europe/Vienna");
+    expect(d.updateHousehold).toHaveBeenCalledWith(TEST_IDENTITY, { timezone: "Europe/Vienna" });
   });
 
   it("rejects an unknown timezone with 400", async () => {
     const d = deps();
     const put = await route({ routeKey: "PUT /household", headers: {}, body: JSON.stringify({ timezone: "Mars/Olympus" }), requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
     expect(put.statusCode).toBe(400);
-    expect(d.updateHouseholdTimezone).not.toHaveBeenCalled();
+    expect(d.updateHousehold).not.toHaveBeenCalled();
   });
 });

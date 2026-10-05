@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_PREFERENCES,
+  loadLegacyTennerDefaults,
   loadPreferences,
   parsePreferences,
   PREFERENCES_STORAGE_KEY,
@@ -26,7 +27,7 @@ describe("preferences model", () => {
     const storage = memoryStorage();
     const changed = {
       ...DEFAULT_PREFERENCES,
-      defaultCategory: "FITNESS" as const,
+      defaultAssignedTo: "JULIA",
       theme: "DARK" as const,
       showUpcoming: false,
     };
@@ -41,15 +42,14 @@ describe("preferences model", () => {
   it("keeps valid fields and replaces invalid ones with defaults", () => {
     expect(
       parsePreferences({
-        defaultEstimatedMinutes: 30,
-        defaultFrequencyDays: 99999,
-        defaultCategory: "garden",
+        defaultAssignedTo: "lena",
+        showUpcoming: false,
         theme: "LIGHT",
+        defaultEstimatedMinutes: 30,
         extra: 1,
       }),
-    ).toEqual({ ...DEFAULT_PREFERENCES, defaultEstimatedMinutes: 30, theme: "LIGHT" });
+    ).toEqual({ ...DEFAULT_PREFERENCES, showUpcoming: false, theme: "LIGHT" });
     expect(parsePreferences(null)).toEqual(DEFAULT_PREFERENCES);
-    expect(parsePreferences({ defaultEstimatedMinutes: 2.5 }).defaultEstimatedMinutes).toBe(10);
   });
 
   it("survives broken JSON and blocked storage", () => {
@@ -69,6 +69,41 @@ describe("preferences model", () => {
   it("resolves the default assignee", () => {
     expect(resolveAssignee("SELF", "JULIA")).toBe("JULIA");
     expect(resolveAssignee("STEFAN", "JULIA")).toBe("STEFAN");
+  });
+
+  it("reads Quick Add defaults stored before HOUSEHOLD-ADMIN-003 for the migration offer", () => {
+    const stored = (preferences: Record<string, unknown>) => memoryStorage(JSON.stringify({ version: 1, preferences }));
+    expect(
+      loadLegacyTennerDefaults(
+        stored({ defaultCategory: "FITNESS", defaultEstimatedMinutes: 25, defaultFrequencyDays: 7 }),
+      ),
+    ).toEqual({
+      category: "FITNESS",
+      estimatedMinutes: 25,
+      frequencyDays: 7,
+    });
+    expect(loadLegacyTennerDefaults(stored({ defaultEstimatedMinutes: 25 }))).toEqual({
+      category: "HOUSEHOLD",
+      estimatedMinutes: 25,
+      frequencyDays: 14,
+    });
+    expect(
+      loadLegacyTennerDefaults(
+        stored({ defaultCategory: "HOUSEHOLD", defaultEstimatedMinutes: 10, defaultFrequencyDays: 14 }),
+      ),
+    ).toBeNull();
+    expect(loadLegacyTennerDefaults(stored({ theme: "DARK" }))).toBeNull();
+    expect(loadLegacyTennerDefaults(memoryStorage("{broken"))).toBeNull();
+    expect(loadLegacyTennerDefaults(memoryStorage())).toBeNull();
+  });
+
+  it("drops the old fields when the preferences are saved again", () => {
+    const storage = memoryStorage(
+      JSON.stringify({ version: 1, preferences: { defaultCategory: "FITNESS", theme: "DARK" } }),
+    );
+    savePreferences(loadPreferences(storage), storage);
+    expect(loadLegacyTennerDefaults(storage)).toBeNull();
+    expect(loadPreferences(storage).theme).toBe("DARK");
   });
 
   it("uses window.localStorage by default", () => {
