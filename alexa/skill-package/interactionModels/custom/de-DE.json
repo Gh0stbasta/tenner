@@ -4,6 +4,88 @@
       "invocationName": "tenner",
       "intents": [
         {
+          "name": "TodayIntent",
+          "slots": [
+            {
+              "name": "member",
+              "type": "TennerMember"
+            }
+          ],
+          "samples": [
+            "was ist heute fällig",
+            "was heute fällig ist",
+            "was muss ich heute machen",
+            "was ich heute machen muss",
+            "was steht heute an",
+            "was heute ansteht",
+            "welche tenner sind heute fällig",
+            "was ist heute für {member} fällig",
+            "was muss {member} heute machen",
+            "was steht heute für {member} an",
+            "was {member} heute machen muss"
+          ]
+        },
+        {
+          "name": "OverdueIntent",
+          "slots": [
+            {
+              "name": "member",
+              "type": "TennerMember"
+            }
+          ],
+          "samples": [
+            "was ist überfällig",
+            "was überfällig ist",
+            "was habe ich vergessen",
+            "was ich vergessen habe",
+            "welche tenner sind überfällig",
+            "was ist bei {member} überfällig",
+            "was hat {member} vergessen"
+          ]
+        },
+        {
+          "name": "SuggestIntent",
+          "slots": [
+            {
+              "name": "member",
+              "type": "TennerMember"
+            }
+          ],
+          "samples": [
+            "was soll ich jetzt machen",
+            "was ich jetzt machen soll",
+            "was mache ich als nächstes",
+            "was soll ich als nächstes machen",
+            "hast du einen vorschlag",
+            "was soll {member} jetzt machen"
+          ]
+        },
+        {
+          "name": "WorkLeftIntent",
+          "slots": [
+            {
+              "name": "member",
+              "type": "TennerMember"
+            }
+          ],
+          "samples": [
+            "wie viel ist noch zu tun",
+            "wie viel noch zu tun ist",
+            "wie viel arbeit ist übrig",
+            "wie viel arbeit noch übrig ist",
+            "wie lange brauche ich noch",
+            "wie viel muss {member} noch machen"
+          ]
+        },
+        {
+          "name": "AMAZON.YesIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NoIntent",
+          "samples": []
+        },
+        {
           "name": "SpeakerIntent",
           "slots": [
             {

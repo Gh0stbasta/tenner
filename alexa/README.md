@@ -4,7 +4,8 @@ German (de-DE) Alexa custom skill "Tenner" ([ADR 0005](../docs/decisions/0005-al
 [`docs/backlog/alexa/`](../docs/backlog/alexa/)). This folder is its own npm package, next to `backend/` and
 `frontend/`; Terraform for the skill Lambda lives in [`terraform/alexa.tf`](../terraform/alexa.tf).
 
-**Current state (ALEXA-002):** account linking and speaker recognition. „Alexa, öffne Tenner“ greets the recognized
+**Current state (ALEXA-003):** today, overdue, suggestion and work-left questions by voice (see "Supported
+Phrases"), account linking and speaker recognition (ALEXA-002). „Alexa, öffne Tenner“ greets the recognized
 member by name, asks an unknown voice once „Wer spricht gerade?“ and asks unlinked accounts to link Tenner in the
 Alexa app. Help, stop, cancel, fallback and session end are handled.
 
@@ -20,12 +21,32 @@ alexa/
 │   ├── skill.ts                            skill builder, handler order
 │   ├── handlers/                           one file per request/intent type
 │   ├── speech.ts                           all German response texts
+│   ├── answers.ts                          spoken answers from the dashboard (pure, ALEXA-003)
+│   ├── dashboard.ts                        GET /dashboard types and call
 │   ├── session.ts                          linked token, API client, household context, speaker resolution
 │   ├── tennerApi.ts                        Tenner API client (timeout, error kinds, correlation ID)
 │   ├── config.ts                           environment (the only module reading process.env)
 │   └── log.ts                              JSON log lines without personal data
 └── tests/                                  vitest, request envelopes in tests/envelopes.ts
 ```
+
+## Supported Phrases (de-DE)
+
+Inside the skill („Alexa, öffne Tenner“, then …) or one-shot („Alexa, frag Tenner, …“). „für Julia“ / „bei Julia“
+works with every question; otherwise the answer is for the recognized speaker (own + shared Tenners) or, if nobody
+is recognized, for the whole household.
+
+| Question | Examples | Answer |
+|---|---|---|
+| Today (ALEXA-003) | „was ist heute fällig“, „was muss ich heute machen“, „was steht heute für Julia an“ | count, minutes, up to three titles; „Soll ich die restlichen … vorlesen?“ → „ja“ / „nein“; nothing due → next upcoming Tenner |
+| Overdue | „was ist überfällig“, „was habe ich vergessen“ | longest overdue first, „seit 4 Tagen“ |
+| Suggestion | „was soll ich jetzt machen“, „hast du einen Vorschlag“ | overdue before due today, shortest first |
+| Work left | „wie viel ist noch zu tun“, „wie viel Arbeit ist übrig“ | open minutes today + overdue, per member when household-wide |
+| Speaker (ALEXA-002) | „ich bin Julia“, answer to „Wer spricht gerade?“ | maps the recognized voice to the member |
+| Help / stop | „Hilfe“, „stopp“, „abbrechen“ | |
+
+One-shot questions end the session after the answer; inside an open session Tenner asks „Was möchtest du noch
+wissen?“. Every answer also appears as a card in the Alexa app (APL screens follow in ALEXA-006).
 
 ## Development
 

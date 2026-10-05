@@ -39,6 +39,9 @@ export const SPEECH = {
   whoIsSpeakingReprompt: (names: readonly string[]): string => `Wer spricht gerade: ${esc(joinAlternatives(names))}?`,
   speakerSaved: (name: string): string => `Danke, ${esc(name)}. Ab jetzt erkenne ich dich an deiner Stimme. ${EXAMPLE}`,
   speakerNotUnderstood: (names: readonly string[]): string => `Das habe ich nicht verstanden. Bist du ${esc(joinAlternatives(names))}?`,
+  // ALEXA-003 (plain text, escaped by the caller).
+  unknownMember: (spoken: string, names: readonly string[]): string =>
+    `Ich kenne niemanden namens ${spoken} in eurem Haushalt. Zum Haushalt gehören ${joinAlternatives(names, "und")}.`,
   noVoiceProfile:
     "Ich kann Stimmen nur unterscheiden, wenn du in der Alexa-App ein Sprachprofil angelegt und Skills personalisieren aktiviert hast.",
 } as const;

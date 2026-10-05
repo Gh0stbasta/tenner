@@ -22,7 +22,8 @@ export function envelope(request: Record<string, unknown>, options: EnvelopeOpti
   return {
     version: "1.0",
     session: {
-      new: request.type === "LaunchRequest",
+      // One-shot requests („Alexa, frag Tenner, …“) start a new session too; tests set false for follow-ups.
+      new: true,
       sessionId: "amzn1.echo-api.session.test",
       application: { applicationId },
       user,

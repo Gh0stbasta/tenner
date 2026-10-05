@@ -24,7 +24,8 @@ export function fakeApi(routes: Record<string, FakeRoute> = {}) {
   const fetch = vi.fn(async (url: string, init: RequestInit = {}) => {
     const { pathname, search } = new URL(url);
     const path = decodeURIComponent(pathname.replace(/^\/prod/, ""));
-    const key = Object.keys(all).find((candidate) => candidate === `${init.method ?? "GET"} ${path}` || candidate === `${init.method ?? "GET"} ${path}${search}`);
+    const method = init.method ?? "GET";
+    const key = [`${method} ${path}${search}`, `${method} ${path}`].find((candidate) => candidate in all);
     const route = key === undefined ? { status: 404, error: { code: "NOT_FOUND" } } : all[key];
     if (route === "network-error") throw new TypeError("fetch failed");
     if (route === "never") {
