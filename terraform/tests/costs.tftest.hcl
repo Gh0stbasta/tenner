@@ -63,6 +63,11 @@ mock_provider "aws" {
   }
 }
 
+# Alexa skill region (ALEXA-001): mocked like the default provider.
+mock_provider "aws" {
+  alias = "alexa"
+}
+
 run "budget_alerts_at_50_80_and_forecast_100" {
   command = plan
 

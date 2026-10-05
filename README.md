@@ -27,6 +27,7 @@ The repository contains:
 - the German web app in [`frontend/`](frontend/README.md) (FRONTEND-001 – 007, FRONTEND-009, UX-005): dashboard,
   Tenner management with search and filters, create/edit dialogs, Quick Add, complete with undo, recent activity,
   Tenner detail with history, central error handling. It is published to CloudFront by `deploy.yml`.
+- the Alexa skill foundation in [`alexa/`](alexa/README.md) (ALEXA-001, [ADR 0005](docs/decisions/0005-alexa-platform.md)): German skill skeleton, skill Lambda `tenner-alexa-skill` in eu-west-1 (created once the GitHub variable `ALEXA_SKILL_ID` is set)
 - the project documentation
 
 ## Terraform (local)
@@ -83,6 +84,8 @@ For the managed resources so far:
   (always allowed)
 - IAM: create and manage `tenner-api-role` and its inline policy, plus `iam:PassRole` for that role to Lambda
 - Cost monitoring (OPERATIONS-001): AWS Budgets and Cost Explorer anomaly permissions, see "Cost Monitoring"
+- Alexa skill (ALEXA-001): Lambda, IAM role and CloudWatch Logs for `tenner-alexa-skill` in **eu-west-1**, see
+  [`alexa/README.md`](alexa/README.md) → "CI Permissions" (only needed before `ALEXA_SKILL_ID` is set)
 
 For the state backend:
 
@@ -108,8 +111,8 @@ access keys exist in GitHub or in this repository.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| [`pr.yml`](.github/workflows/pr.yml) | `pull_request` | Runs `terraform fmt -check`, `validate` and `test` offline. Then checks AWS identity, builds the Lambda bundle, runs `terraform plan` and enforces mandatory tags on the plan. Runs frontend and backend `npm ci`, `lint`, `test`, `build`. **Never applies.** |
-| [`deploy.yml`](.github/workflows/deploy.yml) | push to `main` | Builds frontend and backend as a gate, checks AWS identity, then runs `terraform init` and `plan`, enforces mandatory tags, applies the checked plan, calls `GET /health` on the deployed API, then builds the frontend against that API and publishes it to S3/CloudFront (`scripts/deploy-frontend.sh`). |
+| [`pr.yml`](.github/workflows/pr.yml) | `pull_request` | Runs `terraform fmt -check`, `validate` and `test` offline. Then checks AWS identity, builds the Lambda bundle, runs `terraform plan` and enforces mandatory tags on the plan. Runs frontend, backend and alexa `npm ci`, `lint`, `test`, `build`. **Never applies.** |
+| [`deploy.yml`](.github/workflows/deploy.yml) | push to `main` | Builds frontend and backend as a gate, checks AWS identity, then runs `terraform init` and `plan`, enforces mandatory tags, applies the checked plan, calls `GET /health` on the deployed API, then builds the frontend against that API and publishes it to S3/CloudFront (`scripts/deploy-frontend.sh`). When `ALEXA_SKILL_ID` is set, it also deploys the Alexa skill package (`scripts/deploy-alexa-skill.sh`). |
 
 Settings:
 
@@ -119,7 +122,7 @@ Settings:
 | Terraform version | `1.16.4` (`TF_VERSION` in both workflows) |
 | Node.js version | `22` (`NODE_VERSION` in both workflows) |
 | Terraform directory | `terraform/` |
-| Application directories | `frontend/`, `backend/` |
+| Application directories | `frontend/`, `backend/`, `alexa/` |
 
 If `terraform/` contains no `*.tf` files, the Terraform steps are skipped with a notice.
 If `frontend/package.json` or `backend/package.json` is missing, that build is skipped.
@@ -365,6 +368,12 @@ python3 scripts/backfill_frequency_unit.py --apply   # conditional, idempotent w
   paused Tenners then appear as due again. Due dates already moved by a vacation stay moved.
 - **Infrastructure changes:** reverting the Terraform code and letting `deploy.yml` apply it
   is the only supported way. Manual changes in AWS are not allowed (see `docs/architecture.md`).
+
+### Alexa Skill (ALEXA-001)
+
+Setup, the one-time activation in the Alexa developer console, the GitHub variable `ALEXA_SKILL_ID`, the secrets
+`ASK_REFRESH_TOKEN` and `ASK_VENDOR_ID`, and rollback are described in [`alexa/README.md`](alexa/README.md).
+Without `ALEXA_SKILL_ID` nothing Alexa-related is deployed.
 
 ### Known Limitations
 

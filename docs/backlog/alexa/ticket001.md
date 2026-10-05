@@ -220,3 +220,47 @@ Manual: „Alexa, öffne Tenner“ on a household Echo Show answers with the wel
 - Voice workflows (ALEXA-003 – 005), visuals (ALEXA-006, 007), notifications (ALEXA-008)
 - Publishing the skill in the Alexa Skills Store / certification
 - Other locales than de-DE
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05 (repository side). Activation needs the owner's external steps below.
+
+- [x] ADR `docs/decisions/0005-alexa-platform.md` (accepted with the ticket's recommendations on the owner's
+  go-ahead; vetoable until activation) and allowed services in `docs/architecture.md` updated
+- [x] All Alexa code in the root folder `alexa/` (own npm package: `skill-package/`, `src/`, `tests/`, README,
+  lockfile, lint/test/build like `backend/`); Dependabot entry `/alexa`
+- [x] Interaction model de-DE (invocation `tenner`, Help/Stop/Cancel/Fallback/NavigateHome) and manifest with the
+  endpoint placeholder `${SKILL_LAMBDA_ARN}` (filled by `scripts/render_alexa_manifest.py` at deploy time)
+- [x] Handlers: Launch (welcome text from the ticket), Help, Stop/Cancel/NavigateHome, Fallback + unknown intents,
+  SessionEnded (logged), generic error handler; SDK skill-ID check via `ALEXA_SKILL_ID`
+- [x] Terraform `terraform/alexa.tf`: provider alias `aws.alexa` (`alexa_region`, default eu-west-1, validated
+  against the ASK trigger regions), Lambda `tenner-alexa-skill` (Node.js 22, arm64, 256 MB, 7 s), log group
+  (30 days), logs-only role, permission for `alexa-appkit.amazon.com` with `event_source_token = alexa_skill_id`,
+  output `alexa_skill_lambda_arn`; everything gated by `alexa_skill_id != ""`
+- [x] CI: `alexa` in the PR and deploy build matrices; skill bundle build before plan; `TF_VAR_alexa_skill_id` from
+  the GitHub variable `ALEXA_SKILL_ID`; "Deploy Alexa skill package" after apply (`scripts/deploy-alexa-skill.sh`,
+  ASK CLI 2.30.7, secrets `ASK_REFRESH_TOKEN`, `ASK_VENDOR_ID`); skipped with a notice while the variable is unset
+- [x] Only the Tenner skill can invoke the Lambda (permission with skill ID; SDK check as defense in depth; tested)
+- [x] Tests passing: alexa 20 (100 % coverage; launch, help, stop/cancel/home, fallback, unknown intent, unknown
+  request type, session end, foreign skill ID, timing, config, interaction model JSON, manifest), Terraform 57
+  (6 new incl. gating, timeout < 8 s, permission, invalid skill ID/region), scripts 36 (4 new); bundle smoke-tested
+  with Node (`dist/index.mjs`, 100 kB)
+- [ ] Skill package and Lambda deploy through GitHub Actions — after the owner's activation steps
+- [ ] „Alexa, öffne Tenner“ works on a household device — after activation (manual test)
+
+Owner steps (external, documented in `alexa/README.md` → "Activation"):
+
+1. Create the skill "Tenner" (German, custom, self-hosted) in the Alexa developer console; note skill ID and
+   vendor ID.
+2. Extend `GitHubActionsDeployRole` with the eu-west-1 statements (`alexa/README.md` → "CI Permissions").
+3. GitHub variable `ALEXA_SKILL_ID`, secrets `ASK_VENDOR_ID` and `ASK_REFRESH_TOKEN`.
+4. Deploy, enable testing in "Development", say „Alexa, öffne Tenner“.
+
+Decisions and assumptions:
+
+- Gating by `alexa_skill_id` keeps CI green and the deploy role unchanged until the owner activates the skill.
+- The skill ID check in the SDK throws for foreign skill IDs (the invocation fails instead of answering).
+- `LOG_LEVEL` is passed but the skeleton only logs errors and session ends; structured logging grows in ALEXA-009.
+- The skill package deploy script is unverified against a real account (TD-034).

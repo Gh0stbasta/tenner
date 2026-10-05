@@ -65,6 +65,11 @@ mock_provider "aws" {
   }
 }
 
+# Alexa skill region (ALEXA-001): mocked like the default provider.
+mock_provider "aws" {
+  alias = "alexa"
+}
+
 run "user_pool_is_admin_only_with_email_login" {
   command = plan
 

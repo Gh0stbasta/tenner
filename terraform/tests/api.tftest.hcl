@@ -39,6 +39,11 @@ override_resource {
   }
 }
 
+# Alexa skill region (ALEXA-001): mocked like the default provider.
+mock_provider "aws" {
+  alias = "alexa"
+}
+
 run "lambda_matches_runtime_requirements" {
   command = plan
 

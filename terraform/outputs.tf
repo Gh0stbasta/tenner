@@ -127,3 +127,8 @@ output "cognito_household_groups" {
   description = "Cognito groups that grant household membership (FUTURE-011)."
   value       = values(local.household_groups)
 }
+
+output "alexa_skill_lambda_arn" {
+  description = "ARN of the Alexa skill Lambda (ALEXA-001); the skill manifest endpoint. Empty until alexa_skill_id is set."
+  value       = local.alexa_enabled ? aws_lambda_function.alexa_skill[0].arn : ""
+}

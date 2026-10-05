@@ -114,6 +114,8 @@ Allowed:
 - EventBridge
 - Cognito
 - Billing features without runtime: AWS Budgets, Cost Anomaly Detection ([ADR 0003](decisions/0003-cost-monitoring.md))
+- Alexa Skills Kit (custom skill, APL, Reminders, Proactive Events, Data Store) and the skill Lambda in eu-west-1
+  ([ADR 0005](decisions/0005-alexa-platform.md)); the only resources outside eu-central-1, no data stored there
 
 Not Allowed:
 
@@ -154,6 +156,7 @@ Assumption: about 10,000 API requests, a few hundred writes and a few MB of logs
 | CloudWatch Logs | a few MB ingestion and storage, 30-day retention | < 0.01 USD |
 | Cognito (Essentials) | 10,000 MAU free | 0 USD |
 | AWS Budgets, Cost Anomaly Detection | first two budgets free; anomaly detection free | 0 USD |
+| Alexa skill Lambda + logs (eu-west-1, ADR 0005) | a few hundred voice requests; Lambda free tier, Alexa APIs free | 0 USD |
 | **Total** | | **< 0.10 USD per month** |
 
 Monitoring: a 5 USD monthly budget with alerts at 50 %, 80 % and 100 % forecast plus a daily anomaly summary
@@ -810,6 +813,8 @@ tenner/
 │
 ├── backend/
 │
+├── alexa/            Alexa skill package + skill Lambda (ADR 0005)
+│
 ├── terraform/
 │
 ├── backlog/
@@ -1396,6 +1401,13 @@ Examples:
 - Garmin
 - Strava
 - Zwift
+
+## Alexa Skill (ADR 0005)
+
+German custom skill "Tenner" in `alexa/` (own npm package). The skill Lambda `tenner-alexa-skill` runs in
+eu-west-1 (Alexa Skills Kit trigger region), may only be invoked by the Tenner skill ID and has a logs-only role.
+From ALEXA-002 on it calls the Tenner API in eu-central-1 with the linked user's Cognito token; it never accesses
+DynamoDB. Terraform creates it only when `alexa_skill_id` is set. Status and setup: `alexa/README.md`.
 
 ## Mobile App
 

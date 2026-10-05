@@ -1,0 +1,16 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "tenner",
+      "intents": [
+        { "name": "AMAZON.HelpIntent", "samples": ["was kann ich fragen", "wie funktioniert tenner"] },
+        { "name": "AMAZON.StopIntent", "samples": [] },
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        { "name": "AMAZON.NavigateHomeIntent", "samples": [] },
+        { "name": "AMAZON.FallbackIntent", "samples": [] }
+      ],
+      "types": []
+    }
+  },
+  "version": "1"
+}

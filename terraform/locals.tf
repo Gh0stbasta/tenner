@@ -117,6 +117,19 @@ locals {
   api_source_dir  = "${path.module}/../backend/dist"
   api_package_zip = "${path.module}/../.build/tenner-api.zip"
 
+  # Alexa skill Lambda (ALEXA-001, ADR 0005). Created only once the skill exists (var.alexa_skill_id set).
+  alexa_enabled              = var.alexa_skill_id != ""
+  alexa_function_name        = "${local.name_prefix}-alexa-skill"
+  alexa_role_name            = "${local.name_prefix}-alexa-skill-role"
+  alexa_log_group_name       = "/${local.name_prefix}/alexa-skill"
+  alexa_source_dir           = "${path.module}/../alexa/dist"
+  alexa_package_zip          = "${path.module}/../.build/tenner-alexa-skill.zip"
+  alexa_runtime              = "nodejs22.x"
+  alexa_architecture         = "arm64"
+  alexa_memory_mb            = 256
+  alexa_timeout_seconds      = 7 # Alexa waits at most 8 seconds for a response.
+  alexa_invocation_principal = "alexa-appkit.amazon.com"
+
   # Persistence layer (TICKET-006).
   tenners_table_name = "${local.name_prefix}-tenners"
   history_table_name = "${local.name_prefix}-history"

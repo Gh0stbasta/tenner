@@ -945,3 +945,32 @@ cache only if measurements show slow responses.
 ### Related Work
 
 ANALYTICS-001 – 009, `backend/src/analytics/`, `docs/analytics.md`.
+
+## TD-034: Alexa skill package deployment not yet exercised; second region outside the Resource Group
+
+### Description
+
+`scripts/deploy-alexa-skill.sh` deploys the skill manifest and interaction model with ASK CLI 2.30.7 (SMAPI) and
+environment credentials. It could not be run from the development environment (no Amazon developer account, the
+Amazon developer site was unreachable), so the CLI flags, the environment-profile mechanism and the status JSON
+paths are unverified. The eu-west-1 skill resources are also not part of the tag-based Resource Group `Tenner`,
+which is regional (eu-central-1).
+
+### Reason
+
+ALEXA-001 had to be implemented before the owner created the skill and the CI credentials (ADR 0005).
+
+### Impact
+
+The first deployment with `ALEXA_SKILL_ID` set may fail in the "Deploy Alexa skill package" step (Terraform has
+already applied by then, so the Lambda exists; only the console-side update is missing). The Resource Group view
+misses three resources.
+
+### Suggested Improvement
+
+Fix the script on the first run (or switch to direct SMAPI REST calls with `curl` if the CLI's environment profile
+does not work); add the ALEXA-009 health check. Add a second Resource Group in eu-west-1 if the overview is needed.
+
+### Related Work
+
+ALEXA-001, ADR 0005, `scripts/deploy-alexa-skill.sh`, `terraform/alexa.tf`.

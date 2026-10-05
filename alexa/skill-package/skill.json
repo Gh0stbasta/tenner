@@ -1,0 +1,45 @@
+{
+  "manifest": {
+    "manifestVersion": "1.0",
+    "publishingInformation": {
+      "locales": {
+        "de-DE": {
+          "name": "Tenner",
+          "summary": "Die kleinen Aufgaben im Haushalt im Blick.",
+          "description": "Tenner sagt dir, welche kleinen Haushaltsaufgaben heute fällig sind.",
+          "examplePhrases": [
+            "Alexa, öffne Tenner",
+            "Alexa, frag Tenner, was heute fällig ist"
+          ],
+          "keywords": [
+            "Haushalt",
+            "Aufgaben"
+          ]
+        }
+      },
+      "isAvailableWorldwide": false,
+      "distributionCountries": [
+        "DE"
+      ],
+      "testingInstructions": "Private household skill in development stage; not published.",
+      "category": "ORGANIZERS_AND_ASSISTANTS"
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "${SKILL_LAMBDA_ARN}"
+        }
+      }
+    },
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": false,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false,
+      "locales": {
+        "de-DE": {}
+      }
+    }
+  }
+}

@@ -127,5 +127,5 @@ Several tickets need AWS services that are **not** on the allowed-services list 
 | X-Ray | OBSERVABILITY-004 |
 | CloudTrail trail | SECURITY-012 |
 | Bedrock or an external LLM API | AI-001 |
-| Alexa Skills Kit (custom skill, APL, Reminders, Proactive Events, Data Store), skill Lambda in eu-west-1 | ALEXA-001 |
+| Alexa Skills Kit (custom skill, APL, Reminders, Proactive Events, Data Store), skill Lambda in eu-west-1 | ALEXA-001 (accepted: [ADR 0005](decisions/0005-alexa-platform.md)) |
 | AWS Budgets / Cost Anomaly Detection | OPERATIONS-001 (billing features, no runtime cost) |

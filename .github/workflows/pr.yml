@@ -93,6 +93,14 @@ jobs:
           npm ci
           npm run build
 
+      # ALEXA-001: the skill Lambda bundle is only needed once the skill exists (GitHub variable ALEXA_SKILL_ID).
+      - name: Build Alexa skill bundle
+        if: github.event.pull_request.user.login != 'dependabot[bot]' && hashFiles('terraform/**/*.tf') != '' && vars.ALEXA_SKILL_ID != ''
+        working-directory: alexa
+        run: |
+          npm ci
+          npm run build
+
       - name: Terraform plan
         if: github.event.pull_request.user.login != 'dependabot[bot]' && hashFiles('terraform/**/*.tf') != ''
         env:
@@ -103,6 +111,8 @@ jobs:
           # Cost alerts (OPERATIONS-001): e-mail is a secret (personal data); the monitor ARN is optional.
           TF_VAR_budget_alert_email: ${{ secrets.BUDGET_ALERT_EMAIL }}
           TF_VAR_cost_anomaly_monitor_arn: ${{ vars.COST_ANOMALY_MONITOR_ARN }}
+          # Alexa skill (ALEXA-001): the skill ID is not secret; empty means no Alexa resources.
+          TF_VAR_alexa_skill_id: ${{ vars.ALEXA_SKILL_ID }}
         run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m -out=tfplan
 
       - name: Enforce mandatory tags
@@ -121,7 +131,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [frontend, backend]
+        project: [frontend, backend, alexa]
     defaults:
       run:
         working-directory: ${{ matrix.project }}

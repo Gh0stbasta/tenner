@@ -156,3 +156,36 @@ variable "cost_anomaly_monitor_arn" {
     error_message = "cost_anomaly_monitor_arn must be empty or a Cost Explorer anomaly monitor ARN."
   }
 }
+
+variable "alexa_region" {
+  description = "Region of the Alexa skill Lambda (ALEXA-001, ADR 0005). Must offer the Alexa Skills Kit trigger; eu-west-1 is recommended for de-DE skills."
+  type        = string
+  default     = "eu-west-1"
+
+  validation {
+    condition     = contains(["us-east-1", "eu-west-1", "us-west-2", "ap-northeast-1"], var.alexa_region)
+    error_message = "alexa_region must be a region with the Alexa Skills Kit Lambda trigger: us-east-1, eu-west-1, us-west-2 or ap-northeast-1."
+  }
+}
+
+variable "alexa_skill_id" {
+  description = "Alexa skill ID of the Tenner skill (amzn1.ask.skill.<uuid>), from the Alexa developer console. Empty: no Alexa resources are created. Set as GitHub variable ALEXA_SKILL_ID."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.alexa_skill_id == "" || can(regex("^amzn1\\.ask\\.skill\\.[0-9a-f-]{36}$", var.alexa_skill_id))
+    error_message = "alexa_skill_id must be empty or an Alexa skill ID (amzn1.ask.skill.<uuid>)."
+  }
+}
+
+variable "alexa_log_level" {
+  description = "Log level of the Alexa skill Lambda."
+  type        = string
+  default     = "INFO"
+
+  validation {
+    condition     = contains(["DEBUG", "INFO", "WARN", "ERROR"], var.alexa_log_level)
+    error_message = "alexa_log_level must be one of DEBUG, INFO, WARN, ERROR."
+  }
+}
