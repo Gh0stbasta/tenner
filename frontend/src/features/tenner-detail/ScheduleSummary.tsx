@@ -21,7 +21,7 @@ function relativeDue(nextDue: string, timeZone: string | undefined): string {
 export function ScheduleSummary({ tenner }: { readonly tenner: Tenner }) {
   const timeZone = useHouseholdTimezone();
   const rows: [string, string][] = [
-    ["Häufigkeit", frequencyLabel(tenner.frequencyDays)],
+    ["Häufigkeit", frequencyLabel(tenner)],
     [
       "Zuletzt erledigt",
       tenner.lastCompleted === null ? "Noch nie" : lastCompletedLabel(tenner.lastCompleted, timeZone),

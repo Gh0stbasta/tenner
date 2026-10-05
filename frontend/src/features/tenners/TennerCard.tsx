@@ -78,7 +78,7 @@ export function TennerCard({ tenner, status, busy = false, onEdit, onArchive, on
           </Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          {frequencyLabel(tenner.frequencyDays)} · Fällig: {formatShortDate(tenner.nextDue)}
+          {frequencyLabel(tenner)} · Fällig: {formatShortDate(tenner.nextDue)}
         </Typography>
       </CardContent>
       <CardActions sx={{ px: 2, pb: 2, pt: 0, flexWrap: "wrap", gap: 1 }}>

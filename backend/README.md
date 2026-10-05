@@ -100,7 +100,7 @@ The assignment is logged as `HouseholdMemberAssigned` with the Cognito username,
 
 | Model | Fields |
 |---|---|
-| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `active`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy` |
+| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `frequencyUnit`, `frequencyInterval`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `active`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy` |
 | `Completion` | `tenantId`, `completionId` (stored as `historyId`), `tennerId`, `completedBy`, `recordedBy`, `completedAt`, `actualMinutes` |
 
 `createdBy`, `updatedBy` and `recordedBy` are set from the authenticated user (SECURITY-004). Records written before
@@ -120,7 +120,14 @@ Zod schemas are in `src/validators/`. The limits are centralized in `LIMITS`:
 |---|---|
 | `title` | trimmed, 3–100 characters |
 | `estimatedMinutes` | integer, 1–480 |
-| `frequencyDays` | integer, 1–3650 |
+| `frequencyDays` | integer, 1–3650. Alone it means unit `DAY` with that interval |
+| `frequencyUnit` | `DAY`, `WEEK`, `MONTH`, `YEAR` (SCHEDULING-001) |
+| `frequencyInterval` | integer ≥ 1, default 1; only with `frequencyUnit`; at most 3650 approximate days (e.g. 10 years) |
+
+Send either `frequencyDays` or `frequencyUnit` (+ `frequencyInterval`), not both (400 otherwise). The validator
+normalizes every request to all three fields; for `MONTH`/`YEAR`, `frequencyDays` is an approximation (30/365 per
+unit) for analytics only. Due dates come from `calculateNextDue` (`src/utils/schedule.ts`): months and years keep
+the calendar day and clamp to the month end (31 Jan + 1 month → 28/29 Feb).
 | `actualMinutes` | integer, 1–1440 |
 | `completedAt` | ISO 8601 UTC timestamp (`Z`, no offset) |
 | `category`, `assignedTo`, `completedBy` | enumeration values |
@@ -155,11 +162,11 @@ Remaining criteria are applied as a `FilterExpression`. Sorting happens in the s
 
 ### PUT /tenners/{tennerId}
 
-This is a partial update. Allowed fields: `title`, `category`, `estimatedMinutes`, `frequencyDays`, `assignedTo`
+This is a partial update. Allowed fields: `title`, `category`, `estimatedMinutes`, `frequencyDays` or `frequencyUnit` + `frequencyInterval`, `assignedTo`
 and `active`. At least one field is required, and the same validation rules as on create apply.
 
 The protected fields `tenantId`, `tennerId`, `createdAt`, `lastCompleted` and `nextDue` are rejected with 400.
-`updatedAt` and `updatedBy` are refreshed. Changing `frequencyDays` does **not** change `nextDue` or `lastCompleted`.
+`updatedAt` and `updatedBy` are refreshed. Changing the frequency does **not** change `nextDue` or `lastCompleted`.
 
 The repository uses one `UpdateItem` that sets only the provided fields plus `updatedAt`, with the condition
 `attribute_exists(tennerId)` (missing → 404) and `ReturnValues: ALL_NEW`. Attributes that were not sent, such as
@@ -193,7 +200,7 @@ Effects on other endpoints:
 | `actualMinutes` | optional, 1–1440. Default: the Tenner's `estimatedMinutes` |
 | `completedAt` | optional UTC timestamp. Default: now. It must not be in the future (60 s clock-skew tolerance) or earlier than `lastCompleted` |
 
-**Recurrence (completion-based):** `nextDue = local date(completedAt) + frequencyDays` (household timezone, SCHEDULING-008) for early, on-time and overdue
+**Recurrence (completion-based):** `nextDue = calculateNextDue(local date(completedAt), frequencyUnit, frequencyInterval)` (household timezone, SCHEDULING-001/008) for early, on-time and overdue
 completions alike. `lastCompleted = completedAt`, `updatedAt = now` and `updatedBy` = authenticated user.
 
 **Atomicity:** a single `TransactWriteItems`:
@@ -232,11 +239,11 @@ be `{}`. `reason` is optional, trimmed, 1–250 characters, and whitespace-only 
 newest first). A filter skips reverted completions, and pages are read until enough matches are found.
 There is no Scan. If no active completion exists, the result is `409 NO_COMPLETION_TO_UNDO`.
 
-**State restoration** always uses the Tenner's **current** `frequencyDays`:
+**State restoration** always uses the Tenner's **current** frequency:
 
 | Case | `lastCompleted` | `nextDue` |
 |---|---|---|
-| A previous active completion exists | its `completedAt` | local date(`completedAt`) + `frequencyDays` (may be in the past) |
+| A previous active completion exists | its `completedAt` | `calculateNextDue`(local date(`completedAt`), unit, interval) (may be in the past) |
 | The first completion was reverted | `null` | local `createdAt` date (fallback: today) |
 
 `updatedAt` is set to now and `updatedBy` to the authenticated user in both cases.
@@ -395,10 +402,11 @@ the Lambda) and `403 FORBIDDEN` for accounts without a household group (SECURITY
 
 ### POST /tenners
 
-Request (all fields required, unknown fields rejected):
+Request (`title`, `category`, `estimatedMinutes`, `assignedTo` and a frequency in one of the two forms; unknown fields rejected):
 
 ```json
 { "title": "Vacuum Office", "category": "HOUSEHOLD", "estimatedMinutes": 10, "frequencyDays": 14, "assignedTo": "STEFAN" }
+{ "title": "Review finances", "category": "FINANCE", "estimatedMinutes": 30, "frequencyUnit": "MONTH", "frequencyInterval": 1, "assignedTo": "JULIA" }
 ```
 
 The service generates `tennerId` (UUID v4), `tenantId` (from the identity), `createdBy` = `updatedBy` = authenticated user, `active = true`,

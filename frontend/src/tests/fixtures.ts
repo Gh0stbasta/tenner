@@ -68,6 +68,8 @@ export function tenner(overrides: Partial<Tenner> = {}): Tenner {
     category: "HOUSEHOLD",
     estimatedMinutes: 10,
     frequencyDays: 14,
+    frequencyUnit: "DAY",
+    frequencyInterval: 14,
     assignedTo: "STEFAN",
     lastCompleted: null,
     nextDue: "2026-10-02",

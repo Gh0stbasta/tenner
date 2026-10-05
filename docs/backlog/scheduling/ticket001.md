@@ -197,3 +197,37 @@ npm run test
 - Weekday-based rules (SCHEDULING-002)
 - Cron expressions
 - Fixed-schedule (non-completion-based) recurrence
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] All six frequencies supported: `frequencyUnit` (`DAY`/`WEEK`/`MONTH`/`YEAR`) + `frequencyInterval` on the
+  Tenner, in create/update requests and in every response
+- [x] Calendar-correct month and year arithmetic: month-end clamping, leap years, year boundaries
+  (`backend/tests/schedule.test.ts`)
+- [x] Existing Tenners keep working unchanged: read-time default DAY / `frequencyDays`; requests with only
+  `frequencyDays` stay valid; optional idempotent backfill `scripts/backfill_frequency_unit.py` (dry run by default)
+- [x] Single due-date function `calculateNextDue` (`backend/src/utils/schedule.ts`), used by Complete and Undo
+- [x] Frontend presets: Täglich, Wöchentlich, Alle 2 Wochen, Monatlich, Vierteljährlich, Jährlich, plus free
+  interval + unit ("Alle X Tage"); human-readable labels ("Vierteljährlich", "Alle 2 Jahre") on cards and detail
+- [x] Architecture documentation updated (`docs/architecture.md` → "Scheduling Model")
+- [x] Tests passing: backend 481 (coverage 99.9 % lines), frontend 246, scripts 32; lint and build clean;
+  form checked in the browser at phone width
+- [ ] Deploys through GitHub Actions: no infrastructure change; verified after merge
+
+Decisions and assumptions:
+
+- Request forms: either `frequencyDays` or `frequencyUnit` (+ `frequencyInterval`, default 1). Sending both is
+  rejected (400) instead of guessing which one wins. The frontend always sends unit + interval; Quick Add keeps
+  sending `frequencyDays` (TD-027).
+- Upper limit: 3650 approximate days (e.g. 120 months, 10 years), consistent with the existing limit.
+- Completion-based recurrence stays: a monthly Tenner completed on 28 Feb continues from the 28th, not the 31st
+  (fixed-schedule recurrence is out of scope).
+- Optimistic locking is unchanged: a frequency change always changes `updatedAt`, which the complete/undo
+  conditions already check.
+- The backfill does not change `updatedAt`, so it cannot make concurrent completions fail.
+
+Technical debt: TD-027 (default frequency in settings and Quick Add is days only).

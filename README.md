@@ -338,12 +338,25 @@ scripts/smoke-test.sh "$(terraform -chdir=terraform output -raw frontend_url)" \
   "$(terraform -chdir=terraform output -raw api_endpoint)"
 ```
 
+### Data Backfill (optional, SCHEDULING-001)
+
+Tenners created before SCHEDULING-001 have no `frequencyUnit`; the API reads them as `DAY` with
+`frequencyInterval = frequencyDays`, so no migration is needed. To store the values explicitly, run in
+AWS CloudShell (needs `dynamodb:Scan` and `dynamodb:UpdateItem` on `tenner-tenners`):
+
+```bash
+python3 scripts/backfill_frequency_unit.py           # dry run: lists affected Tenners
+python3 scripts/backfill_frequency_unit.py --apply   # conditional, idempotent writes
+```
+
 ### Rollback
 
 - **Workflow or application changes:** revert the commit on `main`. The deploy workflow then
   re-applies the previous state and republishes the previous frontend.
 - **Frontend only (emergency):** the bucket is versioned and keeps previous object versions for 30 days.
   Restore the previous `index.html` version in S3, then invalidate `/index.html`.
+- **Calendar frequencies (SCHEDULING-001):** code before SCHEDULING-001 ignores `frequencyUnit` and uses
+  `frequencyDays`, so after a revert monthly/yearly Tenners recur every 30/365 days. No data is lost.
 - **Infrastructure changes:** reverting the Terraform code and letting `deploy.yml` apply it
   is the only supported way. Manual changes in AWS are not allowed (see `docs/architecture.md`).
 

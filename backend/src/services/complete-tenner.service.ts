@@ -5,7 +5,8 @@ import { toCompletionResponse, toTennerResponse, type CompleteTennerRequest, typ
 import { ConflictError, NotFoundError, ValidationError } from "../exceptions/index.js";
 import type { Completion, Tenner } from "../models/index.js";
 import type { CompletionRecord, CompletionRepository, TennerRepository } from "../repositories/index.js";
-import { addDays, toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
+import { toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
+import { calculateNextDue, type Frequency } from "../utils/schedule.js";
 import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
 import { sha256Json, uuidV5 } from "../utils/uuid.js";
 
@@ -29,7 +30,7 @@ export class CompleteTennerService {
 
   /**
    * Complete a Tenner: append an immutable history record and move the Tenner into its next cycle
-   * (nextDue = completion date + frequencyDays), atomically. With an idempotency key, retries return
+   * (nextDue = completion date + frequency), atomically. With an idempotency key, retries return
    * the original result; reusing the key for a different request is a conflict.
    * completedBy defaults to the authenticated user; recordedBy is always the authenticated user (SECURITY-004).
    */
@@ -65,7 +66,7 @@ export class CompleteTennerService {
     const updated: Tenner = {
       ...tenner,
       lastCompleted: completedAt,
-      nextDue: nextDueAfter(completedAt, tenner.frequencyDays, await this.timezoneOf(tenantId)),
+      nextDue: nextDueAfter(completedAt, tenner, await this.timezoneOf(tenantId)),
       updatedAt: toUtcTimestamp(now),
       updatedBy: identity.userId,
     };
@@ -108,9 +109,9 @@ export class CompleteTennerService {
 }
 
 /**
- * Next due date: the completion's calendar date in the household timezone plus frequencyDays
- * (completion-based recurrence, SCHEDULING-008). Day arithmetic on calendar dates is DST-safe.
+ * Next due date: the completion's calendar date in the household timezone (SCHEDULING-008) advanced by the
+ * Tenner's frequency via calculateNextDue (SCHEDULING-001). Calendar arithmetic is DST-safe.
  */
-export function nextDueAfter(completedAt: string, frequencyDays: number, timezone: string): string {
-  return addDays(dateInTimeZone(new Date(completedAt), timezone), frequencyDays);
+export function nextDueAfter(completedAt: string, frequency: Frequency, timezone: string): string {
+  return calculateNextDue(dateInTimeZone(new Date(completedAt), timezone), frequency.frequencyUnit, frequency.frequencyInterval);
 }

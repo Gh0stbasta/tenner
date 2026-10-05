@@ -17,7 +17,7 @@ function detailsOf(fn: () => unknown): { field: string; message: string }[] {
 
 describe("createTennerSchema", () => {
   it("accepts a valid request and trims the title", () => {
-    expect(validate(createTennerSchema, { ...valid, title: "  Vacuum Office  " })).toEqual(valid);
+    expect(validate(createTennerSchema, { ...valid, title: "  Vacuum Office  " })).toEqual({ ...valid, frequencyUnit: "DAY", frequencyInterval: 14 });
   });
 
   it.each([
@@ -41,8 +41,10 @@ describe("createTennerSchema", () => {
 
   it("rejects missing fields and unknown fields", () => {
     expect(detailsOf(() => validate(createTennerSchema, {})).map((d) => d.field)).toEqual(
-      expect.arrayContaining(["title", "category", "estimatedMinutes", "frequencyDays", "assignedTo"]),
+      expect.arrayContaining(["title", "category", "estimatedMinutes", "assignedTo"]),
     );
+    const withoutFrequency = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinutes: 10, assignedTo: "STEFAN" };
+    expect(detailsOf(() => validate(createTennerSchema, withoutFrequency))).toEqual([{ field: "frequencyDays", message: "frequencyDays or frequencyUnit is required." }]);
     expect(detailsOf(() => validate(createTennerSchema, { ...valid, tenantId: "other" }))).toHaveLength(1);
   });
 
@@ -53,7 +55,8 @@ describe("createTennerSchema", () => {
 
 describe("updateTennerSchema", () => {
   it("accepts a partial update", () => {
-    expect(validate(updateTennerSchema, { frequencyDays: 7 })).toEqual({ frequencyDays: 7 });
+    expect(validate(updateTennerSchema, { frequencyDays: 7 })).toEqual({ frequencyDays: 7, frequencyUnit: "DAY", frequencyInterval: 7 });
+    expect(validate(updateTennerSchema, { title: "Vacuum" })).toEqual({ title: "Vacuum" });
   });
 
   it("rejects an empty update", () => {

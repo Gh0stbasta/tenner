@@ -69,10 +69,17 @@ describe("UndoCompletionService", () => {
     expect(outcome.restoredPrevious).toBe(false);
   });
 
-  it("uses the current frequencyDays for the restored schedule", async () => {
-    const { tenners, service } = setup([latest, previous], { ...loaded, frequencyDays: 30 });
+  it("uses the current frequency for the restored schedule", async () => {
+    const { tenners, service } = setup([latest, previous], { ...loaded, frequencyDays: 30, frequencyInterval: 30 });
     await service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" });
     expect(tenners.undoCompletion.mock.calls[0]?.[0].nextDue).toBe("2026-10-01");
+  });
+
+  it("restores the previous due date of a quarterly Tenner with calendar arithmetic (SCHEDULING-001)", async () => {
+    const quarterly = { ...loaded, frequencyDays: 90, frequencyUnit: "MONTH", frequencyInterval: 3 } as const;
+    const { tenners, service } = setup([latest, completionFixture({ completedAt: "2025-11-30T10:00:00Z" })], quarterly);
+    await service.undoLatestCompletion(TEST_IDENTITY, "tenner-001", { revertedBy: "STEFAN" });
+    expect(tenners.undoCompletion.mock.calls[0]?.[0].nextDue).toBe("2026-02-28");
   });
 
   it("returns NO_COMPLETION_TO_UNDO when no active completion exists", async () => {

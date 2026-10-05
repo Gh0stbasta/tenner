@@ -222,7 +222,7 @@ describe("POST /tenners", () => {
     const response = await route(event("POST /tenners", {}, JSON.stringify(valid)), d);
     expect(response.statusCode).toBe(201);
     expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: tennerResponse });
-    expect(d.createTenner).toHaveBeenCalledWith(TEST_IDENTITY, valid);
+    expect(d.createTenner).toHaveBeenCalledWith(TEST_IDENTITY, { ...valid, frequencyUnit: "DAY", frequencyInterval: valid.frequencyDays });
   });
 
   it("rejects invalid input with 400 before calling the service", async () => {
@@ -285,7 +285,7 @@ describe("PUT /tenners/{tennerId}", () => {
     const d = deps();
     const response = await route(put("t-1", { frequencyDays: 30 }), d);
     expect(response.statusCode).toBe(200);
-    expect(d.updateTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", { frequencyDays: 30 });
+    expect(d.updateTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", { frequencyDays: 30, frequencyUnit: "DAY", frequencyInterval: 30 });
   });
 
   it("returns 404 when the Tenner does not exist", async () => {

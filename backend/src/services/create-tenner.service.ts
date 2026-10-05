@@ -31,6 +31,8 @@ export class CreateTennerService {
       category: request.category,
       estimatedMinutes: request.estimatedMinutes,
       frequencyDays: request.frequencyDays,
+      frequencyUnit: request.frequencyUnit,
+      frequencyInterval: request.frequencyInterval,
       assignedTo: request.assignedTo,
       lastCompleted: null,
       nextDue: dateInTimeZone(now, await this.timezoneOf(identity.tenantId)),

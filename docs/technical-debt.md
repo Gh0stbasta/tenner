@@ -735,3 +735,28 @@ Convert `from`/`to` into UTC instants of the household's local day boundaries be
 ### Related Work
 
 SCHEDULING-008, TICKET-020, `backend/src/services/history.service.ts`.
+
+## TD-027: Default frequency for new Tenners is in days only
+
+### Description
+
+The Settings default ("Häufigkeit (alle … Tage)") and Quick Add still use a day count. A default of "monthly"
+cannot be configured; Quick Add always creates DAY-based Tenners.
+
+### Reason
+
+SCHEDULING-001 limited the change to the Tenner form and API; the per-browser preferences (FRONTEND-008) keep
+their stored format to avoid a preferences migration.
+
+### Impact
+
+Small: a monthly Tenner created through Quick Add drifts by days until it is edited to "Monatlich".
+
+### Suggested Improvement
+
+Store `defaultFrequencyUnit` + `defaultFrequencyInterval` in the preferences envelope (new version with migration)
+and send them from Quick Add and the create dialog.
+
+### Related Work
+
+SCHEDULING-001, FRONTEND-008, `frontend/src/features/settings/useNewTennerDefaults.ts`.

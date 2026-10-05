@@ -1,7 +1,7 @@
 /** Zod schemas for Tenner API payloads. They mirror backend/src/dto. */
 
 import { z } from "zod";
-import { CATEGORIES, USER_IDS } from "../../types/domain";
+import { CATEGORIES, FREQUENCY_UNITS, USER_IDS } from "../../types/domain";
 
 export const categorySchema = z.enum(CATEGORIES);
 export const userIdSchema = z.enum(USER_IDS);
@@ -12,6 +12,8 @@ export const tennerSchema = z.object({
   category: categorySchema,
   estimatedMinutes: z.number(),
   frequencyDays: z.number(),
+  frequencyUnit: z.enum(FREQUENCY_UNITS),
+  frequencyInterval: z.number(),
   assignedTo: userIdSchema,
   lastCompleted: z.string().nullable(),
   nextDue: z.string(),

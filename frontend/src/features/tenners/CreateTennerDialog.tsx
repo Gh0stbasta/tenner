@@ -26,7 +26,7 @@ export interface CreateTennerDialogProps {
   readonly onClose: () => void;
 }
 
-const FIELDS = ["title", "category", "assignedTo", "estimatedMinutes", "frequencyDays"] as const;
+const FIELDS = ["title", "category", "assignedTo", "estimatedMinutes", "frequencyInterval", "frequencyUnit"] as const;
 
 export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
   const theme = useTheme();
@@ -44,7 +44,8 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
       category: defaults.category,
       assignedTo: defaults.assignedTo,
       estimatedMinutes: defaults.estimatedMinutes,
-      frequencyDays: defaults.frequencyDays,
+      frequencyInterval: defaults.frequencyDays,
+      frequencyUnit: "DAY",
       active: true,
     },
   });
@@ -57,9 +58,9 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
   };
 
   const submit = form.handleSubmit((values) => {
-    const { title, category, assignedTo, estimatedMinutes, frequencyDays } = values;
+    const { title, category, assignedTo, estimatedMinutes, frequencyUnit, frequencyInterval } = values;
     create.mutate(
-      { title, category, assignedTo, estimatedMinutes, frequencyDays },
+      { title, category, assignedTo, estimatedMinutes, frequencyUnit, frequencyInterval },
       {
         onSuccess: (created) => {
           notify({ message: `✅ „${created.title}“ angelegt.` });

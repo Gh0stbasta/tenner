@@ -31,11 +31,19 @@ export interface EditTennerDialogProps {
   readonly onClose: () => void;
 }
 
-const FIELDS = ["title", "category", "assignedTo", "estimatedMinutes", "frequencyDays", "active"] as const;
+const FIELDS = [
+  "title",
+  "category",
+  "assignedTo",
+  "estimatedMinutes",
+  "frequencyInterval",
+  "frequencyUnit",
+  "active",
+] as const;
 
 function toFormValues(tenner: Tenner): TennerFormValues {
-  const { title, category, assignedTo, estimatedMinutes, frequencyDays, active } = tenner;
-  return { title, category, assignedTo, estimatedMinutes, frequencyDays, active };
+  const { title, category, assignedTo, estimatedMinutes, frequencyUnit, frequencyInterval, active } = tenner;
+  return { title, category, assignedTo, estimatedMinutes, frequencyUnit, frequencyInterval, active };
 }
 
 function formatTimestamp(value: string | null): string {
@@ -96,6 +104,11 @@ function EditTennerForm({ tenner, onClose }: { readonly tenner: Tenner; readonly
     const changes: Record<string, unknown> = {};
     for (const field of FIELDS) {
       if (dirtyFields[field]) changes[field] = values[field];
+    }
+    // The API needs the unit with every interval change (SCHEDULING-001), so the frequency is sent as a pair.
+    if (dirtyFields.frequencyUnit || dirtyFields.frequencyInterval) {
+      changes.frequencyUnit = values.frequencyUnit;
+      changes.frequencyInterval = values.frequencyInterval;
     }
     update.mutate(
       { tennerId: tenner.tennerId, update: changes as TennerUpdate },

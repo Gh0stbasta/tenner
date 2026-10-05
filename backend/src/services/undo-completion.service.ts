@@ -33,7 +33,7 @@ export class UndoCompletionService {
 
   /**
    * Revert the latest non-reverted completion and restore the schedule from the previous active completion
-   * (or reset to "due on creation date" if none). Uses the Tenner's current frequencyDays. Atomic.
+   * (or reset to "due on creation date" if none). Uses the Tenner's current frequency. Atomic.
    * revertedBy and updatedBy are the authenticated user (SECURITY-004).
    */
   async undoLatestCompletion(identity: Identity, tennerId: string, request: UndoCompletionRequest, idempotencyKey?: string): Promise<UndoCompletionOutcome> {
@@ -104,7 +104,7 @@ export function restoreSchedule(tenner: Tenner, previous: Completion | undefined
     return {
       ...tenner,
       lastCompleted: previous.completedAt,
-      nextDue: nextDueAfter(previous.completedAt, tenner.frequencyDays, timezone),
+      nextDue: nextDueAfter(previous.completedAt, tenner, timezone),
       updatedAt: timestamp,
     };
   }

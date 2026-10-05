@@ -20,25 +20,89 @@ import {
   estimatedMinutesSchema,
   isoDateSchema,
   frequencyDaysSchema,
+  frequencyIntervalSchema,
+  frequencyUnitSchema,
   titleSchema,
   userIdSchema,
   utcTimestampSchema,
 } from "./common.js";
 import { isValidTimeZone } from "../utils/timezone.js";
+import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
 
-export const createTennerSchema = z.strictObject({
+const tennerFields = {
   title: titleSchema,
   category: categorySchema,
   estimatedMinutes: estimatedMinutesSchema,
-  frequencyDays: frequencyDaysSchema,
+  frequencyDays: frequencyDaysSchema.optional(),
+  frequencyUnit: frequencyUnitSchema.optional(),
+  frequencyInterval: frequencyIntervalSchema.optional(),
   assignedTo: userIdSchema,
+};
+
+interface FrequencyInput {
+  readonly frequencyDays?: number | undefined;
+  readonly frequencyUnit?: Frequency["frequencyUnit"] | undefined;
+  readonly frequencyInterval?: number | undefined;
+}
+
+type NormalizedFrequency = Frequency & { readonly frequencyDays: number };
+
+/**
+ * Normalize the frequency fields (SCHEDULING-001): `frequencyDays` alone → DAY with interval = days (requests
+ * from before SCHEDULING-001 stay valid); `frequencyUnit` (+ `frequencyInterval`, default 1) → derived
+ * frequencyDays. Mixing both forms is rejected so a client can never send contradicting values.
+ */
+function normalizeFrequency(value: FrequencyInput, ctx: z.RefinementCtx): NormalizedFrequency | undefined {
+  const { frequencyDays, frequencyUnit, frequencyInterval } = value;
+  if (frequencyDays !== undefined && (frequencyUnit !== undefined || frequencyInterval !== undefined)) {
+    ctx.addIssue({ code: "custom", path: ["frequencyDays"], message: "Use either frequencyDays or frequencyUnit with frequencyInterval." });
+    return undefined;
+  }
+  if (frequencyInterval !== undefined && frequencyUnit === undefined) {
+    ctx.addIssue({ code: "custom", path: ["frequencyUnit"], message: "frequencyUnit is required with frequencyInterval." });
+    return undefined;
+  }
+  if (frequencyDays !== undefined) return { frequencyDays, frequencyUnit: "DAY", frequencyInterval: frequencyDays };
+  if (frequencyUnit === undefined) return undefined;
+  const interval = frequencyInterval ?? 1;
+  const days = approximateFrequencyDays(frequencyUnit, interval);
+  if (days > MAX_FREQUENCY_DAYS) {
+    ctx.addIssue({ code: "custom", path: ["frequencyInterval"], message: `The frequency must not exceed ${MAX_FREQUENCY_DAYS} days.` });
+    return undefined;
+  }
+  return { frequencyDays: days, frequencyUnit, frequencyInterval: interval };
+}
+
+/** The request without the raw frequency fields (they are replaced by the normalized ones). */
+function omitFrequency<T extends FrequencyInput>(value: T): Omit<T, keyof FrequencyInput> {
+  const rest: Record<string, unknown> = { ...(value as Record<string, unknown>) };
+  delete rest.frequencyDays;
+  delete rest.frequencyUnit;
+  delete rest.frequencyInterval;
+  return rest as Omit<T, keyof FrequencyInput>;
+}
+
+/** Create: a frequency is required, in either form. */
+export const createTennerSchema = z.strictObject(tennerFields).transform((value, ctx): CreateTennerRequest => {
+  const rest = omitFrequency(value);
+  const frequency = normalizeFrequency(value, ctx);
+  if (frequency === undefined) {
+    if (ctx.issues.length === 0) ctx.addIssue({ code: "custom", path: ["frequencyDays"], message: "frequencyDays or frequencyUnit is required." });
+    return z.NEVER;
+  }
+  return { ...rest, ...frequency };
 }) satisfies z.ZodType<CreateTennerRequest>;
 
 /** Partial update; protected fields (tenantId, tennerId, createdAt, lastCompleted, nextDue) are rejected as unknown keys. */
-export const updateTennerSchema = createTennerSchema
-  .extend({ active: z.boolean() })
+export const updateTennerSchema = z
+  .strictObject({ ...tennerFields, active: z.boolean() })
   .partial()
-  .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." }) satisfies z.ZodType<UpdateTennerRequest>;
+  .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." })
+  .transform((value, ctx): UpdateTennerRequest => {
+    const rest = omitFrequency(value);
+    const frequency = normalizeFrequency(value, ctx);
+    return frequency === undefined ? rest : { ...rest, ...frequency };
+  }) satisfies z.ZodType<UpdateTennerRequest>;
 
 export const completeTennerSchema = z.strictObject({
   completedBy: userIdSchema.optional(),

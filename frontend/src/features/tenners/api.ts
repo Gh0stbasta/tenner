@@ -4,7 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { z } from "zod";
 import { apiClient } from "../../api/client";
 import { queryKeys } from "../../api/queryKeys";
-import type { Category, UserId } from "../../types/domain";
+import type { Category, FrequencyUnit, UserId } from "../../types/domain";
 import { trackEvent } from "../../utils/telemetry";
 import { useCurrentUser } from "../completions/CurrentUserProvider";
 import { tennerSchema, type Tenner } from "./schemas";
@@ -103,13 +103,21 @@ export function useRestoreTenner() {
   });
 }
 
-export interface TennerInput {
+interface TennerFields {
   readonly title: string;
   readonly category: Category;
   readonly assignedTo: UserId;
   readonly estimatedMinutes: number;
-  readonly frequencyDays: number;
 }
+
+/** Calendar frequency (SCHEDULING-001). */
+export interface FrequencyFields {
+  readonly frequencyUnit: FrequencyUnit;
+  readonly frequencyInterval: number;
+}
+
+/** Frequency in days only (DAY unit) or as unit + interval; the API accepts either, never both. */
+export type TennerInput = TennerFields & ({ readonly frequencyDays: number } | FrequencyFields);
 
 export function createTenner(input: TennerInput): Promise<Tenner> {
   return apiClient.post("/tenners", { schema: tennerSchema, body: input });
@@ -124,7 +132,7 @@ export function useCreateTenner() {
   });
 }
 
-export type TennerUpdate = Partial<TennerInput> & { readonly active?: boolean };
+export type TennerUpdate = Partial<TennerFields> & Partial<FrequencyFields> & { readonly active?: boolean };
 
 export function updateTenner(tennerId: string, update: TennerUpdate): Promise<Tenner> {
   return apiClient.put(`/tenners/${encodeURIComponent(tennerId)}`, { schema: tennerSchema, body: update });

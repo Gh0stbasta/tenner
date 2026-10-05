@@ -410,28 +410,46 @@ Next Due:
 2026-10-15
 ```
 
-Calculation:
+Calculation (SCHEDULING-001):
 
 ```text
-next_due =
-last_completed +
-frequency_days
+next_due = calculateNextDue(local date(last_completed), frequency_unit, frequency_interval)
 ```
 
-Supported frequencies:
+Supported frequencies, stored as a unit plus an interval:
 
 ```text
-Daily
-Weekly
-Every X Days
-Monthly
-Quarterly
-Yearly
+Daily        → DAY,   1
+Weekly       → WEEK,  1
+Every X Days → DAY,   X
+Monthly      → MONTH, 1
+Quarterly    → MONTH, 3
+Yearly       → YEAR,  1
 ```
+
+Any interval up to 10 years is allowed (e.g. every 2 weeks, every 6 months).
+
+## Scheduling Model (SCHEDULING-001)
+
+- `frequencyUnit` (`DAY`, `WEEK`, `MONTH`, `YEAR`) and `frequencyInterval` (≥ 1) define the recurrence.
+- `calculateNextDue` (`backend/src/utils/schedule.ts`) is the only function that derives a due date from a frequency.
+  Complete and Undo use it.
+- DAY and WEEK add exact days. MONTH and YEAR keep the calendar day and clamp to the last day of the target
+  month: `2026-01-31 + 1 MONTH → 2026-02-28`, `2028-01-31 + 1 MONTH → 2028-02-29`,
+  `2028-02-29 + 1 YEAR → 2029-02-28`. Each step starts from the actual completion date, so a monthly Tenner
+  completed on the 31st and then on the 28th continues from the 28th (completion-based recurrence).
+- `frequencyDays` is kept for compatibility and analytics: exact for DAY/WEEK, an approximation for MONTH/YEAR
+  (30/365 per unit). It is never used for due dates.
+- API: clients send either `frequencyDays` (→ DAY, interval = days; the pre-SCHEDULING-001 form) or
+  `frequencyUnit` + `frequencyInterval`, never both. The validator normalizes the request to all three fields.
+- Migration: none required. Items without `frequencyUnit` are read as DAY with `frequencyInterval = frequencyDays`.
+  `scripts/backfill_frequency_unit.py` optionally writes these values (dry run by default, conditional and
+  idempotent).
+- Changing the frequency does not move `nextDue`; it applies from the next completion.
 
 No cron expressions.
 
-No advanced scheduling rules.
+No weekday rules (SCHEDULING-002) and no fixed-schedule (non-completion-based) recurrence.
 
 ---
 
@@ -1116,14 +1134,14 @@ index.ts (routing, correlation, error mapping)
   `DeleteItem` is never used by the code (TD-013). Restore (TICKET-015) reverses a soft delete (`active = true`,
   `deletedAt = null`) with an `updatedAt` lock. It never changes the schedule or the history.
 - **Completion workflow (TICKET-013):** completing a Tenner appends an immutable history record and moves the Tenner
-  into its next cycle (`nextDue = local date(completedAt) + frequencyDays`, SCHEDULING-008) in one `TransactWriteItems`. Optimistic
+  into its next cycle (`nextDue = calculateNextDue(local date(completedAt), unit, interval)`, SCHEDULING-001/008) in one `TransactWriteItems`. Optimistic
   locking checks the loaded state (`updatedAt`, `lastCompleted`, `frequencyDays`, active and not deleted), and
   a conflict returns `409 CONCURRENT_MODIFICATION`. The optional `Idempotency-Key` maps to a deterministic UUID v5
   completion ID. Retries return the original result, and conflicting reuse returns 409. Transactions need no extra
   IAM action, because DynamoDB authorizes them through `PutItem` and `UpdateItem`.
 - **Undo workflow (TICKET-014):** completions are never deleted. Undo marks the latest non-reverted completion
   (`revertedAt`, `revertedBy`, `revertReason`) and restores the Tenner from the previous active completion, using the
-  current `frequencyDays`. If no previous completion exists, `lastCompleted` becomes `null` and `nextDue` the
+  current frequency. If no previous completion exists, `lastCompleted` becomes `null` and `nextDue` the
   `createdAt` date. Both writes happen in one `TransactWriteItems`, with conditions on "not yet reverted" and the
   loaded Tenner state. History per Tenner is read through the GSI `tennerId-completedAt-index`
   (`tenantTennerId = "<tenant>#<tenner>"`, newest first, no Scan).
@@ -1136,7 +1154,7 @@ index.ts (routing, correlation, error mapping)
   - The household timezone (IANA, e.g. `Europe/Berlin`) is stored in `tenner-households` and edited in Settings
     (`GET`/`PUT /household`). Without a stored value, `APPLICATION_TIMEZONE` (default `Europe/Berlin`) applies.
   - All services get it through one function, `TimeZoneSource = (tenantId) => Promise<string>`.
-  - `today = localDate(now, tz)`; `nextDue = localDate(completedAt, tz) + frequencyDays`; a new Tenner is due on
+  - `today = localDate(now, tz)`; `nextDue = calculateNextDue(localDate(completedAt, tz), unit, interval)`; a new Tenner is due on
     its local creation date. Timestamps (`completedAt`, `createdAt`, …) stay UTC ISO strings.
   - Local dates come from the platform `Intl` API (`utils/timezone.ts`), which carries the IANA database and DST
     rules. Adding days is pure calendar arithmetic, so DST changes never shift a date. No date library is needed.

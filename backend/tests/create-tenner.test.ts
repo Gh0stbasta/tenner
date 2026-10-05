@@ -7,7 +7,8 @@ import { mockLogger, mockTennerRepository, TEST_IDENTITY, testIdentity } from ".
 
 const NOW = new Date("2026-10-01T18:30:15.123Z");
 const ID = "5c2bfd9b-c8d1-4ab7-af57-b1dfe6ddbf05";
-const request = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14, assignedTo: "STEFAN" } as const;
+/** Validated (normalized) request as the service receives it. */
+const request = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14, frequencyUnit: "DAY", frequencyInterval: 14, assignedTo: "STEFAN" } as const;
 
 function service() {
   const repository = mockTennerRepository();
@@ -69,6 +70,9 @@ describe("CreateTennerService", () => {
   });
 });
 
+/** Request body as clients sent it before SCHEDULING-001 (frequencyDays only). */
+const body = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14, assignedTo: "STEFAN" } as const;
+
 describe("createTennerHandler", () => {
   const event = (body: unknown): APIGatewayProxyEventV2 =>
     ({ body: typeof body === "string" ? body : JSON.stringify(body), isBase64Encoded: false }) as unknown as APIGatewayProxyEventV2;
@@ -76,7 +80,7 @@ describe("createTennerHandler", () => {
   it("returns 201 with the created Tenner and logs the creation", async () => {
     const logger = mockLogger();
     const { service: svc } = service();
-    const response = await createTennerHandler(event(request), TEST_IDENTITY, (t, r) => svc.createTenner(t, r), logger);
+    const response = await createTennerHandler(event(body), TEST_IDENTITY, (t, r) => svc.createTenner(t, r), logger);
 
     expect(response.statusCode).toBe(201);
     expect(JSON.parse(response.body ?? "").data).toMatchObject({ tennerId: ID, title: "Vacuum Office" });
@@ -84,10 +88,10 @@ describe("createTennerHandler", () => {
   });
 
   it.each([
-    ["invalid title", { ...request, title: "ab" }],
-    ["invalid frequency days", { ...request, frequencyDays: 4000 }],
-    ["invalid category", { ...request, category: "GARDEN" }],
-    ["invalid assigned user", { ...request, assignedTo: "BOB" }],
+    ["invalid title", { ...body, title: "ab" }],
+    ["invalid frequency days", { ...body, frequencyDays: 4000 }],
+    ["invalid category", { ...body, category: "GARDEN" }],
+    ["invalid assigned user", { ...body, assignedTo: "BOB" }],
     ["malformed JSON", "{"],
     ["missing body", ""],
   ])("rejects %s", async (_name, body) => {
@@ -98,11 +102,11 @@ describe("createTennerHandler", () => {
 
   it("propagates repository failures (mapped to 500 by the router)", async () => {
     const create = vi.fn().mockRejectedValue(new PersistenceError());
-    await expect(createTennerHandler(event(request), TEST_IDENTITY, create, mockLogger())).rejects.toBeInstanceOf(PersistenceError);
+    await expect(createTennerHandler(event(body), TEST_IDENTITY, create, mockLogger())).rejects.toBeInstanceOf(PersistenceError);
   });
 
   it("propagates conflicts", async () => {
     const create = vi.fn().mockRejectedValue(new ConflictError("Tenner already exists."));
-    await expect(createTennerHandler(event(request), TEST_IDENTITY, create, mockLogger())).rejects.toBeInstanceOf(ConflictError);
+    await expect(createTennerHandler(event(body), TEST_IDENTITY, create, mockLogger())).rejects.toBeInstanceOf(ConflictError);
   });
 });
