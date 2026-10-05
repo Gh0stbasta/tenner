@@ -25,7 +25,8 @@ describe("CreateTennerDialog", () => {
     renderDialog();
     expect(screen.getByRole("textbox", { name: "Titel" })).toHaveValue("");
     expect(screen.getByRole("spinbutton", { name: "Geschätzte Minuten" })).toHaveValue(10);
-    expect(screen.getByRole("spinbutton", { name: "Häufigkeit in Tagen" })).toHaveValue(14);
+    expect(screen.getByRole("spinbutton", { name: "Wiederholen alle" })).toHaveValue(14);
+    expect(screen.getByRole("combobox", { name: "Einheit" })).toHaveTextContent("Tage");
     expect(screen.getByRole("combobox", { name: "Kategorie" })).toHaveTextContent("Haushalt");
     expect(screen.getByRole("combobox", { name: "Zuständig" })).toHaveTextContent("Stefan");
     expect(submitButton()).toBeDisabled();
@@ -41,11 +42,11 @@ describe("CreateTennerDialog", () => {
     await userEvent.type(minutes, "500");
     expect(await screen.findByText("Geschätzte Minuten müssen zwischen 1 und 480 liegen.")).toBeInTheDocument();
 
-    const frequency = screen.getByRole("spinbutton", { name: "Häufigkeit in Tagen" });
+    const frequency = screen.getByRole("spinbutton", { name: "Wiederholen alle" });
     await userEvent.clear(frequency);
     expect(await screen.findByText("Bitte eine Zahl eingeben.")).toBeInTheDocument();
     await userEvent.type(frequency, "0");
-    expect(await screen.findByText("Die Häufigkeit muss zwischen 1 und 3650 Tagen liegen.")).toBeInTheDocument();
+    expect(await screen.findByText("Bitte eine Zahl ab 1 eingeben.")).toBeInTheDocument();
     expect(submitButton()).toBeDisabled();
   });
 
@@ -61,11 +62,68 @@ describe("CreateTennerDialog", () => {
     expect(await screen.findByText("Bitte eine ganze Zahl eingeben.")).toBeInTheDocument();
   });
 
-  it("sets the frequency through presets", async () => {
+  it.each([
+    ["Täglich", 1, "Tage"],
+    ["Wöchentlich", 1, "Wochen"],
+    ["Alle 2 Wochen", 2, "Wochen"],
+    ["Monatlich", 1, "Monate"],
+    ["Vierteljährlich", 3, "Monate"],
+    ["Jährlich", 1, "Jahre"],
+  ])("maps the preset %s to interval and unit (SCHEDULING-001)", async (preset, interval, unit) => {
     renderDialog();
-    await userEvent.click(screen.getByRole("button", { name: "Monatlich (30)" }));
-    expect(screen.getByRole("spinbutton", { name: "Häufigkeit in Tagen" })).toHaveValue(30);
-    expect(screen.getByRole("button", { name: "Monatlich (30)" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(screen.getByRole("button", { name: preset }));
+    expect(screen.getByRole("spinbutton", { name: "Wiederholen alle" })).toHaveValue(interval);
+    expect(screen.getByRole("combobox", { name: "Einheit" })).toHaveTextContent(unit);
+    expect(screen.getByRole("button", { name: preset })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("supports 'every X days' through the free input and limits frequencies to 10 years", async () => {
+    renderDialog();
+    const frequency = screen.getByRole("spinbutton", { name: "Wiederholen alle" });
+    await userEvent.clear(frequency);
+    await userEvent.type(frequency, "11");
+    expect(screen.getByRole("button", { name: "Täglich" })).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(screen.getByRole("combobox", { name: "Einheit" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Jahre" }));
+    expect(await screen.findByText("Die Häufigkeit darf höchstens 3650 Tage (10 Jahre) betragen.")).toBeInTheDocument();
+  });
+
+  it("offers weekday chips for weekly frequencies and sends them in ISO order (SCHEDULING-002)", async () => {
+    const fetchMock = mockFetch({ "POST /tenners": ok(tenner({ title: "Mülltonnen raus" }), 201) });
+    const { onClose } = renderDialog();
+    await userEvent.type(screen.getByRole("textbox", { name: "Titel" }), "Mülltonnen raus");
+    expect(screen.queryByRole("group", { name: "An Wochentagen (optional)" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Wöchentlich" }));
+    const weekdays = screen.getByRole("group", { name: "An Wochentagen (optional)" });
+    await userEvent.click(within(weekdays).getByRole("button", { name: "Fr" }));
+    await userEvent.click(within(weekdays).getByRole("button", { name: "Di" }));
+    expect(within(weekdays).getByRole("button", { name: "Di" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Wöchentlich" })).toHaveAttribute("aria-pressed", "false");
+    await waitFor(() => expect(submitButton()).toBeEnabled());
+    await userEvent.click(submitButton());
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(fetchMock.calls()[0]?.body).toMatchObject({
+      frequencyUnit: "WEEK",
+      frequencyInterval: 1,
+      weekdays: ["TUE", "FRI"],
+    });
+  });
+
+  it("drops weekdays when the unit is not weeks", async () => {
+    const fetchMock = mockFetch({ "POST /tenners": ok(tenner(), 201) });
+    const { onClose } = renderDialog();
+    await userEvent.type(screen.getByRole("textbox", { name: "Titel" }), "Gießen");
+    await userEvent.click(screen.getByRole("button", { name: "Wöchentlich" }));
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "An Wochentagen (optional)" })).getByRole("button", { name: "Sa" }),
+    );
+    await userEvent.click(screen.getByRole("combobox", { name: "Einheit" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Tage" }));
+    await waitFor(() => expect(submitButton()).toBeEnabled());
+    await userEvent.click(submitButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(fetchMock.calls()[0]?.body).toMatchObject({ frequencyUnit: "DAY", weekdays: null });
   });
 
   it("creates the Tenner, closes, notifies and refreshes dashboard and lists", async () => {
@@ -78,7 +136,7 @@ describe("CreateTennerDialog", () => {
     await userEvent.click(await screen.findByRole("option", { name: "Haus & Garten" }));
     await userEvent.click(screen.getByRole("combobox", { name: "Zuständig" }));
     await userEvent.click(await screen.findByRole("option", { name: "Julia" }));
-    await userEvent.click(screen.getByRole("button", { name: "Wöchentlich (7)" }));
+    await userEvent.click(screen.getByRole("button", { name: "Vierteljährlich" }));
     await waitFor(() => expect(submitButton()).toBeEnabled());
     await userEvent.click(submitButton());
 
@@ -88,7 +146,9 @@ describe("CreateTennerDialog", () => {
       category: "HOME",
       assignedTo: "JULIA",
       estimatedMinutes: 10,
-      frequencyDays: 7,
+      frequencyUnit: "MONTH",
+      frequencyInterval: 3,
+      weekdays: null,
     });
     expect(await screen.findByText("✅ „Fenster putzen“ angelegt.")).toBeInTheDocument();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.dashboard });

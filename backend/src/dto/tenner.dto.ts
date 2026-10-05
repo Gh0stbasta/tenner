@@ -1,12 +1,20 @@
 /** API contracts for Tenners. Requests are produced by validators (see validators/). */
 
-import type { Category, Tenner, UserId } from "../models/index.js";
+import type { Category, FrequencyUnit, Tenner, UserId, Weekday } from "../models/index.js";
 
+/**
+ * Validated create request. The frequency is normalized by the validator (SCHEDULING-001): clients send either
+ * `frequencyDays` (→ DAY, interval = days) or `frequencyUnit` + `frequencyInterval` (→ derived frequencyDays).
+ */
 export interface CreateTennerRequest {
   readonly title: string;
   readonly category: Category;
   readonly estimatedMinutes: number;
   readonly frequencyDays: number;
+  readonly frequencyUnit: FrequencyUnit;
+  readonly frequencyInterval: number;
+  /** WEEK only (SCHEDULING-002); null for every other frequency. */
+  readonly weekdays: readonly Weekday[] | null;
   readonly assignedTo: UserId;
 }
 
@@ -27,9 +35,16 @@ export interface TennerResponse {
   readonly category: Category;
   readonly estimatedMinutes: number;
   readonly frequencyDays: number;
+  readonly frequencyUnit: FrequencyUnit;
+  readonly frequencyInterval: number;
+  readonly weekdays: readonly Weekday[] | null;
   readonly assignedTo: UserId;
   readonly lastCompleted: string | null;
   readonly nextDue: string;
+  readonly snoozedUntil: string | null;
+  /** Individual pause (SCHEDULING-005); a vacation pause is derived from GET /household. */
+  readonly pausedAt: string | null;
+  readonly pausedUntil: string | null;
   readonly active: boolean;
   readonly deletedAt: string | null;
   readonly createdAt: string;
@@ -64,9 +79,15 @@ export function toTennerResponse(tenner: Tenner): TennerResponse {
     category: tenner.category,
     estimatedMinutes: tenner.estimatedMinutes,
     frequencyDays: tenner.frequencyDays,
+    frequencyUnit: tenner.frequencyUnit,
+    frequencyInterval: tenner.frequencyInterval,
+    weekdays: tenner.weekdays,
     assignedTo: tenner.assignedTo,
     lastCompleted: tenner.lastCompleted,
     nextDue: tenner.nextDue,
+    snoozedUntil: tenner.snoozedUntil,
+    pausedAt: tenner.pausedAt,
+    pausedUntil: tenner.pausedUntil,
     active: tenner.active,
     deletedAt: tenner.deletedAt,
     createdAt: tenner.createdAt,
@@ -74,4 +95,9 @@ export function toTennerResponse(tenner: Tenner): TennerResponse {
     createdBy: tenner.createdBy,
     updatedBy: tenner.updatedBy,
   };
+}
+
+/** POST /tenners/{tennerId}/pause (SCHEDULING-005): until = last paused day; omitted = until resumed. */
+export interface PauseTennerRequest {
+  readonly until?: string | undefined;
 }

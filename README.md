@@ -19,7 +19,7 @@ The repository contains:
 - the remote Terraform state backend (TICKET-003): S3 bucket `tenner-terraform-state` and lock table `tenner-terraform-locks`
 - tag enforcement on every plan (TICKET-001A, `scripts/check_tags.py`): mandatory keys and valid AWS tag characters (TICKET-023)
 - the API runtime (TICKET-005): Lambda `tenner-api` and HTTP API `tenner-api-gateway` with `GET /health` (code in [`backend/`](backend/README.md))
-- the DynamoDB persistence layer (TICKET-006): tables `tenner-tenners` and `tenner-history` with GSIs
+- the DynamoDB persistence layer (TICKET-006): tables `tenner-tenners` and `tenner-history` with GSIs (plus `tenner-households` for household settings, SCHEDULING-008)
 - the backend API (TICKET-008 to TICKET-016): CRUD, complete/undo/restore workflows and dashboard (see [`backend/README.md`](backend/README.md))
 - frontend hosting (TICKET-017): private S3 bucket `tenner-frontend-<env>` behind CloudFront with Origin Access Control; URL in the Terraform output `frontend_url`
 - the backend extension for archived Tenners (TICKET-024, `GET /tenners?deleted=true`) and API throttling (SECURITY-014)
@@ -69,7 +69,7 @@ For the managed resources so far:
 - S3 and DynamoDB (state resources)
 - Lambda
 - API Gateway (`apigateway:*` on `tenner-api-gateway`)
-- DynamoDB tables `tenner-tenners` and `tenner-history` (create, update, tag, PITR)
+- DynamoDB tables `tenner-tenners`, `tenner-history` and `tenner-households` (create, update, tag, PITR, deletion protection; SCHEDULING-008 added `tenner-households`)
 - S3 bucket `tenner-frontend-<env>` (bucket configuration, policy) and CloudFront (distribution, origin access control, response headers policy)
 - Frontend publishing (TICKET-018):
   - `s3:ListBucket` on `arn:aws:s3:::tenner-frontend-<env>`
@@ -338,12 +338,28 @@ scripts/smoke-test.sh "$(terraform -chdir=terraform output -raw frontend_url)" \
   "$(terraform -chdir=terraform output -raw api_endpoint)"
 ```
 
+### Data Backfill (optional, SCHEDULING-001)
+
+Tenners created before SCHEDULING-001 have no `frequencyUnit`; the API reads them as `DAY` with
+`frequencyInterval = frequencyDays`, so no migration is needed. To store the values explicitly, run in
+AWS CloudShell (needs `dynamodb:Scan` and `dynamodb:UpdateItem` on `tenner-tenners`):
+
+```bash
+python3 scripts/backfill_frequency_unit.py           # dry run: lists affected Tenners
+python3 scripts/backfill_frequency_unit.py --apply   # conditional, idempotent writes
+```
+
 ### Rollback
 
 - **Workflow or application changes:** revert the commit on `main`. The deploy workflow then
   re-applies the previous state and republishes the previous frontend.
 - **Frontend only (emergency):** the bucket is versioned and keeps previous object versions for 30 days.
   Restore the previous `index.html` version in S3, then invalidate `/index.html`.
+- **Calendar frequencies (SCHEDULING-001):** code before SCHEDULING-001 ignores `frequencyUnit` and uses
+  `frequencyDays`, so after a revert monthly/yearly Tenners recur every 30/365 days. No data is lost.
+  Code before SCHEDULING-002 ignores `weekdays`; weekday-bound Tenners then recur every 7 × interval days.
+- **Pause and vacation (SCHEDULING-005):** code before it ignores `pausedAt`/`pausedUntil` and the stored vacation;
+  paused Tenners then appear as due again. Due dates already moved by a vacation stay moved.
 - **Infrastructure changes:** reverting the Terraform code and letting `deploy.yml` apply it
   is the only supported way. Manual changes in AWS are not allowed (see `docs/architecture.md`).
 

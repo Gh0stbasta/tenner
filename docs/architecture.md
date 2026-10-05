@@ -410,28 +410,52 @@ Next Due:
 2026-10-15
 ```
 
-Calculation:
+Calculation (SCHEDULING-001):
 
 ```text
-next_due =
-last_completed +
-frequency_days
+next_due = calculateNextDue(local date(last_completed), frequency_unit, frequency_interval)
 ```
 
-Supported frequencies:
+Supported frequencies, stored as a unit plus an interval:
 
 ```text
-Daily
-Weekly
-Every X Days
-Monthly
-Quarterly
-Yearly
+Daily        → DAY,   1
+Weekly       → WEEK,  1
+Every X Days → DAY,   X
+Monthly      → MONTH, 1
+Quarterly    → MONTH, 3
+Yearly       → YEAR,  1
 ```
+
+Any interval up to 10 years is allowed (e.g. every 2 weeks, every 6 months).
+
+## Scheduling Model (SCHEDULING-001)
+
+- `frequencyUnit` (`DAY`, `WEEK`, `MONTH`, `YEAR`) and `frequencyInterval` (≥ 1) define the recurrence.
+- `calculateNextDue` (`backend/src/utils/schedule.ts`) is the only function that derives a due date from a frequency.
+  Complete and Undo use it.
+- DAY and WEEK add exact days. MONTH and YEAR keep the calendar day and clamp to the last day of the target
+  month: `2026-01-31 + 1 MONTH → 2026-02-28`, `2028-01-31 + 1 MONTH → 2028-02-29`,
+  `2028-02-29 + 1 YEAR → 2029-02-28`. Each step starts from the actual completion date, so a monthly Tenner
+  completed on the 31st and then on the 28th continues from the 28th (completion-based recurrence).
+- `frequencyDays` is kept for compatibility and analytics: exact for DAY/WEEK, an approximation for MONTH/YEAR
+  (30/365 per unit). It is never used for due dates.
+- API: clients send either `frequencyDays` (→ DAY, interval = days; the pre-SCHEDULING-001 form) or
+  `frequencyUnit` + `frequencyInterval`, never both. The validator normalizes the request to all three fields.
+- Migration: none required. Items without `frequencyUnit` are read as DAY with `frequencyInterval = frequencyDays`.
+  `scripts/backfill_frequency_unit.py` optionally writes these values (dry run by default, conditional and
+  idempotent).
+- Changing the frequency does not move `nextDue`; it applies from the next completion.
+- **Weekdays (SCHEDULING-002):** WEEK frequencies may list `weekdays` (`MON`..`SUN`, stored in ISO order). Then
+  `nextDue` is the first date after `completedDate + (interval − 1) weeks` whose weekday is listed: every Saturday,
+  completed Mon 2026-10-05 → Sat 2026-10-10; every Tue + Fri, completed Tue 2026-10-06 → Fri 2026-10-09;
+  every second Friday, completed Fri 2026-10-02 → Fri 2026-10-16. It stays completion-based.
+  `frequencyDays` becomes the average gap (7 × interval / number of weekdays, e.g. Tue + Fri → 4).
+  `weekdays` is only valid with `WEEK` in the same request; any frequency change without it resets it to `null`.
 
 No cron expressions.
 
-No advanced scheduling rules.
+No "nth weekday of month" rules and no fixed-schedule (non-completion-based) recurrence.
 
 ---
 
@@ -990,8 +1014,9 @@ Introduced by TICKET-006 (`terraform/dynamodb.tf`).
 |---|---|---|---|
 | `tenner-tenners` | `tenantId` (PK), `tennerId` (SK) | `nextDue-index` (`tenantId`, `nextDue`), `assignedTo-index` (`tenantId`, `assignedTo`) | Current state of Tenners |
 | `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`), `tennerId-completedAt-index` (`tenantTennerId`, `completedAt`, TICKET-014) | Immutable completion history |
+| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `updatedAt`, `updatedBy` |
 
-Both tables use:
+All tables use:
 - `PAY_PER_REQUEST` billing
 - SSE with the AWS managed KMS key (`aws/dynamodb`)
 - point-in-time recovery (35 days)
@@ -1032,6 +1057,7 @@ API Gateway → Lambda tenner-api ──(AWS SDK v3 DocumentClient)──> tenne
 |---|---|---|
 | `TENNERS_TABLE` | `aws_dynamodb_table.tenners.name` | table name (never hardcoded in code) |
 | `HISTORY_TABLE` | `aws_dynamodb_table.history.name` | table name |
+| `HOUSEHOLDS_TABLE` | `aws_dynamodb_table.households.name` | table name (SCHEDULING-008) |
 | `ENVIRONMENT` | `var.environment` | environment label |
 | `APPLICATION_NAME` | `local.common_tags.Application` | application label |
 | `LOG_LEVEL` | `var.api_log_level` | logger threshold |
@@ -1114,23 +1140,74 @@ index.ts (routing, correlation, error mapping)
   `DeleteItem` is never used by the code (TD-013). Restore (TICKET-015) reverses a soft delete (`active = true`,
   `deletedAt = null`) with an `updatedAt` lock. It never changes the schedule or the history.
 - **Completion workflow (TICKET-013):** completing a Tenner appends an immutable history record and moves the Tenner
-  into its next cycle (`nextDue = UTC date(completedAt) + frequencyDays`) in one `TransactWriteItems`. Optimistic
+  into its next cycle (`nextDue = calculateNextDue(local date(completedAt), unit, interval)`, SCHEDULING-001/008) in one `TransactWriteItems`. Optimistic
   locking checks the loaded state (`updatedAt`, `lastCompleted`, `frequencyDays`, active and not deleted), and
   a conflict returns `409 CONCURRENT_MODIFICATION`. The optional `Idempotency-Key` maps to a deterministic UUID v5
   completion ID. Retries return the original result, and conflicting reuse returns 409. Transactions need no extra
   IAM action, because DynamoDB authorizes them through `PutItem` and `UpdateItem`.
 - **Undo workflow (TICKET-014):** completions are never deleted. Undo marks the latest non-reverted completion
   (`revertedAt`, `revertedBy`, `revertReason`) and restores the Tenner from the previous active completion, using the
-  current `frequencyDays`. If no previous completion exists, `lastCompleted` becomes `null` and `nextDue` the
+  current frequency. If no previous completion exists, `lastCompleted` becomes `null` and `nextDue` the
   `createdAt` date. Both writes happen in one `TransactWriteItems`, with conditions on "not yet reverted" and the
   loaded Tenner state. History per Tenner is read through the GSI `tennerId-completedAt-index`
   (`tenantTennerId = "<tenant>#<tenner>"`, newest first, no Scan).
+- **Snooze (SCHEDULING-003):** `POST /tenners/{tennerId}/snooze` with `until` or `days` sets `nextDue` and
+  `snoozedUntil` to the new date. Rules: after today (household timezone) and after the current `nextDue`, at most
+  one frequency interval or 30 days ahead (whichever is later); inactive or archived → 409. The next completion
+  clears `snoozedUntil`. One `TransactWriteItems` writes an audit event and the Tenner (optimistic lock on
+  `updatedAt`, active, not deleted).
+  - **Storage decision:** the audit event lives in `tenner-history` (`eventType = SNOOZE`, `historyId =
+    snooze#<id>`), not in a new table or a counter attribute. It has no `completedAt` and no `tenantTennerId`,
+    so the sparse GSIs `completedAt-index` and `tennerId-completedAt-index` never contain it: completion history,
+    undo and analytics ignore snoozes without code changes. `#` cannot occur in completion IDs (UUIDs), so keys
+    cannot collide. Considered: a separate table (more infrastructure for few items) and a snooze counter on the
+    Tenner (not auditable).
+  - Snooze events are not exposed through the API yet (TD-028).
+- **Skip (SCHEDULING-004):** `POST /tenners/{tennerId}/skip` (optional `reason`, ≤ 200 characters) drops the current
+  occurrence: `nextDue = calculateNextDue(max(today, nextDue), unit, interval, weekdays)`, `lastCompleted` unchanged,
+  `snoozedUntil` cleared, inactive/archived → 409. Same transaction and storage pattern as snooze (`eventType = SKIP`,
+  `historyId = skip#<id>`, fields `skippedDue`, `nextDue`, `reason`), so skips never count as completions.
+  - For a Tenner that is not due yet the next cycle counts from its due date (the ticket says "today"), so a skip
+    never moves a Tenner earlier.
+  - Analytics: a skipped occurrence is neither fulfilled nor neglected. Today only completion-based views exist
+    (consistency on the detail page), which ignore skips automatically. ANALYTICS-006/008 must exclude skipped
+    cycles from expected completions (noted in those tickets).
+  - The reason is free text and is not logged.
+- **Pause and vacation (SCHEDULING-005):**
+  - Individual pause: `POST /tenners/{tennerId}/pause` (`until` = last paused day, optional) and `/resume`. Stored as
+    `pausedAt` + `pausedUntil` on the Tenner. Household vacation: `PUT`/`DELETE /household/vacation`
+    (`from`, `until`, optional `categories`, default all), stored in `tenner-households`.
+  - **Decision: no scheduler.** A Tenner is paused while `pausedAt` is set and `pausedUntil` is null or ≥ today, or
+    while the vacation covers today and its category. This is evaluated at read time, so a pause with an end date
+    ends on its own ("automatic resume"). Considered: a daily EventBridge job (new infrastructure, IAM changes for
+    the deploy role, a Scan) — rejected as unnecessary for one household.
+  - Due dates move when the pause is set, not when it ends: a pause until D moves a due date ≤ D to D + 1; a vacation
+    moves Tenners due within it (and overdue ones once it has started) behind it, spread by `distributeResume`
+    so that no day exceeds the average daily load (Σ minutes / frequencyDays) + 50 %, at least one Tenner per day.
+    Manual resume of an open-ended pause sets a passed due date to today. Completion and skip move a new due date
+    out of the vacation; completion also ends an individual pause.
+  - Effects: the dashboard leaves paused Tenners out of all sections and summaries and lists them in `paused` (a
+    second Query on the tenant's active Tenners). The frontend shows "Pausiert bis …". Notifications
+    (NOTIFICATION-001) and analytics (ANALYTICS-006/008) do not exist yet; their tickets now require excluding
+    paused Tenners and periods.
 - **Dashboard read model (TICKET-016):** `GET /dashboard` returns due today, overdue, upcoming (next 7 days),
   a summary and actionable workload per user and category in one response. It is backed by one `nextDue-index`
-  Query (`nextDue <= reference + 7`, active and not deleted). The reference date is "today" in `APPLICATION_TIMEZONE`
-  (default `Europe/Berlin`, Terraform `var.application_timezone`), or the `date` parameter.
+  Query (`nextDue <= reference + 7`, active and not deleted). The reference date is "today" in the household timezone, or the `date` parameter.
 - **Time and IDs:** services receive a `Clock` and an `IdGenerator` (`utils/clock.ts`), so tests are deterministic.
-  Dates are UTC until SCHEDULING-008 (TD-005).
+  Calendar dates are household-local (see "Date Semantics").
+- **Date semantics (SCHEDULING-008):** `nextDue` is a calendar date (`YYYY-MM-DD`) in the **household timezone**.
+  - The household timezone (IANA, e.g. `Europe/Berlin`) is stored in `tenner-households` and edited in Settings
+    (`GET`/`PUT /household`). Without a stored value, `APPLICATION_TIMEZONE` (default `Europe/Berlin`) applies.
+  - All services get it through one function, `TimeZoneSource = (tenantId) => Promise<string>`.
+  - `today = localDate(now, tz)`; `nextDue = calculateNextDue(localDate(completedAt, tz), unit, interval)`; a new Tenner is due on
+    its local creation date. Timestamps (`completedAt`, `createdAt`, …) stay UTC ISO strings.
+  - Local dates come from the platform `Intl` API (`utils/timezone.ts`), which carries the IANA database and DST
+    rules. Adding days is pure calendar arithmetic, so DST changes never shift a date. No date library is needed.
+  - The frontend computes "today" for due/overdue labels in the household timezone too (`useToday()`).
+  - Migration: none. Values computed before 2026-10-05 were UTC dates and may be one day early for completions
+    between local midnight and 01:00/02:00; the next completion corrects them.
+  - Changing the timezone does not rewrite stored `nextDue` values; it only changes how future dates and "today"
+    are computed.
 
 ---
 

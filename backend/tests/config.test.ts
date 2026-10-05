@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.js";
 
-const TABLES = { TENNERS_TABLE: "tenner-tenners", HISTORY_TABLE: "tenner-history" };
+const TABLES = { TENNERS_TABLE: "tenner-tenners", HISTORY_TABLE: "tenner-history", HOUSEHOLDS_TABLE: "tenner-households" };
 
 describe("loadConfig", () => {
   it("uses defaults when variables are missing", () => {
@@ -21,7 +21,7 @@ describe("loadConfig", () => {
       logLevel: "DEBUG",
       applicationName: "Tenner",
       timezone: "Europe/Berlin",
-      tables: { tenners: "tenner-tenners", history: "tenner-history" },
+      tables: { tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" },
       onboarding: undefined,
     });
   });

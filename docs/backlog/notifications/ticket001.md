@@ -157,6 +157,14 @@ Do not log message bodies containing personal data beyond Tenner titles.
 
 ---
 
+## Paused Tenners (added by SCHEDULING-005)
+
+Suppress notifications for paused Tenners: individually paused (`pausedAt` set and `pausedUntil` null or ≥ today)
+or covered by the household vacation (`tenner-households.vacation`: today within `from`–`until` and category
+listed, or all categories). Use the same rules as `backend/src/utils/pause.ts`.
+
+---
+
 # Testing Requirements
 
 ```text

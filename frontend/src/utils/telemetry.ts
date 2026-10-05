@@ -7,7 +7,13 @@ export type TelemetryEvent =
   | "FilterChanged"
   | "TennerCreated"
   | "TennerUpdated"
-  | "CompletionUndone";
+  | "CompletionUndone"
+  | "TennerSnoozed"
+  | "TennerSkipped"
+  | "TennerPaused"
+  | "TennerResumed"
+  | "VacationSet"
+  | "VacationEnded";
 
 export function trackEvent(event: TelemetryEvent, properties: Readonly<Record<string, unknown>> = {}): void {
   console.info(`[telemetry] ${event}`, properties);

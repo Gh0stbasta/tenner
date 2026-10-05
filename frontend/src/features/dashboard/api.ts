@@ -13,10 +13,18 @@ const dashboardTennerSchema = z.object({
   assignedTo: userIdSchema,
   estimatedMinutes: z.number(),
   nextDue: z.string(),
+  snoozedUntil: z.string().nullable(),
   overdueDays: z.number().optional(),
   daysUntilDue: z.number().optional(),
 });
 export type DashboardTenner = z.infer<typeof dashboardTennerSchema>;
+
+/** SCHEDULING-005: paused Tenners, excluded from all other sections. */
+const pausedTennerSchema = dashboardTennerSchema.extend({
+  pausedUntil: z.string().nullable(),
+  pauseReason: z.enum(["PAUSE", "VACATION"]),
+});
+export type PausedDashboardTenner = z.infer<typeof pausedTennerSchema>;
 
 const groupSummarySchema = z.object({ count: z.number(), estimatedMinutes: z.number() });
 export type GroupSummary = z.infer<typeof groupSummarySchema>;
@@ -37,6 +45,7 @@ export const dashboardSchema = z.object({
   dueToday: z.array(dashboardTennerSchema),
   overdue: z.array(dashboardTennerSchema),
   upcoming: z.array(dashboardTennerSchema),
+  paused: z.array(pausedTennerSchema).default([]),
   byUser: z.partialRecord(userIdSchema, groupSummarySchema),
   byCategory: z.partialRecord(categorySchema, groupSummarySchema),
 });

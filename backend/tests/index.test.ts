@@ -16,6 +16,7 @@ const emptyDashboard = {
   dueToday: [],
   overdue: [],
   upcoming: [],
+  paused: [],
   byUser: {},
   byCategory: {},
 };
@@ -39,6 +40,14 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       },
       replayed: false,
     })),
+    snoozeTenner: vi.fn(async () => ({
+      tenner: tennerResponse,
+      snooze: { snoozeId: "s-1", snoozedBy: "STEFAN" as const, snoozedAt: "2026-10-01T18:30:00Z", previousNextDue: "2026-10-01", snoozedUntil: "2026-10-04" },
+    })),
+    skipTenner: vi.fn(async () => ({
+      tenner: tennerResponse,
+      skip: { skipId: "k-1", skippedBy: "STEFAN" as const, skippedAt: "2026-10-01T18:30:00Z", skippedDue: "2026-10-01", nextDue: "2026-10-15", reason: null },
+    })),
     getDashboard: vi.fn(async () => emptyDashboard),
     getTenner: vi.fn(async () => tennerResponse),
     getHistory: vi.fn(async () => ({ items: [], nextCursor: null })),
@@ -61,6 +70,12 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       replayed: false,
     })),
     deleteTenner: vi.fn(async () => ({ response: { tennerId: "t-1", deleted: true as const }, outcome: { status: "DELETED" as const, tenner: tennerFixture() } })),
+    getHousehold: vi.fn(async () => ({ timezone: "Europe/Berlin", vacation: null })),
+    updateHouseholdTimezone: vi.fn(async (_identity, timezone: string) => ({ timezone, vacation: null })),
+    pauseTenner: vi.fn(async () => tennerResponse),
+    resumeTenner: vi.fn(async () => tennerResponse),
+    setVacation: vi.fn(async () => ({ household: { timezone: "Europe/Berlin", vacation: { from: "2026-10-10", until: "2026-10-24", categories: null } }, rescheduled: 2, conflicts: 0 })),
+    endVacation: vi.fn(async () => ({ timezone: "Europe/Berlin", vacation: null })),
     getOnboarding: vi.fn(async () => ({ assignedTo: null, members: [] })),
     assignHouseholdMember: vi.fn(async () => ({ response: { userId: "JULIA" as const }, group: "household:default:JULIA" })),
     ...overrides,
@@ -220,7 +235,7 @@ describe("POST /tenners", () => {
     const response = await route(event("POST /tenners", {}, JSON.stringify(valid)), d);
     expect(response.statusCode).toBe(201);
     expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: tennerResponse });
-    expect(d.createTenner).toHaveBeenCalledWith(TEST_IDENTITY, valid);
+    expect(d.createTenner).toHaveBeenCalledWith(TEST_IDENTITY, { ...valid, frequencyUnit: "DAY", frequencyInterval: valid.frequencyDays, weekdays: null });
   });
 
   it("rejects invalid input with 400 before calling the service", async () => {
@@ -269,6 +284,52 @@ describe("GET /tenners", () => {
   });
 });
 
+describe("POST /tenners/{tennerId}/snooze (SCHEDULING-003)", () => {
+  it("snoozes and returns 200", async () => {
+    const d = deps();
+    const response = await route({ ...event("POST /tenners/{tennerId}/snooze", {}, JSON.stringify({ days: 3 })), pathParameters: { tennerId: "t-1" } } as APIGatewayProxyEventV2, d);
+    expect(response.statusCode).toBe(200);
+    expect(d.snoozeTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", { days: 3 });
+  });
+
+  it("rejects requests with both until and days", async () => {
+    const d = deps();
+    const response = await route({ ...event("POST /tenners/{tennerId}/snooze", {}, JSON.stringify({ days: 3, until: "2026-10-08" })), pathParameters: { tennerId: "t-1" } } as APIGatewayProxyEventV2, d);
+    expect(response.statusCode).toBe(400);
+    expect(d.snoozeTenner).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /tenners/{tennerId}/skip (SCHEDULING-004)", () => {
+  it("skips and returns 200", async () => {
+    const d = deps();
+    const response = await route({ ...event("POST /tenners/{tennerId}/skip"), pathParameters: { tennerId: "t-1" } } as APIGatewayProxyEventV2, d);
+    expect(response.statusCode).toBe(200);
+    expect(d.skipTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", {});
+  });
+});
+
+describe("pause and vacation routes (SCHEDULING-005)", () => {
+  const withId = (routeKey: string, body?: string) => ({ ...event(routeKey, {}, body), pathParameters: { tennerId: "t-1" } }) as APIGatewayProxyEventV2;
+
+  it("pauses and resumes", async () => {
+    const d = deps();
+    expect((await route(withId("POST /tenners/{tennerId}/pause", JSON.stringify({ until: "2026-10-12" })), d)).statusCode).toBe(200);
+    expect(d.pauseTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", { until: "2026-10-12" });
+    expect((await route(withId("POST /tenners/{tennerId}/resume"), d)).statusCode).toBe(200);
+    expect(d.resumeTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1");
+  });
+
+  it("sets and ends the vacation", async () => {
+    const d = deps();
+    const set = await route(event("PUT /household/vacation", {}, JSON.stringify({ from: "2026-10-10", until: "2026-10-24" })), d);
+    expect(set.statusCode).toBe(200);
+    expect(d.setVacation).toHaveBeenCalledWith(TEST_IDENTITY, { from: "2026-10-10", until: "2026-10-24" });
+    expect((await route(event("DELETE /household/vacation"), d)).statusCode).toBe(200);
+    expect(d.endVacation).toHaveBeenCalledWith(TEST_IDENTITY);
+  });
+});
+
 describe("PUT /tenners/{tennerId}", () => {
   const put = (id: string | undefined, payload: unknown): APIGatewayProxyEventV2 =>
     ({
@@ -283,7 +344,7 @@ describe("PUT /tenners/{tennerId}", () => {
     const d = deps();
     const response = await route(put("t-1", { frequencyDays: 30 }), d);
     expect(response.statusCode).toBe(200);
-    expect(d.updateTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", { frequencyDays: 30 });
+    expect(d.updateTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", { frequencyDays: 30, frequencyUnit: "DAY", frequencyInterval: 30, weekdays: null });
   });
 
   it("returns 404 when the Tenner does not exist", async () => {
@@ -501,7 +562,7 @@ describe("createDependencies", () => {
       environment: "prod",
       application: "Tenner",
       timezone: "Europe/Berlin",
-      tables: { tenners: "tenner-tenners", history: "tenner-history" },
+      tables: { tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" },
       onboarding: { userPoolId: "eu-central-1_TEST", tenantId: "default" },
     });
   });
@@ -514,5 +575,24 @@ describe("handler", () => {
     const response = await handler(event("GET /health"));
     expect(response.statusCode).toBe(503);
     expect(JSON.parse(response.body ?? "").database).toBe("misconfigured");
+  });
+});
+
+describe("household routes (SCHEDULING-008)", () => {
+  it("GET /household uses the tenant from the claims; PUT passes the identity", async () => {
+    const d = deps();
+    const get = await route({ routeKey: "GET /household", headers: {}, requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
+    expect(get.statusCode).toBe(200);
+    expect(d.getHousehold).toHaveBeenCalledWith("default");
+    const put = await route({ routeKey: "PUT /household", headers: {}, body: JSON.stringify({ timezone: "Europe/Vienna" }), requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
+    expect(put.statusCode).toBe(200);
+    expect(d.updateHouseholdTimezone).toHaveBeenCalledWith(TEST_IDENTITY, "Europe/Vienna");
+  });
+
+  it("rejects an unknown timezone with 400", async () => {
+    const d = deps();
+    const put = await route({ routeKey: "PUT /household", headers: {}, body: JSON.stringify({ timezone: "Mars/Olympus" }), requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
+    expect(put.statusCode).toBe(400);
+    expect(d.updateHouseholdTimezone).not.toHaveBeenCalled();
   });
 });

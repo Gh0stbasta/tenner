@@ -73,7 +73,7 @@ describe("updateTennerHandler", () => {
     const response = await updateTennerHandler(event({ title: "Vacuum Home Office", frequencyDays: 30 }), TEST_IDENTITY, (t, id, r) => service.updateTenner(t, id, r), logger);
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body ?? "").data).toMatchObject({ title: "Vacuum Home Office", frequencyDays: 30 });
-    expect(logger.info).toHaveBeenCalledWith("Tenner updated", { tennerId: "t-1", changedFields: ["title", "frequencyDays"], assignedTo: "STEFAN" });
+    expect(logger.info).toHaveBeenCalledWith("Tenner updated", { tennerId: "t-1", changedFields: ["title", "frequencyDays", "frequencyUnit", "frequencyInterval", "weekdays"], assignedTo: "STEFAN" });
   });
 
   it.each([

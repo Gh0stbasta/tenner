@@ -10,15 +10,17 @@ export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
 export interface TableConfig {
   readonly tenners: string;
   readonly history: string;
+  /** Household settings, e.g. the timezone (SCHEDULING-008). */
+  readonly households: string;
 }
 
 export interface AppConfig {
   readonly environment: string;
   readonly logLevel: LogLevel;
   readonly applicationName: string;
-  /** IANA timezone for calendar-date decisions such as the dashboard reference date (TICKET-016). */
+  /** Default household timezone (APPLICATION_TIMEZONE) until a household saves its own (SCHEDULING-008). */
   readonly timezone: string;
-  /** DynamoDB table names. Undefined when TENNERS_TABLE or HISTORY_TABLE is missing. */
+  /** DynamoDB table names. Undefined when TENNERS_TABLE, HISTORY_TABLE or HOUSEHOLDS_TABLE is missing. */
   readonly tables: TableConfig | undefined;
   /** Self-assignment to a household member (HOTFIX-001). Undefined when the variables are missing. */
   readonly onboarding: OnboardingConfig | undefined;
@@ -49,6 +51,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const logLevel = (env.LOG_LEVEL ?? DEFAULTS.logLevel).toUpperCase();
   const tenners = readTrimmed(env.TENNERS_TABLE);
   const history = readTrimmed(env.HISTORY_TABLE);
+  const households = readTrimmed(env.HOUSEHOLDS_TABLE);
   const userPoolId = readTrimmed(env.COGNITO_USER_POOL_ID);
   const householdTenantId = readTrimmed(env.HOUSEHOLD_TENANT_ID);
   return {
@@ -56,7 +59,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     logLevel: LOG_LEVELS.includes(logLevel as LogLevel) ? (logLevel as LogLevel) : DEFAULTS.logLevel,
     applicationName: readTrimmed(env.APPLICATION_NAME) ?? DEFAULTS.applicationName,
     timezone: resolveTimeZone(readTrimmed(env.APPLICATION_TIMEZONE)),
-    tables: tenners && history ? { tenners, history } : undefined,
+    tables: tenners && history && households ? { tenners, history, households } : undefined,
     onboarding: userPoolId && householdTenantId ? { userPoolId, tenantId: householdTenantId } : undefined,
   };
 }

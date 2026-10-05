@@ -161,3 +161,36 @@ resource "aws_dynamodb_table" "history" {
     prevent_destroy = true
   }
 }
+
+# Household settings (SCHEDULING-008): one item per tenant, e.g. the timezone all due dates use.
+# HOUSEHOLD-ADMIN-003 adds more attributes to the same item.
+resource "aws_dynamodb_table" "households" {
+  name         = local.households_table_name
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "tenantId"
+
+  attribute {
+    name = "tenantId"
+    type = "S"
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  deletion_protection_enabled = true
+
+  tags = {
+    Name        = local.households_table_name
+    Purpose     = "Household settings storage."
+    Description = "Stores settings per household such as the timezone."
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}

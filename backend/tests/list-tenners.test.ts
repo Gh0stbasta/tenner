@@ -9,7 +9,7 @@ const NOW = new Date("2026-10-10T08:00:00Z");
 function setup(tenners: Tenner[] = []) {
   const repository = mockTennerRepository();
   repository.list.mockResolvedValue(tenners);
-  return { repository, service: new ListTennersService(repository, () => NOW) };
+  return { repository, service: new ListTennersService(repository, () => NOW, async () => "UTC") };
 }
 
 describe("ListTennersService", () => {
@@ -86,7 +86,7 @@ describe("ListTennersService", () => {
   it("propagates repository failures", async () => {
     const repository = mockTennerRepository();
     repository.list.mockRejectedValue(new PersistenceError());
-    await expect(new ListTennersService(repository, () => NOW).listTenners("default")).rejects.toBeInstanceOf(PersistenceError);
+    await expect(new ListTennersService(repository, () => NOW, async () => "UTC").listTenners("default")).rejects.toBeInstanceOf(PersistenceError);
   });
 });
 

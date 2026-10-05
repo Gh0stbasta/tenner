@@ -14,7 +14,7 @@ export class UpdateTennerService {
   /**
    * Apply a validated partial update. Only allowed fields are copied (protected fields can never pass),
    * updatedAt/updatedBy are refreshed, and the schedule (lastCompleted, nextDue) stays untouched even when
-   * frequencyDays changes.
+   * the frequency changes.
    */
   async updateTenner(identity: Identity, tennerId: string, request: UpdateTennerRequest): Promise<UpdateTennerResponse> {
     const changes: TennerUpdate = {
@@ -22,6 +22,9 @@ export class UpdateTennerService {
       category: request.category,
       estimatedMinutes: request.estimatedMinutes,
       frequencyDays: request.frequencyDays,
+      frequencyUnit: request.frequencyUnit,
+      frequencyInterval: request.frequencyInterval,
+      weekdays: request.weekdays,
       assignedTo: request.assignedTo,
       active: request.active,
       updatedAt: toUtcTimestamp(this.clock()),

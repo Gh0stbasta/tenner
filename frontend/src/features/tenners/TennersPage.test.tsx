@@ -255,9 +255,30 @@ describe("TennersPage", () => {
 });
 
 describe("frequencyLabel", () => {
-  it("names daily and weekly frequencies", () => {
-    expect(frequencyLabel(1)).toBe("Täglich");
-    expect(frequencyLabel(7)).toBe("Wöchentlich");
-    expect(frequencyLabel(30)).toBe("Alle 30 Tage");
+  it.each([
+    ["DAY", 1, "Täglich"],
+    ["DAY", 7, "Wöchentlich"],
+    ["DAY", 30, "Alle 30 Tage"],
+    ["WEEK", 1, "Wöchentlich"],
+    ["WEEK", 2, "Alle 2 Wochen"],
+    ["MONTH", 1, "Monatlich"],
+    ["MONTH", 3, "Vierteljährlich"],
+    ["MONTH", 6, "Halbjährlich"],
+    ["MONTH", 2, "Alle 2 Monate"],
+    ["YEAR", 1, "Jährlich"],
+    ["YEAR", 2, "Alle 2 Jahre"],
+  ] as const)("labels %s × %i as %s (SCHEDULING-001)", (frequencyUnit, frequencyInterval, label) => {
+    expect(frequencyLabel({ frequencyUnit, frequencyInterval })).toBe(label);
+  });
+
+  it("lists weekdays for weekday-bound frequencies (SCHEDULING-002)", () => {
+    expect(frequencyLabel({ frequencyUnit: "WEEK", frequencyInterval: 1, weekdays: ["SAT"] })).toBe("Wöchentlich (Sa)");
+    expect(frequencyLabel({ frequencyUnit: "WEEK", frequencyInterval: 1, weekdays: ["TUE", "FRI"] })).toBe(
+      "Wöchentlich (Di, Fr)",
+    );
+    expect(frequencyLabel({ frequencyUnit: "WEEK", frequencyInterval: 2, weekdays: ["FRI"] })).toBe(
+      "Alle 2 Wochen (Fr)",
+    );
+    expect(frequencyLabel({ frequencyUnit: "WEEK", frequencyInterval: 1, weekdays: null })).toBe("Wöchentlich");
   });
 });

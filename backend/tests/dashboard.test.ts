@@ -27,7 +27,8 @@ const mixed = [
 function setup(candidates: Tenner[] = mixed, now = new Date("2026-10-01T08:00:00Z"), timezone = "Europe/Berlin") {
   const repository = mockTennerRepository();
   repository.getDashboardCandidates.mockResolvedValue(candidates);
-  return { repository, service: new DashboardService(repository, () => now, timezone) };
+  repository.list.mockResolvedValue([]);
+  return { repository, service: new DashboardService(repository, () => now, async () => timezone, async () => null) };
 }
 
 const ids = (items: { tennerId: string }[]) => items.map((i) => i.tennerId);
@@ -56,7 +57,7 @@ describe("DashboardService", () => {
     expect(all).not.toContain("deleted-but-active-flag");
     expect(dashboard.overdue.map((i) => i.overdueDays)).toEqual([11, 3]);
     expect(dashboard.upcoming.map((i) => i.daysUntilDue)).toEqual([3, 3, 7]);
-    expect(dashboard.dueToday[0]).toEqual({ tennerId: "due-c", title: "Water Plants", category: "HOME", assignedTo: "STEFAN", estimatedMinutes: 5, nextDue: REF });
+    expect(dashboard.dueToday[0]).toEqual({ tennerId: "due-c", title: "Water Plants", category: "HOME", assignedTo: "STEFAN", estimatedMinutes: 5, nextDue: REF, snoozedUntil: null });
     expect(dashboard.dueToday[0]).not.toHaveProperty("overdueDays");
   });
 
@@ -109,6 +110,7 @@ describe("DashboardService", () => {
       dueToday: [],
       overdue: [],
       upcoming: [],
+      paused: [],
       byUser: {},
       byCategory: {},
     });

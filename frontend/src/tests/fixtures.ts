@@ -11,6 +11,7 @@ export function dashboardTenner(overrides: Partial<DashboardTenner> = {}): Dashb
     assignedTo: "STEFAN",
     estimatedMinutes: 10,
     nextDue: "2026-10-02",
+    snoozedUntil: null,
     ...overrides,
   };
 }
@@ -58,6 +59,7 @@ export function dashboard(overrides: Partial<Dashboard> = {}): Dashboard {
     dueToday,
     overdue,
     upcoming,
+    paused: overrides.paused ?? [],
   };
 }
 
@@ -68,9 +70,15 @@ export function tenner(overrides: Partial<Tenner> = {}): Tenner {
     category: "HOUSEHOLD",
     estimatedMinutes: 10,
     frequencyDays: 14,
+    frequencyUnit: "DAY",
+    frequencyInterval: 14,
+    weekdays: null,
     assignedTo: "STEFAN",
     lastCompleted: null,
     nextDue: "2026-10-02",
+    snoozedUntil: null,
+    pausedAt: null,
+    pausedUntil: null,
     active: true,
     deletedAt: null,
     createdAt: "2026-09-01T08:00:00Z",

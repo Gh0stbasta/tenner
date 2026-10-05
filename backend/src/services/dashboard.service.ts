@@ -1,7 +1,11 @@
-/** Dashboard read model (TICKET-016): due today, overdue, upcoming and workload summaries in one response. */
+/**
+ * Dashboard read model (TICKET-016): due today, overdue, upcoming and workload summaries in one response.
+ * Two queries since SCHEDULING-005: the nextDue window and the active Tenners for the paused section.
+ */
 
 import type {
   DashboardGroupSummary,
+  DashboardPausedTennerResponse,
   DashboardRequest,
   DashboardResponse,
   DashboardSummaryResponse,
@@ -10,7 +14,8 @@ import type {
 import type { Tenner } from "../models/index.js";
 import type { TennerRepository } from "../repositories/index.js";
 import { addDays, type Clock } from "../utils/clock.js";
-import { dateInTimeZone, daysBetween } from "../utils/timezone.js";
+import { isPaused, isPausedIndividually, pausedUntilOf, type VacationSource } from "../utils/pause.js";
+import { dateInTimeZone, daysBetween, type TimeZoneSource } from "../utils/timezone.js";
 
 /** Upcoming window: referenceDate < nextDue <= referenceDate + UPCOMING_DAYS. */
 export const UPCOMING_DAYS = 7;
@@ -35,21 +40,29 @@ export const SORT_UPCOMING = chain(byString("nextDue"), byMinutes, byString("tit
 
 export class DashboardService {
   constructor(
-    private readonly repository: Pick<TennerRepository, "getDashboardCandidates">,
+    private readonly repository: Pick<TennerRepository, "getDashboardCandidates" | "list">,
     private readonly clock: Clock,
-    private readonly timezone: string,
+    private readonly timezoneOf: TimeZoneSource,
+    private readonly vacationOf: VacationSource,
   ) {}
 
   async getDashboard(tenantId: string, request: DashboardRequest = {}): Promise<DashboardResponse> {
-    const referenceDate = request.date ?? dateInTimeZone(this.clock(), this.timezone);
+    const timezone = await this.timezoneOf(tenantId);
+    const referenceDate = request.date ?? dateInTimeZone(this.clock(), timezone);
     const endDate = addDays(referenceDate, UPCOMING_DAYS);
+    const vacation = await this.vacationOf(tenantId);
+    const matches = (t: Tenner): boolean =>
+      t.active &&
+      t.deletedAt === null &&
+      (request.assignedTo === undefined || t.assignedTo === request.assignedTo) &&
+      (request.category === undefined || t.category === request.category);
+    // Paused Tenners (SCHEDULING-005) leave every section and summary and get their own list.
     const candidates = (await this.repository.getDashboardCandidates(tenantId, endDate)).filter(
-      (t) =>
-        t.active &&
-        t.deletedAt === null &&
-        (request.assignedTo === undefined || t.assignedTo === request.assignedTo) &&
-        (request.category === undefined || t.category === request.category),
+      (t) => matches(t) && !isPaused(t, vacation, referenceDate),
     );
+    const paused = (await this.repository.list(tenantId, { active: true }))
+      .filter((t) => matches(t) && isPaused(t, vacation, referenceDate))
+      .sort(SORT_OVERDUE);
 
     const dueToday = candidates.filter((t) => t.nextDue === referenceDate).sort(SORT_DUE_TODAY);
     const overdue = candidates.filter((t) => t.nextDue < referenceDate).sort(SORT_OVERDUE);
@@ -58,11 +71,16 @@ export class DashboardService {
 
     return {
       referenceDate,
-      timezone: this.timezone,
+      timezone,
       summary: summarize(dueToday, overdue, upcoming),
       dueToday: dueToday.map((t) => toItem(t)),
       overdue: overdue.map((t) => toItem(t, { overdueDays: daysBetween(t.nextDue, referenceDate) })),
       upcoming: upcoming.map((t) => toItem(t, { daysUntilDue: daysBetween(referenceDate, t.nextDue) })),
+      paused: paused.map((t): DashboardPausedTennerResponse => ({
+        ...toItem(t),
+        pausedUntil: pausedUntilOf(t, vacation, referenceDate),
+        pauseReason: isPausedIndividually(t, referenceDate) ? "PAUSE" : "VACATION",
+      })),
       byUser: groupBy(actionable, (t) => t.assignedTo),
       byCategory: groupBy(actionable, (t) => t.category),
     };
@@ -101,6 +119,7 @@ function toItem(tenner: Tenner, extra: { overdueDays?: number; daysUntilDue?: nu
     assignedTo: tenner.assignedTo,
     estimatedMinutes: tenner.estimatedMinutes,
     nextDue: tenner.nextDue,
+    snoozedUntil: tenner.snoozedUntil,
     ...extra,
   };
 }

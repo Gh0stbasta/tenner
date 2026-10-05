@@ -13,6 +13,7 @@ import { QuickAddTenner } from "../tenners/QuickAddTenner";
 import { useDashboard, type Dashboard } from "./api";
 import { DueTodayList } from "./DueTodayList";
 import { OverdueList } from "./OverdueList";
+import { PausedList } from "./PausedList";
 import { SummaryCards } from "./SummaryCards";
 import { UpcomingList } from "./UpcomingList";
 import { CategorySummaryCard, UserSummaryCard } from "./WorkloadCards";
@@ -60,6 +61,7 @@ export function DashboardPage() {
           <DueTodayList tenners={data.dueToday} />
           <OverdueList tenners={data.overdue} />
           {preferences.showUpcoming && <UpcomingList tenners={data.upcoming} />}
+          <PausedList tenners={data.paused} />
           {preferences.showRecentActivity && <RecentActivityWidget />}
         </Grid>
         {sideColumn && (

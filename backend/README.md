@@ -1,7 +1,7 @@
 # Tenner Backend
 
 TypeScript code for the `tenner-api` Lambda function (Node.js 22, arm64), behind an
-API Gateway HTTP API. Data is stored in DynamoDB (`tenner-tenners`, `tenner-history`).
+API Gateway HTTP API. Data is stored in DynamoDB (`tenner-tenners`, `tenner-history`, `tenner-households`).
 
 ## Commands
 
@@ -100,7 +100,7 @@ The assignment is logged as `HouseholdMemberAssigned` with the Cognito username,
 
 | Model | Fields |
 |---|---|
-| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `active`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy` |
+| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `frequencyUnit`, `frequencyInterval`, `weekdays`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `snoozedUntil` (YYYY-MM-DD or null, SCHEDULING-003), `pausedAt`, `pausedUntil` (SCHEDULING-005), `active`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy` |
 | `Completion` | `tenantId`, `completionId` (stored as `historyId`), `tennerId`, `completedBy`, `recordedBy`, `completedAt`, `actualMinutes` |
 
 `createdBy`, `updatedBy` and `recordedBy` are set from the authenticated user (SECURITY-004). Records written before
@@ -120,7 +120,17 @@ Zod schemas are in `src/validators/`. The limits are centralized in `LIMITS`:
 |---|---|
 | `title` | trimmed, 3–100 characters |
 | `estimatedMinutes` | integer, 1–480 |
-| `frequencyDays` | integer, 1–3650 |
+| `frequencyDays` | integer, 1–3650. Alone it means unit `DAY` with that interval |
+| `frequencyUnit` | `DAY`, `WEEK`, `MONTH`, `YEAR` (SCHEDULING-001) |
+| `frequencyInterval` | integer ≥ 1, default 1; only with `frequencyUnit`; at most 3650 approximate days (e.g. 10 years) |
+| `weekdays` | `null` or 1–7 distinct values of `MON`..`SUN` (SCHEDULING-002); only with `frequencyUnit: "WEEK"` in the same request. Normalized to ISO order |
+
+Send either `frequencyDays` or `frequencyUnit` (+ `frequencyInterval`), not both (400 otherwise). The validator
+normalizes every request to all three fields; for `MONTH`/`YEAR`, `frequencyDays` is an approximation (30/365 per
+unit) for analytics only. Due dates come from `calculateNextDue` (`src/utils/schedule.ts`): months and years keep
+the calendar day and clamp to the month end (31 Jan + 1 month → 28/29 Feb). With `weekdays`, the next due date is
+the first listed weekday after `completed date + (interval − 1) weeks` (every Saturday, completed Monday → that
+Saturday); `frequencyDays` is then the average gap.
 | `actualMinutes` | integer, 1–1440 |
 | `completedAt` | ISO 8601 UTC timestamp (`Z`, no offset) |
 | `category`, `assignedTo`, `completedBy` | enumeration values |
@@ -136,7 +146,7 @@ Unknown fields are rejected (`strictObject`). An update must contain at least on
 | `category` | category values | category |
 | `active` | `true` (default), `false` | active or inactive Tenners. No default together with `deleted=true` |
 | `deleted` | `true`, `false` | `true`: only soft-deleted (archived) Tenners (TICKET-024). Default: deleted Tenners are excluded |
-| `due` | `true`, `false` | `true`: `nextDue <= today` (UTC). `false` does not filter |
+| `due` | `true`, `false` | `true`: `nextDue <= today` (household timezone, SCHEDULING-008). `false` does not filter |
 | `overdue` | `true`, `false` | `true`: `nextDue < today` (wins over `due`). `false` does not filter |
 | `sort` | `nextDue` (default), `title`, `createdAt`, `updatedAt` | sort field (ties broken by title, then ID) |
 | `order` | `asc` (default), `desc` | sort direction |
@@ -155,11 +165,11 @@ Remaining criteria are applied as a `FilterExpression`. Sorting happens in the s
 
 ### PUT /tenners/{tennerId}
 
-This is a partial update. Allowed fields: `title`, `category`, `estimatedMinutes`, `frequencyDays`, `assignedTo`
+This is a partial update. Allowed fields: `title`, `category`, `estimatedMinutes`, `frequencyDays` or `frequencyUnit` + `frequencyInterval`, `assignedTo`
 and `active`. At least one field is required, and the same validation rules as on create apply.
 
 The protected fields `tenantId`, `tennerId`, `createdAt`, `lastCompleted` and `nextDue` are rejected with 400.
-`updatedAt` and `updatedBy` are refreshed. Changing `frequencyDays` does **not** change `nextDue` or `lastCompleted`.
+`updatedAt` and `updatedBy` are refreshed. Changing the frequency does **not** change `nextDue` or `lastCompleted`.
 
 The repository uses one `UpdateItem` that sets only the provided fields plus `updatedAt`, with the condition
 `attribute_exists(tennerId)` (missing → 404) and `ReturnValues: ALL_NEW`. Attributes that were not sent, such as
@@ -193,7 +203,7 @@ Effects on other endpoints:
 | `actualMinutes` | optional, 1–1440. Default: the Tenner's `estimatedMinutes` |
 | `completedAt` | optional UTC timestamp. Default: now. It must not be in the future (60 s clock-skew tolerance) or earlier than `lastCompleted` |
 
-**Recurrence (completion-based):** `nextDue = UTC date(completedAt) + frequencyDays` for early, on-time and overdue
+**Recurrence (completion-based):** `nextDue = calculateNextDue(local date(completedAt), frequencyUnit, frequencyInterval)` (household timezone, SCHEDULING-001/008) for early, on-time and overdue
 completions alike. `lastCompleted = completedAt`, `updatedAt = now` and `updatedBy` = authenticated user.
 
 **Atomicity:** a single `TransactWriteItems`:
@@ -232,12 +242,12 @@ be `{}`. `reason` is optional, trimmed, 1–250 characters, and whitespace-only 
 newest first). A filter skips reverted completions, and pages are read until enough matches are found.
 There is no Scan. If no active completion exists, the result is `409 NO_COMPLETION_TO_UNDO`.
 
-**State restoration** always uses the Tenner's **current** `frequencyDays`:
+**State restoration** always uses the Tenner's **current** frequency:
 
 | Case | `lastCompleted` | `nextDue` |
 |---|---|---|
-| A previous active completion exists | its `completedAt` | UTC date(`completedAt`) + `frequencyDays` (may be in the past) |
-| The first completion was reverted | `null` | `createdAt` date (fallback: today) |
+| A previous active completion exists | its `completedAt` | `calculateNextDue`(local date(`completedAt`), unit, interval) (may be in the past) |
+| The first completion was reverted | `null` | local `createdAt` date (fallback: today) |
 
 `updatedAt` is set to now and `updatedBy` to the authenticated user in both cases.
 
@@ -256,6 +266,40 @@ result without reverting another completion. Reusing the key with a different re
 **Logs:** "Undo completion requested", then "Undo completion succeeded" (`UndoSucceeded`, `completionId`,
 `revertedBy`, `restoredPrevious`, `restoredNextDue`, `durationMs`) or "Undo completion failed"
 (`UndoNoCompletion` / `UndoConflict` / `UndoFailed`, `errorCode`, `durationMs`).
+
+### POST /tenners/{tennerId}/snooze
+
+Postpones a Tenner without completing it (SCHEDULING-003). Body: exactly one of
+
+| Field | Rule |
+|---|---|
+| `until` | `YYYY-MM-DD`, a real calendar date |
+| `days` | integer 1–3650, counted from today in the household timezone |
+
+Rules (400 `VALIDATION_ERROR` with the field otherwise): the date must be after today and after the current
+`nextDue`, and not later than one frequency interval or 30 days from today, whichever is later. Inactive or archived
+Tenners → 409 `TENNER_INACTIVE`; unknown → 404; a concurrent change → 409 `CONCURRENT_MODIFICATION`.
+
+Effect: `nextDue = snoozedUntil = <date>`, `updatedAt`/`updatedBy` refreshed, plus an audit event in `tenner-history`
+(`eventType: "SNOOZE"`, `historyId: "snooze#<id>"`, `previousNextDue`, `snoozedUntil`, `snoozedBy`, `snoozedAt`)
+in one transaction. Snooze events have no `completedAt`, so history, undo and analytics never see them.
+The next completion sets `snoozedUntil` back to `null`. Logged as `TennerSnoozed`.
+
+Response: `200 { success: true, data: { tenner: TennerResponse, snooze: { snoozeId, snoozedBy, snoozedAt, previousNextDue, snoozedUntil } } }`.
+
+### POST /tenners/{tennerId}/skip
+
+Skips one occurrence without completing it (SCHEDULING-004). Body optional: `{ "reason": "Not needed this week" }`
+(trimmed, 1–200 characters; unknown fields rejected). An empty body is allowed.
+
+Effect: `nextDue = calculateNextDue(max(today, nextDue), frequencyUnit, frequencyInterval, weekdays)` (so a Tenner
+that is not due yet moves one cycle past its due date), `lastCompleted` unchanged, `snoozedUntil = null`, plus a
+`SKIP` event in `tenner-history` (`historyId: "skip#<id>"`, `skippedDue`, `nextDue`, `reason`, `skippedBy`,
+`skippedAt`) in one transaction. Skips never appear in history, undo or analytics. Inactive or archived → 409
+`TENNER_INACTIVE`; unknown → 404; concurrent change → 409 `CONCURRENT_MODIFICATION`. Logged as `TennerSkipped`
+(without the reason text).
+
+Response: `200 { success: true, data: { tenner: TennerResponse, skip: { skipId, skippedBy, skippedAt, skippedDue, nextDue, reason } } }`.
 
 ### POST /tenners/{tennerId}/restore
 
@@ -279,16 +323,20 @@ result without reverting another completion. Reusing the key with a different re
 
 ### GET /dashboard
 
-This is the dashboard read model: one request, one DynamoDB Query.
+This is the dashboard read model: one request, two DynamoDB Queries (the `nextDue-index` window and, since
+SCHEDULING-005, the tenant's active Tenners for the `paused` section). Paused Tenners (individual pause or household
+vacation) are excluded from all sections and summaries and listed in `paused` with `pausedUntil` (null = open-ended)
+and `pauseReason` (`PAUSE` or `VACATION`).
 
 | Parameter | Values |
 |---|---|
 | `assignedTo` | `STEFAN`, `JULIA`. Filters all sections |
 | `category` | category values. Filters all sections |
-| `date` | `YYYY-MM-DD`, a real calendar date (`2026-02-30` → 400). Default: today in `APPLICATION_TIMEZONE`. Future dates are allowed |
+| `date` | `YYYY-MM-DD`, a real calendar date (`2026-02-30` → 400). Default: today in the household timezone. Future dates are allowed |
 
-**Application timezone:** `APPLICATION_TIMEZONE` (default `Europe/Berlin`, invalid values fall back to the default).
-The reference date is computed with `Intl`, independent of the Lambda runtime timezone.
+**Household timezone (SCHEDULING-008):** stored per household (`GET`/`PUT /household`); without a stored value
+`APPLICATION_TIMEZONE` applies (default `Europe/Berlin`, invalid values fall back to the default). The response
+includes `timezone`. Dates are computed with `Intl`, independent of the Lambda runtime timezone.
 
 **Classification** (`nextDue` as `YYYY-MM-DD`; inactive and deleted Tenners excluded):
 
@@ -380,8 +428,16 @@ and a Tenner fixture.
 | `DELETE /tenners/{tennerId}` | `200 { success: true, data: { tennerId, deleted: true } }` (TICKET-012, soft delete, idempotent). Returns `404 NOT_FOUND` |
 | `POST /tenners/{tennerId}/complete` | `200 { success: true, data: { tenner, completion } }` (TICKET-013). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | `POST /tenners/{tennerId}/undo-completion` | `200 { success: true, data: { tenner, revertedCompletion } }` (TICKET-014). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `NO_COMPLETION_TO_UNDO`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
+| `POST /tenners/{tennerId}/snooze` | `200 { success: true, data: { tenner, snooze } }` (SCHEDULING-003). Returns `400`, `404`, or `409` with `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
+| `POST /tenners/{tennerId}/skip` | `200 { success: true, data: { tenner, skip } }` (SCHEDULING-004). Returns `400`, `404`, or `409` with `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
 | `POST /tenners/{tennerId}/restore` | `200 { success: true, data: { tennerId, active, deletedAt } }` (TICKET-015, idempotent). Returns `400`, `404`, or `409` with `TENNER_NOT_DELETED` or `CONCURRENT_MODIFICATION` |
 | `GET /dashboard` | `200 { success: true, data: DashboardResponse }` (TICKET-016). Returns `400 VALIDATION_ERROR` "Invalid dashboard query." |
+| `GET /household` | `200 { success: true, data: { timezone, vacation } }` (SCHEDULING-008/005). Falls back to `APPLICATION_TIMEZONE`; `vacation` is `{ from, until, categories }` or null |
+| `PUT /household/vacation` | Body `{ "from": "YYYY-MM-DD", "until": "YYYY-MM-DD", "categories"?: [...] }` (SCHEDULING-005) → `200 { success: true, data: { household, rescheduled, conflicts } }`. `until` before `from` or in the past, empty or duplicate categories → 400. Moves affected Tenners behind the vacation (spread by daily load); concurrently changed Tenners keep their date and are counted in `conflicts`. Logged as `HouseholdVacationSet` |
+| `DELETE /household/vacation` | `200 { success: true, data: { timezone, vacation: null } }`. Moved due dates stay. Logged as `HouseholdVacationEnded` |
+| `POST /tenners/{tennerId}/pause` | Body optional `{ "until": "YYYY-MM-DD" }` (last paused day, after today) → `200 TennerResponse` with `pausedAt`, `pausedUntil` (SCHEDULING-005). A due date ≤ `until` moves to `until + 1`. 400, 404, 409 `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
+| `POST /tenners/{tennerId}/resume` | `200 TennerResponse` (SCHEDULING-005). Ends an individual pause; a passed due date becomes today. 409 `TENNER_NOT_PAUSED` if not paused (a vacation is ended with `DELETE /household/vacation`) |
+| `PUT /household` | Body `{ "timezone": "<IANA name>" }` → `200 { success: true, data: { timezone } }`. Unknown or malformed timezones → `400 VALIDATION_ERROR`. Affects every household member; logged as `HouseholdTimezoneChanged` |
 | `GET /history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `400` for invalid filters or cursor |
 | `GET /tenners/{tennerId}/history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `404` for an unknown Tenner |
 | unknown route | `404 NOT_FOUND` |
@@ -392,14 +448,15 @@ the Lambda) and `403 FORBIDDEN` for accounts without a household group (SECURITY
 
 ### POST /tenners
 
-Request (all fields required, unknown fields rejected):
+Request (`title`, `category`, `estimatedMinutes`, `assignedTo` and a frequency in one of the two forms; unknown fields rejected):
 
 ```json
 { "title": "Vacuum Office", "category": "HOUSEHOLD", "estimatedMinutes": 10, "frequencyDays": 14, "assignedTo": "STEFAN" }
+{ "title": "Review finances", "category": "FINANCE", "estimatedMinutes": 30, "frequencyUnit": "MONTH", "frequencyInterval": 1, "assignedTo": "JULIA" }
 ```
 
 The service generates `tennerId` (UUID v4), `tenantId` (from the identity), `createdBy` = `updatedBy` = authenticated user, `active = true`,
-`lastCompleted = null`, `nextDue` = today (UTC date) and `createdAt` = `updatedAt` = now (UTC, seconds precision).
+`lastCompleted = null`, `nextDue` = today in the household timezone and `createdAt` = `updatedAt` = now (UTC, seconds precision).
 The repository writes with `attribute_not_exists(tennerId)`, so it never overwrites an existing item.
 
 ## Dependencies

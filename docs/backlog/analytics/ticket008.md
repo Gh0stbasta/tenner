@@ -118,6 +118,20 @@ with at least two completions.
 
 ---
 
+## Paused Periods (added by SCHEDULING-005)
+
+Exclude paused periods from expected completions: individual pauses (`pausedAt` … `pausedUntil` on the Tenner;
+only the current pause is stored) and the household vacation (`tenner-households.vacation`, per category).
+
+## Skipped and Snoozed Occurrences (added by SCHEDULING-004)
+
+Skipped occurrences (`tenner-history` items with `eventType = SKIP`, `historyId` prefix `skip#`) count neither
+as fulfilled nor as neglected: exclude each skipped cycle from the expected completions. Snoozes
+(`eventType = SNOOZE`) move the due date but are not completions either. Neither event type appears in the
+`completedAt` GSIs; read them with a base-table query on the `historyId` prefix (TD-028).
+
+---
+
 # Testing Requirements
 
 ```text

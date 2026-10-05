@@ -31,7 +31,7 @@ function deps() {
 describe("createDependencies wiring", () => {
   it("probes both configured tables", async () => {
     send.mockResolvedValue({});
-    await expect(deps().probeDatabase({ tenners: "tenner-tenners", history: "tenner-history" })).resolves.toBe(true);
+    await expect(deps().probeDatabase({ tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" })).resolves.toBe(true);
     expect(send.mock.calls.every(([command]) => command instanceof GetCommand)).toBe(true);
   });
 
@@ -42,9 +42,12 @@ describe("createDependencies wiring", () => {
       category: "HOUSEHOLD",
       estimatedMinutes: 10,
       frequencyDays: 14,
+      frequencyUnit: "DAY",
+      frequencyInterval: 14,
+      weekdays: null,
       assignedTo: "STEFAN",
     });
-    const command = send.mock.calls[0]?.[0] as PutCommand;
+    const command = send.mock.calls.map(([c]) => c).find((c) => c instanceof PutCommand) as PutCommand;
     expect(command).toBeInstanceOf(PutCommand);
     expect(command.input.TableName).toBe("tenner-tenners");
     expect(command.input.Item?.tennerId).toBe(created.tennerId);
@@ -87,10 +90,24 @@ describe("createDependencies wiring", () => {
     await expect(deps().restoreTenner(TEST_IDENTITY, "t-1")).resolves.toMatchObject({ status: "RESTORED" });
   });
 
-  it("serves the dashboard from one nextDue-index query", async () => {
+  it("serves the dashboard from the nextDue-index query plus the active Tenners for the paused section (SCHEDULING-005)", async () => {
     send.mockResolvedValue({ Items: [tennerFixture({ nextDue: "2026-10-01" })] });
     await expect(deps().getDashboard("default", { date: "2026-10-01" })).resolves.toMatchObject({ summary: { dueTodayCount: 1 } });
-    expect((send.mock.calls[0]?.[0] as QueryCommand).input.IndexName).toBe("nextDue-index");
+    const queries = send.mock.calls.map(([c]) => c).filter((c) => c instanceof QueryCommand) as QueryCommand[];
+    expect(queries.map((q) => q.input.IndexName)).toEqual(["nextDue-index", undefined]);
+  });
+
+  it("reads and saves the household timezone in the households table (SCHEDULING-008)", async () => {
+    send.mockImplementation(async (command: unknown) => (command instanceof GetCommand ? { Item: { tenantId: "default", timezone: "Asia/Tokyo", updatedAt: "x" } } : { Attributes: { tenantId: "default", timezone: "UTC", updatedAt: "y", updatedBy: "STEFAN" } }));
+    await expect(deps().getHousehold("default")).resolves.toEqual({ timezone: "Asia/Tokyo", vacation: null });
+    expect((send.mock.calls[0]?.[0] as GetCommand).input).toEqual({ TableName: "tenner-households", Key: { tenantId: "default" } });
+    await expect(deps().updateHouseholdTimezone(TEST_IDENTITY, "UTC")).resolves.toEqual({ timezone: "UTC", vacation: null });
+    expect((send.mock.calls.at(-1)?.[0] as UpdateCommand).input.TableName).toBe("tenner-households");
+  });
+
+  it("falls back to the configured timezone when the household has none", async () => {
+    send.mockResolvedValue({});
+    await expect(deps().getHousehold("default")).resolves.toEqual({ timezone: "Europe/Berlin", vacation: null });
   });
 
   it("reads a single Tenner with GetItem", async () => {

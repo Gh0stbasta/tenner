@@ -9,4 +9,5 @@ export const queryKeys = {
   recentActivity: ["history", "recent"] as const,
   tennerHistory: (tennerId: string) => ["history", "tenner", tennerId] as const,
   onboarding: ["onboarding"] as const,
+  household: ["household"] as const,
 };

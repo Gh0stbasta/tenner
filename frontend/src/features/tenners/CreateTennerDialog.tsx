@@ -19,14 +19,22 @@ import { useNewTennerDefaults } from "../settings/useNewTennerDefaults";
 import { useCreateTenner } from "./api";
 import { applyServerErrors } from "./applyServerErrors";
 import { TennerForm } from "./TennerForm";
-import { tennerFormSchema, type TennerFormValues } from "./tennerForm.schema";
+import { tennerFormSchema, weekdaysForApi, type TennerFormValues } from "./tennerForm.schema";
 
 export interface CreateTennerDialogProps {
   readonly open: boolean;
   readonly onClose: () => void;
 }
 
-const FIELDS = ["title", "category", "assignedTo", "estimatedMinutes", "frequencyDays"] as const;
+const FIELDS = [
+  "title",
+  "category",
+  "assignedTo",
+  "estimatedMinutes",
+  "frequencyInterval",
+  "frequencyUnit",
+  "weekdays",
+] as const;
 
 export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
   const theme = useTheme();
@@ -44,7 +52,9 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
       category: defaults.category,
       assignedTo: defaults.assignedTo,
       estimatedMinutes: defaults.estimatedMinutes,
-      frequencyDays: defaults.frequencyDays,
+      frequencyInterval: defaults.frequencyDays,
+      frequencyUnit: "DAY",
+      weekdays: [],
       active: true,
     },
   });
@@ -57,9 +67,17 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
   };
 
   const submit = form.handleSubmit((values) => {
-    const { title, category, assignedTo, estimatedMinutes, frequencyDays } = values;
+    const { title, category, assignedTo, estimatedMinutes, frequencyUnit, frequencyInterval } = values;
     create.mutate(
-      { title, category, assignedTo, estimatedMinutes, frequencyDays },
+      {
+        title,
+        category,
+        assignedTo,
+        estimatedMinutes,
+        frequencyUnit,
+        frequencyInterval,
+        weekdays: weekdaysForApi(values),
+      },
       {
         onSuccess: (created) => {
           notify({ message: `✅ „${created.title}“ angelegt.` });

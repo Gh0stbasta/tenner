@@ -1,11 +1,16 @@
 import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import PauseCircleOutlineIcon from "@mui/icons-material/PauseCircleOutlineOutlined";
+import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
 import UnarchiveOutlinedIcon from "@mui/icons-material/UnarchiveOutlined";
 import { Button, Chip, Stack } from "@mui/material";
 import { PageHeader } from "../../components/PageHeader";
 import { CATEGORY_LABELS, USER_LABELS } from "../../types/domain";
-import { todayIsoDate } from "../../utils/dates";
+import { useHouseholdVacation, useToday } from "../household/api";
+import { isPausedIndividually } from "../pause/pauseStatus";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
+import { SnoozedBadge } from "../snooze/SnoozedBadge";
+import { SnoozeMenu } from "../snooze/SnoozeMenu";
 import type { Tenner } from "../tenners/schemas";
 import { tennerStatus } from "../tenners/status";
 import { TennerStatusBadge } from "../tenners/TennerStatusBadge";
@@ -16,10 +21,23 @@ export interface TennerDetailHeaderProps {
   readonly onEdit: () => void;
   readonly onArchive: () => void;
   readonly onRestore: () => void;
+  /** SCHEDULING-005 */
+  readonly onPause: () => void;
+  readonly onResume: () => void;
 }
 
-export function TennerDetailHeader({ tenner, busy, onEdit, onArchive, onRestore }: TennerDetailHeaderProps) {
-  const status = tennerStatus(tenner, todayIsoDate());
+export function TennerDetailHeader({
+  tenner,
+  busy,
+  onEdit,
+  onArchive,
+  onRestore,
+  onPause,
+  onResume,
+}: TennerDetailHeaderProps) {
+  const today = useToday();
+  const status = tennerStatus(tenner, today, useHouseholdVacation());
+  const pausedIndividually = isPausedIndividually(tenner, today);
   const archived = status.kind === "archived";
   return (
     <PageHeader
@@ -35,6 +53,7 @@ export function TennerDetailHeader({ tenner, busy, onEdit, onArchive, onRestore 
           <Chip size="small" label={CATEGORY_LABELS[tenner.category]} />
           <span>{USER_LABELS[tenner.assignedTo]}</span>
           <TennerStatusBadge status={status} />
+          <SnoozedBadge snoozedUntil={tenner.snoozedUntil} />
         </Stack>
       }
       actions={
@@ -45,6 +64,19 @@ export function TennerDetailHeader({ tenner, busy, onEdit, onArchive, onRestore 
         ) : (
           <>
             <CompleteTennerButton tenner={tenner} disabled={busy || !tenner.active} />
+            {(status.kind === "overdue" || status.kind === "dueToday") && (
+              <SnoozeMenu tenner={tenner} disabled={busy} />
+            )}
+            {tenner.active &&
+              (pausedIndividually ? (
+                <Button startIcon={<PlayCircleOutlineIcon />} onClick={onResume} disabled={busy}>
+                  Fortsetzen
+                </Button>
+              ) : (
+                <Button startIcon={<PauseCircleOutlineIcon />} onClick={onPause} disabled={busy}>
+                  Pausieren
+                </Button>
+              ))}
             <Button startIcon={<EditOutlinedIcon />} onClick={onEdit} disabled={busy}>
               Bearbeiten
             </Button>

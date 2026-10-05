@@ -164,3 +164,33 @@ npm run test
 
 - Skip occurrence (SCHEDULING-004)
 - Bulk snooze (PRODUCTIVITY-005)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Tenners can be snoozed: `POST /tenners/{tennerId}/snooze` with `until` or `days`; `nextDue` and
+  `snoozedUntil` set atomically with optimistic locking (`updatedAt`, active, not deleted)
+- [x] Limits enforced: after today (household timezone) and after the current `nextDue`; at most one frequency
+  interval or 30 days, whichever is later; inactive/archived → 409 `TENNER_INACTIVE`
+- [x] Snoozes are auditable but do not count as completions: `tenner-history` items with `eventType = SNOOZE` and
+  no `completedAt`, so the completion GSIs (history, undo, analytics) never contain them (storage decision in
+  `docs/architecture.md`); completion clears `snoozedUntil`
+- [x] UI quick options: "Verschieben" on due/overdue dashboard items (icon) and the detail header (button) with
+  Morgen, In 3 Tagen, Nächstes Wochenende, Datum wählen; "Verschoben bis …" badge
+- [x] Tests passing: backend 506 (by days, until date, past/today rejected, maximum, inactive/archived, completion
+  clears snooze, concurrent modification, transaction shape without completion index keys), frontend 255 (menu,
+  date picker, error, badge, detail header), Terraform 51 (new route); lint, build, `terraform fmt`/`validate` clean
+- [ ] Deploys through GitHub Actions: new API route only (no new IAM permissions); verified after merge
+
+Decisions and assumptions:
+
+- A snooze must move the date **later** than the current `nextDue` (never pulls a Tenner forward); the UI offers
+  it only for due and overdue Tenners.
+- The maximum is measured from today, using `calculateNextDue` for one interval (calendar-correct for months/years).
+- No idempotency key: a retried snooze sets the same date again and adds a second audit event; harmless.
+- Undoing a completion does not restore a snooze that the completion cleared (TD-028).
+
+Technical debt: TD-028 (snooze events not readable through the API; undo does not restore a cleared snooze).

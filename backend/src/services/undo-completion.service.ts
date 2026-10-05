@@ -10,7 +10,8 @@ import {
 import { ConflictError, NotFoundError } from "../exceptions/index.js";
 import type { Completion, Tenner } from "../models/index.js";
 import type { CompletionRecord, CompletionRepository, TennerRepository } from "../repositories/index.js";
-import { toUtcDate, toUtcTimestamp, type Clock } from "../utils/clock.js";
+import { toUtcTimestamp, type Clock } from "../utils/clock.js";
+import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
 import { sha256Json } from "../utils/uuid.js";
 import { nextDueAfter } from "./complete-tenner.service.js";
 
@@ -27,11 +28,12 @@ export class UndoCompletionService {
     private readonly tenners: Pick<TennerRepository, "getById" | "undoCompletion">,
     private readonly completions: Pick<CompletionRepository, "getLatestActiveCompletions" | "findByRevertIdempotencyKey">,
     private readonly clock: Clock,
+    private readonly timezoneOf: TimeZoneSource,
   ) {}
 
   /**
    * Revert the latest non-reverted completion and restore the schedule from the previous active completion
-   * (or reset to "due on creation date" if none). Uses the Tenner's current frequencyDays. Atomic.
+   * (or reset to "due on creation date" if none). Uses the Tenner's current frequency. Atomic.
    * revertedBy and updatedBy are the authenticated user (SECURITY-004).
    */
   async undoLatestCompletion(identity: Identity, tennerId: string, request: UndoCompletionRequest, idempotencyKey?: string): Promise<UndoCompletionOutcome> {
@@ -56,7 +58,7 @@ export class UndoCompletionService {
     const now = this.clock();
     const timestamp = toUtcTimestamp(now);
     const reverted: Completion = { ...latest, revertedAt: timestamp, revertedBy, revertReason: request.reason ?? null };
-    const restored: Tenner = { ...restoreSchedule(tenner, previous, now, timestamp), updatedBy: revertedBy };
+    const restored: Tenner = { ...restoreSchedule(tenner, previous, now, timestamp, await this.timezoneOf(tenantId)), updatedBy: revertedBy };
 
     try {
       await this.tenners.undoCompletion(restored, { completion: reverted, revertIdempotencyKey: idempotencyKey, revertRequestHash: requestHash }, tenner);
@@ -95,12 +97,18 @@ export class UndoCompletionService {
 /**
  * Restored schedule: from the previous active completion (nextDue may lie in the past = overdue again),
  * or, without one, lastCompleted = null and nextDue = createdAt date (fallback: today if createdAt is invalid).
+ * All dates are calendar dates in the household timezone (SCHEDULING-008).
  */
-export function restoreSchedule(tenner: Tenner, previous: Completion | undefined, now: Date, timestamp: string): Tenner {
+export function restoreSchedule(tenner: Tenner, previous: Completion | undefined, now: Date, timestamp: string, timezone: string): Tenner {
   if (previous) {
-    return { ...tenner, lastCompleted: previous.completedAt, nextDue: nextDueAfter(previous.completedAt, tenner.frequencyDays), updatedAt: timestamp };
+    return {
+      ...tenner,
+      lastCompleted: previous.completedAt,
+      nextDue: nextDueAfter(previous.completedAt, tenner, timezone),
+      updatedAt: timestamp,
+    };
   }
   const created = new Date(tenner.createdAt);
-  const nextDue = Number.isNaN(created.getTime()) ? toUtcDate(now) : toUtcDate(created);
+  const nextDue = dateInTimeZone(Number.isNaN(created.getTime()) ? now : created, timezone);
   return { ...tenner, lastCompleted: null, nextDue, updatedAt: timestamp };
 }

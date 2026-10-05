@@ -39,10 +39,11 @@ export function getDocumentClient(): DynamoDBDocumentClient {
   return sharedClient;
 }
 
-/** Sort key attribute per table, required to build a valid probe key. */
-const SORT_KEYS: Record<keyof TableConfig, string> = {
+/** Sort key attribute per table (null: partition key only), required to build a valid probe key. */
+const SORT_KEYS: Record<keyof TableConfig, string | null> = {
   tenners: "tennerId",
   history: "historyId",
+  households: null,
 };
 
 /**
@@ -63,7 +64,7 @@ export async function probeTables(
         client.send(
           new GetCommand({
             TableName: tables[table],
-            Key: { ...PROBE_KEY, [SORT_KEYS[table]]: PROBE_KEY.tenantId },
+            Key: { ...PROBE_KEY, ...(SORT_KEYS[table] ? { [SORT_KEYS[table]]: PROBE_KEY.tenantId } : {}) },
           }),
           { abortSignal: controller.signal },
         ),

@@ -114,7 +114,11 @@ SECURITY-006, NOTIFICATION-005, OBSERVABILITY-002, TICKET-022, OBSERVABILITY-004
 
 ---
 
-## TD-005: Due dates are calculated in UTC instead of household local time
+## TD-005: Due dates are calculated in UTC instead of household local time (resolved)
+
+> Resolved by SCHEDULING-008 (2026-10-05): create, complete, undo, list and dashboard use the household timezone.
+> `nextDue` values computed before the change may be one day early for completions between local midnight and
+> 01:00/02:00; they correct themselves with the next completion.
 
 ### Description
 
@@ -707,3 +711,107 @@ Custom domain with ACM certificate and `TLSv1.2_2021` (TICKET-022).
 ### Related Work
 
 SECURITY-005, TICKET-022, `terraform/frontend-hosting.tf`
+
+## TD-026: History date filters use UTC days
+
+### Description
+
+`GET /history?from=…&to=…` filters `completedAt` by inclusive UTC days, while due dates and "today" use the
+household timezone since SCHEDULING-008.
+
+### Reason
+
+SCHEDULING-008 covers due-date calculation; the history filter is a read-only view and was kept unchanged to limit scope.
+
+### Impact
+
+Completions between local midnight and 01:00/02:00 (Europe/Berlin) appear under the previous day when filtering
+history by date. No data is wrong.
+
+### Suggested Improvement
+
+Convert `from`/`to` into UTC instants of the household's local day boundaries before querying `completedAt-index`.
+
+### Related Work
+
+SCHEDULING-008, TICKET-020, `backend/src/services/history.service.ts`.
+
+## TD-027: Default frequency for new Tenners is in days only
+
+### Description
+
+The Settings default ("Häufigkeit (alle … Tage)") and Quick Add still use a day count. A default of "monthly"
+cannot be configured; Quick Add always creates DAY-based Tenners.
+
+### Reason
+
+SCHEDULING-001 limited the change to the Tenner form and API; the per-browser preferences (FRONTEND-008) keep
+their stored format to avoid a preferences migration.
+
+### Impact
+
+Small: a monthly Tenner created through Quick Add drifts by days until it is edited to "Monatlich".
+
+### Suggested Improvement
+
+Store `defaultFrequencyUnit` + `defaultFrequencyInterval` in the preferences envelope (new version with migration)
+and send them from Quick Add and the create dialog.
+
+### Related Work
+
+SCHEDULING-001, FRONTEND-008, `frontend/src/features/settings/useNewTennerDefaults.ts`.
+
+## TD-028: Snooze and skip events are stored but not readable through the API
+
+### Description
+
+SCHEDULING-003 and SCHEDULING-004 write audit events (`eventType = SNOOZE` / `SKIP`) into `tenner-history`, but no
+endpoint or UI lists them, a skip cannot be undone, and undoing a completion does not restore a snooze it cleared.
+
+### Reason
+
+The ticket requires snoozes to be auditable and distinguishable from completions; analytics (ANALYTICS domain)
+is the intended consumer and does not exist yet.
+
+### Impact
+
+Snoozes can only be inspected in DynamoDB. Analytics cannot yet report how often Tenners are postponed.
+
+### Suggested Improvement
+
+Add a base-table query (`tenantId`, `begins_with(historyId, "snooze#")` or `"skip#"`) behind a read endpoint when analytics
+needs it; consider a GSI if per-Tenner snooze history is needed at scale.
+
+### Related Work
+
+SCHEDULING-003, SCHEDULING-004, ANALYTICS tickets, `backend/src/repositories/dynamodb/completion.mapper.ts` (`toSnoozeItem`, `toSkipItem`).
+
+## TD-029: Pause and vacation simplifications
+
+### Description
+
+SCHEDULING-005 evaluates pauses at read time and moves due dates only when a pause or vacation is set. Known gaps:
+
+- `GET /tenners?due=true|overdue=true` still includes paused Tenners (the UI shows them as "Pausiert").
+- A single pause moves the Tenner to the day after the pause without load spreading; only vacations spread.
+- Ending a vacation early does not pull moved due dates forward; changing it later only moves Tenners again.
+- Undo of a completion does not consider the vacation; no history of past pauses is kept.
+- A vacation reschedules Tenners with sequential conditional writes (not one transaction); concurrently changed
+  Tenners keep their date and are reported as conflicts.
+
+### Reason
+
+Keeps the feature free of a scheduler and new infrastructure for one household (see `docs/architecture.md`).
+
+### Impact
+
+Minor inconsistencies in list filters and edge cases; no data loss.
+
+### Suggested Improvement
+
+Pass the vacation into the list service for due/overdue filters; reuse `distributeResume` for single pauses; add a
+pause history when analytics needs it (ANALYTICS-006/008).
+
+### Related Work
+
+SCHEDULING-005, `backend/src/utils/pause.ts`, `backend/src/services/vacation.service.ts`.

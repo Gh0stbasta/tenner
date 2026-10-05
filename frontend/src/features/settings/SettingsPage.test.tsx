@@ -1,7 +1,8 @@
 import { useTheme } from "@mui/material";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fail, mockFetch, ok } from "../../tests/fetchMock";
 import { renderWithProviders } from "../../tests/render";
 import { DEFAULT_PREFERENCES, loadPreferences } from "./preferences";
 import { SettingsPage } from "./SettingsPage";
@@ -17,14 +18,18 @@ async function choose(label: string, option: string) {
 }
 
 describe("SettingsPage", () => {
-  it("shows all sections and the signed-in person read-only", () => {
+  beforeEach(() => {
+    mockFetch({ "GET /household": ok({ timezone: "Europe/Berlin" }) });
+  });
+
+  it("shows all sections and the signed-in person read-only", async () => {
     renderWithProviders(<SettingsPage />, { user: "JULIA" });
     for (const name of ["Profil", "Standardwerte für neue Tenner", "Dashboard", "App"]) {
       expect(screen.getByRole("region", { name })).toBeInTheDocument();
     }
     expect(within(screen.getByRole("region", { name: "Profil" })).getByText("Julia")).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: /Person|Benutzer/ })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Zeitzone")).toHaveValue("Europe/Berlin");
+    await waitFor(() => expect(screen.getByLabelText("Zeitzone des Haushalts")).toHaveValue("Europe/Berlin"));
   });
 
   it("logs out from the profile section", async () => {
@@ -94,6 +99,38 @@ describe("SettingsPage", () => {
     expect(await screen.findByText("Modus: light")).toBeInTheDocument();
   });
 
+  it("timezone is configurable for the household (SCHEDULING-008)", async () => {
+    const fetchMock = mockFetch({
+      "GET /household": ok({ timezone: "Europe/Berlin" }),
+      "PUT /household": ({ init }) => ok(JSON.parse(String(init?.body)) as unknown),
+      "GET /dashboard": ok({}),
+    });
+    const { queryClient } = renderWithProviders(<SettingsPage />);
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const input = screen.getByLabelText("Zeitzone des Haushalts");
+    await waitFor(() => expect(input).toHaveValue("Europe/Berlin"));
+    await userEvent.clear(input);
+    await userEvent.type(input, "Europe/Vien");
+    await userEvent.click(await screen.findByRole("option", { name: "Europe/Vienna" }));
+    expect(await screen.findByText("Zeitzone auf Europe/Vienna geändert.")).toBeInTheDocument();
+    expect(fetchMock.calls().find((call) => call.key === "PUT /household")?.body).toEqual({
+      timezone: "Europe/Vienna",
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["dashboard"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["tenners"] });
+  });
+
+  it("shows an error when the timezone cannot be saved or loaded", async () => {
+    mockFetch({ "GET /household": ok({ timezone: "Europe/Berlin" }), "PUT /household": fail(400, "VALIDATION_ERROR") });
+    renderWithProviders(<SettingsPage />);
+    const input = screen.getByLabelText("Zeitzone des Haushalts");
+    await waitFor(() => expect(input).toHaveValue("Europe/Berlin"));
+    await userEvent.clear(input);
+    await userEvent.type(input, "Asia/Toky");
+    await userEvent.click(await screen.findByRole("option", { name: "Asia/Tokyo" }));
+    expect(await screen.findByText(/Die Zeitzone konnte nicht gespeichert werden/)).toBeInTheDocument();
+  });
+
   it("system theme follows the device setting", () => {
     vi.stubGlobal(
       "matchMedia",
@@ -134,7 +171,7 @@ describe("SettingsPage", () => {
 
   it("responsive layout: controls use the full width on small screens", () => {
     renderWithProviders(<SettingsPage />);
-    for (const label of ["Geschätzte Dauer (Minuten)", "Häufigkeit (alle … Tage)", "Zeitzone"]) {
+    for (const label of ["Geschätzte Dauer (Minuten)", "Häufigkeit (alle … Tage)", "Zeitzone des Haushalts"]) {
       expect(screen.getByLabelText(label).closest(".MuiFormControl-root")).toHaveClass("MuiFormControl-fullWidth");
     }
   });

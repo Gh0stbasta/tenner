@@ -17,7 +17,7 @@ Internet (anyone)
          ▼
        Lambda tenner-api (role tenner-api-role)
          │  tenant + user only from the verified household group (cognito:groups)
-         ├──► DynamoDB tenner-tenners, tenner-history (keys start with tenantId)
+         ├──► DynamoDB tenner-tenners, tenner-history, tenner-households (keys start with tenantId)
          └──► Cognito group membership (self-assignment, HOTFIX-001)
 
 GitHub Actions ──(OIDC, GitHubActionsDeployRole)──► Terraform state (S3 + DynamoDB lock) and all resources above
@@ -45,7 +45,7 @@ GitHub Actions ──(OIDC, GitHubActionsDeployRole)──► Terraform state (S
 | Input validation | Strict Zod schemas (unknown fields rejected) for every body and query | `backend/src/validators/` |
 | Errors | Clients never see stack traces or storage errors (generic 500) | `backend/src/utils/http.ts` |
 | Lambda | Node.js 22 (supported), no secrets in environment variables (only names and IDs), logs retained 30 days | `tests/api.tftest.hcl` |
-| DynamoDB | Encryption at rest, point-in-time recovery, deletion protection on both tables | `tests/dynamodb.tftest.hcl` |
+| DynamoDB | Encryption at rest, point-in-time recovery, deletion protection on all tables | `tests/dynamodb.tftest.hcl` |
 | S3 frontend | Private, Block Public Access, SSE-S3, versioning (30-day noncurrent retention), TLS-only policy | `tests/frontend_hosting.tftest.hcl` |
 | S3 state | Private, SSE-S3, versioning, TLS-only policy; lock table encrypted with deletion protection | `tests/state_backend.tftest.hcl` |
 | CloudFront | HTTPS redirect, CSP (`script-src 'self'`), HSTS, X-Frame-Options, nosniff, referrer policy | `terraform/frontend-hosting.tf` |
@@ -67,7 +67,7 @@ no `*` action; every wildcard resource justified.
 | Policy | Actions | Resources | Review |
 |---|---|---|---|
 | `-logging` | `logs:CreateLogStream`, `logs:PutLogEvents` | `/tenner/api` log group, `:log-stream:*` | ✅ Wildcard on stream names is required (Lambda creates streams per container) |
-| `-dynamodb` | `GetItem`, `PutItem`, `UpdateItem`, `Query` | both tables and their indexes | ✅ **SECURITY-005 removed `Scan` and `DeleteItem`** (never used; deletes are soft deletes). Index wildcard `/index/*` covers the GSIs only |
+| `-dynamodb` | `GetItem`, `PutItem`, `UpdateItem`, `Query` | all Tenner tables and their indexes | ✅ **SECURITY-005 removed `Scan` and `DeleteItem`** (never used; deletes are soft deletes). Index wildcard `/index/*` covers the GSIs only |
 | `-dynamodb` | `BatchGetItem` | `tenner-tenners` | ✅ Title lookup for history (TICKET-020) |
 | `-cognito` | `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `ListUsersInGroup` | Tenner user pool | ⚠️ IAM cannot restrict the user or group; the code only adds the caller to one free household group (TD-023) |
 | Trust | `sts:AssumeRole` | `lambda.amazonaws.com` | ✅ |

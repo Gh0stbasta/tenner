@@ -46,7 +46,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     logLevel: "INFO",
     applicationName: "Tenner",
     timezone: "Europe/Berlin",
-    tables: { tenners: "tenner-tenners", history: "tenner-history" },
+    tables: { tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" },
     onboarding: { userPoolId: "eu-central-1_TEST", tenantId: "default" },
     ...overrides,
   };
@@ -65,7 +65,7 @@ export function mockLogger(): Mocked<Logger> {
 }
 
 export function mockTennerRepository(): Mocked<TennerRepository> {
-  return { getById: vi.fn(), getTitles: vi.fn(), getDashboardCandidates: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn(), completeTenner: vi.fn(), undoCompletion: vi.fn(), restore: vi.fn() };
+  return { getById: vi.fn(), getTitles: vi.fn(), getDashboardCandidates: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn(), completeTenner: vi.fn(), undoCompletion: vi.fn(), snoozeTenner: vi.fn(), skipTenner: vi.fn(), updateSchedule: vi.fn(), restore: vi.fn() };
 }
 
 export function mockCompletionRepository(): Mocked<CompletionRepository> {
@@ -104,9 +104,15 @@ export function tennerFixture(overrides: Partial<Tenner> = {}): Tenner {
     category: "HOUSEHOLD",
     estimatedMinutes: 10,
     frequencyDays: 14,
+    frequencyUnit: "DAY",
+    frequencyInterval: 14,
+    weekdays: null,
     assignedTo: "STEFAN",
     lastCompleted: null,
     nextDue: "2026-10-01",
+    snoozedUntil: null,
+    pausedAt: null,
+    pausedUntil: null,
     active: true,
     deletedAt: null,
     createdAt: "2026-10-01T10:00:00Z",

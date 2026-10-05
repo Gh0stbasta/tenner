@@ -5,7 +5,10 @@ import { toCompletionResponse, toTennerResponse, type CompleteTennerRequest, typ
 import { ConflictError, NotFoundError, ValidationError } from "../exceptions/index.js";
 import type { Completion, Tenner } from "../models/index.js";
 import type { CompletionRecord, CompletionRepository, TennerRepository } from "../repositories/index.js";
-import { addDays, toUtcDate, toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
+import { toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
+import { avoidVacation, type VacationSource } from "../utils/pause.js";
+import { calculateNextDue, type Frequency } from "../utils/schedule.js";
+import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
 import { sha256Json, uuidV5 } from "../utils/uuid.js";
 
 /** Tolerated client clock skew for explicit completedAt values. */
@@ -23,11 +26,13 @@ export class CompleteTennerService {
     private readonly completions: Pick<CompletionRepository, "getById">,
     private readonly clock: Clock,
     private readonly newId: IdGenerator,
+    private readonly timezoneOf: TimeZoneSource,
+    private readonly vacationOf: VacationSource = async () => null,
   ) {}
 
   /**
    * Complete a Tenner: append an immutable history record and move the Tenner into its next cycle
-   * (nextDue = completion date + frequencyDays), atomically. With an idempotency key, retries return
+   * (nextDue = completion date + frequency), atomically. With an idempotency key, retries return
    * the original result; reusing the key for a different request is a conflict.
    * completedBy defaults to the authenticated user; recordedBy is always the authenticated user (SECURITY-004).
    */
@@ -63,7 +68,12 @@ export class CompleteTennerService {
     const updated: Tenner = {
       ...tenner,
       lastCompleted: completedAt,
-      nextDue: nextDueAfter(completedAt, tenner.frequencyDays),
+      // A due date inside the household vacation moves behind it (SCHEDULING-005).
+      nextDue: avoidVacation(nextDueAfter(completedAt, tenner, await this.timezoneOf(tenantId)), tenner, await this.vacationOf(tenantId)),
+      snoozedUntil: null,
+      // Completing a paused Tenner ends its pause.
+      pausedAt: null,
+      pausedUntil: null,
       updatedAt: toUtcTimestamp(now),
       updatedBy: identity.userId,
     };
@@ -105,7 +115,10 @@ export class CompleteTennerService {
   }
 }
 
-/** Next due date: UTC calendar date of the completion plus frequencyDays (completion-based recurrence). */
-export function nextDueAfter(completedAt: string, frequencyDays: number): string {
-  return addDays(toUtcDate(new Date(completedAt)), frequencyDays);
+/**
+ * Next due date: the completion's calendar date in the household timezone (SCHEDULING-008) advanced by the
+ * Tenner's frequency via calculateNextDue (SCHEDULING-001). Calendar arithmetic is DST-safe.
+ */
+export function nextDueAfter(completedAt: string, frequency: Frequency, timezone: string): string {
+  return calculateNextDue(dateInTimeZone(new Date(completedAt), timezone), frequency.frequencyUnit, frequency.frequencyInterval, frequency.weekdays);
 }

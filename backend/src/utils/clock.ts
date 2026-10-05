@@ -13,7 +13,10 @@ export function toUtcTimestamp(date: Date): string {
   return date.toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
-/** UTC calendar date (YYYY-MM-DD). Household timezone support follows in SCHEDULING-008. */
+/**
+ * UTC calendar date (YYYY-MM-DD). Only for date arithmetic on calendar dates; "today" and completion dates use the
+ * household timezone (dateInTimeZone, SCHEDULING-008).
+ */
 export function toUtcDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }

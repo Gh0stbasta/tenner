@@ -5,18 +5,20 @@ import { toTennerResponse } from "../dto/index.js";
 import type { Identity } from "../auth/index.js";
 import type { Tenner } from "../models/index.js";
 import type { TennerRepository } from "../repositories/index.js";
-import { toUtcDate, toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
+import { toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
+import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
 
 export class CreateTennerService {
   constructor(
     private readonly repository: Pick<TennerRepository, "save">,
     private readonly clock: Clock,
     private readonly newId: IdGenerator,
+    private readonly timezoneOf: TimeZoneSource,
   ) {}
 
   /**
    * Create a Tenner from a validated request. Defaults: new UUID, active, never completed,
-   * due today (so it appears in the due list immediately), createdAt = updatedAt = now,
+   * due today in the household timezone (so it appears in the due list immediately), createdAt = updatedAt = now,
    * createdBy = updatedBy = the authenticated user, tenant from the identity.
    */
   async createTenner(identity: Identity, request: CreateTennerRequest): Promise<TennerResponse> {
@@ -29,9 +31,15 @@ export class CreateTennerService {
       category: request.category,
       estimatedMinutes: request.estimatedMinutes,
       frequencyDays: request.frequencyDays,
+      frequencyUnit: request.frequencyUnit,
+      frequencyInterval: request.frequencyInterval,
+      weekdays: request.weekdays,
       assignedTo: request.assignedTo,
       lastCompleted: null,
-      nextDue: toUtcDate(now),
+      nextDue: dateInTimeZone(now, await this.timezoneOf(identity.tenantId)),
+      snoozedUntil: null,
+      pausedAt: null,
+      pausedUntil: null,
       active: true,
       deletedAt: null,
       createdAt: timestamp,
