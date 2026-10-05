@@ -25,6 +25,17 @@ function event(routeKey: string, headers: Record<string, string> = {}, body?: st
   return { routeKey, headers, body, queryStringParameters: query, requestContext: { requestId: "req-1" } } as unknown as APIGatewayProxyEventV2;
 }
 
+const household = {
+  name: "Unser Haushalt",
+  timezone: "Europe/Berlin",
+  weekStartsOn: "MONDAY" as const,
+  workdays: ["MON", "TUE", "WED", "THU", "FRI"] as const,
+  defaults: { category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14 },
+  defaultsSource: "DEFAULT" as const,
+  handovers: [],
+  vacation: null,
+};
+
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
   return {
     config: testConfig(),
@@ -70,12 +81,22 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       replayed: false,
     })),
     deleteTenner: vi.fn(async () => ({ response: { tennerId: "t-1", deleted: true as const }, outcome: { status: "DELETED" as const, tenner: tennerFixture() } })),
-    getHousehold: vi.fn(async () => ({ timezone: "Europe/Berlin", vacation: null })),
-    updateHouseholdTimezone: vi.fn(async (_identity, timezone: string) => ({ timezone, vacation: null })),
+    getHousehold: vi.fn(async () => household),
+    updateHousehold: vi.fn(async () => household),
     pauseTenner: vi.fn(async () => tennerResponse),
     resumeTenner: vi.fn(async () => tennerResponse),
-    setVacation: vi.fn(async () => ({ household: { timezone: "Europe/Berlin", vacation: { from: "2026-10-10", until: "2026-10-24", categories: null } }, rescheduled: 2, conflicts: 0 })),
-    endVacation: vi.fn(async () => ({ timezone: "Europe/Berlin", vacation: null })),
+    setVacation: vi.fn(async () => ({ household: { ...household, vacation: { from: "2026-10-10", until: "2026-10-24", categories: null } }, rescheduled: 2, conflicts: 0 })),
+    endVacation: vi.fn(async () => household),
+    listMembers: vi.fn(async () => [{ userId: "STEFAN", displayName: "Stefan", color: "BLUE" as const, active: true }]),
+    createMember: vi.fn(async () => ({ userId: "LENA", displayName: "Lena", color: "GREEN" as const, active: true })),
+    updateMember: vi.fn(async () => ({ userId: "STEFAN", displayName: "Steffen", color: "BLUE" as const, active: true })),
+    deactivateMember: vi.fn(async () => ({ member: { userId: "JULIA", displayName: "Julia", color: "PURPLE" as const, active: false }, reassigned: 2, reassignedTo: "STEFAN", revokedAccounts: 1 })),
+    reactivateMember: vi.fn(async () => ({ userId: "JULIA", displayName: "Julia", color: "PURPLE" as const, active: true })),
+    startHandover: vi.fn(async () => ({ handover: { from: "JULIA", to: "STEFAN", until: "2026-10-12", categories: null }, handedOver: 3 })),
+    endHandover: vi.fn(async () => ({ returned: 3 })),
+    listCategories: vi.fn(async () => [{ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: false }]),
+    createCategory: vi.fn(async () => ({ categoryId: "GARDEN", name: "Garten", icon: "GARDEN" as const, color: "GREEN" as const, sortOrder: 6, archived: false })),
+    updateCategory: vi.fn(async () => ({ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: true })),
     getOnboarding: vi.fn(async () => ({ assignedTo: null, members: [] })),
     assignHouseholdMember: vi.fn(async () => ({ response: { userId: "JULIA" as const }, group: "household:default:JULIA" })),
     ...overrides,
@@ -235,7 +256,7 @@ describe("POST /tenners", () => {
     const response = await route(event("POST /tenners", {}, JSON.stringify(valid)), d);
     expect(response.statusCode).toBe(201);
     expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: tennerResponse });
-    expect(d.createTenner).toHaveBeenCalledWith(TEST_IDENTITY, { ...valid, frequencyUnit: "DAY", frequencyInterval: valid.frequencyDays, weekdays: null });
+    expect(d.createTenner).toHaveBeenCalledWith(TEST_IDENTITY, { ...valid, frequencyUnit: "DAY", frequencyInterval: valid.frequencyDays, weekdays: null, assignmentMode: "FIXED", rotation: null });
   });
 
   it("rejects invalid input with 400 before calling the service", async () => {
@@ -276,7 +297,7 @@ describe("GET /tenners", () => {
     expect(d.listTenners).toHaveBeenCalledWith("default", { deleted: true });
   });
 
-  it.each([{ sort: "priority" }, { assignedTo: "BOB" }, { active: "yes" }, { deleted: "yes" }, { order: "up" }, { unknown: "1" }])("rejects %j with 400", async (query) => {
+  it.each([{ sort: "priority" }, { assignedTo: "bob" }, { active: "yes" }, { deleted: "yes" }, { order: "up" }, { unknown: "1" }])("rejects %j with 400", async (query) => {
     const d = deps();
     const response = await route(event("GET /tenners", {}, undefined, query), d);
     expect(response.statusCode).toBe(400);
@@ -327,6 +348,52 @@ describe("pause and vacation routes (SCHEDULING-005)", () => {
     expect(d.setVacation).toHaveBeenCalledWith(TEST_IDENTITY, { from: "2026-10-10", until: "2026-10-24" });
     expect((await route(event("DELETE /household/vacation"), d)).statusCode).toBe(200);
     expect(d.endVacation).toHaveBeenCalledWith(TEST_IDENTITY);
+  });
+});
+
+describe("member routes (HOUSEHOLD-ADMIN-001)", () => {
+  it("lists, creates and updates members", async () => {
+    const d = deps();
+    expect((await route(event("GET /users"), d)).statusCode).toBe(200);
+    expect(d.listMembers).toHaveBeenCalledWith("default");
+    expect((await route(event("POST /users", {}, JSON.stringify({ displayName: "Lena", color: "GREEN" })), d)).statusCode).toBe(201);
+    const put = { ...event("PUT /users/{userId}", {}, JSON.stringify({ displayName: "Steffen" })), pathParameters: { userId: "STEFAN" } } as APIGatewayProxyEventV2;
+    expect((await route(put, d)).statusCode).toBe(200);
+    expect(d.updateMember).toHaveBeenCalledWith(TEST_IDENTITY, "STEFAN", { displayName: "Steffen" });
+  });
+});
+
+describe("member deactivation routes (HOUSEHOLD-ADMIN-004)", () => {
+  it("deactivates and reactivates members", async () => {
+    const d = deps();
+    const withUser = (routeKey: string, body?: string) => ({ ...event(routeKey, {}, body), pathParameters: { userId: "JULIA" } }) as APIGatewayProxyEventV2;
+    expect((await route(withUser("POST /users/{userId}/deactivate", JSON.stringify({ reassignTo: "STEFAN" })), d)).statusCode).toBe(200);
+    expect(d.deactivateMember).toHaveBeenCalledWith(TEST_IDENTITY, "JULIA", { reassignTo: "STEFAN" });
+    expect((await route(withUser("POST /users/{userId}/reactivate"), d)).statusCode).toBe(200);
+    expect(d.reactivateMember).toHaveBeenCalledWith(TEST_IDENTITY, "JULIA");
+  });
+
+  it("starts and ends a handover (HOUSEHOLD-004)", async () => {
+    const d = deps();
+    const withUser = (routeKey: string, body?: string) => ({ ...event(routeKey, {}, body), pathParameters: { userId: "JULIA" } }) as APIGatewayProxyEventV2;
+    const start = await route(withUser("POST /users/{userId}/handover", JSON.stringify({ to: "STEFAN", until: "2026-10-12" })), d);
+    expect(start.statusCode).toBe(201);
+    expect(d.startHandover).toHaveBeenCalledWith(TEST_IDENTITY, "JULIA", { to: "STEFAN", until: "2026-10-12" });
+    expect((await route(withUser("POST /users/{userId}/handover", JSON.stringify({ to: "STEFAN", until: "12.10.2026" })), d)).statusCode).toBe(400);
+    expect((await route(withUser("POST /users/{userId}/handover", JSON.stringify({ to: "STEFAN", until: "2026-10-12", categories: [] })), d)).statusCode).toBe(400);
+    expect((await route(withUser("DELETE /users/{userId}/handover"), d)).statusCode).toBe(200);
+    expect(d.endHandover).toHaveBeenCalledWith(TEST_IDENTITY, "JULIA");
+  });
+});
+
+describe("category routes (HOUSEHOLD-ADMIN-002)", () => {
+  it("lists, creates and updates categories", async () => {
+    const d = deps();
+    expect((await route(event("GET /categories"), d)).statusCode).toBe(200);
+    expect((await route(event("POST /categories", {}, JSON.stringify({ name: "Garten", icon: "GARDEN", color: "GREEN" })), d)).statusCode).toBe(201);
+    const put = { ...event("PUT /categories/{categoryId}", {}, JSON.stringify({ archived: true })), pathParameters: { categoryId: "HOUSEHOLD" } } as APIGatewayProxyEventV2;
+    expect((await route(put, d)).statusCode).toBe(200);
+    expect(d.updateCategory).toHaveBeenCalledWith(TEST_IDENTITY, "HOUSEHOLD", { archived: true });
   });
 });
 
@@ -488,7 +555,7 @@ describe("GET /dashboard", () => {
     expect(d.getDashboard).toHaveBeenCalledWith("default", { assignedTo: "STEFAN", category: "HOUSEHOLD", date: "2026-10-01" });
   });
 
-  it.each([{ assignedTo: "BOB" }, { category: "GARDEN" }, { date: "01.10.2026" }, { date: "2026-02-30" }])("rejects %j with 400 Invalid dashboard query.", async (query) => {
+  it.each([{ assignedTo: "bob" }, { category: "garden" }, { date: "01.10.2026" }, { date: "2026-02-30" }])("rejects %j with 400 Invalid dashboard query.", async (query) => {
     const d = deps();
     const response = await route(event("GET /dashboard", {}, undefined, query), d);
     expect(response.statusCode).toBe(400);
@@ -527,7 +594,7 @@ describe("history routes", () => {
     expect(d.getHistory).toHaveBeenCalledWith("default", { from: "2026-09-01", to: "2026-09-30", completedBy: "JULIA", limit: 50, includeUndone: true });
   });
 
-  it.each([{ limit: "0" }, { limit: "101" }, { limit: "ten" }, { from: "2026-10-02", to: "2026-10-01" }, { cursor: "not base64!" }, { completedBy: "BOB" }, { foo: "1" }])("GET /history rejects %j", async (query) => {
+  it.each([{ limit: "0" }, { limit: "101" }, { limit: "ten" }, { from: "2026-10-02", to: "2026-10-01" }, { cursor: "not base64!" }, { completedBy: "bob" }, { foo: "1" }])("GET /history rejects %j", async (query) => {
     const d = deps();
     expect((await route(event("GET /history", {}, undefined, query), d)).statusCode).toBe(400);
     expect(d.getHistory).not.toHaveBeenCalled();
@@ -586,13 +653,13 @@ describe("household routes (SCHEDULING-008)", () => {
     expect(d.getHousehold).toHaveBeenCalledWith("default");
     const put = await route({ routeKey: "PUT /household", headers: {}, body: JSON.stringify({ timezone: "Europe/Vienna" }), requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
     expect(put.statusCode).toBe(200);
-    expect(d.updateHouseholdTimezone).toHaveBeenCalledWith(TEST_IDENTITY, "Europe/Vienna");
+    expect(d.updateHousehold).toHaveBeenCalledWith(TEST_IDENTITY, { timezone: "Europe/Vienna" });
   });
 
   it("rejects an unknown timezone with 400", async () => {
     const d = deps();
     const put = await route({ routeKey: "PUT /household", headers: {}, body: JSON.stringify({ timezone: "Mars/Olympus" }), requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
     expect(put.statusCode).toBe(400);
-    expect(d.updateHouseholdTimezone).not.toHaveBeenCalled();
+    expect(d.updateHousehold).not.toHaveBeenCalled();
   });
 });

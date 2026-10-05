@@ -157,6 +157,10 @@ Do not log message bodies containing personal data beyond Tenner titles.
 
 ---
 
+## Shared Tenners (added by HOUSEHOLD-002)
+
+Tenners with `assignedTo = "HOUSEHOLD"` belong to everyone: notify all active members, deduplicated per user.
+
 ## Paused Tenners (added by SCHEDULING-005)
 
 Suppress notifications for paused Tenners: individually paused (`pausedAt` set and `pausedUntil` null or ≥ today)

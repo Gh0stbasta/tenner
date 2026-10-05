@@ -105,12 +105,15 @@ The assignment is logged as `HouseholdMemberAssigned` with the Cognito username,
 
 `createdBy`, `updatedBy` and `recordedBy` are set from the authenticated user (SECURITY-004). Records written before
 authentication have `null` there.
-| `User` | `userId`, `displayName`, `active` |
+| `HouseholdCategory` | `categoryId`, `name`, `icon`, `color`, `sortOrder`, `archived`, `createdAt`, `updatedAt` (HOUSEHOLD-ADMIN-002, stored in `tenner-households`); creating or re-categorizing a Tenner needs a non-archived category (400) |
+| `HouseholdMember` | `userId`, `displayName`, `color`, `active`, `createdAt`, `updatedAt` (HOUSEHOLD-ADMIN-001, stored in `tenner-households`) |
 
 | Enumeration | Values |
 |---|---|
-| `Category` | `HOUSEHOLD`, `FITNESS`, `FAMILY`, `HOME`, `PERSONAL`, `FINANCE` |
-| `UserId` | `STEFAN`, `JULIA` (hardcoded until HOUSEHOLD-ADMIN-001, see TD-007) |
+| `Category` | managed category IDs, format `^[A-Z][A-Z0-9_]{0,29}$`; seed `HOUSEHOLD`, `FITNESS`, `FAMILY`, `HOME`, `PERSONAL`, `FINANCE` (HOUSEHOLD-ADMIN-002) |
+| `CategoryIcon` | `HOME`, `CLEANING`, `FITNESS`, `FAMILY`, `PERSON`, `MONEY`, `GARDEN`, `PET`, `CAR`, `HEALTH`, `WORK`, `STAR` |
+| `UserId` | managed member IDs, format `^[A-Z][A-Z0-9_]{0,29}$`; seed members `STEFAN`, `JULIA`. `assignedTo` may also be `HOUSEHOLD` (shared, HOUSEHOLD-002), which is reserved |
+| `MemberColor` | `BLUE`, `GREEN`, `ORANGE`, `PURPLE`, `RED`, `TEAL`, `PINK`, `GREY` |
 
 ## Validation
 
@@ -123,6 +126,7 @@ Zod schemas are in `src/validators/`. The limits are centralized in `LIMITS`:
 | `frequencyDays` | integer, 1–3650. Alone it means unit `DAY` with that interval |
 | `frequencyUnit` | `DAY`, `WEEK`, `MONTH`, `YEAR` (SCHEDULING-001) |
 | `frequencyInterval` | integer ≥ 1, default 1; only with `frequencyUnit`; at most 3650 approximate days (e.g. 10 years) |
+| `assignmentMode`, `rotation` | HOUSEHOLD-001: `FIXED` (default, `rotation` null) or `ROTATING` with `rotation` = ordered list of ≥ 2 distinct active members containing `assignedTo`; `rotation` without `ROTATING` → 400. Completion advances `assignedTo` to the next active member; undo restores it. Responses also carry `originalAssignee` (HOUSEHOLD-004: member a Tenner is covered for, else null; cleared by any `assignedTo` update) |
 | `weekdays` | `null` or 1–7 distinct values of `MON`..`SUN` (SCHEDULING-002); only with `frequencyUnit: "WEEK"` in the same request. Normalized to ISO order |
 
 Send either `frequencyDays` or `frequencyUnit` (+ `frequencyInterval`), not both (400 otherwise). The validator
@@ -422,7 +426,7 @@ and a Tenner fixture.
 |---|---|
 | `GET /health` | `200 {"status":"ok","application":"tenner","environment":"prod","database":"connected"}`. Returns `503` with `"status":"error"` and `database` `unreachable` or `misconfigured` |
 | `POST /tenners` | `201 { success: true, data: TennerResponse }` (TICKET-009). Returns `400 VALIDATION_ERROR` with `details`, `409 CONFLICT` if the ID exists, `500 PERSISTENCE_ERROR` |
-| `GET /tenners` | `200 { success: true, data: TennerResponse[] }` (TICKET-010). Returns `400 VALIDATION_ERROR` for invalid parameters |
+| `GET /tenners` | `200 { success: true, data: TennerResponse[] }` (TICKET-010). `assignedTo=<member>` also returns shared Tenners (`HOUSEHOLD`, HOUSEHOLD-002). Returns `400 VALIDATION_ERROR` for invalid parameters |
 | `GET /tenners/{tennerId}` | `200 { success: true, data: TennerResponse }` (TICKET-019). Soft-deleted Tenners → `404` unless `?includeDeleted=true`. Returns `400` for an invalid id or query |
 | `PUT /tenners/{tennerId}` | `200 { success: true, data: TennerResponse }` (TICKET-011). Returns `400 VALIDATION_ERROR` or `404 NOT_FOUND` |
 | `DELETE /tenners/{tennerId}` | `200 { success: true, data: { tennerId, deleted: true } }` (TICKET-012, soft delete, idempotent). Returns `404 NOT_FOUND` |
@@ -432,12 +436,22 @@ and a Tenner fixture.
 | `POST /tenners/{tennerId}/skip` | `200 { success: true, data: { tenner, skip } }` (SCHEDULING-004). Returns `400`, `404`, or `409` with `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
 | `POST /tenners/{tennerId}/restore` | `200 { success: true, data: { tennerId, active, deletedAt } }` (TICKET-015, idempotent). Returns `400`, `404`, or `409` with `TENNER_NOT_DELETED` or `CONCURRENT_MODIFICATION` |
 | `GET /dashboard` | `200 { success: true, data: DashboardResponse }` (TICKET-016). Returns `400 VALIDATION_ERROR` "Invalid dashboard query." |
-| `GET /household` | `200 { success: true, data: { timezone, vacation } }` (SCHEDULING-008/005). Falls back to `APPLICATION_TIMEZONE`; `vacation` is `{ from, until, categories }` or null |
+| `GET /users` | `200 { success: true, data: MemberResponse[] }` with `userId`, `displayName`, `color`, `active` (HOUSEHOLD-ADMIN-001). Seed members until the household saves its own list |
+| `POST /users` | Body `{ "displayName": "Lena", "color": "GREEN", "userId"?: "LENA" }` → `201 MemberResponse`. `userId` defaults to a slug of the name. 400 invalid fields, 409 `MEMBER_EXISTS`, 409 `CONCURRENT_MODIFICATION`; at most 20 members. Logged as `MemberCreated` |
+| `PUT /users/{userId}` | Body `{ "displayName"?, "color"? }` (at least one; `userId` immutable) → `200 MemberResponse`. 404 for unknown members. Logged as `MemberUpdated` |
+| `POST /users/{userId}/deactivate` | Body optional `{ "reassignTo": "JULIA" }` → `200 { success: true, data: { member, reassigned, reassignedTo, revokedAccounts } }` (HOUSEHOLD-ADMIN-004). `reassignTo` is required (400) if Tenners are assigned and must be another active member. 409 `CANNOT_DEACTIVATE_SELF`, `LAST_ACTIVE_MEMBER`, `MEMBER_INACTIVE`; 404 unknown. Removes all accounts from the member's Cognito group. Logged as `MemberDeactivated` |
+| `POST /users/{userId}/reactivate` | `200 MemberResponse`; 409 `MEMBER_ACTIVE` if already active. Logged as `MemberReactivated` |
+| `POST /users/{userId}/handover` | Body `{ "to": "JULIA", "until": "YYYY-MM-DD", "categories"?: [...] }` → `201 { success: true, data: { handover: { from, to, until, categories }, handedOver } }` (HOUSEHOLD-004). Moves the member's non-archived Tenners (of the categories, default all) to `to` with `originalAssignee` = member. 400: `to` not another active member or away itself, `until` in the past, unknown, empty or duplicate categories; 404 unknown member; 409 `MEMBER_INACTIVE`, `HANDOVER_ACTIVE`, `CONCURRENT_MODIFICATION`. Logged as `HandoverStarted` |
+| `DELETE /users/{userId}/handover` | `200 { success: true, data: { returned } }`: gives the Tenners back now; 404 without a handover. Logged as `HandoverEnded`. Expired handovers are given back on the next `GET /dashboard`, `GET /tenners` or `GET /household` (logged as `HandoverExpired`) |
+| `GET /categories` | `200 { success: true, data: CategoryResponse[] }` with `categoryId`, `name`, `icon`, `color`, `sortOrder`, `archived`, in display order (HOUSEHOLD-ADMIN-002). Seed categories until the household saves its own list |
+| `POST /categories` | Body `{ "name": "Garten", "icon": "GARDEN", "color": "GREEN", "categoryId"?: "GARDEN" }` → `201 CategoryResponse` (appended). 400 invalid fields, 409 `CATEGORY_EXISTS` or `CONCURRENT_MODIFICATION`; at most 30 categories. Logged as `CategoryCreated` |
+| `PUT /categories/{categoryId}` | Body `{ "name"?, "icon"?, "color"?, "sortOrder"? (new 0-based position), "archived"? }` (at least one) → `200 CategoryResponse`. 404 for unknown categories. Logged as `CategoryUpdated` |
+| `GET /household` | `200 { success: true, data: { name, timezone, weekStartsOn, workdays, defaults, defaultsSource, vacation, handovers } }` (SCHEDULING-008/005, HOUSEHOLD-ADMIN-003). Effective values: defaults `Unser Haushalt`, `APPLICATION_TIMEZONE`, `MONDAY`, Monday–Friday, `{ HOUSEHOLD, 10, 14 }`; `defaultsSource` is `DEFAULT` until the household saves its own defaults; `vacation` is `{ from, until, categories }` or null; `handovers` lists running handovers (HOUSEHOLD-004) |
 | `PUT /household/vacation` | Body `{ "from": "YYYY-MM-DD", "until": "YYYY-MM-DD", "categories"?: [...] }` (SCHEDULING-005) → `200 { success: true, data: { household, rescheduled, conflicts } }`. `until` before `from` or in the past, empty or duplicate categories → 400. Moves affected Tenners behind the vacation (spread by daily load); concurrently changed Tenners keep their date and are counted in `conflicts`. Logged as `HouseholdVacationSet` |
 | `DELETE /household/vacation` | `200 { success: true, data: { timezone, vacation: null } }`. Moved due dates stay. Logged as `HouseholdVacationEnded` |
 | `POST /tenners/{tennerId}/pause` | Body optional `{ "until": "YYYY-MM-DD" }` (last paused day, after today) → `200 TennerResponse` with `pausedAt`, `pausedUntil` (SCHEDULING-005). A due date ≤ `until` moves to `until + 1`. 400, 404, 409 `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
 | `POST /tenners/{tennerId}/resume` | `200 TennerResponse` (SCHEDULING-005). Ends an individual pause; a passed due date becomes today. 409 `TENNER_NOT_PAUSED` if not paused (a vacation is ended with `DELETE /household/vacation`) |
-| `PUT /household` | Body `{ "timezone": "<IANA name>" }` → `200 { success: true, data: { timezone } }`. Unknown or malformed timezones → `400 VALIDATION_ERROR`. Affects every household member; logged as `HouseholdTimezoneChanged` |
+| `PUT /household` | Body: any of `name` (1–60), `timezone` (IANA), `weekStartsOn` (`MONDAY`/`SUNDAY`), `workdays` (1–7 distinct `MON`..`SUN`, stored in ISO order), `defaults` (`{ category, estimatedMinutes 1–480, frequencyDays 1–3650 }`, category must be selectable) → `200 HouseholdResponse`. Invalid values or an empty body → `400 VALIDATION_ERROR`. Affects every household member; logged as `HouseholdSettingsChanged` with the changed fields |
 | `GET /history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `400` for invalid filters or cursor |
 | `GET /tenners/{tennerId}/history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `404` for an unknown Tenner |
 | unknown route | `404 NOT_FOUND` |

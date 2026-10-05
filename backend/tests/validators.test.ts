@@ -17,18 +17,18 @@ function detailsOf(fn: () => unknown): { field: string; message: string }[] {
 
 describe("createTennerSchema", () => {
   it("accepts a valid request and trims the title", () => {
-    expect(validate(createTennerSchema, { ...valid, title: "  Vacuum Office  " })).toEqual({ ...valid, frequencyUnit: "DAY", frequencyInterval: 14, weekdays: null });
+    expect(validate(createTennerSchema, { ...valid, title: "  Vacuum Office  " })).toEqual({ ...valid, frequencyUnit: "DAY", frequencyInterval: 14, weekdays: null, assignmentMode: "FIXED", rotation: null });
   });
 
   it.each([
     ["title too short", { title: "ab" }, "title"],
     ["title too long", { title: "x".repeat(101) }, "title"],
-    ["unknown category", { category: "GARDEN" }, "category"],
+    ["unknown category", { category: "garden" }, "category"],
     ["estimatedMinutes below range", { estimatedMinutes: 0 }, "estimatedMinutes"],
     ["estimatedMinutes above range", { estimatedMinutes: 481 }, "estimatedMinutes"],
     ["estimatedMinutes not integer", { estimatedMinutes: 2.5 }, "estimatedMinutes"],
     ["frequencyDays above range", { frequencyDays: 3651 }, "frequencyDays"],
-    ["unknown user", { assignedTo: "BOB" }, "assignedTo"],
+    ["unknown user", { assignedTo: "bob" }, "assignedTo"],
     ["wrong type", { frequencyDays: "14" }, "frequencyDays"],
   ])("rejects %s", (_name, override, field) => {
     expect(detailsOf(() => validate(createTennerSchema, { ...valid, ...override })).map((d) => d.field)).toContain(field);

@@ -136,9 +136,9 @@ run "cognito_policy_only_manages_group_membership" {
   assert {
     condition = toset(data.aws_iam_policy_document.api_cognito.statement[0].actions) == toset([
       "cognito-idp:AdminAddUserToGroup", "cognito-idp:AdminRemoveUserFromGroup",
-      "cognito-idp:AdminListGroupsForUser", "cognito-idp:ListUsersInGroup",
+      "cognito-idp:AdminListGroupsForUser", "cognito-idp:ListUsersInGroup", "cognito-idp:CreateGroup",
     ])
-    error_message = "The API may only read and change household group membership (HOTFIX-001)."
+    error_message = "The API may only read and change household group membership and create member groups (HOTFIX-001, HOUSEHOLD-ADMIN-001)."
   }
 
   assert {

@@ -1,7 +1,7 @@
 /** Business logic for listing Tenners (TICKET-010). */
 
 import { toTennerResponse, type ListTennersRequest, type ListTennersResponse, type SortOrder, type TennerSortField } from "../dto/index.js";
-import type { Tenner } from "../models/index.js";
+import { SHARED_ASSIGNEE, type Tenner } from "../models/index.js";
 import type { TennerCriteria, TennerRepository } from "../repositories/index.js";
 import type { Clock } from "../utils/clock.js";
 import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
@@ -20,7 +20,13 @@ export class ListTennersService {
     const needsToday = request.due === true || request.overdue === true;
     const today = needsToday ? dateInTimeZone(this.clock(), await this.timezoneOf(tenantId)) : "";
     const criteria = toCriteria(request, today);
-    const tenners = await this.repository.list(tenantId, criteria);
+    // A member filter also returns shared Tenners (HOUSEHOLD-002): a second assignedTo-index query.
+    const includeShared = request.assignedTo !== undefined && request.assignedTo !== SHARED_ASSIGNEE;
+    const [own, shared] = await Promise.all([
+      this.repository.list(tenantId, criteria),
+      includeShared ? this.repository.list(tenantId, { ...criteria, assignedTo: SHARED_ASSIGNEE }) : Promise.resolve([]),
+    ]);
+    const tenners = [...own, ...shared];
     return sortTenners(tenners, request.sort ?? DEFAULT_SORT, request.order ?? DEFAULT_ORDER).map(toTennerResponse);
   }
 }

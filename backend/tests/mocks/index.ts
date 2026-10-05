@@ -3,7 +3,7 @@
 import { vi, type Mocked } from "vitest";
 import type { Identity } from "../../src/auth/index.js";
 import type { AppConfig } from "../../src/config.js";
-import type { Completion, Tenner } from "../../src/models/index.js";
+import type { Completion, HouseholdSettings, Tenner } from "../../src/models/index.js";
 import type { CompletionRepository, TennerRepository } from "../../src/repositories/index.js";
 import type { AnalyticsService, TennerService } from "../../src/services/index.js";
 import type { ApiEvent } from "../../src/types/api.js";
@@ -108,6 +108,9 @@ export function tennerFixture(overrides: Partial<Tenner> = {}): Tenner {
     frequencyInterval: 14,
     weekdays: null,
     assignedTo: "STEFAN",
+    assignmentMode: "FIXED",
+    rotation: null,
+    originalAssignee: null,
     lastCompleted: null,
     nextDue: "2026-10-01",
     snoozedUntil: null,
@@ -119,6 +122,28 @@ export function tennerFixture(overrides: Partial<Tenner> = {}): Tenner {
     updatedAt: "2026-10-01T10:00:00Z",
     createdBy: "STEFAN",
     updatedBy: "STEFAN",
+    ...overrides,
+  };
+}
+
+/** A stored household item with nothing customized (HOUSEHOLD-ADMIN-001 – 003). */
+export function householdSettings(overrides: Partial<HouseholdSettings> = {}): HouseholdSettings {
+  return {
+    tenantId: "default",
+    name: null,
+    timezone: null,
+    weekStartsOn: null,
+    workdays: null,
+    defaults: null,
+    vacation: null,
+    members: null,
+    membersVersion: 0,
+    categories: null,
+    handovers: [],
+    handoversVersion: 0,
+    categoriesVersion: 0,
+    updatedAt: "t",
+    updatedBy: null,
     ...overrides,
   };
 }

@@ -151,3 +151,31 @@ npm run test
 
 - Nested categories
 - Tags in addition to categories
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Categories manageable per household: `GET/POST /categories`, `PUT /categories/{categoryId}`; Settings →
+  "Kategorien" with add, rename, icon, color, reorder (up/down) and archive/restore
+- [x] Existing categories preserved: the six original categories are the seed (read-time default, idempotent)
+- [x] No hardcoded category lists remain: validation, dashboard workload, filters, form, Quick Add defaults,
+  vacation categories and all labels use the managed categories (the seed is the only constant; the Quick Add
+  keyword table still covers the seed categories, TD-030)
+- [x] Archived categories handled: they stay on existing Tenners (shown, edit form keeps them as disabled option),
+  in filters and analytics, but are rejected for new Tenners and category changes (400)
+- [x] Tests passing: backend 614 (seed, create, duplicate rejected, archive, archived on existing Tenner, archived
+  rejected for new Tenner, dynamic analytics grouping, reorder), frontend 285, Terraform 51; lint and build clean
+- [ ] Deploys through GitHub Actions: new API routes only; verified after merge
+
+Decisions and assumptions:
+
+- Storage: list in the household item of `tenner-households`, same as members (the ticket allowed "the simpler
+  option"); optimistic locking with `categoriesVersion`.
+- Reorder: `PUT` with `sortOrder` = new position; the service renumbers all categories (one request per move).
+- An archived default category in the user preferences falls back to the first selectable category.
+- At most 30 categories; colors reuse the member palette; icons are a fixed set of 12.
+
+Technical debt: TD-007 resolved; TD-030 added.

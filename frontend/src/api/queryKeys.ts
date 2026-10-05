@@ -10,4 +10,6 @@ export const queryKeys = {
   tennerHistory: (tennerId: string) => ["history", "tenner", tennerId] as const,
   onboarding: ["onboarding"] as const,
   household: ["household"] as const,
+  members: ["members"] as const,
+  categories: ["categories"] as const,
 };

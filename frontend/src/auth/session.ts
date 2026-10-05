@@ -1,14 +1,14 @@
 /** Identity helpers (SECURITY-003, FUTURE-011): household member from the ID token, Cognito URLs. */
 
 import type { AuthConfig } from "../config";
-import { USER_IDS, type UserId } from "../types/domain";
+import { USER_ID_PATTERN, type UserId } from "../types/domain";
 
 export const CALLBACK_PATH = "/auth/callback";
 
 /** Extra parameters of the Cognito authorize request: German pages, straight to Google (no Cognito login page). */
 export const LOGIN_PARAMS = { lang: "de", identity_provider: "Google" } as const;
 
-const HOUSEHOLD_GROUP_PATTERN = /^household:[A-Za-z0-9_-]{1,64}:([A-Z]+)$/;
+const HOUSEHOLD_GROUP_PATTERN = /^household:[A-Za-z0-9_-]{1,64}:([A-Z][A-Z0-9_]{0,29})$/;
 
 /**
  * Household member from the cognito:groups claim: exactly one group "household:<tenantId>:<userId>" with a known
@@ -22,7 +22,7 @@ export function userIdFromProfile(profile: Readonly<Record<string, unknown>> | u
   );
   if (household.length !== 1) return undefined;
   const userId = HOUSEHOLD_GROUP_PATTERN.exec(household[0] ?? "")?.[1];
-  return userId !== undefined && (USER_IDS as readonly string[]).includes(userId) ? (userId as UserId) : undefined;
+  return userId !== undefined && USER_ID_PATTERN.test(userId) ? userId : undefined;
 }
 
 /** Cognito logout endpoint: ends the managed login session and returns to the app. */

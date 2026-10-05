@@ -108,6 +108,9 @@ interface TennerFields {
   readonly category: Category;
   readonly assignedTo: UserId;
   readonly estimatedMinutes: number;
+  /** HOUSEHOLD-001; omitted = FIXED. */
+  readonly assignmentMode?: "FIXED" | "ROTATING";
+  readonly rotation?: readonly UserId[] | null;
 }
 
 /** Calendar frequency (SCHEDULING-001). */

@@ -18,4 +18,8 @@ export interface Completion {
   readonly revertedAt: string | null;
   readonly revertedBy: UserId | null;
   readonly revertReason: string | null;
+  /** Assignee before this completion advanced a rotation (HOUSEHOLD-001); undo restores it. */
+  readonly assignedToBefore?: UserId | undefined;
+  /** Handover state before the completion (HOUSEHOLD-004), set only with assignedToBefore when not null. */
+  readonly originalAssigneeBefore?: UserId | undefined;
 }

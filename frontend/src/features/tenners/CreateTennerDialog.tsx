@@ -19,7 +19,8 @@ import { useNewTennerDefaults } from "../settings/useNewTennerDefaults";
 import { useCreateTenner } from "./api";
 import { applyServerErrors } from "./applyServerErrors";
 import { TennerForm } from "./TennerForm";
-import { tennerFormSchema, weekdaysForApi, type TennerFormValues } from "./tennerForm.schema";
+import { assignmentForApi, tennerFormSchema, weekdaysForApi, type TennerFormValues } from "./tennerForm.schema";
+import { useAssignees } from "../members/useAssignees";
 
 export interface CreateTennerDialogProps {
   readonly open: boolean;
@@ -43,6 +44,7 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
   const notify = useNotify();
   const defaults = useNewTennerDefaults();
   const create = useCreateTenner();
+  const memberOrder = useAssignees().map((member) => member.userId);
 
   const form = useForm<TennerFormValues>({
     resolver: zodResolver(tennerFormSchema),
@@ -55,6 +57,8 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
       frequencyInterval: defaults.frequencyDays,
       frequencyUnit: "DAY",
       weekdays: [],
+      rotating: false,
+      rotation: [],
       active: true,
     },
   });
@@ -77,6 +81,7 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
         frequencyUnit,
         frequencyInterval,
         weekdays: weekdaysForApi(values),
+        ...assignmentForApi(values, memberOrder),
       },
       {
         onSuccess: (created) => {

@@ -13,6 +13,12 @@ import {
   type SnoozeTennerRequest,
   type SkipTennerRequest,
   type PauseTennerRequest,
+  type CreateMemberRequest,
+  type DeactivateMemberRequest,
+  type StartHandoverRequest,
+  type CreateCategoryRequest,
+  type UpdateCategoryRequest,
+  type UpdateMemberRequest,
   type VacationRequest,
   type UndoCompletionRequest,
   type UpdateTennerRequest,
@@ -27,13 +33,16 @@ import {
   frequencyIntervalSchema,
   frequencyUnitSchema,
   weekdaysSchema,
+  displayNameSchema,
+  categoryIconSchema,
+  memberColorSchema,
   titleSchema,
   userIdSchema,
   utcTimestampSchema,
 } from "./common.js";
 import { isValidTimeZone } from "../utils/timezone.js";
 import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
-import { WEEKDAYS, type Weekday } from "../models/index.js";
+import { ASSIGNMENT_MODES, SHARED_ASSIGNEE, WEEK_STARTS, WEEKDAYS, type AssignmentMode, type UserId, type Weekday } from "../models/index.js";
 
 const tennerFields = {
   title: titleSchema,
@@ -44,6 +53,8 @@ const tennerFields = {
   frequencyInterval: frequencyIntervalSchema.optional(),
   weekdays: weekdaysSchema.nullable().optional(),
   assignedTo: userIdSchema,
+  assignmentMode: z.enum(ASSIGNMENT_MODES).optional(),
+  rotation: z.array(userIdSchema).max(20).nullable().optional(),
 };
 
 interface FrequencyInput {
@@ -87,6 +98,38 @@ function normalizeFrequency(value: FrequencyInput, ctx: z.RefinementCtx): Normal
   return { frequencyDays: approximateFrequencyDays(frequencyUnit, interval, weekdays), frequencyUnit, frequencyInterval: interval, weekdays };
 }
 
+interface AssignmentInput {
+  readonly assignedTo?: UserId | undefined;
+  readonly assignmentMode?: AssignmentMode | undefined;
+  readonly rotation?: readonly UserId[] | null | undefined;
+}
+
+/**
+ * Normalize the assignment fields (HOUSEHOLD-001): ROTATING needs `rotation` (≥ 2 distinct members, not HOUSEHOLD)
+ * in the same request, and a given `assignedTo` must be part of it; FIXED stores rotation null. `rotation` without
+ * ROTATING is rejected. Undefined result = no assignment-mode change.
+ */
+function normalizeAssignment(value: AssignmentInput, ctx: z.RefinementCtx): { assignmentMode: AssignmentMode; rotation: UserId[] | null } | undefined {
+  const { assignmentMode, rotation, assignedTo } = value;
+  const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
+  if (rotation != null && assignmentMode !== "ROTATING") {
+    issue("rotation", "rotation requires assignmentMode ROTATING in the same request.");
+    return undefined;
+  }
+  if (assignmentMode === undefined) return undefined;
+  if (assignmentMode === "FIXED") return { assignmentMode, rotation: null };
+  const members = rotation ?? [];
+  if (members.length < 2 || new Set(members).size !== members.length || members.includes(SHARED_ASSIGNEE)) {
+    issue("rotation", "A rotation needs at least two distinct household members.");
+    return undefined;
+  }
+  if (assignedTo !== undefined && !members.includes(assignedTo)) {
+    issue("assignedTo", "Must be part of the rotation.");
+    return undefined;
+  }
+  return { assignmentMode, rotation: [...members] };
+}
+
 /** The request without the raw frequency fields (they are replaced by the normalized ones). */
 function omitFrequency<T extends FrequencyInput>(value: T): Omit<T, keyof FrequencyInput> {
   const rest: Record<string, unknown> = { ...(value as Record<string, unknown>) };
@@ -94,6 +137,8 @@ function omitFrequency<T extends FrequencyInput>(value: T): Omit<T, keyof Freque
   delete rest.frequencyUnit;
   delete rest.frequencyInterval;
   delete rest.weekdays;
+  delete rest.assignmentMode;
+  delete rest.rotation;
   return rest as Omit<T, keyof FrequencyInput>;
 }
 
@@ -105,7 +150,9 @@ export const createTennerSchema = z.strictObject(tennerFields).transform((value,
     if (ctx.issues.length === 0) ctx.addIssue({ code: "custom", path: ["frequencyDays"], message: "frequencyDays or frequencyUnit is required." });
     return z.NEVER;
   }
-  return { ...rest, ...frequency };
+  const assignment = normalizeAssignment(value, ctx) ?? { assignmentMode: "FIXED" as const, rotation: null };
+  if (ctx.issues.length > 0) return z.NEVER;
+  return { ...rest, ...frequency, ...assignment };
 }) satisfies z.ZodType<CreateTennerRequest>;
 
 /** Partial update; protected fields (tenantId, tennerId, createdAt, lastCompleted, nextDue) are rejected as unknown keys. */
@@ -116,7 +163,8 @@ export const updateTennerSchema = z
   .transform((value, ctx): UpdateTennerRequest => {
     const rest = omitFrequency(value);
     const frequency = normalizeFrequency(value, ctx);
-    return frequency === undefined ? rest : { ...rest, ...frequency };
+    const assignment = normalizeAssignment(value, ctx);
+    return { ...rest, ...(frequency ?? {}), ...(assignment ?? {}) };
   }) satisfies z.ZodType<UpdateTennerRequest>;
 
 export const completeTennerSchema = z.strictObject({
@@ -199,14 +247,23 @@ export const tennerHistoryQuerySchema = z.strictObject({
 export const assignHouseholdMemberSchema = z.strictObject({ userId: userIdSchema }) satisfies z.ZodType<AssignHouseholdMemberRequest>;
 
 /** PUT /household (SCHEDULING-008): an IANA timezone the runtime knows; unknown fields rejected. */
-export const updateHouseholdSchema = z.strictObject({
-  timezone: z
-    .string()
-    .trim()
-    .min(1)
-    .max(64)
-    .refine((value) => /^[A-Za-z0-9_+\-/]+$/.test(value) && isValidTimeZone(value), { message: "Unknown timezone." }),
-}) satisfies z.ZodType<UpdateHouseholdRequest>;
+export const updateHouseholdSchema = z
+  .strictObject({
+    name: z.string().trim().min(1).max(60).optional(),
+    timezone: z
+      .string()
+      .trim()
+      .min(1)
+      .max(64)
+      .refine((value) => /^[A-Za-z0-9_+\-/]+$/.test(value) && isValidTimeZone(value), { message: "Unknown timezone." })
+      .optional(),
+    weekStartsOn: z.enum(WEEK_STARTS).optional(),
+    workdays: weekdaysSchema.transform((days) => WEEKDAYS.filter((day) => days.includes(day))).optional(),
+    defaults: z
+      .strictObject({ category: categorySchema, estimatedMinutes: estimatedMinutesSchema, frequencyDays: frequencyDaysSchema })
+      .optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." }) satisfies z.ZodType<UpdateHouseholdRequest>;
 
 /** Snooze (SCHEDULING-003): exactly one of `until` (real calendar date) or `days` (1–3650). */
 export const snoozeTennerSchema = z
@@ -238,3 +295,48 @@ export const vacationSchema = z
       .optional(),
   })
   .refine((value) => value.from <= value.until, { path: ["until"], message: "Must not be before from." }) satisfies z.ZodType<VacationRequest>;
+
+/** POST /users (HOUSEHOLD-ADMIN-001). */
+export const createMemberSchema = z.strictObject({
+  userId: userIdSchema.optional(),
+  displayName: displayNameSchema,
+  color: memberColorSchema,
+}) satisfies z.ZodType<CreateMemberRequest>;
+
+/** PUT /users/{userId}: rename or recolor; userId is immutable. */
+export const updateMemberSchema = z
+  .strictObject({ displayName: displayNameSchema.optional(), color: memberColorSchema.optional() })
+  .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." }) satisfies z.ZodType<UpdateMemberRequest>;
+
+/** POST /categories (HOUSEHOLD-ADMIN-002). */
+export const createCategorySchema = z.strictObject({
+  categoryId: categorySchema.optional(),
+  name: displayNameSchema,
+  icon: categoryIconSchema,
+  color: memberColorSchema,
+}) satisfies z.ZodType<CreateCategoryRequest>;
+
+/** PUT /categories/{categoryId}: rename, icon, color, position, archive; categoryId is immutable. */
+export const updateCategorySchema = z
+  .strictObject({
+    name: displayNameSchema.optional(),
+    icon: categoryIconSchema.optional(),
+    color: memberColorSchema.optional(),
+    sortOrder: z.number().int().min(0).max(99).optional(),
+    archived: z.boolean().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided." }) satisfies z.ZodType<UpdateCategoryRequest>;
+
+/** POST /users/{userId}/deactivate (HOUSEHOLD-ADMIN-004). */
+export const deactivateMemberSchema = z.strictObject({ reassignTo: userIdSchema.optional() }) satisfies z.ZodType<DeactivateMemberRequest>;
+
+/** POST /users/{userId}/handover (HOUSEHOLD-004). */
+export const startHandoverSchema = z.strictObject({
+  to: userIdSchema,
+  until: isoDateSchema,
+  categories: z
+    .array(categorySchema)
+    .min(1)
+    .refine((values) => new Set(values).size === values.length, "Categories must be distinct.")
+    .optional(),
+}) satisfies z.ZodType<StartHandoverRequest>;

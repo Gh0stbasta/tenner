@@ -14,6 +14,8 @@ export interface DashboardTennerResponse {
   readonly title: string;
   readonly category: Category;
   readonly assignedTo: UserId;
+  /** Member the Tenner is covered for during a handover (HOUSEHOLD-004), or null. */
+  readonly originalAssignee: UserId | null;
   readonly estimatedMinutes: number;
   readonly nextDue: string;
   /** Postponed-to date (SCHEDULING-003), or null. */
@@ -46,6 +48,8 @@ export interface DashboardSummaryResponse {
 export interface DashboardGroupSummary {
   readonly count: number;
   readonly estimatedMinutes: number;
+  /** byUser only (HOUSEHOLD-002): shared Tenners included in `count`; their minutes are split evenly. */
+  readonly sharedCount?: number;
 }
 
 export interface DashboardResponse {

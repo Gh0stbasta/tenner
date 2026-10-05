@@ -208,8 +208,10 @@ committed; Terraform keeps it in the encrypted state bucket (TD-021).
 #### Household membership
 
 Membership is a Cognito group `household:<tenantId>:<userId>`. Terraform creates `household:default:STEFAN`
-and `household:default:JULIA`. Normally the app assigns the group itself when someone picks a person on the
-first login. To check or fix assignments, use AWS CloudShell (region `eu-central-1`):
+and `household:default:JULIA`. Members added in the app (Settings → "Haushaltsmitglieder", HOUSEHOLD-ADMIN-001)
+get their group from the API on their first assignment. Normally the app assigns the group itself when someone picks
+a person on the first login. **A newly added member is a free place until its person signs in** (TD-020), so add
+members only when they are about to sign in. To check or fix assignments, use AWS CloudShell (region `eu-central-1`):
 
 ```bash
 POOL_ID=$(aws cognito-idp list-user-pools --max-results 20 \

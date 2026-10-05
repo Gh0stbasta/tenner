@@ -284,7 +284,7 @@ describe("completeTennerHandler", () => {
   });
 
   it.each([
-    ["invalid completed user", { completedBy: "BOB" }],
+    ["invalid completed user", { completedBy: "bob" }],
     ["invalid actual minutes", { completedBy: "STEFAN", actualMinutes: 0 }],
     ["timestamp with offset", { completedBy: "STEFAN", completedAt: "2026-10-01T20:30:00+02:00" }],
   ])("rejects %s", async (_name, payload) => {

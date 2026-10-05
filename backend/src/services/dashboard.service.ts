@@ -11,7 +11,8 @@ import type {
   DashboardSummaryResponse,
   DashboardTennerResponse,
 } from "../dto/index.js";
-import type { Tenner } from "../models/index.js";
+import { SEED_MEMBERS, SHARED_ASSIGNEE, type Tenner } from "../models/index.js";
+import type { MemberSource } from "./member.service.js";
 import type { TennerRepository } from "../repositories/index.js";
 import { addDays, type Clock } from "../utils/clock.js";
 import { isPaused, isPausedIndividually, pausedUntilOf, type VacationSource } from "../utils/pause.js";
@@ -44,6 +45,7 @@ export class DashboardService {
     private readonly clock: Clock,
     private readonly timezoneOf: TimeZoneSource,
     private readonly vacationOf: VacationSource,
+    private readonly membersOf: MemberSource = async () => SEED_MEMBERS,
   ) {}
 
   async getDashboard(tenantId: string, request: DashboardRequest = {}): Promise<DashboardResponse> {
@@ -54,7 +56,8 @@ export class DashboardService {
     const matches = (t: Tenner): boolean =>
       t.active &&
       t.deletedAt === null &&
-      (request.assignedTo === undefined || t.assignedTo === request.assignedTo) &&
+      // A member filter includes shared Tenners (HOUSEHOLD-002).
+      (request.assignedTo === undefined || t.assignedTo === request.assignedTo || t.assignedTo === SHARED_ASSIGNEE) &&
       (request.category === undefined || t.category === request.category);
     // Paused Tenners (SCHEDULING-005) leave every section and summary and get their own list.
     const candidates = (await this.repository.getDashboardCandidates(tenantId, endDate)).filter(
@@ -81,7 +84,7 @@ export class DashboardService {
         pausedUntil: pausedUntilOf(t, vacation, referenceDate),
         pauseReason: isPausedIndividually(t, referenceDate) ? "PAUSE" : "VACATION",
       })),
-      byUser: groupBy(actionable, (t) => t.assignedTo),
+      byUser: groupByUser(actionable, (await this.membersOf(tenantId)).filter((member) => member.active).map((member) => member.userId)),
       byCategory: groupBy(actionable, (t) => t.category),
     };
   }
@@ -102,6 +105,23 @@ function summarize(dueToday: Tenner[], overdue: Tenner[], upcoming: Tenner[]): D
   };
 }
 
+/**
+ * Actionable load per member. Shared Tenners count for every active member (sharedCount) and their minutes are split
+ * evenly; minutes are rounded per member (HOUSEHOLD-002).
+ */
+function groupByUser(tenners: readonly Tenner[], activeMembers: readonly string[]): Record<string, DashboardGroupSummary> {
+  const own = groupBy(tenners.filter((t) => t.assignedTo !== SHARED_ASSIGNEE), (t) => t.assignedTo) as Record<string, DashboardGroupSummary>;
+  const shared = tenners.filter((t) => t.assignedTo === SHARED_ASSIGNEE);
+  if (shared.length === 0 || activeMembers.length === 0) return own;
+  const sharedMinutes = minutes(shared) / activeMembers.length;
+  const result: Record<string, DashboardGroupSummary> = { ...own };
+  for (const userId of activeMembers) {
+    const current = own[userId] ?? { count: 0, estimatedMinutes: 0 };
+    result[userId] = { count: current.count + shared.length, estimatedMinutes: Math.round(current.estimatedMinutes + sharedMinutes), sharedCount: shared.length };
+  }
+  return result;
+}
+
 function groupBy<K extends string>(tenners: readonly Tenner[], key: (t: Tenner) => K): Partial<Record<K, DashboardGroupSummary>> {
   const groups: Partial<Record<K, DashboardGroupSummary>> = {};
   for (const tenner of tenners) {
@@ -117,6 +137,7 @@ function toItem(tenner: Tenner, extra: { overdueDays?: number; daysUntilDue?: nu
     title: tenner.title,
     category: tenner.category,
     assignedTo: tenner.assignedTo,
+    originalAssignee: tenner.originalAssignee,
     estimatedMinutes: tenner.estimatedMinutes,
     nextDue: tenner.nextDue,
     snoozedUntil: tenner.snoozedUntil,

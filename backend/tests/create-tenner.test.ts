@@ -8,7 +8,7 @@ import { mockLogger, mockTennerRepository, TEST_IDENTITY, testIdentity } from ".
 const NOW = new Date("2026-10-01T18:30:15.123Z");
 const ID = "5c2bfd9b-c8d1-4ab7-af57-b1dfe6ddbf05";
 /** Validated (normalized) request as the service receives it. */
-const request = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14, frequencyUnit: "DAY", frequencyInterval: 14, weekdays: null, assignedTo: "STEFAN" } as const;
+const request = { title: "Vacuum Office", category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14, frequencyUnit: "DAY", frequencyInterval: 14, weekdays: null, assignedTo: "STEFAN", assignmentMode: "FIXED", rotation: null } as const;
 
 function service() {
   const repository = mockTennerRepository();
@@ -24,6 +24,7 @@ describe("CreateTennerService", () => {
       tenantId: "default",
       tennerId: ID,
       ...request,
+      originalAssignee: null,
       lastCompleted: null,
       nextDue: "2026-10-01",
       snoozedUntil: null,
@@ -39,6 +40,7 @@ describe("CreateTennerService", () => {
     expect(response).toEqual({
       tennerId: ID,
       ...request,
+      originalAssignee: null,
       lastCompleted: null,
       nextDue: "2026-10-01",
       snoozedUntil: null,
@@ -96,8 +98,8 @@ describe("createTennerHandler", () => {
   it.each([
     ["invalid title", { ...body, title: "ab" }],
     ["invalid frequency days", { ...body, frequencyDays: 4000 }],
-    ["invalid category", { ...body, category: "GARDEN" }],
-    ["invalid assigned user", { ...body, assignedTo: "BOB" }],
+    ["invalid category", { ...body, category: "garden" }],
+    ["invalid assigned user", { ...body, assignedTo: "bob" }],
     ["malformed JSON", "{"],
     ["missing body", ""],
   ])("rejects %s", async (_name, body) => {

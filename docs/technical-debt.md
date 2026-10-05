@@ -177,7 +177,10 @@ TICKET-001, SECURITY-001
 
 ---
 
-## TD-007: Several tickets mark the user list and categories as hardcoded
+## TD-007: Several tickets mark the user list and categories as hardcoded (resolved)
+
+> Household members resolved by HOUSEHOLD-ADMIN-001 (2026-10-05): members are managed data in `tenner-households`;
+> only the seed members (STEFAN, JULIA) remain as one constant. Categories resolved by HOUSEHOLD-ADMIN-002 the same way.
 
 ### Description
 
@@ -544,7 +547,8 @@ SECURITY-004, TD-018, `backend/src/repositories/dynamodb/tenner.mapper.ts`, `com
 Since FUTURE-011, Cognito creates a user on every first Google sign-in. Their users stay in the pool until an
 administrator deletes them. Since HOTFIX-001, a new user picks a household member on the first login; each
 member can be claimed once. **Until every member is claimed, a stranger who knows the URL can claim a free
-member and gets full household access.** After that, strangers see "Kein freier Platz" (403).
+member and gets full household access.** After that, strangers see "Kein freier Platz" (403). Since
+HOUSEHOLD-ADMIN-001, every member added in the settings is a new free place until its person signs in.
 
 ### Reason
 
@@ -633,7 +637,8 @@ FUTURE-011, TD-007, HOUSEHOLD-ADMIN-001
 ### Description
 
 For self-assignment (HOTFIX-001), `tenner-api-role` may call `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`,
-`AdminListGroupsForUser` and `ListUsersInGroup` on the Tenner user pool. IAM cannot restrict which user or group
+`AdminListGroupsForUser`, `ListUsersInGroup` and, since HOUSEHOLD-ADMIN-001, `CreateGroup` (groups of members added
+in the app are created on their first assignment) on the Tenner user pool. IAM cannot restrict which user or group
 is affected; the code only ever adds the calling user to one household group and only after checking it is free.
 Concurrent claims of the same member are resolved by a re-count after adding (the later account withdraws).
 
@@ -815,3 +820,61 @@ pause history when analytics needs it (ANALYTICS-006/008).
 ### Related Work
 
 SCHEDULING-005, `backend/src/utils/pause.ts`, `backend/src/services/vacation.service.ts`.
+
+## TD-030: Quick Add category suggestions know only the seed categories
+
+### Description
+
+`suggestCategory` (FRONTEND-006) maps German/English keywords to the six seed categories. Categories added in the
+settings never get suggested; archived ones are skipped.
+
+### Reason
+
+HOUSEHOLD-ADMIN-002 made categories managed data; keywords per category were not part of the ticket.
+
+### Impact
+
+New categories must be picked manually in the create dialog; Quick Add uses the default category.
+
+### Suggested Improvement
+
+Store optional keywords per category (or match the category name) and build the suggestion table from
+`GET /categories`.
+
+### Related Work
+
+HOUSEHOLD-ADMIN-002, FRONTEND-006, `frontend/src/features/tenners/quickAdd.ts`.
+
+## TD-031: Handover give-back runs on read, not on a schedule
+
+### Description
+
+HOUSEHOLD-004 gives handed-over Tenners back when `GET /dashboard`, `GET /tenners` or `GET /household` notices
+that a handover's last day has passed (`HandoverService.expireDue`). Known gaps:
+
+- Without any of these reads, Tenners stay with the cover after `until` (nothing else reads assignments yet; a
+  future notifier or analytics job must call `expireDue` first).
+- Each of these reads costs one extra GetItem on `tenner-households` (household settings are read several times per
+  request already, see the services' `membersOf`/`timezoneOf`/`vacationOf` sources).
+- Starting, ending and expiring move Tenners with sequential `UpdateItem` calls, not one transaction. A failure
+  leaves a partial state that the next identical start, the next end or the next read completes.
+- Give-back scans all non-deleted Tenners of the household (no index on `originalAssignee`).
+- Two requests expiring at the same moment may both give back (idempotent) and one save loses the version race
+  (logged as `Handover expiry skipped`, retried on the next read).
+
+### Reason
+
+Same decision as SCHEDULING-005: no scheduler or new infrastructure for one household (see `docs/architecture.md`).
+
+### Impact
+
+Assignments may be outdated until the next app open; slightly higher DynamoDB read cost per read request.
+
+### Suggested Improvement
+
+When NOTIFICATION-001 introduces a scheduled Lambda, call `expireDue` from it daily and drop the read hook; load
+the household item once per request and pass it to all services.
+
+### Related Work
+
+HOUSEHOLD-004, `backend/src/services/handover.service.ts`, `backend/src/index.ts`.

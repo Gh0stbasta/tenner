@@ -1,10 +1,12 @@
 /** Zod schemas for Tenner API payloads. They mirror backend/src/dto. */
 
 import { z } from "zod";
-import { CATEGORIES, FREQUENCY_UNITS, USER_IDS, WEEKDAYS } from "../../types/domain";
+import { FREQUENCY_UNITS, WEEKDAYS } from "../../types/domain";
 
-export const categorySchema = z.enum(CATEGORIES);
-export const userIdSchema = z.enum(USER_IDS);
+/** Category IDs are managed data (HOUSEHOLD-ADMIN-002); names come from features/categories. */
+export const categorySchema = z.string();
+/** Member IDs are managed data (HOUSEHOLD-ADMIN-001); names come from features/members. */
+export const userIdSchema = z.string();
 
 export const tennerSchema = z.object({
   tennerId: z.string(),
@@ -17,6 +19,11 @@ export const tennerSchema = z.object({
   /** SCHEDULING-002: weekdays for WEEK frequencies, otherwise null. */
   weekdays: z.array(z.enum(WEEKDAYS)).nullable(),
   assignedTo: userIdSchema,
+  /** HOUSEHOLD-001: rotating assignment; FIXED for Tenners from before. */
+  assignmentMode: z.enum(["FIXED", "ROTATING"]).default("FIXED"),
+  rotation: z.array(z.string()).nullable().default(null),
+  /** HOUSEHOLD-004: member the Tenner is covered for during a handover. */
+  originalAssignee: z.string().nullable().default(null),
   lastCompleted: z.string().nullable(),
   nextDue: z.string(),
   /** SCHEDULING-003: postponed-to date, cleared by the next completion. */

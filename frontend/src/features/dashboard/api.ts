@@ -11,6 +11,8 @@ const dashboardTennerSchema = z.object({
   title: z.string(),
   category: categorySchema,
   assignedTo: userIdSchema,
+  /** HOUSEHOLD-004: member the Tenner is covered for during a handover. */
+  originalAssignee: z.string().nullable().default(null),
   estimatedMinutes: z.number(),
   nextDue: z.string(),
   snoozedUntil: z.string().nullable(),
@@ -26,7 +28,11 @@ const pausedTennerSchema = dashboardTennerSchema.extend({
 });
 export type PausedDashboardTenner = z.infer<typeof pausedTennerSchema>;
 
-const groupSummarySchema = z.object({ count: z.number(), estimatedMinutes: z.number() });
+const groupSummarySchema = z.object({
+  count: z.number(),
+  estimatedMinutes: z.number(),
+  sharedCount: z.number().optional(),
+});
 export type GroupSummary = z.infer<typeof groupSummarySchema>;
 
 export const dashboardSchema = z.object({
@@ -46,8 +52,8 @@ export const dashboardSchema = z.object({
   overdue: z.array(dashboardTennerSchema),
   upcoming: z.array(dashboardTennerSchema),
   paused: z.array(pausedTennerSchema).default([]),
-  byUser: z.partialRecord(userIdSchema, groupSummarySchema),
-  byCategory: z.partialRecord(categorySchema, groupSummarySchema),
+  byUser: z.partialRecord(z.string(), groupSummarySchema),
+  byCategory: z.partialRecord(z.string(), groupSummarySchema),
 });
 export type Dashboard = z.infer<typeof dashboardSchema>;
 

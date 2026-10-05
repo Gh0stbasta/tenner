@@ -2,59 +2,105 @@ import { GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it, vi } from "vitest";
 import { PersistenceError, ValidationError } from "../src/exceptions/index.js";
 import { getHouseholdHandler, updateHouseholdHandler } from "../src/handlers/household.js";
-import { DynamoDbHouseholdRepository, type HouseholdRepository } from "../src/repositories/index.js";
+import { SEED_CATEGORIES, type HouseholdSettings, type HouseholdSettingsChange } from "../src/models/index.js";
+import { DynamoDbHouseholdRepository } from "../src/repositories/index.js";
 import { DashboardService, HouseholdService, ListTennersService } from "../src/services/index.js";
 import type { ApiEvent } from "../src/types/api.js";
-import { mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
+import { householdSettings, mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-05T08:00:00Z");
 
-function memoryRepository(timezone?: string): HouseholdRepository & { saveTimezone: ReturnType<typeof vi.fn> } {
+function memoryRepository(timezone?: string) {
   return {
-    get: vi.fn(async (tenantId: string) => (timezone ? { tenantId, timezone, vacation: null, updatedAt: "t", updatedBy: null } : undefined)),
-    saveTimezone: vi.fn(async (tenantId: string, tz: string, actor, timestamp: string) => ({ tenantId, timezone: tz, vacation: null, updatedAt: timestamp, updatedBy: actor })),
-    saveVacation: vi.fn(),
+    get: vi.fn(async () => (timezone ? householdSettings({ timezone }) : undefined)),
+    saveSettings: vi.fn(async (_tenantId: string, changes: HouseholdSettingsChange, actor: string, timestamp: string) =>
+      householdSettings({ ...(changes as Partial<HouseholdSettings>), updatedAt: timestamp, updatedBy: actor }),
+    ),
   };
 }
+
+const DEFAULT_HOUSEHOLD = { name: "Unser Haushalt", timezone: "Europe/Berlin", weekStartsOn: "MONDAY", workdays: ["MON", "TUE", "WED", "THU", "FRI"], defaults: { category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14 }, defaultsSource: "DEFAULT", vacation: null, handovers: [] } as const;
 
 describe("HouseholdService", () => {
   it("returns the stored timezone or the configured default (getHouseholdTimezone)", async () => {
     await expect(new HouseholdService(memoryRepository("Asia/Tokyo"), () => NOW, "Europe/Berlin").timezoneOf("default")).resolves.toBe("Asia/Tokyo");
-    await expect(new HouseholdService(memoryRepository(), () => NOW, "Europe/Berlin").getHousehold("default")).resolves.toEqual({ timezone: "Europe/Berlin", vacation: null });
   });
 
-  it("saves the timezone with the acting user and time", async () => {
+  it("returns default settings for a new household (HOUSEHOLD-ADMIN-003)", async () => {
+    await expect(new HouseholdService(memoryRepository(), () => NOW, "Europe/Berlin").getHousehold("default")).resolves.toEqual(DEFAULT_HOUSEHOLD);
+  });
+
+  it("saves any subset of the settings with the acting user and time", async () => {
     const repository = memoryRepository();
-    await expect(new HouseholdService(repository, () => NOW, "Europe/Berlin").updateTimezone(TEST_IDENTITY, "America/New_York")).resolves.toEqual({ timezone: "America/New_York", vacation: null });
-    expect(repository.saveTimezone).toHaveBeenCalledWith("default", "America/New_York", "STEFAN", "2026-10-05T08:00:00Z");
+    const service = new HouseholdService(repository, () => NOW, "Europe/Berlin");
+    const result = await service.updateSettings(TEST_IDENTITY, { name: "Familie S.", workdays: ["MON", "WED"], defaults: { category: "FITNESS", estimatedMinutes: 30, frequencyDays: 7 } });
+    expect(repository.saveSettings).toHaveBeenCalledWith(
+      "default",
+      { name: "Familie S.", workdays: ["MON", "WED"], defaults: { category: "FITNESS", estimatedMinutes: 30, frequencyDays: 7 } },
+      "STEFAN",
+      "2026-10-05T08:00:00Z",
+    );
+    expect(result).toMatchObject({ name: "Familie S.", workdays: ["MON", "WED"], defaultsSource: "HOUSEHOLD", timezone: "Europe/Berlin" });
+    await expect(service.updateSettings(TEST_IDENTITY, { timezone: "America/New_York" })).resolves.toMatchObject({ timezone: "America/New_York" });
+  });
+
+  it("rejects unknown or archived default categories", async () => {
+    const categories = SEED_CATEGORIES.map((c) => (c.categoryId === "FINANCE" ? { ...c, archived: true } : c));
+    const service = new HouseholdService(memoryRepository(), () => NOW, "Europe/Berlin", async () => categories);
+    await expect(service.updateSettings(TEST_IDENTITY, { defaults: { category: "PETS", estimatedMinutes: 5, frequencyDays: 7 } })).rejects.toBeInstanceOf(ValidationError);
+    await expect(service.updateSettings(TEST_IDENTITY, { defaults: { category: "FINANCE", estimatedMinutes: 5, frequencyDays: 7 } })).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("exposes effective settings to backend consumers", async () => {
+    const repository = memoryRepository();
+    repository.get.mockResolvedValue(householdSettings({ weekStartsOn: "SUNDAY" }));
+    await expect(new HouseholdService(repository, () => NOW, "UTC").settingsOf("default")).resolves.toMatchObject({ weekStartsOn: "SUNDAY", timezone: "UTC" });
   });
 });
 
 describe("household handlers", () => {
   const event = (body: unknown): ApiEvent => ({ routeKey: "PUT /household", body: JSON.stringify(body) }) as unknown as ApiEvent;
 
-  it("GET returns the household timezone", async () => {
-    const response = await getHouseholdHandler("default", async () => ({ timezone: "Europe/Berlin", vacation: null }));
-    expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: { timezone: "Europe/Berlin", vacation: null } });
+  it("GET returns the household settings", async () => {
+    const response = await getHouseholdHandler("default", async () => DEFAULT_HOUSEHOLD);
+    expect(JSON.parse(response.body ?? "")).toEqual({ success: true, data: DEFAULT_HOUSEHOLD });
   });
 
-  it("PUT saves a valid IANA timezone and logs the change", async () => {
+  it("PUT saves valid settings and logs the changed fields", async () => {
     const logger = mockLogger();
-    const update = vi.fn(async (_identity, timezone: string) => ({ timezone, vacation: null }));
-    const response = await updateHouseholdHandler(event({ timezone: " Europe/Vienna " }), TEST_IDENTITY, update, logger);
+    const update = vi.fn(async () => ({ ...DEFAULT_HOUSEHOLD, timezone: "Europe/Vienna" }));
+    const response = await updateHouseholdHandler(event({ timezone: " Europe/Vienna ", workdays: ["FRI", "MON"], weekStartsOn: "SUNDAY" }), TEST_IDENTITY, update, logger);
     expect(response.statusCode).toBe(200);
-    expect(update).toHaveBeenCalledWith(TEST_IDENTITY, "Europe/Vienna");
-    expect(logger.info).toHaveBeenCalledWith("Household timezone changed", { event: "HouseholdTimezoneChanged", timezone: "Europe/Vienna" });
+    expect(update).toHaveBeenCalledWith(TEST_IDENTITY, { timezone: "Europe/Vienna", workdays: ["MON", "FRI"], weekStartsOn: "SUNDAY" });
+    expect(logger.info).toHaveBeenCalledWith("Household settings changed", {
+      event: "HouseholdSettingsChanged",
+      changedFields: ["timezone", "weekStartsOn", "workdays"],
+      changedBy: "STEFAN",
+      timezone: "Europe/Vienna",
+    });
   });
 
-  it.each([{ timezone: "Mars/Olympus" }, { timezone: "" }, { timezone: "Europe/Berlin; rm" }, { timezone: "x".repeat(65) }, {}, { timezone: "UTC", name: "x" }])(
-    "invalid timezone rejected: %j",
-    async (body) => {
-      const update = vi.fn();
-      await expect(updateHouseholdHandler(event(body), TEST_IDENTITY, update, mockLogger())).rejects.toBeInstanceOf(ValidationError);
-      expect(update).not.toHaveBeenCalled();
-    },
-  );
+  it.each([
+    { timezone: "Mars/Olympus" },
+    { timezone: "" },
+    { timezone: "Europe/Berlin; rm" },
+    { timezone: "x".repeat(65) },
+    {},
+    { timezone: "UTC", extra: "x" },
+    { name: " " },
+    { name: "x".repeat(61) },
+    { weekStartsOn: "FRIDAY" },
+    { workdays: [] },
+    { workdays: ["MON", "MON"] },
+    { defaults: { category: "HOUSEHOLD", estimatedMinutes: 0, frequencyDays: 14 } },
+    { defaults: { category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 4000 } },
+    { defaults: { category: "household", estimatedMinutes: 10, frequencyDays: 14 } },
+    { defaults: { category: "HOUSEHOLD", estimatedMinutes: 10 } },
+  ])("invalid settings rejected: %j", async (body) => {
+    const update = vi.fn();
+    await expect(updateHouseholdHandler(event(body), TEST_IDENTITY, update, mockLogger())).rejects.toBeInstanceOf(ValidationError);
+    expect(update).not.toHaveBeenCalled();
+  });
 });
 
 describe("DynamoDbHouseholdRepository", () => {
@@ -62,7 +108,7 @@ describe("DynamoDbHouseholdRepository", () => {
 
   it("reads the item by tenant; missing settings read as null", async () => {
     const c = client(async () => ({ Item: { tenantId: "default", timezone: "Europe/Berlin", updatedAt: "t", updatedBy: "JULIA" } }));
-    await expect(new DynamoDbHouseholdRepository(c, "tenner-households").get("default")).resolves.toEqual({ tenantId: "default", timezone: "Europe/Berlin", vacation: null, updatedAt: "t", updatedBy: "JULIA" });
+    await expect(new DynamoDbHouseholdRepository(c, "tenner-households").get("default")).resolves.toEqual(householdSettings({ timezone: "Europe/Berlin", updatedBy: "JULIA" }));
     expect((c.send.mock.calls[0]?.[0] as GetCommand).input).toEqual({ TableName: "tenner-households", Key: { tenantId: "default" } });
     await expect(new DynamoDbHouseholdRepository(client(async () => ({ Item: { tenantId: "default" } })), "t").get("default")).resolves.toMatchObject({ timezone: null, vacation: null });
     await expect(new DynamoDbHouseholdRepository(client(async () => ({})), "t").get("default")).resolves.toBeUndefined();
@@ -70,37 +116,49 @@ describe("DynamoDbHouseholdRepository", () => {
 
   it("reads the vacation and ignores malformed values (SCHEDULING-005)", async () => {
     const read = (vacation: unknown) => new DynamoDbHouseholdRepository(client(async () => ({ Item: { tenantId: "default", vacation } })), "t").get("default");
-    await expect(read({ from: "2026-10-10", until: "2026-10-24", categories: ["HOME", "BOGUS"] })).resolves.toMatchObject({ vacation: { from: "2026-10-10", until: "2026-10-24", categories: ["HOME"] } });
+    await expect(read({ from: "2026-10-10", until: "2026-10-24", categories: ["HOME", "bogus"] })).resolves.toMatchObject({ vacation: { from: "2026-10-10", until: "2026-10-24", categories: ["HOME"] } });
     await expect(read({ from: "2026-10-10", until: "2026-10-24", categories: null })).resolves.toMatchObject({ vacation: { categories: null } });
     await expect(read({ from: "2026-10-10" })).resolves.toMatchObject({ vacation: null });
     await expect(read("x")).resolves.toMatchObject({ vacation: null });
   });
 
   it("upserts only the vacation (SCHEDULING-005)", async () => {
-    const c = client(async () => ({ Attributes: { tenantId: "default", vacation: null, updatedAt: "ts", updatedBy: "STEFAN" } }));
+    const c = client(async () => ({ Attributes: { tenantId: "default", vacation: null, members: null, membersVersion: 0, categories: null, categoriesVersion: 0, updatedAt: "ts", updatedBy: "STEFAN" } }));
     await new DynamoDbHouseholdRepository(c, "tenner-households").saveVacation("default", null, "STEFAN", "ts");
     expect((c.send.mock.calls[0]?.[0] as UpdateCommand).input).toMatchObject({
-      UpdateExpression: "SET #value = :value, #updatedAt = :timestamp, #updatedBy = :actor",
-      ExpressionAttributeNames: { "#value": "vacation" },
-      ExpressionAttributeValues: { ":value": null },
+      UpdateExpression: "SET #vacation = :vacation, #updatedAt = :timestamp, #updatedBy = :actor",
+      ExpressionAttributeNames: { "#vacation": "vacation" },
+      ExpressionAttributeValues: { ":vacation": null },
     });
   });
 
-  it("upserts only the timezone fields", async () => {
+  it("upserts only the given settings (undefined fields are skipped)", async () => {
     const c = client(async () => ({ Attributes: { tenantId: "default", timezone: "UTC", updatedAt: "ts", updatedBy: "STEFAN" } }));
-    await expect(new DynamoDbHouseholdRepository(c, "tenner-households").saveTimezone("default", "UTC", "STEFAN", "ts")).resolves.toMatchObject({ timezone: "UTC", updatedBy: "STEFAN" });
+    await expect(new DynamoDbHouseholdRepository(c, "tenner-households").saveSettings("default", { timezone: "UTC", name: undefined }, "STEFAN", "ts")).resolves.toMatchObject({ timezone: "UTC", updatedBy: "STEFAN" });
     expect((c.send.mock.calls[0]?.[0] as UpdateCommand).input).toMatchObject({
       Key: { tenantId: "default" },
-      UpdateExpression: "SET #value = :value, #updatedAt = :timestamp, #updatedBy = :actor",
-      ExpressionAttributeNames: { "#value": "timezone", "#updatedAt": "updatedAt", "#updatedBy": "updatedBy" },
+      UpdateExpression: "SET #timezone = :timezone, #updatedAt = :timestamp, #updatedBy = :actor",
+      ExpressionAttributeNames: { "#timezone": "timezone", "#updatedAt": "updatedAt", "#updatedBy": "updatedBy" },
     });
+  });
+
+  it("reads the household settings of HOUSEHOLD-ADMIN-003 and ignores malformed values", async () => {
+    const read = (item: Record<string, unknown>) => new DynamoDbHouseholdRepository(client(async () => ({ Item: { tenantId: "default", ...item } })), "t").get("default");
+    await expect(read({ name: "Familie S.", weekStartsOn: "SUNDAY", workdays: ["FRI", "MON", "XYZ"], defaults: { category: "FITNESS", estimatedMinutes: 30, frequencyDays: 7 } })).resolves.toMatchObject({
+      name: "Familie S.",
+      weekStartsOn: "SUNDAY",
+      workdays: ["MON", "FRI"],
+      defaults: { category: "FITNESS", estimatedMinutes: 30, frequencyDays: 7 },
+    });
+    await expect(read({ weekStartsOn: "FRIDAY", workdays: [], defaults: { category: "x" } })).resolves.toMatchObject({ weekStartsOn: null, workdays: null, defaults: null });
+    await expect(read({ workdays: "MON", defaults: "x" })).resolves.toMatchObject({ workdays: null, defaults: null });
   });
 
   it("maps failures and empty update responses to PersistenceError", async () => {
     const failing = new DynamoDbHouseholdRepository(client(async () => Promise.reject(new Error("x"))), "t");
     await expect(failing.get("default")).rejects.toBeInstanceOf(PersistenceError);
-    await expect(failing.saveTimezone("default", "UTC", "STEFAN", "ts")).rejects.toBeInstanceOf(PersistenceError);
-    await expect(new DynamoDbHouseholdRepository(client(async () => ({})), "t").saveTimezone("default", "UTC", "STEFAN", "ts")).rejects.toBeInstanceOf(PersistenceError);
+    await expect(failing.saveSettings("default", { timezone: "UTC" }, "STEFAN", "ts")).rejects.toBeInstanceOf(PersistenceError);
+    await expect(new DynamoDbHouseholdRepository(client(async () => ({})), "t").saveSettings("default", { timezone: "UTC" }, "STEFAN", "ts")).rejects.toBeInstanceOf(PersistenceError);
   });
 });
 

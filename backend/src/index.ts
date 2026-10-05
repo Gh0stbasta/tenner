@@ -4,7 +4,7 @@
  * standard error response.
  */
 
-import { identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
+import { householdGroupName, identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
 import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
 import { loadConfig, type AppConfig } from "./config.js";
@@ -23,9 +23,26 @@ import {
   type EndVacation,
   type GetHousehold,
   type SetVacation,
-  type UpdateHouseholdTimezone,
+  type UpdateHousehold,
 } from "./handlers/household.js";
 import { pauseTennerHandler, resumeTennerHandler, type PauseTenner, type ResumeTenner } from "./handlers/pause-tenner.js";
+import { createCategoryHandler, listCategoriesHandler, updateCategoryHandler, type CreateCategory, type ListCategories, type UpdateCategory } from "./handlers/categories.js";
+import {
+  createMemberHandler,
+  deactivateMemberHandler,
+  endHandoverHandler,
+  listMembersHandler,
+  reactivateMemberHandler,
+  startHandoverHandler,
+  updateMemberHandler,
+  type CreateMember,
+  type DeactivateMember,
+  type EndHandover,
+  type ListMembers,
+  type ReactivateMember,
+  type StartHandover,
+  type UpdateMember,
+} from "./handlers/members.js";
 import { historyHandler, tennerHistoryHandler, type GetHistory, type GetTennerHistory } from "./handlers/history.js";
 import { listTennersHandler, type ListTenners } from "./handlers/list-tenners.js";
 import { assignHouseholdMemberHandler, onboardingHandler, type AssignHouseholdMember, type GetOnboarding } from "./handlers/onboarding.js";
@@ -49,8 +66,12 @@ import {
   HistoryService,
   HouseholdAssignmentService,
   HouseholdService,
+  HandoverService,
   ListTennersService,
   RestoreTennerService,
+  CategoryService,
+  MemberDeactivationService,
+  MemberService,
   PauseTennerService,
   SkipTennerService,
   VacationService,
@@ -61,7 +82,7 @@ import {
 import { systemClock, uuidGenerator } from "./utils/clock.js";
 import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
-import type { Vacation } from "./models/index.js";
+import { SEED_CATEGORIES, SEED_MEMBERS, type Handover, type HouseholdCategory, type HouseholdMember, type Vacation } from "./models/index.js";
 import { createLogger, errorFields, type Logger } from "./utils/logger.js";
 
 /** Dependencies shared by all handlers; replaced in tests. */
@@ -82,13 +103,23 @@ export interface Dependencies {
   readonly resumeTenner: ResumeTenner;
   readonly setVacation: SetVacation;
   readonly endVacation: EndVacation;
+  readonly listMembers: ListMembers;
+  readonly createMember: CreateMember;
+  readonly updateMember: UpdateMember;
+  readonly deactivateMember: DeactivateMember;
+  readonly reactivateMember: ReactivateMember;
+  readonly startHandover: StartHandover;
+  readonly endHandover: EndHandover;
+  readonly listCategories: ListCategories;
+  readonly createCategory: CreateCategory;
+  readonly updateCategory: UpdateCategory;
   readonly getDashboard: GetDashboard;
   readonly getTenner: GetTenner;
   readonly getHistory: GetHistory;
   readonly getTennerHistory: GetTennerHistory;
   readonly getOnboarding: GetOnboarding;
   readonly getHousehold: GetHousehold;
-  readonly updateHouseholdTimezone: UpdateHouseholdTimezone;
+  readonly updateHousehold: UpdateHousehold;
   readonly assignHouseholdMember: AssignHouseholdMember;
 }
 
@@ -143,9 +174,19 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "POST /tenners/{tennerId}/resume": ({ event, deps, logger, identity }) => resumeTennerHandler(event, identity, deps.resumeTenner, logger),
   "PUT /household/vacation": ({ event, deps, logger, identity }) => setVacationHandler(event, identity, deps.setVacation, logger),
   "DELETE /household/vacation": ({ deps, logger, identity }) => endVacationHandler(identity, deps.endVacation, logger),
+  "GET /users": ({ deps, identity }) => listMembersHandler(identity.tenantId, deps.listMembers),
+  "POST /users": ({ event, deps, logger, identity }) => createMemberHandler(event, identity, deps.createMember, logger),
+  "PUT /users/{userId}": ({ event, deps, logger, identity }) => updateMemberHandler(event, identity, deps.updateMember, logger),
+  "POST /users/{userId}/deactivate": ({ event, deps, logger, identity }) => deactivateMemberHandler(event, identity, deps.deactivateMember, logger),
+  "POST /users/{userId}/reactivate": ({ event, deps, logger, identity }) => reactivateMemberHandler(event, identity, deps.reactivateMember, logger),
+  "POST /users/{userId}/handover": ({ event, deps, logger, identity }) => startHandoverHandler(event, identity, deps.startHandover, logger),
+  "DELETE /users/{userId}/handover": ({ event, deps, logger, identity }) => endHandoverHandler(event, identity, deps.endHandover, logger),
+  "GET /categories": ({ deps, identity }) => listCategoriesHandler(identity.tenantId, deps.listCategories),
+  "POST /categories": ({ event, deps, logger, identity }) => createCategoryHandler(event, identity, deps.createCategory, logger),
+  "PUT /categories/{categoryId}": ({ event, deps, logger, identity }) => updateCategoryHandler(event, identity, deps.updateCategory, logger),
   "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
   "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
-  "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHouseholdTimezone, logger),
+  "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHousehold, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -167,43 +208,57 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const tennerRepository = tables ? new DynamoDbTennerRepository(getDocumentClient(), tables.tenners, tables.history) : undefined;
   const completionRepository = tables ? new DynamoDbCompletionRepository(getDocumentClient(), tables.history) : undefined;
   const householdRepository = tables ? new DynamoDbHouseholdRepository(getDocumentClient(), tables.households) : undefined;
-  const householdService = householdRepository ? new HouseholdService(householdRepository, systemClock, config.timezone) : undefined;
+  const householdService = householdRepository ? new HouseholdService(householdRepository, systemClock, config.timezone, (tenantId) => categoriesOf(tenantId)) : undefined;
   // SCHEDULING-008: the one place that resolves a household's timezone for all date calculations.
   const timezoneOf = (tenantId: string): Promise<string> => householdService?.timezoneOf(tenantId) ?? Promise.resolve(config.timezone);
   const vacationOf = (tenantId: string): Promise<Vacation | null> => householdService?.vacationOf(tenantId) ?? Promise.resolve(null);
-  const createTennerService = tennerRepository ? new CreateTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf) : undefined;
+  // HOUSEHOLD-ADMIN-001: managed members; without the households table only the seed members exist.
+  const memberService = householdRepository ? new MemberService(householdRepository, systemClock) : undefined;
+  const membersOf = (tenantId: string): Promise<readonly HouseholdMember[]> => memberService?.membersOf(tenantId) ?? Promise.resolve(SEED_MEMBERS);
+  // HOUSEHOLD-ADMIN-002: managed categories; without the households table only the seed categories exist.
+  const categoryService = householdRepository ? new CategoryService(householdRepository, systemClock) : undefined;
+  const categoriesOf = (tenantId: string): Promise<readonly HouseholdCategory[]> => categoryService?.categoriesOf(tenantId) ?? Promise.resolve(SEED_CATEGORIES);
+  // HOUSEHOLD-004: no scheduler — expired handovers are given back before the reads that show assignments.
+  const handoverService = householdRepository && tennerRepository ? new HandoverService(householdRepository, tennerRepository, systemClock, timezoneOf, logger) : undefined;
+  const handoversOf = (tenantId: string): Promise<readonly Handover[]> => handoverService?.handoversOf(tenantId) ?? Promise.resolve([]);
+  const expireHandovers = (tenantId: string): Promise<void> => handoverService?.expireDue(tenantId) ?? Promise.resolve();
+  const createTennerService = tennerRepository ? new CreateTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf, membersOf, categoriesOf) : undefined;
   const listTennersService = tennerRepository ? new ListTennersService(tennerRepository, systemClock, timezoneOf) : undefined;
   const getTennerService = tennerRepository ? new GetTennerService(tennerRepository) : undefined;
   const historyService = tennerRepository && completionRepository ? new HistoryService(completionRepository, tennerRepository) : undefined;
-  const updateTennerService = tennerRepository ? new UpdateTennerService(tennerRepository, systemClock) : undefined;
+  const updateTennerService = tennerRepository ? new UpdateTennerService(tennerRepository, systemClock, membersOf, categoriesOf) : undefined;
   const deleteTennerService = tennerRepository ? new DeleteTennerService(tennerRepository, systemClock) : undefined;
   const restoreTennerService = tennerRepository ? new RestoreTennerService(tennerRepository, systemClock) : undefined;
-  const dashboardService = tennerRepository ? new DashboardService(tennerRepository, systemClock, timezoneOf, vacationOf) : undefined;
+  const dashboardService = tennerRepository ? new DashboardService(tennerRepository, systemClock, timezoneOf, vacationOf, membersOf) : undefined;
   const completeTennerService =
-    tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator, timezoneOf, vacationOf) : undefined;
+    tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator, timezoneOf, vacationOf, membersOf, handoversOf) : undefined;
   const undoCompletionService = tennerRepository && completionRepository ? new UndoCompletionService(tennerRepository, completionRepository, systemClock, timezoneOf) : undefined;
   const snoozeTennerService = tennerRepository ? new SnoozeTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf) : undefined;
   const skipTennerService = tennerRepository ? new SkipTennerService(tennerRepository, systemClock, uuidGenerator, timezoneOf, vacationOf) : undefined;
   const pauseTennerService = tennerRepository ? new PauseTennerService(tennerRepository, systemClock, timezoneOf) : undefined;
   const vacationService = tennerRepository && householdRepository ? new VacationService(householdRepository, tennerRepository, systemClock, timezoneOf, logger) : undefined;
   const onboarding = config.onboarding;
-  const householdAssignmentService = onboarding
-    ? new HouseholdAssignmentService(new CognitoHouseholdMembershipRepository(getCognitoClient(), onboarding.userPoolId), onboarding.tenantId)
-    : undefined;
+  const membershipRepository = onboarding ? new CognitoHouseholdMembershipRepository(getCognitoClient(), onboarding.userPoolId) : undefined;
+  const householdAssignmentService = onboarding && membershipRepository ? new HouseholdAssignmentService(membershipRepository, onboarding.tenantId, membersOf) : undefined;
+  // HOUSEHOLD-ADMIN-004: without Cognito configuration there are no groups to revoke.
+  const revokeAccess = (tenantId: string, userId: string): Promise<number> =>
+    membershipRepository?.removeAllMembers(householdGroupName(tenantId, userId)) ?? Promise.resolve(0);
+  const memberDeactivationService =
+    householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
 
   return {
     config,
     logger,
     probeDatabase: (t) => probeTables(getDocumentClient(), t),
     createTenner: createTennerService ? (identity, request) => createTennerService.createTenner(identity, request) : notConfigured,
-    listTenners: listTennersService ? (tenantId, request) => listTennersService.listTenners(tenantId, request) : notConfigured,
+    listTenners: listTennersService ? async (tenantId, request) => (await expireHandovers(tenantId), listTennersService.listTenners(tenantId, request)) : notConfigured,
     updateTenner: updateTennerService ? (identity, id, request) => updateTennerService.updateTenner(identity, id, request) : notConfigured,
     deleteTenner: deleteTennerService ? (identity, id) => deleteTennerService.deleteTenner(identity, id) : notConfigured,
     restoreTenner: restoreTennerService ? (identity, id) => restoreTennerService.restoreTenner(identity, id) : notConfigured,
     getHistory: historyService ? (tenantId, request) => historyService.getHistory(tenantId, request) : notConfigured,
     getTennerHistory: historyService ? (tenantId, id, request) => historyService.getTennerHistory(tenantId, id, request) : notConfigured,
     getTenner: getTennerService ? (tenantId, id, options) => getTennerService.getTenner(tenantId, id, options) : notConfigured,
-    getDashboard: dashboardService ? (tenantId, request) => dashboardService.getDashboard(tenantId, request) : notConfigured,
+    getDashboard: dashboardService ? async (tenantId, request) => (await expireHandovers(tenantId), dashboardService.getDashboard(tenantId, request)) : notConfigured,
     completeTenner: completeTennerService
       ? (identity, id, request, key) => completeTennerService.completeTenner(identity, id, request, key)
       : notConfigured,
@@ -216,8 +271,18 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     resumeTenner: pauseTennerService ? (identity, id) => pauseTennerService.resume(identity, id) : notConfigured,
     setVacation: vacationService ? (identity, request) => vacationService.setVacation(identity, request) : notConfigured,
     endVacation: vacationService ? (identity) => vacationService.endVacation(identity) : notConfigured,
-    getHousehold: householdService ? (tenantId) => householdService.getHousehold(tenantId) : notConfigured,
-    updateHouseholdTimezone: householdService ? (identity, timezone) => householdService.updateTimezone(identity, timezone) : notConfigured,
+    listMembers: memberService ? (tenantId) => memberService.listMembers(tenantId) : notConfigured,
+    createMember: memberService ? (identity, request) => memberService.createMember(identity, request) : notConfigured,
+    updateMember: memberService ? (identity, userId, request) => memberService.updateMember(identity, userId, request) : notConfigured,
+    deactivateMember: memberDeactivationService ? (identity, userId, request) => memberDeactivationService.deactivate(identity, userId, request) : notConfigured,
+    reactivateMember: memberDeactivationService ? (identity, userId) => memberDeactivationService.reactivate(identity, userId) : notConfigured,
+    startHandover: handoverService ? (identity, userId, request) => handoverService.start(identity, userId, request) : notConfigured,
+    endHandover: handoverService ? (identity, userId) => handoverService.end(identity, userId) : notConfigured,
+    listCategories: categoryService ? (tenantId) => categoryService.listCategories(tenantId) : notConfigured,
+    createCategory: categoryService ? (identity, request) => categoryService.createCategory(identity, request) : notConfigured,
+    updateCategory: categoryService ? (identity, categoryId, request) => categoryService.updateCategory(identity, categoryId, request) : notConfigured,
+    getHousehold: householdService ? async (tenantId) => (await expireHandovers(tenantId), householdService.getHousehold(tenantId)) : notConfigured,
+    updateHousehold: householdService ? (identity, request) => householdService.updateSettings(identity, request) : notConfigured,
     getOnboarding: householdAssignmentService ? (principal) => householdAssignmentService.getOnboarding(principal) : notConfigured,
     assignHouseholdMember: householdAssignmentService ? (principal, userId) => householdAssignmentService.assign(principal, userId) : notConfigured,
   };

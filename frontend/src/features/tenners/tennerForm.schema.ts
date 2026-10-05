@@ -3,9 +3,7 @@
 import { z } from "zod";
 import {
   APPROXIMATE_DAYS_PER_UNIT,
-  CATEGORIES,
   FREQUENCY_UNITS,
-  USER_IDS,
   WEEKDAYS,
   type FrequencyUnit,
   type Weekday,
@@ -35,8 +33,8 @@ export const tennerFormSchema = z
       .min(1, "Titel ist erforderlich.")
       .min(LIMITS.titleMin, `Der Titel braucht mindestens ${LIMITS.titleMin} Zeichen.`)
       .max(LIMITS.titleMax, `Der Titel darf höchstens ${LIMITS.titleMax} Zeichen haben.`),
-    category: z.enum(CATEGORIES, { error: "Bitte eine Kategorie wählen." }),
-    assignedTo: z.enum(USER_IDS, { error: "Bitte eine Person wählen." }),
+    category: z.string({ error: "Bitte eine Kategorie wählen." }).min(1, "Bitte eine Kategorie wählen."),
+    assignedTo: z.string({ error: "Bitte eine Person wählen." }).min(1, "Bitte eine Person wählen."),
     estimatedMinutes: integerBetween(
       LIMITS.minutesMin,
       LIMITS.minutesMax,
@@ -46,7 +44,18 @@ export const tennerFormSchema = z
     frequencyUnit: z.enum(FREQUENCY_UNITS, { error: "Bitte eine Einheit wählen." }),
     /** Only used with "Wochen" (SCHEDULING-002); empty = every n weeks after the last completion. */
     weekdays: z.array(z.enum(WEEKDAYS)),
+    /** HOUSEHOLD-001: rotate between the selected members after each completion. */
+    rotating: z.boolean(),
+    rotation: z.array(z.string()),
     active: z.boolean(),
+  })
+  .refine((values) => !values.rotating || values.rotation.length >= 2, {
+    path: ["rotation"],
+    message: "Bitte mindestens zwei Personen auswählen.",
+  })
+  .refine((values) => !values.rotating || values.rotation.includes(values.assignedTo), {
+    path: ["assignedTo"],
+    message: "Die zuständige Person muss in der Rotation sein.",
   })
   // Same upper bound as the backend: at most 3650 (approximate) days.
   .refine(
@@ -80,4 +89,17 @@ export function weekdaysForApi(values: Pick<TennerFormValues, "frequencyUnit" | 
   if (values.frequencyUnit !== "WEEK") return null;
   const selected = WEEKDAYS.filter((day) => values.weekdays.includes(day));
   return selected.length > 0 ? selected : null;
+}
+
+/** Assignment fields for the API (HOUSEHOLD-001): rotation in the order of `memberOrder`. */
+export function assignmentForApi(
+  values: Pick<TennerFormValues, "rotating" | "rotation">,
+  memberOrder: readonly string[],
+): { assignmentMode: "FIXED" | "ROTATING"; rotation: string[] | null } {
+  if (!values.rotating) return { assignmentMode: "FIXED", rotation: null };
+  const ordered = memberOrder.filter((id) => values.rotation.includes(id));
+  return {
+    assignmentMode: "ROTATING",
+    rotation: [...ordered, ...values.rotation.filter((id) => !ordered.includes(id))],
+  };
 }

@@ -2,12 +2,12 @@
 
 import { Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
 import { TennerLink } from "../../components/TennerLink";
-import { CATEGORY_LABELS, USER_LABELS } from "../../types/domain";
-import { formatMinutes } from "../../utils/format";
+import { useCategoryName } from "../categories/api";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
 import { SnoozedBadge } from "../snooze/SnoozedBadge";
 import { SnoozeMenu } from "../snooze/SnoozeMenu";
 import type { DashboardTenner } from "./api";
+import { AssigneeLabel } from "../members/AssigneeLabel";
 
 export type DashboardCardVariant = "dueToday" | "overdue" | "upcoming";
 
@@ -27,6 +27,7 @@ const ACCENT: Readonly<Record<DashboardCardVariant, string>> = {
 };
 
 export function DashboardTennerCard({ tenner, variant, status, completable = false }: DashboardTennerCardProps) {
+  const categoryName = useCategoryName();
   return (
     <Card component="li" sx={{ listStyle: "none", borderLeft: 4, borderLeftColor: ACCENT[variant] }}>
       <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, "&:last-child": { pb: 2 } }}>
@@ -35,10 +36,12 @@ export function DashboardTennerCard({ tenner, variant, status, completable = fal
             <TennerLink tennerId={tenner.tennerId}>{tenner.title}</TennerLink>
           </Typography>
           <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1, flexWrap: "wrap", alignItems: "center" }}>
-            <Chip size="small" label={CATEGORY_LABELS[tenner.category]} />
-            <Typography variant="body2" color="text.secondary">
-              {USER_LABELS[tenner.assignedTo]} · {formatMinutes(tenner.estimatedMinutes)}
-            </Typography>
+            <Chip size="small" label={categoryName(tenner.category)} />
+            <AssigneeLabel
+              assignedTo={tenner.assignedTo}
+              originalAssignee={tenner.originalAssignee}
+              estimatedMinutes={tenner.estimatedMinutes}
+            />
             {status !== undefined && (
               <Typography
                 variant="body2"

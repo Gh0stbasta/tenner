@@ -18,12 +18,22 @@ import {
   isPaused,
   pausedUntilOf,
 } from "../src/utils/pause.js";
-import { mockCompletionRepository, mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
+import { householdSettings, mockCompletionRepository, mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
 
 // Monday, 5 Oct 2026, 10:00 in Berlin.
 const NOW = new Date("2026-10-05T08:00:00Z");
 const TODAY = "2026-10-05";
 const BERLIN = async () => "Europe/Berlin";
+const HOUSEHOLD = {
+  name: "Unser Haushalt",
+  timezone: "Europe/Berlin",
+  weekStartsOn: "MONDAY" as const,
+  workdays: ["MON", "TUE", "WED", "THU", "FRI"] as const,
+  defaults: { category: "HOUSEHOLD", estimatedMinutes: 10, frequencyDays: 14 },
+  defaultsSource: "DEFAULT" as const,
+  handovers: [],
+  vacation: null,
+};
 const VACATION: Vacation = { from: "2026-10-10", until: "2026-10-24", categories: ["HOUSEHOLD", "HOME"] };
 
 const t = (tennerId: string, overrides: Partial<Tenner> = {}) => tennerFixture({ tennerId, title: tennerId, ...overrides });
@@ -142,7 +152,7 @@ describe("PauseTennerService", () => {
 
 describe("VacationService", () => {
   function setup(tenners: Tenner[], conflictFor: string[] = []) {
-    const households = { saveVacation: vi.fn(async (tenantId: string, vacation: Vacation | null) => ({ tenantId, timezone: null, vacation, updatedAt: "ts", updatedBy: "STEFAN" as const })) };
+    const households = { saveVacation: vi.fn(async (tenantId: string, vacation: Vacation | null) => householdSettings({ tenantId, vacation, updatedAt: "ts", updatedBy: "STEFAN" })) };
     const repository = mockTennerRepository();
     repository.list.mockResolvedValue(tenners);
     repository.updateSchedule.mockImplementation(async (_tenant, id) => {
@@ -167,7 +177,7 @@ describe("VacationService", () => {
       ["vacuum", { nextDue: "2026-10-25" }],
       ["windows", { nextDue: "2026-10-26" }],
     ]);
-    expect(result).toEqual({ household: { timezone: "Europe/Berlin", vacation: VACATION }, rescheduled: 2, conflicts: 0 });
+    expect(result).toMatchObject({ household: { timezone: "Europe/Berlin", vacation: VACATION }, rescheduled: 2, conflicts: 0 });
   });
 
   it("defaults to all categories and counts concurrent changes as conflicts", async () => {
@@ -187,7 +197,7 @@ describe("VacationService", () => {
 
   it("ends the vacation without moving due dates back", async () => {
     const { households, repository, service } = setup([]);
-    await expect(service.endVacation(TEST_IDENTITY)).resolves.toEqual({ timezone: "Europe/Berlin", vacation: null });
+    await expect(service.endVacation(TEST_IDENTITY)).resolves.toMatchObject({ timezone: "Europe/Berlin", vacation: null });
     expect(households.saveVacation).toHaveBeenCalledWith("default", null, "STEFAN", "2026-10-05T08:00:00Z");
     expect(repository.updateSchedule).not.toHaveBeenCalled();
   });
@@ -290,7 +300,7 @@ describe("pause and vacation handlers", () => {
 
   it("validates and sets the vacation", async () => {
     const logger = mockLogger();
-    const set = vi.fn(async () => ({ household: { timezone: "Europe/Berlin", vacation: VACATION }, rescheduled: 3, conflicts: 0 }));
+    const set = vi.fn(async () => ({ household: { ...HOUSEHOLD, vacation: VACATION }, rescheduled: 3, conflicts: 0 }));
     const response = await setVacationHandler(event(JSON.stringify({ from: "2026-10-10", until: "2026-10-24", categories: ["HOUSEHOLD", "HOME"] })), TEST_IDENTITY, set, logger);
     expect(response.statusCode).toBe(200);
     expect(logger.info).toHaveBeenCalledWith("Household vacation set", { event: "HouseholdVacationSet", from: "2026-10-10", until: "2026-10-24", categories: ["HOUSEHOLD", "HOME"], rescheduled: 3, conflicts: 0 });
@@ -307,8 +317,8 @@ describe("pause and vacation handlers", () => {
 
   it("ends the vacation", async () => {
     const logger = mockLogger();
-    const response = await endVacationHandler(TEST_IDENTITY, vi.fn(async () => ({ timezone: "Europe/Berlin", vacation: null })), logger);
-    expect(JSON.parse(response.body ?? "").data).toEqual({ timezone: "Europe/Berlin", vacation: null });
+    const response = await endVacationHandler(TEST_IDENTITY, vi.fn(async () => HOUSEHOLD), logger);
+    expect(JSON.parse(response.body ?? "").data).toMatchObject({ timezone: "Europe/Berlin", vacation: null });
     expect(logger.info).toHaveBeenCalledWith("Household vacation ended", { event: "HouseholdVacationEnded", endedBy: "STEFAN" });
   });
 });

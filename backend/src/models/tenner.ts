@@ -1,4 +1,4 @@
-import type { Category, FrequencyUnit, UserId, Weekday } from "./enums.js";
+import type { AssignmentMode, Category, FrequencyUnit, UserId, Weekday } from "./enums.js";
 
 /** A recurring responsibility (stored in tenner-tenners). */
 export interface Tenner {
@@ -22,6 +22,15 @@ export interface Tenner {
    */
   readonly weekdays: readonly Weekday[] | null;
   readonly assignedTo: UserId;
+  /** HOUSEHOLD-001; items stored before read as FIXED. */
+  readonly assignmentMode: AssignmentMode;
+  /** Ordered members for ROTATING (at least 2); null for FIXED. */
+  readonly rotation: readonly UserId[] | null;
+  /**
+   * Member the Tenner belongs to while it is handed over to `assignedTo` (HOUSEHOLD-004), or null. The handover's
+   * end gives it back; a manual reassignment clears it. Items stored before read as null.
+   */
+  readonly originalAssignee: UserId | null;
   /** ISO 8601 UTC timestamp of the last completion, or null if never completed. */
   readonly lastCompleted: string | null;
   /** Calendar date (YYYY-MM-DD) when the Tenner is due next. */

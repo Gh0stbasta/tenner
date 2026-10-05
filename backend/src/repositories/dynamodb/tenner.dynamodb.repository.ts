@@ -351,7 +351,7 @@ export class DynamoDbTennerRepository implements TennerRepository {
     return toTenner(attributes);
   }
 
-  /** Update of lastCompleted/nextDue/snoozedUntil/pause fields/updatedAt/updatedBy, locked on the loaded Tenner state. */
+  /** Update of lastCompleted/nextDue/snoozedUntil/pause fields/assignedTo (rotation)/originalAssignee (handover)/updatedAt/updatedBy, locked on the loaded Tenner state. */
   private scheduleUpdate(updated: Tenner, expected: Tenner) {
     const lastCompletedCondition =
       expected.lastCompleted === null ? "(attribute_not_exists(#lastCompleted) OR #lastCompleted = :null)" : "#lastCompleted = :expectedLastCompleted";
@@ -359,7 +359,7 @@ export class DynamoDbTennerRepository implements TennerRepository {
       TableName: this.tableName,
       Key: { tenantId: expected.tenantId, tennerId: expected.tennerId },
       UpdateExpression:
-        "SET #lastCompleted = :lastCompleted, #nextDue = :nextDue, #snoozedUntil = :snoozedUntil, #pausedAt = :pausedAt, #pausedUntil = :pausedUntil, #updatedAt = :updatedAt, #updatedBy = :updatedBy",
+        "SET #lastCompleted = :lastCompleted, #nextDue = :nextDue, #snoozedUntil = :snoozedUntil, #pausedAt = :pausedAt, #pausedUntil = :pausedUntil, #assignedTo = :assignedTo, #originalAssignee = :originalAssignee, #updatedAt = :updatedAt, #updatedBy = :updatedBy",
       ConditionExpression: ["#updatedAt = :expectedUpdatedAt", "#frequencyDays = :expectedFrequencyDays", "#active = :true", NOT_DELETED, lastCompletedCondition].join(" AND "),
       ExpressionAttributeNames: {
         "#lastCompleted": "lastCompleted",
@@ -367,6 +367,8 @@ export class DynamoDbTennerRepository implements TennerRepository {
         "#snoozedUntil": "snoozedUntil",
         "#pausedAt": "pausedAt",
         "#pausedUntil": "pausedUntil",
+        "#assignedTo": "assignedTo",
+        "#originalAssignee": "originalAssignee",
         "#updatedAt": "updatedAt",
         "#updatedBy": "updatedBy",
         "#frequencyDays": "frequencyDays",
@@ -379,6 +381,8 @@ export class DynamoDbTennerRepository implements TennerRepository {
         ":snoozedUntil": updated.snoozedUntil,
         ":pausedAt": updated.pausedAt,
         ":pausedUntil": updated.pausedUntil,
+        ":assignedTo": updated.assignedTo,
+        ":originalAssignee": updated.originalAssignee,
         ":updatedAt": updated.updatedAt,
         ":updatedBy": updated.updatedBy,
         ":expectedUpdatedAt": expected.updatedAt,

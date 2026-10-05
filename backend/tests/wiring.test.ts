@@ -46,6 +46,8 @@ describe("createDependencies wiring", () => {
       frequencyInterval: 14,
       weekdays: null,
       assignedTo: "STEFAN",
+      assignmentMode: "FIXED",
+      rotation: null,
     });
     const command = send.mock.calls.map(([c]) => c).find((c) => c instanceof PutCommand) as PutCommand;
     expect(command).toBeInstanceOf(PutCommand);
@@ -56,7 +58,9 @@ describe("createDependencies wiring", () => {
   it("lists Tenners from the configured table", async () => {
     send.mockResolvedValue({ Items: [tennerFixture()] });
     await expect(deps().listTenners("default", {})).resolves.toHaveLength(1);
-    expect((send.mock.calls[0]?.[0] as QueryCommand).input.TableName).toBe("tenner-tenners");
+    // HOUSEHOLD-004: expired handovers are checked on the household item first.
+    expect((send.mock.calls[0]?.[0] as GetCommand).input.TableName).toBe("tenner-households");
+    expect((send.mock.calls[1]?.[0] as QueryCommand).input.TableName).toBe("tenner-tenners");
   });
 
   it("soft deletes Tenners in the configured table", async () => {
@@ -99,15 +103,15 @@ describe("createDependencies wiring", () => {
 
   it("reads and saves the household timezone in the households table (SCHEDULING-008)", async () => {
     send.mockImplementation(async (command: unknown) => (command instanceof GetCommand ? { Item: { tenantId: "default", timezone: "Asia/Tokyo", updatedAt: "x" } } : { Attributes: { tenantId: "default", timezone: "UTC", updatedAt: "y", updatedBy: "STEFAN" } }));
-    await expect(deps().getHousehold("default")).resolves.toEqual({ timezone: "Asia/Tokyo", vacation: null });
+    await expect(deps().getHousehold("default")).resolves.toMatchObject({ timezone: "Asia/Tokyo", vacation: null, name: "Unser Haushalt" });
     expect((send.mock.calls[0]?.[0] as GetCommand).input).toEqual({ TableName: "tenner-households", Key: { tenantId: "default" } });
-    await expect(deps().updateHouseholdTimezone(TEST_IDENTITY, "UTC")).resolves.toEqual({ timezone: "UTC", vacation: null });
+    await expect(deps().updateHousehold(TEST_IDENTITY, { timezone: "UTC" })).resolves.toMatchObject({ timezone: "UTC", vacation: null });
     expect((send.mock.calls.at(-1)?.[0] as UpdateCommand).input.TableName).toBe("tenner-households");
   });
 
   it("falls back to the configured timezone when the household has none", async () => {
     send.mockResolvedValue({});
-    await expect(deps().getHousehold("default")).resolves.toEqual({ timezone: "Europe/Berlin", vacation: null });
+    await expect(deps().getHousehold("default")).resolves.toMatchObject({ timezone: "Europe/Berlin", vacation: null });
   });
 
   it("reads a single Tenner with GetItem", async () => {
@@ -134,6 +138,7 @@ describe("createDependencies wiring", () => {
   });
 
   it("assigns household members through Cognito groups of the configured pool (HOTFIX-001)", async () => {
+    send.mockResolvedValue({});
     cognitoSend.mockImplementation(async (command: { constructor: { name: string } }) =>
       command.constructor.name === "AdminListGroupsForUserCommand" ? { Groups: [] } : command.constructor.name === "ListUsersInGroupCommand" ? { Users: [] } : {},
     );
@@ -146,7 +151,7 @@ describe("createDependencies wiring", () => {
       return { Groups: [] };
     });
     await expect(deps().assignHouseholdMember({ username: "google_1" }, "STEFAN")).resolves.toMatchObject({ group: "household:default:STEFAN" });
-    expect(cognitoSend.mock.calls.map(([c]) => (c as { input: { UserPoolId: string } }).input.UserPoolId)).toEqual(Array(4).fill("eu-central-1_TEST"));
+    expect(cognitoSend.mock.calls.map(([c]) => (c as { input: { UserPoolId: string } }).input.UserPoolId)).toEqual(Array(5).fill("eu-central-1_TEST"));
   });
 
   it("reports 503 for onboarding when Cognito is not configured", async () => {

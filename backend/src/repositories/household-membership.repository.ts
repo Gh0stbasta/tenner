@@ -7,6 +7,10 @@ export interface HouseholdMembershipRepository {
   groupsOf(username: string): Promise<string[]>;
   /** Number of users in the group, capped at 2 (enough to tell "free", "taken" and "conflict"). */
   memberCount(group: string): Promise<number>;
+  /** Create the group if it does not exist yet (members added in the app, HOUSEHOLD-ADMIN-001). Idempotent. */
+  ensureGroup(group: string): Promise<void>;
   addMember(username: string, group: string): Promise<void>;
   removeMember(username: string, group: string): Promise<void>;
+  /** Remove every account from the group (member deactivation, HOUSEHOLD-ADMIN-004); returns how many were removed. */
+  removeAllMembers(group: string): Promise<number>;
 }

@@ -60,6 +60,16 @@ locals {
     "POST /tenners/{tennerId}/resume",          # SCHEDULING-005
     "PUT /household/vacation",                  # SCHEDULING-005
     "DELETE /household/vacation",               # SCHEDULING-005
+    "GET /users",                               # HOUSEHOLD-ADMIN-001
+    "POST /users",                              # HOUSEHOLD-ADMIN-001
+    "PUT /users/{userId}",                      # HOUSEHOLD-ADMIN-001
+    "POST /users/{userId}/deactivate",          # HOUSEHOLD-ADMIN-004
+    "POST /users/{userId}/reactivate",          # HOUSEHOLD-ADMIN-004
+    "POST /users/{userId}/handover",            # HOUSEHOLD-004
+    "DELETE /users/{userId}/handover",          # HOUSEHOLD-004
+    "GET /categories",                          # HOUSEHOLD-ADMIN-002
+    "POST /categories",                         # HOUSEHOLD-ADMIN-002
+    "PUT /categories/{categoryId}",             # HOUSEHOLD-ADMIN-002
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.

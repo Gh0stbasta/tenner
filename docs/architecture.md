@@ -295,13 +295,102 @@ Stefan
 Julia
 ```
 
-Version 1 will support manually configured users only.
+Version 1 supported manually configured users only. Since HOUSEHOLD-ADMIN-001, members are managed in the app
+(Settings → "Haushaltsmitglieder"):
 
-No registration process.
+| Field | Rule |
+|---|---|
+| `userId` | stable, immutable uppercase slug (`^[A-Z][A-Z0-9_]{0,29}$`), derived from the name if omitted ("Lena" → `LENA`) |
+| `displayName` | 1–40 characters |
+| `color` | one of `BLUE`, `GREEN`, `ORANGE`, `PURPLE`, `RED`, `TEAL`, `PINK`, `GREY` |
+| `active` | false after deactivation (HOUSEHOLD-ADMIN-004); the member stays in the list so history keeps its name |
+| `createdAt`, `updatedAt` | UTC timestamps |
+
+- **Storage decision:** the member list is an attribute of the household item in `tenner-households` (with
+  `membersVersion` for optimistic locking), not a new `tenner-users` table as the ticket proposed. Reasons: one
+  GetItem returns all members together with timezone and vacation; no new table, IAM or deploy-role permissions; a
+  household has a handful of members (capped at 20). A separate table becomes worthwhile only with many members or
+  per-member access patterns.
+- **Seed:** while a household has not saved a list, the seed members `STEFAN` and `JULIA` apply (read-time default,
+  idempotent, no migration). The first change stores seed + change.
+- **Validation:** request schemas only check the ID format; services check `assignedTo` (create, update) and an
+  explicit `completedBy` against the active members (400 "Unknown household member."). Filters accept any valid ID.
+  Identity no longer checks a hardcoded list: household groups are only assigned for existing members (onboarding).
+- **Cognito groups:** `STEFAN` and `JULIA` groups are managed by Terraform; groups of members added in the app are
+  created by the API on their first assignment (`cognito-idp:CreateGroup`).
+- **Deactivation (HOUSEHOLD-ADMIN-004):** `POST /users/{userId}/deactivate` reassigns the member's non-archived
+  Tenners to `reassignTo` (required if any exist), marks the member inactive and removes every account from the
+  member's Cognito group (access ends with the next token refresh, at most 60 minutes). Not allowed for yourself or
+  the last active member. Inactive members cannot be assigned or complete Tenners and are not offered in onboarding;
+  `POST /users/{userId}/reactivate` makes them assignable again and their person re-claims them on the next login.
+  Rotations skip deactivated members (HOUSEHOLD-001).
+- **Shared Tenners (HOUSEHOLD-002):** `assignedTo = "HOUSEHOLD"` (constant `SHARED_ASSIGNEE`, reserved — no member
+  can get this ID) means anyone can do it. A member filter (dashboard, `GET /tenners?assignedTo=`) includes shared
+  Tenners; the list queries `assignedTo-index` twice (member + `HOUSEHOLD`). Dashboard "Nach Person" counts each
+  shared Tenner for every active member (`sharedCount`) and splits its minutes evenly. Completions are attributed to
+  `completedBy` as before; `HOUSEHOLD` is never a completer. Deactivation may reassign to `HOUSEHOLD`.
+- **Rotating assignment (HOUSEHOLD-001):** `assignmentMode` `FIXED` (default) or `ROTATING` with an ordered
+  `rotation` (≥ 2 distinct members, not `HOUSEHOLD`; the assignee must be part of it). On completion the assignee
+  moves to the next active member after the **assigned** one (covering does not break the order; deactivated
+  members are skipped); the completion stores `assignedToBefore`, and undo restores it. Changing only `assignedTo`
+  of a rotating Tenner is allowed; the next completion continues from there.
+- **Temporary handover (HOUSEHOLD-004):** `POST /users/{userId}/handover` `{ to, until, categories? }` moves the
+  member's non-archived Tenners (optionally only some categories) to `to` and sets `originalAssignee = userId` on
+  each; `DELETE` gives them back early. The running handovers are a list on the household item (`handovers`,
+  `handoversVersion`, at most one per member); `GET /household` returns them. Rules: both active members, `to` not
+  away itself, `until` (inclusive, household-local date) not in the past; a second handover of the same member →
+  409 `HANDOVER_ACTIVE` (the identical request finishes an interrupted one). Tenners the member covers for someone
+  else move on but keep their original owner. A manual change of `assignedTo` clears `originalAssignee` (that Tenner
+  stays where it was put). Rotating Tenners: a completion continues the rotation from the original assignee's turn
+  and ends the cover for that Tenner; if the next member is away, the cover takes the turn (`originalAssignee` =
+  next member). Undo restores assignee and `originalAssignee`. A member deactivated during the handover does not
+  get Tenners back.
+  - **Decision — give-back on read instead of a scheduler.** Context: the ticket allows "scheduled notifier job or
+    on read"; no scheduler exists yet (NOTIFICATION-001 is open). Options: (a) EventBridge schedule + Lambda,
+    (b) give back on the next read. Decision: (b) — `GET /dashboard`, `GET /tenners` and `GET /household` first give
+    back handovers whose last day has passed (one GetItem when nothing expired; errors are logged and never fail
+    the read). Consequences: no new infrastructure or IAM; assignments are corrected when someone opens the app.
+    Risks: without reads the cover keeps the Tenners; one extra read per request (TD-031).
+- No registration process beyond the Google self-assignment (HOTFIX-001).
 
 No self-service onboarding.
 
 ---
+
+## Household Settings (HOUSEHOLD-ADMIN-003)
+
+Household-wide settings are server-side, one item per tenant in `tenner-households`: `name`, `timezone`,
+`weekStartsOn` (`MONDAY`/`SUNDAY`), `workdays` and `defaults` for new Tenners (category, estimated minutes,
+frequency in days), next to `vacation`, `members` and `categories`. Missing values fall back to defaults
+(`toHouseholdResponse`); backend code reads the effective values through `HouseholdService.settingsOf`.
+
+Personal preferences stay in the browser (FRONTEND-008): default assignee ("Ich selbst" or a member), dashboard
+sections and theme. The settings page shows both groups separately ("Für mich" / "Für den ganzen Haushalt").
+Quick Add defaults that a device stored before are offered once for upload while the household still uses the
+built-in defaults; accepting or dismissing removes them from the device.
+
+Consumers: the timezone is used by all date calculations; the defaults by Quick Add and the create dialog. Week
+start and workdays are stored for ANALYTICS-002 and SCHEDULING-007, which do not exist yet.
+
+## Category
+
+Since HOUSEHOLD-ADMIN-002, categories are managed per household (Settings → "Kategorien"), stored like members in
+the household item of `tenner-households` (`categories` + `categoriesVersion`, same decision and locking).
+
+| Field | Rule |
+|---|---|
+| `categoryId` | immutable uppercase slug, derived from the name if omitted ("Garten" → `GARTEN`) |
+| `name` | 1–40 characters |
+| `icon` | one of `HOME`, `CLEANING`, `FITNESS`, `FAMILY`, `PERSON`, `MONEY`, `GARDEN`, `PET`, `CAR`, `HEALTH`, `WORK`, `STAR` |
+| `color` | member color palette |
+| `sortOrder` | display position, renumbered on every move |
+| `archived` | archived categories stay valid on existing Tenners, filters and analytics, but cannot be chosen for new or changed Tenners |
+
+- Seed: the six original categories (`HOUSEHOLD`, `FITNESS`, `FAMILY`, `HOME`, `PERSONAL`, `FINANCE`) apply until a
+  household saves its own list. No deletion (archive instead); at most 30 categories.
+- Validation: schemas check the ID format; create and category changes on update require an existing, non-archived
+  category. Dashboard and analytics group by whatever category a Tenner has.
+- Quick Add keyword suggestions cover the six seed categories only (TD-030).
 
 ## Tenner
 
@@ -554,8 +643,8 @@ Browser ──(Authorization Code + PKCE, identity_provider=Google)──► Cog
 | `aws_cognito_user_pool.users` (`tenner-users-prod`) | Essentials tier, admin-only sign-up, e-mail username, password ≥ 12, deletion protection, custom attributes `tenantId` (immutable) and `userId` |
 | `aws_cognito_user_pool_client.web` (`tenner-web-prod`) | public client, code flow + PKCE, scopes `openid email`, identity provider Google only, auth flow refresh token only (no passwords), callback `https://<cloudfront>/auth/callback`, tokens 60 min, refresh 30 days, revocation on, cannot write custom attributes |
 | `aws_cognito_identity_provider.google` | Google, scopes `openid email profile`, maps `email` and `username = sub`; client ID/secret from `var.google_client_id` / `var.google_client_secret` (GitHub variable/secret) |
-| `aws_cognito_user_group.household` | `household:default:STEFAN`, `household:default:JULIA` |
-| `aws_iam_role_policy.api_cognito` | API Lambda may add/remove the caller to/from household groups and read group membership on this pool only (HOTFIX-001, TD-023) |
+| `aws_cognito_user_group.household` | `household:default:STEFAN`, `household:default:JULIA` (seed members; groups of members added in the app are created by the API, HOUSEHOLD-ADMIN-001) |
+| `aws_iam_role_policy.api_cognito` | API Lambda may add/remove the caller to/from household groups, read group membership and create member groups on this pool only (HOTFIX-001, HOUSEHOLD-ADMIN-001, TD-023) |
 | `aws_cognito_user_pool_domain.login` | managed login v2, prefix `tenner-prod-<first 8 hex of sha1(account id)>` |
 | `aws_apigatewayv2_authorizer.cognito` | JWT authorizer on every route except `GET /health` (`local.api_public_routes`) |
 
@@ -577,8 +666,8 @@ handlers / services → repositories (every key and query uses identity.tenantId
 
 - **Tenant and acting user:** only from the household group in `cognito:groups`. Groups are assigned by an
   administrator only (users cannot change their groups). There is no default tenant and no tenant parameter;
-  client-supplied `tenantId` fields are rejected (strict schemas) or ignored (headers). The user must be a
-  household member (`STEFAN` or `JULIA`). The HTTP API passes the array claim as a string `"[a b]"`; both forms
+  client-supplied `tenantId` fields are rejected (strict schemas) or ignored (headers). The user ID must match
+  `^[A-Z][A-Z0-9_]{0,29}$`; groups exist only for household members (HOUSEHOLD-ADMIN-001). The HTTP API passes the array claim as a string `"[a b]"`; both forms
   are accepted.
   - `completedBy` defaults to the acting user. Another member is allowed (covering for someone); the completion
     then also stores `recordedBy` = acting user.
@@ -1014,7 +1103,7 @@ Introduced by TICKET-006 (`terraform/dynamodb.tf`).
 |---|---|---|---|
 | `tenner-tenners` | `tenantId` (PK), `tennerId` (SK) | `nextDue-index` (`tenantId`, `nextDue`), `assignedTo-index` (`tenantId`, `assignedTo`) | Current state of Tenners |
 | `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`), `tennerId-completedAt-index` (`tenantTennerId`, `completedAt`, TICKET-014) | Immutable completion history |
-| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `updatedAt`, `updatedBy` |
+| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `members` + `membersVersion` (HOUSEHOLD-ADMIN-001), `categories` + `categoriesVersion` (HOUSEHOLD-ADMIN-002), `name`, `weekStartsOn`, `workdays`, `defaults` (HOUSEHOLD-ADMIN-003), `handovers` + `handoversVersion` (HOUSEHOLD-004), `updatedAt`, `updatedBy` |
 
 All tables use:
 - `PAY_PER_REQUEST` billing

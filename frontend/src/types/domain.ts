@@ -1,26 +1,77 @@
 /**
  * Domain enumerations and display labels. Values mirror backend/src/models/enums.ts.
- * Users are hardcoded until HOUSEHOLD-ADMIN-001 (TD-007).
+ * Household members are managed data since HOUSEHOLD-ADMIN-001 (see features/members).
  */
 
-export const CATEGORIES = ["HOUSEHOLD", "FITNESS", "FAMILY", "HOME", "PERSONAL", "FINANCE"] as const;
-export type Category = (typeof CATEGORIES)[number];
+/** Category ID: immutable uppercase slug, e.g. "HOUSEHOLD". Categories are managed data (HOUSEHOLD-ADMIN-002). */
+export type Category = string;
+export const CATEGORY_ID_PATTERN = /^[A-Z][A-Z0-9_]{0,29}$/;
 
-export const USER_IDS = ["STEFAN", "JULIA"] as const;
-export type UserId = (typeof USER_IDS)[number];
+/** Fixed category icon set; mirrors backend CATEGORY_ICONS. */
+export const CATEGORY_ICONS = [
+  "HOME",
+  "CLEANING",
+  "FITNESS",
+  "FAMILY",
+  "PERSON",
+  "MONEY",
+  "GARDEN",
+  "PET",
+  "CAR",
+  "HEALTH",
+  "WORK",
+  "STAR",
+] as const;
+export type CategoryIcon = (typeof CATEGORY_ICONS)[number];
 
-export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
-  HOUSEHOLD: "Haushalt",
-  FITNESS: "Fitness",
+export const CATEGORY_ICON_LABELS: Readonly<Record<CategoryIcon, string>> = {
+  HOME: "Haus",
+  CLEANING: "Putzen",
+  FITNESS: "Sport",
   FAMILY: "Familie",
-  HOME: "Haus & Garten",
-  PERSONAL: "Persönlich",
-  FINANCE: "Finanzen",
+  PERSON: "Person",
+  MONEY: "Geld",
+  GARDEN: "Garten",
+  PET: "Haustier",
+  CAR: "Auto",
+  HEALTH: "Gesundheit",
+  WORK: "Arbeit",
+  STAR: "Stern",
 };
 
-export const USER_LABELS: Readonly<Record<UserId, string>> = {
-  STEFAN: "Stefan",
-  JULIA: "Julia",
+/** Household member ID: immutable uppercase slug, e.g. "STEFAN" (HOUSEHOLD-ADMIN-001). */
+export type UserId = string;
+export const USER_ID_PATTERN = /^[A-Z][A-Z0-9_]{0,29}$/;
+
+/** Reserved assignee for shared Tenners anyone can do (HOUSEHOLD-002); mirrors backend SHARED_ASSIGNEE. */
+export const SHARED_ASSIGNEE = "HOUSEHOLD";
+export const SHARED_LABEL = "Gemeinsam";
+
+/** Member colors (HOUSEHOLD-ADMIN-001); mirrors backend MEMBER_COLORS. */
+export const MEMBER_COLORS = ["BLUE", "GREEN", "ORANGE", "PURPLE", "RED", "TEAL", "PINK", "GREY"] as const;
+export type MemberColor = (typeof MEMBER_COLORS)[number];
+
+export const MEMBER_COLOR_LABELS: Readonly<Record<MemberColor, string>> = {
+  BLUE: "Blau",
+  GREEN: "Grün",
+  ORANGE: "Orange",
+  PURPLE: "Lila",
+  RED: "Rot",
+  TEAL: "Türkis",
+  PINK: "Pink",
+  GREY: "Grau",
+};
+
+/** Swatch colors (readable on light and dark backgrounds). */
+export const MEMBER_COLOR_VALUES: Readonly<Record<MemberColor, string>> = {
+  BLUE: "#1e6fd9",
+  GREEN: "#2e8540",
+  ORANGE: "#d9730d",
+  PURPLE: "#7b4fc9",
+  RED: "#d0352f",
+  TEAL: "#13868f",
+  PINK: "#c2357f",
+  GREY: "#6b7280",
 };
 
 /** Frequency units (SCHEDULING-001). Mirrors backend/src/models/enums.ts. */

@@ -7,7 +7,8 @@ describe("session helpers", () => {
     expect(userIdFromProfile({ "cognito:groups": ["eu-central-1_X_Google", "household:default:STEFAN"] })).toBe(
       "STEFAN",
     );
-    expect(userIdFromProfile({ "cognito:groups": ["household:default:BOB"] })).toBeUndefined();
+    expect(userIdFromProfile({ "cognito:groups": ["household:default:bob"] })).toBeUndefined();
+    expect(userIdFromProfile({ "cognito:groups": ["household:default:LENA_2"] })).toBe("LENA_2");
     expect(
       userIdFromProfile({ "cognito:groups": ["household:default:STEFAN", "household:default:JULIA"] }),
     ).toBeUndefined();

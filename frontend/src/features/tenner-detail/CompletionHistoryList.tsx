@@ -2,9 +2,9 @@ import { Button, List, ListItem, ListItemText, Typography } from "@mui/material"
 import { errorMessage } from "../../api/errorMessages";
 import { SectionLoading } from "../../components/LoadingState";
 import { ErrorAlert } from "../../components/ErrorAlert";
-import { USER_LABELS } from "../../types/domain";
 import { formatMinutes } from "../../utils/format";
 import type { HistoryItem } from "../completions/api";
+import { useMemberName } from "../members/api";
 
 export interface CompletionHistoryListProps {
   readonly items: readonly HistoryItem[];
@@ -31,6 +31,7 @@ export function CompletionHistoryList({
   onLoadMore,
   onRetry,
 }: CompletionHistoryListProps) {
+  const memberName = useMemberName();
   if (loading) return <SectionLoading label="Verlauf wird geladen" />;
   if (error !== null && error !== undefined)
     return <ErrorAlert title="Verlauf konnte nicht geladen werden" message={errorMessage(error)} onRetry={onRetry} />;
@@ -48,7 +49,7 @@ export function CompletionHistoryList({
           <ListItem key={item.completionId} disableGutters divider>
             <ListItemText
               primary={<time dateTime={item.completedAt}>{formatDateTime(item.completedAt)}</time>}
-              secondary={`${USER_LABELS[item.completedBy]} · ${formatMinutes(item.actualMinutes)}`}
+              secondary={`${memberName(item.completedBy)} · ${formatMinutes(item.actualMinutes)}`}
             />
           </ListItem>
         ))}

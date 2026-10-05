@@ -69,7 +69,7 @@ no `*` action; every wildcard resource justified.
 | `-logging` | `logs:CreateLogStream`, `logs:PutLogEvents` | `/tenner/api` log group, `:log-stream:*` | ✅ Wildcard on stream names is required (Lambda creates streams per container) |
 | `-dynamodb` | `GetItem`, `PutItem`, `UpdateItem`, `Query` | all Tenner tables and their indexes | ✅ **SECURITY-005 removed `Scan` and `DeleteItem`** (never used; deletes are soft deletes). Index wildcard `/index/*` covers the GSIs only |
 | `-dynamodb` | `BatchGetItem` | `tenner-tenners` | ✅ Title lookup for history (TICKET-020) |
-| `-cognito` | `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `ListUsersInGroup` | Tenner user pool | ⚠️ IAM cannot restrict the user or group; the code only adds the caller to one free household group (TD-023) |
+| `-cognito` | `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `ListUsersInGroup`, `CreateGroup` (HOUSEHOLD-ADMIN-001) | Tenner user pool | ⚠️ IAM cannot restrict the user or group; the code only adds the caller to one free household group (TD-023) |
 | Trust | `sts:AssumeRole` | `lambda.amazonaws.com` | ✅ |
 
 ### `GitHubActionsDeployRole` (managed outside this repository)
@@ -114,6 +114,7 @@ These are outside Terraform or need the live system. Run them in AWS CloudShell 
 |---|---|
 | CloudFront default certificate allows TLS 1.0/1.1 handshakes (custom domain needed for TLS 1.2+) | TD-025, TICKET-022 |
 | Unclaimed household members can be claimed by strangers until both members have signed in | TD-020 |
+| A deactivated member's existing ID token stays valid up to 60 minutes (group removal applies at the next refresh) | HOUSEHOLD-ADMIN-004 |
 | API Lambda can change Cognito group membership | TD-023 |
 | Tokens in `localStorage` (XSS would expose them; mitigated by CSP) | ADR 0001 |
 | Google client secret in Terraform state | TD-021 |
