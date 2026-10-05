@@ -324,6 +324,11 @@ Version 1 supported manually configured users only. Since HOUSEHOLD-ADMIN-001, m
   the last active member. Inactive members cannot be assigned or complete Tenners and are not offered in onboarding;
   `POST /users/{userId}/reactivate` makes them assignable again and their person re-claims them on the next login.
   Rotations (HOUSEHOLD-001) do not exist yet.
+- **Shared Tenners (HOUSEHOLD-002):** `assignedTo = "HOUSEHOLD"` (constant `SHARED_ASSIGNEE`, reserved — no member
+  can get this ID) means anyone can do it. A member filter (dashboard, `GET /tenners?assignedTo=`) includes shared
+  Tenners; the list queries `assignedTo-index` twice (member + `HOUSEHOLD`). Dashboard "Nach Person" counts each
+  shared Tenner for every active member (`sharedCount`) and splits its minutes evenly. Completions are attributed to
+  `completedBy` as before; `HOUSEHOLD` is never a completer. Deactivation may reassign to `HOUSEHOLD`.
 - No registration process beyond the Google self-assignment (HOTFIX-001).
 
 No self-service onboarding.

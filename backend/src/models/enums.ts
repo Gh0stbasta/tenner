@@ -18,6 +18,9 @@ export type CategoryIcon = (typeof CATEGORY_ICONS)[number];
 export type UserId = string;
 export const USER_ID_PATTERN = /^[A-Z][A-Z0-9_]{0,29}$/;
 
+/** Reserved assignee for shared Tenners that anyone can do (HOUSEHOLD-002). Never a member ID. */
+export const SHARED_ASSIGNEE = "HOUSEHOLD";
+
 /** Fixed member color palette (HOUSEHOLD-ADMIN-001). */
 export const MEMBER_COLORS = ["BLUE", "GREEN", "ORANGE", "PURPLE", "RED", "TEAL", "PINK", "GREY"] as const;
 export type MemberColor = (typeof MEMBER_COLORS)[number];

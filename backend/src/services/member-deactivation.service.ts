@@ -6,7 +6,7 @@
 import type { Identity } from "../auth/index.js";
 import type { DeactivateMemberRequest, DeactivateMemberResponse, MemberResponse } from "../dto/index.js";
 import { ConflictError, NotFoundError, ValidationError } from "../exceptions/index.js";
-import { SEED_MEMBERS, type HouseholdMember, type UserId } from "../models/index.js";
+import { SEED_MEMBERS, SHARED_ASSIGNEE, type HouseholdMember, type UserId } from "../models/index.js";
 import type { HouseholdRepository, TennerRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock } from "../utils/clock.js";
 import { toMemberResponse } from "./member.service.js";
@@ -41,8 +41,9 @@ export class MemberDeactivationService {
     if (assigned.length > 0 && reassignTo === undefined) {
       throw new ValidationError("Invalid deactivation.", [{ field: "reassignTo", message: `Required: ${assigned.length} Tenner(s) are assigned to ${userId}.` }]);
     }
-    if (reassignTo !== undefined && (reassignTo === userId || !members.some((candidate) => candidate.userId === reassignTo && candidate.active))) {
-      throw new ValidationError("Invalid deactivation.", [{ field: "reassignTo", message: "Must be another active household member." }]);
+    const validTarget = reassignTo === SHARED_ASSIGNEE || members.some((candidate) => candidate.userId === reassignTo && candidate.active && candidate.userId !== userId);
+    if (reassignTo !== undefined && !validTarget) {
+      throw new ValidationError("Invalid deactivation.", [{ field: "reassignTo", message: "Must be another active household member or HOUSEHOLD (shared)." }]);
     }
 
     const timestamp = toUtcTimestamp(this.clock());

@@ -3,7 +3,7 @@
 import type { Identity } from "../auth/index.js";
 import type { CreateMemberRequest, MemberResponse, UpdateMemberRequest } from "../dto/index.js";
 import { ConflictError, NotFoundError, ValidationError } from "../exceptions/index.js";
-import { SEED_MEMBERS, USER_ID_PATTERN, type HouseholdMember, type UserId } from "../models/index.js";
+import { SEED_MEMBERS, SHARED_ASSIGNEE, USER_ID_PATTERN, type HouseholdMember, type UserId } from "../models/index.js";
 import type { HouseholdRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock } from "../utils/clock.js";
 
@@ -32,6 +32,9 @@ export class MemberService {
   async createMember(identity: Identity, request: CreateMemberRequest): Promise<MemberResponse> {
     const { members, version } = await this.load(identity.tenantId);
     const userId = request.userId ?? slugify(request.displayName);
+    if (userId === SHARED_ASSIGNEE) {
+      throw new ValidationError("Invalid member.", [{ field: "userId", message: `${SHARED_ASSIGNEE} is reserved for shared Tenners; provide another userId.` }]);
+    }
     if (!USER_ID_PATTERN.test(userId)) {
       throw new ValidationError("Invalid member.", [{ field: "userId", message: "Cannot derive an ID from the name; provide userId (A-Z, 0-9, _)." }]);
     }
@@ -84,9 +87,14 @@ export function slugify(name: string): string {
   return ascii.replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 30).replace(/_+$/, "");
 }
 
-/** 400 unless `userId` is an active household member (assignedTo, completedBy). */
+/** 400 unless `userId` is an active household member (completedBy, reassignment). */
 export function requireMember(members: readonly HouseholdMember[], userId: UserId, field: string): void {
   if (!members.some((member) => member.userId === userId && member.active)) {
     throw new ValidationError("Invalid request.", [{ field, message: "Unknown household member." }]);
   }
+}
+
+/** 400 unless `assignedTo` is an active member or the shared assignee HOUSEHOLD (HOUSEHOLD-002). */
+export function requireAssignee(members: readonly HouseholdMember[], assignedTo: UserId): void {
+  if (assignedTo !== SHARED_ASSIGNEE) requireMember(members, assignedTo, "assignedTo");
 }

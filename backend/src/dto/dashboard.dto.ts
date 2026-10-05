@@ -46,6 +46,8 @@ export interface DashboardSummaryResponse {
 export interface DashboardGroupSummary {
   readonly count: number;
   readonly estimatedMinutes: number;
+  /** byUser only (HOUSEHOLD-002): shared Tenners included in `count`; their minutes are split evenly. */
+  readonly sharedCount?: number;
 }
 
 export interface DashboardResponse {

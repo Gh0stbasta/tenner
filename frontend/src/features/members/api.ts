@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { z } from "zod";
 import { apiClient } from "../../api/client";
 import { queryKeys } from "../../api/queryKeys";
-import { MEMBER_COLORS, type MemberColor, type UserId } from "../../types/domain";
+import { MEMBER_COLORS, SHARED_ASSIGNEE, SHARED_LABEL, type MemberColor, type UserId } from "../../types/domain";
 
 export const memberSchema = z.object({
   userId: z.string(),
@@ -44,7 +44,10 @@ export function fallbackName(userId: UserId): string {
 export function useMemberName(): (userId: UserId) => string {
   const members = useMembers().data;
   return useCallback(
-    (userId: UserId) => members?.find((member) => member.userId === userId)?.displayName ?? fallbackName(userId),
+    (userId: UserId) =>
+      userId === SHARED_ASSIGNEE
+        ? SHARED_LABEL
+        : (members?.find((member) => member.userId === userId)?.displayName ?? fallbackName(userId)),
     [members],
   );
 }

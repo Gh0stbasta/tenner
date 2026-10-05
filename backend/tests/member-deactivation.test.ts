@@ -59,7 +59,7 @@ describe("MemberDeactivationService", () => {
       return undefined;
     };
     expect(await fields({})).toEqual([{ field: "reassignTo", message: "Required: 2 Tenner(s) are assigned to LENA." }]);
-    expect(await fields({ reassignTo: "LENA" })).toEqual([{ field: "reassignTo", message: "Must be another active household member." }]);
+    expect(await fields({ reassignTo: "LENA" })).toEqual([{ field: "reassignTo", message: "Must be another active household member or HOUSEHOLD (shared)." }]);
     expect(await fields({ reassignTo: "BOB" })).toHaveLength(1);
     expect(tenners.update).not.toHaveBeenCalled();
     expect(households.saveMembers).not.toHaveBeenCalled();

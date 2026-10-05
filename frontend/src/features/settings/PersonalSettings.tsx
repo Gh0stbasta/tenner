@@ -9,7 +9,9 @@ import { ThemeSelector } from "./ThemeSelector";
 
 export function PersonalSettings() {
   const { preferences, update } = useSettings();
-  const assignees = useAssignees(preferences.defaultAssignedTo === "SELF" ? undefined : preferences.defaultAssignedTo);
+  const assignees = useAssignees(preferences.defaultAssignedTo === "SELF" ? undefined : preferences.defaultAssignedTo, {
+    includeShared: true,
+  });
   return (
     <SettingsSection title="Persönlich" description="Nur auf diesem Gerät.">
       <Stack spacing={2}>

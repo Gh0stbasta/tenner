@@ -26,13 +26,13 @@ import { useState } from "react";
 import { TennerLink } from "../../components/TennerLink";
 import { useCategoryName } from "../categories/api";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
-import { formatMinutes, formatShortDate } from "../../utils/format";
+import { formatShortDate } from "../../utils/format";
 import { useToday } from "../household/api";
 import { isPausedIndividually } from "../pause/pauseStatus";
 import type { Tenner } from "./schemas";
 import { frequencyLabel, type TennerStatus } from "./status";
 import { TennerStatusBadge } from "./TennerStatusBadge";
-import { useMemberName } from "../members/api";
+import { AssigneeLabel } from "../members/AssigneeLabel";
 
 export interface TennerCardActions {
   readonly onEdit?: (tenner: Tenner) => void;
@@ -61,7 +61,6 @@ export function TennerCard({
   onResume,
 }: TennerCardProps) {
   const categoryName = useCategoryName();
-  const memberName = useMemberName();
   const theme = useTheme();
   const compact = useMediaQuery(theme.breakpoints.down("sm"));
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -105,9 +104,7 @@ export function TennerCard({
         </Box>
         <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1, flexWrap: "wrap", alignItems: "center" }}>
           <Chip size="small" label={categoryName(tenner.category)} />
-          <Typography variant="body2" color="text.secondary">
-            {memberName(tenner.assignedTo)} · {formatMinutes(tenner.estimatedMinutes)}
-          </Typography>
+          <AssigneeLabel assignedTo={tenner.assignedTo} estimatedMinutes={tenner.estimatedMinutes} />
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           {frequencyLabel(tenner)} · Fällig: {formatShortDate(tenner.nextDue)}

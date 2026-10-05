@@ -127,3 +127,27 @@ npm run test
 # Out of Scope
 
 - Claiming a shared Tenner ("I'll do it")
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Shared Tenners can be created and completed by anyone: `assignedTo = "HOUSEHOLD"` (`SHARED_ASSIGNEE`, reserved
+  for members); "Alle (gemeinsam)" in the form, filters and the personal default assignee; completions keep
+  `completedBy` = the member who did it
+- [x] Dashboards and filters handle shared Tenners: member filters include shared Tenners (dashboard in memory, list
+  with a second `assignedTo-index` query); cards mark them "Gemeinsam" with an icon; "Nach Person" counts them for
+  every active member (`sharedCount`) and splits their minutes evenly
+- [x] Tests passing: backend 645 (create shared, member filter includes shared, completion by any member, even split,
+  assignedTo-index queries, reserved ID), frontend 298; lint and build clean
+- [ ] Deploys through GitHub Actions: no infrastructure change; verified after merge
+
+Decisions and assumptions:
+
+- `HOUSEHOLD` is never a valid `completedBy` and cannot become a member ID.
+- Even split rounds minutes per member; counts include each shared Tenner for every member, shown as
+  "(davon N gemeinsam)".
+- Notifications (NOTIFICATION-001) do not exist yet; that ticket now requires notifying all members.
+- Deactivating a member can hand their Tenners to "Alle (gemeinsam)".

@@ -34,7 +34,7 @@ function WorkloadCard<K extends string>({ title, keys, labels, groups }: Workloa
               <ListItem key={key} disableGutters>
                 <ListItemText
                   primary={label}
-                  secondary={`${formatTennerCount(group.count)} · ${formatMinutes(group.estimatedMinutes)}`}
+                  secondary={`${formatTennerCount(group.count)}${group.sharedCount ? ` (davon ${group.sharedCount} gemeinsam)` : ""} · ${formatMinutes(group.estimatedMinutes)}`}
                 />
               </ListItem>
             ))}

@@ -22,7 +22,7 @@ export function TennerForm({ form, showActive = false, disabled = false }: Tenne
     watch,
     formState: { errors },
   } = form;
-  const assignees = useAssignees(watch("assignedTo"));
+  const assignees = useAssignees(watch("assignedTo"), { includeShared: true });
   const categoryOptions = useCategoryOptions(watch("category"));
   const [unit, interval, weekdays] = watch(["frequencyUnit", "frequencyInterval", "weekdays"]);
   const isPreset = (preset: (typeof FREQUENCY_PRESETS)[number]) =>

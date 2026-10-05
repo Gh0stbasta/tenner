@@ -216,7 +216,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const updateTennerService = tennerRepository ? new UpdateTennerService(tennerRepository, systemClock, membersOf, categoriesOf) : undefined;
   const deleteTennerService = tennerRepository ? new DeleteTennerService(tennerRepository, systemClock) : undefined;
   const restoreTennerService = tennerRepository ? new RestoreTennerService(tennerRepository, systemClock) : undefined;
-  const dashboardService = tennerRepository ? new DashboardService(tennerRepository, systemClock, timezoneOf, vacationOf) : undefined;
+  const dashboardService = tennerRepository ? new DashboardService(tennerRepository, systemClock, timezoneOf, vacationOf, membersOf) : undefined;
   const completeTennerService =
     tennerRepository && completionRepository ? new CompleteTennerService(tennerRepository, completionRepository, systemClock, uuidGenerator, timezoneOf, vacationOf, membersOf) : undefined;
   const undoCompletionService = tennerRepository && completionRepository ? new UndoCompletionService(tennerRepository, completionRepository, systemClock, timezoneOf) : undefined;

@@ -5,7 +5,7 @@ import type { Identity } from "../auth/index.js";
 import { SEED_CATEGORIES, SEED_MEMBERS } from "../models/index.js";
 import { requireSelectableCategory, type CategorySource } from "./category.service.js";
 import type { TennerRepository, TennerUpdate } from "../repositories/index.js";
-import { requireMember, type MemberSource } from "./member.service.js";
+import { requireAssignee, type MemberSource } from "./member.service.js";
 import { toUtcTimestamp, type Clock } from "../utils/clock.js";
 
 export class UpdateTennerService {
@@ -22,7 +22,7 @@ export class UpdateTennerService {
    * the frequency changes.
    */
   async updateTenner(identity: Identity, tennerId: string, request: UpdateTennerRequest): Promise<UpdateTennerResponse> {
-    if (request.assignedTo !== undefined) requireMember(await this.membersOf(identity.tenantId), request.assignedTo, "assignedTo");
+    if (request.assignedTo !== undefined) requireAssignee(await this.membersOf(identity.tenantId), request.assignedTo);
     // An archived category stays on existing Tenners; it can only not be chosen anew (HOUSEHOLD-ADMIN-002).
     if (request.category !== undefined) requireSelectableCategory(await this.categoriesOf(identity.tenantId), request.category);
     const changes: TennerUpdate = {

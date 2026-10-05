@@ -15,6 +15,7 @@ import { useId, useState } from "react";
 import { errorMessage } from "../../api/errorMessages";
 import { useNotify } from "../../components/NotificationProvider";
 import { useActiveMembers, useAssignedTennerCount, useDeactivateMember, type Member } from "./api";
+import { SHARED_OPTION } from "./useAssignees";
 
 export interface DeactivateMemberDialogProps {
   readonly member: Member;
@@ -26,7 +27,8 @@ export function DeactivateMemberDialog({ member, onClose }: DeactivateMemberDial
   const notify = useNotify();
   const deactivate = useDeactivateMember();
   const count = useAssignedTennerCount(member.userId);
-  const others = useActiveMembers().filter((candidate) => candidate.userId !== member.userId);
+  // Another active member or "Alle (gemeinsam)" (HOUSEHOLD-002).
+  const others = [...useActiveMembers().filter((candidate) => candidate.userId !== member.userId), SHARED_OPTION];
   const [reassignTo, setReassignTo] = useState(others[0]?.userId ?? "");
   const target = others.find((candidate) => candidate.userId === reassignTo) ?? others[0];
   const needsTarget = (count.data ?? 0) > 0;

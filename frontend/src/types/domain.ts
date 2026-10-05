@@ -43,6 +43,10 @@ export const CATEGORY_ICON_LABELS: Readonly<Record<CategoryIcon, string>> = {
 export type UserId = string;
 export const USER_ID_PATTERN = /^[A-Z][A-Z0-9_]{0,29}$/;
 
+/** Reserved assignee for shared Tenners anyone can do (HOUSEHOLD-002); mirrors backend SHARED_ASSIGNEE. */
+export const SHARED_ASSIGNEE = "HOUSEHOLD";
+export const SHARED_LABEL = "Gemeinsam";
+
 /** Member colors (HOUSEHOLD-ADMIN-001); mirrors backend MEMBER_COLORS. */
 export const MEMBER_COLORS = ["BLUE", "GREEN", "ORANGE", "PURPLE", "RED", "TEAL", "PINK", "GREY"] as const;
 export type MemberColor = (typeof MEMBER_COLORS)[number];

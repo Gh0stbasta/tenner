@@ -3,12 +3,11 @@
 import { Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
 import { TennerLink } from "../../components/TennerLink";
 import { useCategoryName } from "../categories/api";
-import { formatMinutes } from "../../utils/format";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
 import { SnoozedBadge } from "../snooze/SnoozedBadge";
 import { SnoozeMenu } from "../snooze/SnoozeMenu";
 import type { DashboardTenner } from "./api";
-import { useMemberName } from "../members/api";
+import { AssigneeLabel } from "../members/AssigneeLabel";
 
 export type DashboardCardVariant = "dueToday" | "overdue" | "upcoming";
 
@@ -29,7 +28,6 @@ const ACCENT: Readonly<Record<DashboardCardVariant, string>> = {
 
 export function DashboardTennerCard({ tenner, variant, status, completable = false }: DashboardTennerCardProps) {
   const categoryName = useCategoryName();
-  const memberName = useMemberName();
   return (
     <Card component="li" sx={{ listStyle: "none", borderLeft: 4, borderLeftColor: ACCENT[variant] }}>
       <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, "&:last-child": { pb: 2 } }}>
@@ -39,9 +37,7 @@ export function DashboardTennerCard({ tenner, variant, status, completable = fal
           </Typography>
           <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1, flexWrap: "wrap", alignItems: "center" }}>
             <Chip size="small" label={categoryName(tenner.category)} />
-            <Typography variant="body2" color="text.secondary">
-              {memberName(tenner.assignedTo)} · {formatMinutes(tenner.estimatedMinutes)}
-            </Typography>
+            <AssigneeLabel assignedTo={tenner.assignedTo} estimatedMinutes={tenner.estimatedMinutes} />
             {status !== undefined && (
               <Typography
                 variant="body2"

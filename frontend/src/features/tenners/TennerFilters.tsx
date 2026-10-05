@@ -51,7 +51,7 @@ function Select<T extends string>({ label, value, options, labels, onChange }: S
 
 export function TennerFilters({ value, onChange }: TennerFiltersProps) {
   const set = (patch: Partial<TennerListParams>) => onChange({ ...value, ...patch });
-  const assignees = useAssignees(value.assignedTo);
+  const assignees = useAssignees(value.assignedTo, { includeShared: true });
   const categoryOptions = useCategoryOptions(value.category);
   return (
     <Grid container spacing={1.5} component="section" aria-label="Filter">

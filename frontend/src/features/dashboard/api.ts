@@ -26,7 +26,11 @@ const pausedTennerSchema = dashboardTennerSchema.extend({
 });
 export type PausedDashboardTenner = z.infer<typeof pausedTennerSchema>;
 
-const groupSummarySchema = z.object({ count: z.number(), estimatedMinutes: z.number() });
+const groupSummarySchema = z.object({
+  count: z.number(),
+  estimatedMinutes: z.number(),
+  sharedCount: z.number().optional(),
+});
 export type GroupSummary = z.infer<typeof groupSummarySchema>;
 
 export const dashboardSchema = z.object({
