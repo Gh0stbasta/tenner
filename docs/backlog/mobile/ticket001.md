@@ -122,3 +122,29 @@ Lighthouse "installable" check passes on the deployed site.
 
 - Offline support (MOBILE-002, 003, 004)
 - Push (MOBILE-006)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Installable on Android, iOS and desktop: `public/manifest.json` (name, `start_url` `/dashboard`, `scope` `/`,
+  `display: standalone`, theme colors, icons 192/512 + maskable 512), Apple touch icon and iOS meta tags in
+  `index.html`; Chromium reports no installability errors (DevTools `Page.getInstallabilityErrors` on the built app)
+- [x] Launches in standalone mode (`display: standalone`, `apple-mobile-web-app-capable`)
+- [x] App shortcuts: "Neuer Tenner" (`/dashboard?quickAdd=1` focuses Quick Add) and "Heute"
+- [x] Install entry in Settings → "App": button for the browser prompt, iOS instructions, "installed" confirmation;
+  hidden where installation is impossible
+- [x] Tests passing: frontend 330 (manifest fields and icons, install entry visibility, prompt flow, iOS
+  instructions, platform detection, shortcut focus); lint and build clean
+- [ ] Lighthouse/installability check on the deployed site and a real install on Android and iPhone: after merge
+
+Decisions and assumptions:
+
+- **No `vite-plugin-pwa` in this ticket:** installation needs only a static manifest and icons, so no dependency is
+  added here. The plugin is evaluated in MOBILE-002, where a service worker is needed.
+- `manifest.json` instead of `.webmanifest` so S3 serves it as `application/json` without extra configuration; the
+  deploy script uploads it with `no-cache` like `index.html`.
+- The CSP (`default-src 'self'`) already allows the same-origin manifest and icons; no infrastructure change.
+- The browser's own mini-infobar is suppressed in favor of the settings entry (unobtrusive, as the ticket asks).

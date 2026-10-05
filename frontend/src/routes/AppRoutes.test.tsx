@@ -52,11 +52,12 @@ describe("AppRoutes", () => {
     expect(onLogout).toHaveBeenCalledOnce();
   });
 
-  it("navigates through the main navigation and opens the mobile drawer", async () => {
+  it("navigates through the side navigation and the bottom navigation (MOBILE-005)", async () => {
     renderRoutes("/settings");
-    await userEvent.click(screen.getByRole("button", { name: "Navigation öffnen" }));
-    const [nav] = screen.getAllByRole("navigation", { name: "Hauptnavigation" });
-    await userEvent.click(within(nav as HTMLElement).getByRole("link", { name: "Auswertung" }));
+    const [side, bottom] = screen.getAllByRole("navigation", { name: "Hauptnavigation" });
+    await userEvent.click(within(side as HTMLElement).getByRole("link", { name: "Auswertung" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Auswertung" })).toBeInTheDocument();
+    await userEvent.click(within(bottom as HTMLElement).getByRole("link", { name: "Einstellungen" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Einstellungen" })).toBeInTheDocument();
   });
 });

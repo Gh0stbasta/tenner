@@ -14,7 +14,7 @@ import {
   TextField,
   Tooltip,
 } from "@mui/material";
-import { useId, useState } from "react";
+import { useId, useState, type Ref } from "react";
 import { errorMessage } from "../../api/errorMessages";
 import { useNotify } from "../../components/NotificationProvider";
 import { formatShortDate } from "../../utils/format";
@@ -28,9 +28,11 @@ export interface SnoozeMenuProps {
   /** "icon" for compact cards (dashboard), "button" for page headers. */
   readonly variant?: "icon" | "button";
   readonly disabled?: boolean;
+  /** Ref to the icon button, so a swipe can open the menu (MOBILE-005). */
+  readonly buttonRef?: Ref<HTMLButtonElement>;
 }
 
-export function SnoozeMenu({ tenner, variant = "button", disabled = false }: SnoozeMenuProps) {
+export function SnoozeMenu({ tenner, variant = "button", disabled = false, buttonRef }: SnoozeMenuProps) {
   const menuId = useId();
   const dialogTitleId = useId();
   const today = useToday();
@@ -72,6 +74,7 @@ export function SnoozeMenu({ tenner, variant = "button", disabled = false }: Sno
         <Tooltip title="Verschieben">
           <span>
             <IconButton
+              ref={buttonRef}
               aria-label={label}
               aria-haspopup="menu"
               aria-controls={anchor ? menuId : undefined}

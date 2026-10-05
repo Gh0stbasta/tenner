@@ -43,6 +43,7 @@ Only `src/config.ts` reads `import.meta.env` (ESLint rule).
 | Forms and validation | React Hook Form, Zod                                     |
 | Build                | Vite 8, TypeScript (strict)                              |
 | Tests                | Vitest, React Testing Library, jsdom                     |
+| Service worker       | `vite-plugin-pwa` (Workbox), build time only (MOBILE-002) |
 
 ## Project Structure
 
@@ -73,7 +74,9 @@ Features own their components, hooks and API functions, so `components/` stays s
   exponential backoff; 4xx are not retried. Mutations are never retried automatically.
 - **Routing:** `/` redirects to `/dashboard`. `/tenners`, `/analytics` and `/settings` exist; unknown paths
   show a not-found page. CloudFront serves `index.html` for unknown paths (SPA fallback).
-- **Layout:** app bar, permanent side navigation from `md` (900 px), drawer behind a menu button below.
+- **Layout:** app bar, permanent side navigation from `md` (900 px). Below `md` (MOBILE-005): bottom navigation
+  (Dashboard, Tenner, Auswertung, Einstellungen) and a floating Quick Add button within thumb reach; safe-area insets
+  (`viewport-fit=cover`) keep content clear of notches and the home indicator in the installed app.
 - **Errors (UX-005):** a top-level error boundary shows a fallback with a reload button instead of a blank page.
   `src/api/errorMessages.ts` maps API error codes to German messages (e.g. `CONCURRENT_MODIFICATION` → "Jemand anderes
   hat diesen Tenner geändert …", network/5xx → "Tenner ist gerade nicht erreichbar …"); all error alerts and
@@ -136,6 +139,51 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 - Consumers: Quick Add and the create dialog use the defaults; the dashboard hides upcoming, per-person,
   per-category and recent-activity sections when switched off (due today and overdue always show).
 - The current user is **not** selectable: it comes from the Google login (SECURITY-003/004).
+
+## Installable App (MOBILE-001)
+
+Tenner is a Progressive Web App: it can be added to the home screen and starts without browser UI.
+
+- `public/manifest.json`: name, `start_url` `/dashboard`, `display: standalone`, theme colors, icons (192, 512,
+  maskable 512) and the shortcuts "Neuer Tenner" (`/dashboard?quickAdd=1`, focuses Quick Add) and "Heute".
+- `index.html`: manifest link, Apple touch icon and the iOS home-screen meta tags.
+- Settings → "App": "App installieren" where the browser offers installation (Chrome, Edge, Android; the
+  `beforeinstallprompt` event is captured at startup in `src/features/install/installPrompt.ts`), step-by-step
+  instructions on iPhone/iPad ("Teilen → Zum Home-Bildschirm"), a confirmation once installed; hidden elsewhere
+  (e.g. Firefox desktop).
+- Icons in `public/icons/` were rendered from the favicon motif (white "10" on `#1976d2`); the maskable icon keeps the
+  motif inside the 80 % safe zone. To change them, render new PNGs of the same sizes.
+- No service worker is needed for installation in current browsers.
+
+## Service Worker (MOBILE-002)
+
+- **What it does:** `vite-plugin-pwa` generates `dist/sw.js`, which precaches the app shell (`index.html`, hashed
+  assets, icons, manifest) with content revisions. The app starts from the cache, also offline and on deep links
+  (navigation fallback to `index.html`). API requests (other origin) are never intercepted: always network.
+- **Updates:** every deploy changes the precache revisions, so browsers install a new worker. The app shows
+  "Neue Version verfügbar – Neu laden" (`src/features/install/UpdatePrompt.tsx`); "Später" keeps the old version
+  until the next launch. Open sessions check for updates hourly. A stale shell is served for at most one launch.
+- **Deploy:** `sw.js` and `workbox-*.js` are root files, so `scripts/deploy-frontend.sh` uploads them with
+  `no-cache` like `index.html`; CloudFront does not cache them. No infrastructure change.
+- **Kill switch** (if a broken worker ever ships): set `SERVICE_WORKER_KILL_SWITCH = true` in `vite.config.ts`, merge
+  and deploy. The new `sw.js` unregisters itself and deletes its caches on the next visit; the app then loads
+  from the network as before MOBILE-002. Revert the flag once fixed.
+- **Why a dependency:** a correct precache needs the list of built files with revisions on every build; Workbox
+  generates it and handles cleanup of outdated caches. Only `workbox-window` (~2 kB gzip, loaded on demand) ships to
+  the browser; `workbox-build` runs at build time.
+- The dev server (`npm run dev`) does not register the worker.
+
+## Touch Interaction (MOBILE-005)
+
+- **Swipe on dashboard cards** (due today and overdue): right → complete (with the usual undo snackbar), left → the
+  snooze menu. A gesture counts only when it moves further sideways than vertically (page scrolling keeps working)
+  and past 80 px; the card follows the finger and shows "Erledigt" / "Verschieben" behind it. The "Erledigt" and
+  "Verschieben" buttons stay on every card as the accessible alternative (`src/features/mobile/useSwipe.ts`).
+- **Pull to refresh** on the dashboard (installed apps have no browser pull-to-refresh): pulling down at the top
+  reloads the dashboard and recent activity (`PullToRefresh.tsx`).
+- **Touch targets:** buttons, icon buttons, toggle buttons and clickable chips are at least 44 × 44 px on touch
+  screens (`@media (pointer: coarse)` in the theme); mouse layouts stay compact.
+- **Haptics:** a short vibration on completion where the browser supports it (Android).
 
 ## Theme
 
