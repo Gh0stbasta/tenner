@@ -19,3 +19,4 @@ export * from "./member.service.js";
 export * from "./category.service.js";
 export * from "./member-deactivation.service.js";
 export * from "./handover.service.js";
+export * from "./alexa-speaker.service.js";

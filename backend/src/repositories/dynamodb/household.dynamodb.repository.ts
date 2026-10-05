@@ -8,9 +8,11 @@ import {
   CATEGORY_ID_PATTERN,
   MEMBER_COLORS,
   USER_ID_PATTERN,
+  ALEXA_PERSON_ID_PATTERN,
   WEEK_STARTS,
   WEEKDAYS,
   type CategoryIcon,
+  type AlexaSpeaker,
   type Handover,
   type HouseholdCategory,
   type HouseholdMember,
@@ -98,6 +100,17 @@ function toHandovers(value: unknown): Handover[] {
   });
 }
 
+/** Stored Alexa speaker mappings; malformed entries are dropped (ALEXA-002). */
+function toAlexaSpeakers(value: unknown): AlexaSpeaker[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry): AlexaSpeaker[] => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const { personId, userId, createdAt, createdBy } = entry as Record<string, unknown>;
+    if (typeof personId !== "string" || !ALEXA_PERSON_ID_PATTERN.test(personId) || typeof userId !== "string" || !USER_ID_PATTERN.test(userId)) return [];
+    return [{ personId, userId, createdAt: typeof createdAt === "string" ? createdAt : "", createdBy: typeof createdBy === "string" ? createdBy : "" }];
+  });
+}
+
 function toDefaults(value: unknown): NewTennerDefaults | null {
   if (typeof value !== "object" || value === null) return null;
   const { category, estimatedMinutes, frequencyDays } = value as Record<string, unknown>;
@@ -121,6 +134,8 @@ function toSettings(item: Record<string, unknown>): HouseholdSettings {
     categoriesVersion: typeof item.categoriesVersion === "number" ? item.categoriesVersion : 0,
     handovers: toHandovers(item.handovers),
     handoversVersion: typeof item.handoversVersion === "number" ? item.handoversVersion : 0,
+    alexaSpeakers: toAlexaSpeakers(item.alexaSpeakers),
+    alexaSpeakersVersion: typeof item.alexaSpeakersVersion === "number" ? item.alexaSpeakersVersion : 0,
     updatedAt: String(item.updatedAt),
     updatedBy: typeof item.updatedBy === "string" ? (item.updatedBy as UserId) : null,
   };
@@ -167,10 +182,15 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
     return this.saveVersionedList(tenantId, "handovers", handovers, expectedVersion, actor, timestamp);
   }
 
+  /** Replace the Alexa speaker mappings with optimistic locking on alexaSpeakersVersion (ALEXA-002). */
+  async saveAlexaSpeakers(tenantId: string, speakers: readonly AlexaSpeaker[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+    return this.saveVersionedList(tenantId, "alexaSpeakers", speakers, expectedVersion, actor, timestamp);
+  }
+
   /** SET <list> and <list>Version = expected + 1, if the stored version still equals `expectedVersion` (0 = none). */
   private async saveVersionedList(
     tenantId: string,
-    name: "members" | "categories" | "handovers",
+    name: "members" | "categories" | "handovers" | "alexaSpeakers",
     list: readonly unknown[],
     expectedVersion: number,
     actor: UserId,

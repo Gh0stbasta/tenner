@@ -371,8 +371,9 @@ python3 scripts/backfill_frequency_unit.py --apply   # conditional, idempotent w
 
 ### Alexa Skill (ALEXA-001)
 
-Setup, the one-time activation in the Alexa developer console, the GitHub variable `ALEXA_SKILL_ID`, the secrets
-`ASK_REFRESH_TOKEN` and `ASK_VENDOR_ID`, and rollback are described in [`alexa/README.md`](alexa/README.md).
+Setup, the one-time activation in the Alexa developer console, the GitHub variables `ALEXA_SKILL_ID` and
+`ALEXA_REDIRECT_URLS` (account linking, ALEXA-002), the secrets `ASK_REFRESH_TOKEN` and `ASK_VENDOR_ID`, and
+rollback are described in [`alexa/README.md`](alexa/README.md).
 Without `ALEXA_SKILL_ID` nothing Alexa-related is deployed.
 
 ### Known Limitations

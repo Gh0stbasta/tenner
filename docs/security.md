@@ -12,6 +12,8 @@ Internet (anyone)
   │  HTTPS only (CloudFront redirect-to-https; API Gateway is HTTPS-only)
   ├──► CloudFront ──(Origin Access Control)──► S3 frontend bucket (private)
   ├──► Cognito / Google sign-in ──► ID token (60 min), refresh token (30 days, revocable)
+  │      └─ Alexa account linking (ALEXA-002): client tenner-alexa (secret held by Amazon) ──► access token
+  │         (60 min), refresh token (3,650 days, revocable); the skill Lambda (eu-west-1) calls the API with it
   └──► API Gateway HTTP API (throttled 10 req/s, burst 20)
          │  JWT authorizer: every route except GET /health
          ▼
@@ -26,6 +28,7 @@ GitHub Actions ──(OIDC, GitHubActionsDeployRole)──► Terraform state (S
 | Boundary | What protects it |
 |---|---|
 | Browser → API | Cognito ID token verified by API Gateway (signature, issuer, audience, expiry) |
+| Alexa skill → API | Cognito access token of the linked member (audience check via `client_id` = Alexa client); same household-group rules as the browser; skill Lambda invocable only by the Tenner skill ID (ADR 0005) |
 | Signed-in user → household data | Exactly one group `household:<tenantId>:<userId>`; each member claimable once (ADR 0002) |
 | User → other tenant | Every DynamoDB key and query uses `identity.tenantId`; no client-supplied tenant (SECURITY-004) |
 | Internet → S3 | Bucket private, Block Public Access on, bucket policy allows only this CloudFront distribution |
@@ -50,6 +53,7 @@ GitHub Actions ──(OIDC, GitHubActionsDeployRole)──► Terraform state (S
 | S3 state | Private, SSE-S3, versioning, TLS-only policy; lock table encrypted with deletion protection | `tests/state_backend.tftest.hcl` |
 | CloudFront | HTTPS redirect, CSP (`script-src 'self'`), HSTS, X-Frame-Options, nosniff, referrer policy | `terraform/frontend-hosting.tf` |
 | Cognito | Deletion protection, no self sign-up with password, app client cannot write identity attributes | `tests/auth.tftest.hcl` |
+| Alexa client (ALEXA-002) | Confidential code-grant client, Google only, scopes `openid tenner/household`, redirect URLs validated to Amazon's account-linking hosts; secret never output or committed; tokens never stored or logged by Tenner | `terraform/auth.tf`, `tests/auth.tftest.hcl`, `alexa/src/tennerApi.ts` |
 | Secrets | Google client secret only in GitHub secrets and the encrypted state (TD-021); nothing in the repository | README → "Google Sign-In" |
 | Dependencies | Dependabot; CI fails on high/critical production vulnerabilities | SECURITY-007 |
 | Deployment check | Smoke tests incl. "API requires login" after every deploy | OPERATIONS-006 |
@@ -122,3 +126,4 @@ These are outside Terraform or need the live system. Run them in AWS CloudShell 
 | No Lambda reserved concurrency | TD-014 |
 | PR plans run with the deploy role | TD-008 |
 | No WAF, GuardDuty or Security Hub (cost) | SECURITY-005 out of scope |
+| The Alexa link has full member rights (no per-route scopes while the web app uses ID tokens); a linked Alexa account stays valid up to 10 years unless unlinked or the member's group is removed | TD-035 |

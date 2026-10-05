@@ -239,3 +239,93 @@ run "google_client_secret_is_required" {
 
   expect_failures = [var.google_client_secret]
 }
+
+# ALEXA-002: Alexa account linking client.
+run "no_alexa_client_without_redirect_urls" {
+  command = plan
+
+  variables {
+    alexa_skill_id = "amzn1.ask.skill.12345678-90ab-cdef-1234-567890abcdef"
+  }
+
+  assert {
+    condition     = length(aws_cognito_user_pool_client.alexa) == 0 && length(aws_cognito_resource_server.tenner) == 0
+    error_message = "Without alexa_redirect_urls no Alexa client may be created."
+  }
+
+  assert {
+    condition     = output.alexa_account_linking == null && aws_lambda_function.api.environment[0].variables["ALEXA_CLIENT_ID"] == ""
+    error_message = "Without the Alexa client there is no linking output and no ALEXA_CLIENT_ID."
+  }
+}
+
+run "alexa_client_for_account_linking" {
+  command = plan
+
+  variables {
+    alexa_skill_id = "amzn1.ask.skill.12345678-90ab-cdef-1234-567890abcdef"
+    alexa_redirect_urls = [
+      "https://layla.amazon.com/api/skill/link/M2ABCDEF",
+      "https://pitangui.amazon.com/api/skill/link/M2ABCDEF",
+      "https://alexa.amazon.co.jp/api/skill/link/M2ABCDEF",
+    ]
+  }
+
+  override_resource {
+    target          = aws_cognito_user_pool_client.alexa[0]
+    override_during = plan
+    values = {
+      id = "alexaclientid"
+    }
+  }
+
+  assert {
+    condition     = aws_cognito_user_pool_client.alexa[0].generate_secret == true && aws_cognito_user_pool_client.alexa[0].allowed_oauth_flows == toset(["code"])
+    error_message = "The Alexa client must be confidential and use the authorization code grant."
+  }
+
+  assert {
+    condition     = aws_cognito_user_pool_client.alexa[0].allowed_oauth_scopes == toset(["openid", "tenner/household"]) && aws_cognito_user_pool_client.alexa[0].supported_identity_providers == toset(["Google"])
+    error_message = "The Alexa client must use Google sign-in with the openid and tenner/household scopes."
+  }
+
+  assert {
+    condition     = aws_cognito_user_pool_client.alexa[0].refresh_token_validity == 3650 && aws_cognito_user_pool_client.alexa[0].access_token_validity == 60
+    error_message = "Alexa refresh tokens must last 3650 days, access tokens 60 minutes."
+  }
+
+  assert {
+    condition     = length(aws_cognito_user_pool_client.alexa[0].callback_urls) == 3
+    error_message = "The Alexa client must allow exactly the Alexa redirect URLs."
+  }
+
+  assert {
+    condition     = aws_apigatewayv2_authorizer.cognito.jwt_configuration[0].audience == toset(["testclientid", "alexaclientid"])
+    error_message = "The authorizer must accept the web client and the Alexa client."
+  }
+
+  assert {
+    condition     = aws_lambda_function.api.environment[0].variables["ALEXA_CLIENT_ID"] == "alexaclientid"
+    error_message = "The API must know the Alexa client ID for the audit channel."
+  }
+
+  assert {
+    condition     = output.alexa_account_linking.access_token_uri == "https://${local.auth_login_domain}/oauth2/token" && !can(output.alexa_account_linking.client_secret)
+    error_message = "The linking output must name the token URL and never the client secret."
+  }
+
+  assert {
+    condition     = contains(local.api_routes, "GET /household/alexa") && aws_apigatewayv2_route.api["DELETE /household/alexa-speakers/{personId}"].authorization_type == "JWT"
+    error_message = "The Alexa routes must exist and require a signed-in user."
+  }
+}
+
+run "invalid_alexa_redirect_url_is_rejected" {
+  command = plan
+
+  variables {
+    alexa_redirect_urls = ["https://evil.example.com/callback"]
+  }
+
+  expect_failures = [var.alexa_redirect_urls]
+}

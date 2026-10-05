@@ -46,6 +46,7 @@ export function mockFetch(routes: Record<string, MockHandler>): FetchMock {
   const handlers: Record<string, MockHandler> = {
     "GET /users": ok(DEFAULT_MEMBERS),
     "GET /categories": ok(DEFAULT_CATEGORIES),
+    "GET /household/alexa": ok({ account: { userId: "STEFAN" }, members: DEFAULT_MEMBERS, speakers: [] }),
     ...routes,
   };
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

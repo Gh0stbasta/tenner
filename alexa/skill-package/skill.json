@@ -40,6 +40,11 @@
       "locales": {
         "de-DE": {}
       }
-    }
+    },
+    "permissions": [
+      {
+        "name": "alexa::person_id:read"
+      }
+    ]
   }
 }

@@ -645,7 +645,8 @@ Decided in [`decisions/0001-authentication.md`](decisions/0001-authentication.md
   `household:<tenantId>:<userId>`. On the first login the user picks a household member; each member can be
   claimed by one account only (HOTFIX-001, ADR 0002 amendment).
 - The API Gateway JWT authorizer protects every route except `GET /health`. The browser sends the
-  Cognito **ID token** because it carries `cognito:groups`.
+  Cognito **ID token** because it carries `cognito:groups`. The Alexa skill sends the **access token** of the
+  linked account (also with `cognito:groups`; ALEXA-002); the authorizer accepts both app clients.
 - The backend derives tenant and acting user only from verified claims (SECURITY-004).
 - Tokens are kept in `localStorage` for up to 30 days (refresh token), so a device stays logged in.
 
@@ -673,7 +674,8 @@ Browser ──(Authorization Code + PKCE, identity_provider=Google)──► Cog
 | `aws_cognito_user_group.household` | `household:default:STEFAN`, `household:default:JULIA` (seed members; groups of members added in the app are created by the API, HOUSEHOLD-ADMIN-001) |
 | `aws_iam_role_policy.api_cognito` | API Lambda may add/remove the caller to/from household groups, read group membership and create member groups on this pool only (HOTFIX-001, HOUSEHOLD-ADMIN-001, TD-023) |
 | `aws_cognito_user_pool_domain.login` | managed login v2, prefix `tenner-prod-<first 8 hex of sha1(account id)>` |
-| `aws_apigatewayv2_authorizer.cognito` | JWT authorizer on every route except `GET /health` (`local.api_public_routes`) |
+| `aws_apigatewayv2_authorizer.cognito` | JWT authorizer on every route except `GET /health` (`local.api_public_routes`); audience = web client plus, once set up, the Alexa client |
+| `aws_cognito_user_pool_client.alexa` (`tenner-alexa-prod`, ALEXA-002) | only when `alexa_skill_id` and `alexa_redirect_urls` are set: confidential client (secret), code grant, scopes `openid tenner/household` (resource server `tenner`), Google only, callbacks = Alexa redirect URLs, access 60 min, refresh 3,650 days, revocation on; output `alexa_account_linking` (URLs, client ID — not the secret) |
 
 The CloudFront CSP allows `connect-src` to `cognito-idp.eu-central-1.amazonaws.com` (discovery, JWKS) and the
 managed login domain (token endpoint). Outputs: `cognito_user_pool_id`, `cognito_client_id`, `cognito_issuer_url`,

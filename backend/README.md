@@ -77,7 +77,10 @@ Other groups (e.g. Cognito's `<pool>_Google`) are ignored.
 - There is **no default tenant** and no tenant parameter. A `tenantId` in the query or body is rejected with 400
   (strict schemas); headers are ignored.
 - Read handlers receive `identity.tenantId`; write handlers and services receive the whole identity.
-- The request logger is bound to `userId` (no e-mail addresses or tokens are logged).
+- The request logger is bound to `userId` (no e-mail addresses or tokens are logged) and to `client`
+  (`alexa` when the token's `client_id` is `ALEXA_CLIENT_ID`, else `web`; ALEXA-002).
+- Access tokens (Alexa account linking, ALEXA-002) work like ID tokens: the household comes from `cognito:groups`;
+  the principal reads `cognito:username` or, in access tokens, `username`.
 - Tests build authenticated events with `authenticatedEvent()` and `jwtClaims()` from `tests/mocks`.
 
 ### First-login self-assignment (HOTFIX-001)
@@ -447,6 +450,9 @@ and a Tenner fixture.
 | `POST /categories` | Body `{ "name": "Garten", "icon": "GARDEN", "color": "GREEN", "categoryId"?: "GARDEN" }` → `201 CategoryResponse` (appended). 400 invalid fields, 409 `CATEGORY_EXISTS` or `CONCURRENT_MODIFICATION`; at most 30 categories. Logged as `CategoryCreated` |
 | `PUT /categories/{categoryId}` | Body `{ "name"?, "icon"?, "color"?, "sortOrder"? (new 0-based position), "archived"? }` (at least one) → `200 CategoryResponse`. 404 for unknown categories. Logged as `CategoryUpdated` |
 | `GET /household` | `200 { success: true, data: { name, timezone, weekStartsOn, workdays, defaults, defaultsSource, vacation, handovers } }` (SCHEDULING-008/005, HOUSEHOLD-ADMIN-003). Effective values: defaults `Unser Haushalt`, `APPLICATION_TIMEZONE`, `MONDAY`, Monday–Friday, `{ HOUSEHOLD, 10, 14 }`; `defaultsSource` is `DEFAULT` until the household saves its own defaults; `vacation` is `{ from, until, categories }` or null; `handovers` lists running handovers (HOUSEHOLD-004) |
+| `GET /household/alexa` | `200 { success: true, data: { account: { userId }, members: [{ userId, displayName }], speakers: [{ personId, userId }] } }` (ALEXA-002): the caller's member, active members and Alexa speaker mappings (mappings to deactivated members hidden). Used by the skill at session start and by Settings → Alexa |
+| `PUT /household/alexa-speakers/{personId}` | Body `{ "userId": "JULIA" }` → `200` with the same body as `GET /household/alexa` (ALEXA-002). `personId` must be an Amazon person ID (`amzn1.ask.person.…`), `userId` an active member (400); replaces the speaker's previous mapping; at most 20 mappings (409 `LIMIT_REACHED`); 409 `CONCURRENT_MODIFICATION`. Logged as `AlexaSpeakerMapped` without the person ID |
+| `DELETE /household/alexa-speakers/{personId}` | `200` with the remaining mappings; 404 without a mapping (ALEXA-002). Logged as `AlexaSpeakerUnmapped` |
 | `PUT /household/vacation` | Body `{ "from": "YYYY-MM-DD", "until": "YYYY-MM-DD", "categories"?: [...] }` (SCHEDULING-005) → `200 { success: true, data: { household, rescheduled, conflicts } }`. `until` before `from` or in the past, empty or duplicate categories → 400. Moves affected Tenners behind the vacation (spread by daily load); concurrently changed Tenners keep their date and are counted in `conflicts`. Logged as `HouseholdVacationSet` |
 | `DELETE /household/vacation` | `200 { success: true, data: { timezone, vacation: null } }`. Moved due dates stay. Logged as `HouseholdVacationEnded` |
 | `POST /tenners/{tennerId}/pause` | Body optional `{ "until": "YYYY-MM-DD" }` (last paused day, after today) → `200 TennerResponse` with `pausedAt`, `pausedUntil` (SCHEDULING-005). A due date ≤ `until` moves to `until + 1`. 400, 404, 409 `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |

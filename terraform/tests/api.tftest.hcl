@@ -73,6 +73,7 @@ run "lambda_matches_runtime_requirements" {
       APPLICATION_TIMEZONE = "Europe/Berlin"
       COGNITO_USER_POOL_ID = "eu-central-1_TEST"
       HOUSEHOLD_TENANT_ID  = "default"
+      ALEXA_CLIENT_ID      = ""
     })
     error_message = "Lambda environment variables do not match the specification."
   }
@@ -92,7 +93,7 @@ run "http_api_routes_health" {
   }
 
   assert {
-    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners", "GET /tenners", "PUT /tenners/{tennerId}", "DELETE /tenners/{tennerId}", "POST /tenners/{tennerId}/complete", "POST /tenners/{tennerId}/undo-completion", "POST /tenners/{tennerId}/restore", "GET /dashboard", "GET /tenners/{tennerId}", "GET /history", "GET /tenners/{tennerId}/history", "GET /onboarding", "POST /onboarding/assignment", "GET /household", "PUT /household", "POST /tenners/{tennerId}/snooze", "POST /tenners/{tennerId}/skip", "POST /tenners/{tennerId}/pause", "POST /tenners/{tennerId}/resume", "PUT /household/vacation", "DELETE /household/vacation", "GET /users", "POST /users", "PUT /users/{userId}", "POST /users/{userId}/deactivate", "POST /users/{userId}/reactivate", "POST /users/{userId}/handover", "DELETE /users/{userId}/handover", "GET /categories", "POST /categories", "PUT /categories/{categoryId}", "GET /analytics/summary", "GET /analytics/trends", "GET /analytics/users", "GET /analytics/categories", "GET /analytics/neglected", "GET /analytics/balance", "GET /analytics/time", "GET /analytics/habits", "GET /analytics/habits/{tennerId}"])
+    condition     = toset(keys(aws_apigatewayv2_route.api)) == toset(["GET /health", "POST /tenners", "GET /tenners", "PUT /tenners/{tennerId}", "DELETE /tenners/{tennerId}", "POST /tenners/{tennerId}/complete", "POST /tenners/{tennerId}/undo-completion", "POST /tenners/{tennerId}/restore", "GET /dashboard", "GET /tenners/{tennerId}", "GET /history", "GET /tenners/{tennerId}/history", "GET /onboarding", "POST /onboarding/assignment", "GET /household", "PUT /household", "POST /tenners/{tennerId}/snooze", "POST /tenners/{tennerId}/skip", "POST /tenners/{tennerId}/pause", "POST /tenners/{tennerId}/resume", "PUT /household/vacation", "DELETE /household/vacation", "GET /users", "POST /users", "PUT /users/{userId}", "POST /users/{userId}/deactivate", "POST /users/{userId}/reactivate", "POST /users/{userId}/handover", "DELETE /users/{userId}/handover", "GET /categories", "POST /categories", "PUT /categories/{categoryId}", "GET /analytics/summary", "GET /analytics/trends", "GET /analytics/users", "GET /analytics/categories", "GET /analytics/neglected", "GET /analytics/balance", "GET /analytics/time", "GET /analytics/habits", "GET /analytics/habits/{tennerId}", "GET /household/alexa", "PUT /household/alexa-speakers/{personId}", "DELETE /household/alexa-speakers/{personId}"])
     error_message = "API routes must match the implemented endpoints."
   }
 

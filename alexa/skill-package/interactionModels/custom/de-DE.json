@@ -3,13 +3,61 @@
     "languageModel": {
       "invocationName": "tenner",
       "intents": [
-        { "name": "AMAZON.HelpIntent", "samples": ["was kann ich fragen", "wie funktioniert tenner"] },
-        { "name": "AMAZON.StopIntent", "samples": [] },
-        { "name": "AMAZON.CancelIntent", "samples": [] },
-        { "name": "AMAZON.NavigateHomeIntent", "samples": [] },
-        { "name": "AMAZON.FallbackIntent", "samples": [] }
+        {
+          "name": "SpeakerIntent",
+          "slots": [
+            {
+              "name": "member",
+              "type": "TennerMember"
+            }
+          ],
+          "samples": [
+            "{member}",
+            "ich bin {member}",
+            "hier ist {member}",
+            "hier spricht {member}",
+            "das ist {member}",
+            "ich heiße {member}"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": [
+            "was kann ich fragen",
+            "wie funktioniert tenner"
+          ]
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        }
       ],
-      "types": []
+      "types": [
+        {
+          "name": "TennerMember",
+          "values": [
+            {
+              "id": "PLACEHOLDER",
+              "name": {
+                "value": "mitglied",
+                "synonyms": []
+              }
+            }
+          ]
+        }
+      ]
     }
   },
   "version": "1"

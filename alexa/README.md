@@ -4,8 +4,9 @@ German (de-DE) Alexa custom skill "Tenner" ([ADR 0005](../docs/decisions/0005-al
 [`docs/backlog/alexa/`](../docs/backlog/alexa/)). This folder is its own npm package, next to `backend/` and
 `frontend/`; Terraform for the skill Lambda lives in [`terraform/alexa.tf`](../terraform/alexa.tf).
 
-**Current state (ALEXA-001):** skeleton skill. „Alexa, öffne Tenner“ answers with a welcome; help, stop, cancel,
-fallback and session end are handled. No household data yet (account linking follows in ALEXA-002).
+**Current state (ALEXA-002):** account linking and speaker recognition. „Alexa, öffne Tenner“ greets the recognized
+member by name, asks an unknown voice once „Wer spricht gerade?“ and asks unlinked accounts to link Tenner in the
+Alexa app. Help, stop, cancel, fallback and session end are handled.
 
 ## Layout
 
@@ -19,6 +20,8 @@ alexa/
 │   ├── skill.ts                            skill builder, handler order
 │   ├── handlers/                           one file per request/intent type
 │   ├── speech.ts                           all German response texts
+│   ├── session.ts                          linked token, API client, household context, speaker resolution
+│   ├── tennerApi.ts                        Tenner API client (timeout, error kinds, correlation ID)
 │   ├── config.ts                           environment (the only module reading process.env)
 │   └── log.ts                              JSON log lines without personal data
 └── tests/                                  vitest, request envelopes in tests/envelopes.ts
@@ -50,7 +53,7 @@ and test it with an envelope from `tests/envelopes.ts`.
 | Invocation | only the Alexa Skills Kit with the Tenner skill ID (Lambda permission `event_source_token`), plus the SDK's skill-ID check (`ALEXA_SKILL_ID`) |
 | Environment | `TENNER_API_BASE_URL` (Tenner API stage), `ALEXA_SKILL_ID`, `LOG_LEVEL`, `ENVIRONMENT` |
 | Logs | `/tenner/alexa-skill` in eu-west-1, 30 days |
-| Data | none stored in eu-west-1; household data only via the Tenner API (from ALEXA-002) |
+| Data | none stored in eu-west-1; household data only via the Tenner API with the linked member's token (3 s timeout per call) |
 
 ## Activation (one-time, owner, outside this repository)
 
@@ -79,6 +82,39 @@ certification. Other Amazon accounts would need a beta test (at most 90 days); t
 
 If the console rejects the invocation name `tenner`, change it to `mein tenner` in
 `interactionModels/custom/de-DE.json` and document it here.
+
+## Account Linking (ALEXA-002, one-time, owner)
+
+The skill acts as a household member through the same Cognito user pool and Google sign-in as the web app.
+
+1. Alexa developer console → Tenner → Build → **Account Linking**: copy the three **Alexa Redirect URLs**.
+2. GitHub → Settings → Secrets and variables → Actions → **Variable** `ALEXA_REDIRECT_URLS` = the URLs as a JSON
+   list, e.g. `["https://layla.amazon.com/api/skill/link/<vendor-id>", "https://pitangui.amazon.com/api/skill/link/<vendor-id>", "https://alexa.amazon.co.jp/api/skill/link/<vendor-id>"]`.
+   Deploy: Terraform creates the Cognito app client `tenner-alexa-prod` and adds it to the API authorizer.
+3. Read the values for the console (with AWS access to the account):
+
+   ```bash
+   terraform -chdir=terraform output alexa_account_linking   # authorization/token URI, client ID, scopes
+   aws cognito-idp describe-user-pool-client --user-pool-id <user_pool_id> --client-id <client_id> \
+     --query UserPoolClient.ClientSecret --output text        # never commit or paste it anywhere else
+   ```
+
+4. Account Linking page: "Do you allow users to create an account or link to an existing account with you?" on;
+   **Auth Code Grant**; Web Authorization URI = `authorization_uri`; Access Token URI = `access_token_uri`;
+   Client ID / Secret from step 3; Authentication Scheme **HTTP Basic**; scopes `openid` and `tenner/household`.
+   Save.
+5. Alexa app → Skills → Tenner → **Link account** → sign in with the Google account you use in Tenner.
+6. Voice recognition (optional): each person creates a voice profile in the Alexa app and enables
+   "Personalize skills" for Tenner (permission `alexa::person_id:read` in `skill-package/skill.json`). On the first
+   „Alexa, öffne Tenner“ Alexa asks „Wer spricht gerade?“; the answer is stored. Settings → Alexa in the web app
+   lists and removes these mappings.
+
+Error messages: not linked → „Bitte verknüpfe Tenner in der Alexa-App“ plus a link card; 401 (link expired or
+revoked) → relink prompt; 403 (account without household member) → „Dieses Konto gehört zu keinem
+Tenner-Haushalt“; API errors or timeouts (3 s per call) → „Tenner ist gerade nicht erreichbar“.
+
+Rotating the client secret needs a new Cognito client (a Terraform change that replaces
+`aws_cognito_user_pool_client.alexa`), new values in the console and relinking (TD-035).
 
 ## CI Permissions
 

@@ -1,8 +1,8 @@
 /**
  * Authenticated identity of a request (SECURITY-004, FUTURE-011).
  *
- * API Gateway's JWT authorizer verifies the Cognito ID token (signature, issuer, audience, expiry)
- * before the Lambda runs. This module only reads the verified claims; it never trusts identity
+ * API Gateway's JWT authorizer verifies the Cognito token (signature, issuer, audience or client_id, expiry)
+ * before the Lambda runs: the web app's ID token, or the access token Alexa sends for the linked account (ALEXA-002). This module only reads the verified claims; it never trusts identity
  * fields from the request body, headers or query string, and it never falls back to a default tenant.
  *
  * Household membership is a Cognito group "household:<tenantId>:<userId>" (e.g. household:default:STEFAN),
@@ -18,8 +18,12 @@ export const GROUPS_CLAIM = "cognito:groups";
 /** Prefix of household membership groups. */
 export const HOUSEHOLD_GROUP_PREFIX = "household:";
 
-/** Cognito username claim (e.g. google_1234567890 for Google users). */
+/** Cognito username claim in ID tokens (e.g. google_1234567890 for Google users). */
 export const USERNAME_CLAIM = "cognito:username";
+/** Cognito access tokens carry the username as "username" (ALEXA-002). */
+export const ACCESS_TOKEN_USERNAME_CLAIM = "username";
+/** App client of an access token; ID tokens carry it as "aud" instead (ALEXA-002). */
+export const CLIENT_ID_CLAIM = "client_id";
 
 /** Signed-in Cognito user, with or without household membership (HOTFIX-001 onboarding). */
 export interface Principal {
@@ -34,9 +38,18 @@ export function householdGroupName(tenantId: string, userId: UserId): string {
 /** The signed-in user from the verified claims, for routes that do not need a household (onboarding). */
 export function principalFromEvent(event: ApiEvent): Principal {
   const claims = claimsOf(event);
-  const username = claims?.[USERNAME_CLAIM];
+  const username = claims?.[USERNAME_CLAIM] ?? claims?.[ACCESS_TOKEN_USERNAME_CLAIM];
   if (typeof username !== "string" || username.trim() === "") throw new UnauthorizedError("Authentication required.");
   return { username };
+}
+
+/** Calling channel for logs and audit (ALEXA-002): "alexa" for the Alexa app client, otherwise "web". */
+export type ClientChannel = "web" | "alexa";
+
+export function clientOf(event: ApiEvent, alexaClientId: string | undefined): ClientChannel {
+  if (alexaClientId === undefined) return "web";
+  const claims = claimsOf(event);
+  return claims?.[CLIENT_ID_CLAIM] === alexaClientId || claims?.aud === alexaClientId ? "alexa" : "web";
 }
 
 /** Tenant and acting user, derived exclusively from verified JWT claims. */

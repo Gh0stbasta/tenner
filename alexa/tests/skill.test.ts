@@ -1,16 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ResponseEnvelope } from "ask-sdk-model";
-import { loadConfig } from "../src/config.js";
+import { DEFAULT_API_TIMEOUT_MS, loadConfig, type SkillConfig } from "../src/config.js";
 import { createSkill } from "../src/skill.js";
 import { SPEECH } from "../src/speech.js";
 import { SKILL_ID, intentRequest, launchRequest, sessionEndedRequest, unknownRequest } from "./envelopes.js";
+import { API_BASE, fakeApi } from "./fakeApi.js";
+import { ssml } from "./ssml.js";
 
-const skill = createSkill({ tennerApiBaseUrl: "", skillId: SKILL_ID });
-
-function ssml(response: ResponseEnvelope): string | undefined {
-  const speech = response.response.outputSpeech;
-  return speech?.type === "SSML" ? speech.ssml : undefined;
-}
+const config = (overrides: Partial<SkillConfig> = {}): SkillConfig => ({ tennerApiBaseUrl: API_BASE, skillId: SKILL_ID, apiTimeoutMs: 1000, ...overrides });
+const skill = createSkill(config(), fakeApi().fetch);
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -66,16 +63,16 @@ describe("Tenner skill (ALEXA-001)", () => {
   });
 
   it("rejects requests for another skill ID without answering", async () => {
-    await expect(skill.invoke(launchRequest("amzn1.ask.skill.other"))).rejects.toThrow("ID verification failed");
+    await expect(skill.invoke(launchRequest({ applicationId: "amzn1.ask.skill.other" }))).rejects.toThrow("ID verification failed");
   });
 
   it("accepts any skill ID when none is configured", async () => {
-    const open = createSkill({ tennerApiBaseUrl: "", skillId: undefined });
-    const response = await open.invoke(launchRequest("amzn1.ask.skill.other"));
+    const open = createSkill(config({ skillId: undefined }), fakeApi().fetch);
+    const response = await open.invoke(launchRequest({ applicationId: "amzn1.ask.skill.other" }));
     expect(ssml(response)).toBe(`<speak>${SPEECH.welcome}</speak>`);
   });
 
-  it("answers well inside the 8 second Alexa limit (no network call yet)", async () => {
+  it("answers well inside the 8 second Alexa limit", async () => {
     const started = performance.now();
     await skill.invoke(launchRequest());
     expect(performance.now() - started).toBeLessThan(1000);
@@ -87,10 +84,15 @@ describe("loadConfig", () => {
     expect(loadConfig({ TENNER_API_BASE_URL: "https://api.test/prod/", ALEXA_SKILL_ID: " amzn1.ask.skill.x " })).toEqual({
       tennerApiBaseUrl: "https://api.test/prod",
       skillId: "amzn1.ask.skill.x",
+      apiTimeoutMs: DEFAULT_API_TIMEOUT_MS,
     });
   });
 
   it("treats a missing or blank skill ID as not configured", () => {
-    expect(loadConfig({ ALEXA_SKILL_ID: "  " })).toEqual({ tennerApiBaseUrl: "", skillId: undefined });
+    expect(loadConfig({ ALEXA_SKILL_ID: "  " })).toMatchObject({ tennerApiBaseUrl: "", skillId: undefined });
+  });
+
+  it("keeps two sequential API calls inside the 7 second Lambda timeout", () => {
+    expect(DEFAULT_API_TIMEOUT_MS * 2).toBeLessThan(7000);
   });
 });

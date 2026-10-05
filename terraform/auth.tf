@@ -152,7 +152,64 @@ resource "aws_cognito_user_group" "household" {
   description  = "Tenner household ${local.household_tenant_id}, member ${each.key}."
 }
 
+# Alexa account linking (ALEXA-002, ADR 0005): a confidential client (Alexa keeps the secret server-side) with the
+# authorization code grant and Google sign-in. Alexa sends the access token; it carries cognito:groups like the ID
+# token, so the skill has exactly the linked member's rights. The secret is entered once in the Alexa developer
+# console (alexa/README.md); it is never output or committed.
+resource "aws_cognito_resource_server" "tenner" {
+  count = local.alexa_auth_enabled ? 1 : 0
+
+  user_pool_id = aws_cognito_user_pool.users.id
+  identifier   = local.alexa_auth_resource_server
+  name         = "Tenner API"
+
+  scope {
+    scope_name        = local.alexa_auth_scope
+    scope_description = "Act as a member of the household."
+  }
+}
+
+resource "aws_cognito_user_pool_client" "alexa" {
+  count = local.alexa_auth_enabled ? 1 : 0
+
+  name         = local.alexa_auth_client_name
+  user_pool_id = aws_cognito_user_pool.users.id
+
+  generate_secret                      = true
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "${aws_cognito_resource_server.tenner[0].identifier}/${local.alexa_auth_scope}"]
+  supported_identity_providers         = [aws_cognito_identity_provider.google.provider_name]
+  explicit_auth_flows                  = ["ALLOW_REFRESH_TOKEN_AUTH"]
+
+  callback_urls = var.alexa_redirect_urls
+
+  access_token_validity  = local.auth_token_minutes
+  id_token_validity      = local.auth_token_minutes
+  refresh_token_validity = local.alexa_auth_refresh_token_days
+  token_validity_units {
+    access_token  = "minutes"
+    id_token      = "minutes"
+    refresh_token = "days"
+  }
+
+  enable_token_revocation       = true
+  prevent_user_existence_errors = "ENABLED"
+
+  read_attributes  = ["email", "email_verified"]
+  write_attributes = ["email"]
+}
+
+resource "aws_cognito_managed_login_branding" "alexa" {
+  count = local.alexa_auth_enabled ? 1 : 0
+
+  user_pool_id                = aws_cognito_user_pool.users.id
+  client_id                   = aws_cognito_user_pool_client.alexa[0].id
+  use_cognito_provided_values = true
+}
+
 # Validates the Cognito ID token (audience = app client, ADR 0001) on protected routes.
+# ALEXA-002: also the Alexa client's access tokens (HTTP API JWT authorizers match client_id when aud is absent).
 resource "aws_apigatewayv2_authorizer" "cognito" {
   api_id           = aws_apigatewayv2_api.api.id
   name             = "${local.name_prefix}-cognito"
@@ -161,6 +218,6 @@ resource "aws_apigatewayv2_authorizer" "cognito" {
 
   jwt_configuration {
     issuer   = "https://${aws_cognito_user_pool.users.endpoint}"
-    audience = [aws_cognito_user_pool_client.web.id]
+    audience = concat([aws_cognito_user_pool_client.web.id], aws_cognito_user_pool_client.alexa[*].id)
   }
 }

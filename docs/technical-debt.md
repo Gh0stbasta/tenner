@@ -974,3 +974,33 @@ does not work); add the ALEXA-009 health check. Add a second Resource Group in e
 ### Related Work
 
 ALEXA-001, ADR 0005, `scripts/deploy-alexa-skill.sh`, `terraform/alexa.tf`.
+
+## TD-035: Alexa link has full member rights and a 10-year refresh token
+
+### Description
+
+The Alexa Cognito client (`tenner-alexa`, ALEXA-002) requests the custom scope `tenner/household`, but no API route
+checks scopes: the linked Alexa account can call every route its member can, including member and category
+administration. The refresh token lives 3,650 days. Rotating the client secret requires replacing the client and
+relinking.
+
+### Reason
+
+HTTP API route scopes (`authorization_scopes`) only work with access tokens; the web app sends ID tokens, which
+carry no `scope` claim, so adding scopes to routes would lock out the web app. A long refresh token is how Alexa
+account linking avoids regular relinking.
+
+### Impact
+
+A compromised Alexa account (or Amazon-side token leak) has the member's full rights until the member is
+deactivated (group removed), the skill is unlinked or tokens are revoked. Voice-only use needs far fewer routes.
+
+### Suggested Improvement
+
+Move the web app to access tokens (they also carry `cognito:groups`), then put `tenner/household` (and a narrower
+`tenner/voice` scope for the Alexa client) on the routes. Alternatively deny administration routes for
+`client = alexa` in the backend router. Add a documented secret rotation with `replace_triggered_by`.
+
+### Related Work
+
+ALEXA-002, `terraform/auth.tf`, `backend/src/auth/identity.ts`, `docs/security.md` → "Residual Risks".

@@ -24,6 +24,8 @@ export interface AppConfig {
   readonly tables: TableConfig | undefined;
   /** Self-assignment to a household member (HOTFIX-001). Undefined when the variables are missing. */
   readonly onboarding: OnboardingConfig | undefined;
+  /** Cognito app client of the Alexa skill (ALEXA_CLIENT_ID); undefined while Alexa is not set up (ALEXA-002). */
+  readonly alexaClientId: string | undefined;
 }
 
 export interface OnboardingConfig {
@@ -61,6 +63,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     timezone: resolveTimeZone(readTrimmed(env.APPLICATION_TIMEZONE)),
     tables: tenners && history && households ? { tenners, history, households } : undefined,
     onboarding: userPoolId && householdTenantId ? { userPoolId, tenantId: householdTenantId } : undefined,
+    alexaClientId: readTrimmed(env.ALEXA_CLIENT_ID),
   };
 }
 

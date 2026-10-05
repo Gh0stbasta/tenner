@@ -48,6 +48,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     timezone: "Europe/Berlin",
     tables: { tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" },
     onboarding: { userPoolId: "eu-central-1_TEST", tenantId: "default" },
+    alexaClientId: undefined,
     ...overrides,
   };
 }
@@ -138,6 +139,8 @@ export function householdSettings(overrides: Partial<HouseholdSettings> = {}): H
     categories: null,
     handovers: [],
     handoversVersion: 0,
+    alexaSpeakers: [],
+    alexaSpeakersVersion: 0,
     categoriesVersion: 0,
     updatedAt: "t",
     updatedBy: null,

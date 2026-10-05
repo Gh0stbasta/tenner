@@ -39,46 +39,49 @@ locals {
   # API routes served by the tenner-api Lambda.
   api_routes = [
     "GET /health",
-    "POST /tenners",                            # TICKET-009
-    "GET /tenners",                             # TICKET-010
-    "PUT /tenners/{tennerId}",                  # TICKET-011
-    "DELETE /tenners/{tennerId}",               # TICKET-012 (soft delete)
-    "POST /tenners/{tennerId}/complete",        # TICKET-013
-    "POST /tenners/{tennerId}/undo-completion", # TICKET-014
-    "POST /tenners/{tennerId}/restore",         # TICKET-015
-    "GET /dashboard",                           # TICKET-016
-    "GET /tenners/{tennerId}",                  # TICKET-019
-    "GET /history",                             # TICKET-020
-    "GET /tenners/{tennerId}/history",          # TICKET-020
-    "GET /onboarding",                          # HOTFIX-001 (signed in, no household needed)
-    "POST /onboarding/assignment",              # HOTFIX-001
-    "GET /household",                           # SCHEDULING-008
-    "PUT /household",                           # SCHEDULING-008
-    "GET /analytics/summary",                   # ANALYTICS-001
-    "GET /analytics/trends",                    # ANALYTICS-002
-    "GET /analytics/users",                     # ANALYTICS-003
-    "GET /analytics/categories",                # ANALYTICS-004
-    "GET /analytics/neglected",                 # ANALYTICS-006
-    "GET /analytics/balance",                   # ANALYTICS-007
-    "GET /analytics/time",                      # ANALYTICS-005
-    "GET /analytics/habits",                    # ANALYTICS-008
-    "GET /analytics/habits/{tennerId}",         # ANALYTICS-008
-    "POST /tenners/{tennerId}/snooze",          # SCHEDULING-003
-    "POST /tenners/{tennerId}/skip",            # SCHEDULING-004
-    "POST /tenners/{tennerId}/pause",           # SCHEDULING-005
-    "POST /tenners/{tennerId}/resume",          # SCHEDULING-005
-    "PUT /household/vacation",                  # SCHEDULING-005
-    "DELETE /household/vacation",               # SCHEDULING-005
-    "GET /users",                               # HOUSEHOLD-ADMIN-001
-    "POST /users",                              # HOUSEHOLD-ADMIN-001
-    "PUT /users/{userId}",                      # HOUSEHOLD-ADMIN-001
-    "POST /users/{userId}/deactivate",          # HOUSEHOLD-ADMIN-004
-    "POST /users/{userId}/reactivate",          # HOUSEHOLD-ADMIN-004
-    "POST /users/{userId}/handover",            # HOUSEHOLD-004
-    "DELETE /users/{userId}/handover",          # HOUSEHOLD-004
-    "GET /categories",                          # HOUSEHOLD-ADMIN-002
-    "POST /categories",                         # HOUSEHOLD-ADMIN-002
-    "PUT /categories/{categoryId}",             # HOUSEHOLD-ADMIN-002
+    "POST /tenners",                               # TICKET-009
+    "GET /tenners",                                # TICKET-010
+    "PUT /tenners/{tennerId}",                     # TICKET-011
+    "DELETE /tenners/{tennerId}",                  # TICKET-012 (soft delete)
+    "POST /tenners/{tennerId}/complete",           # TICKET-013
+    "POST /tenners/{tennerId}/undo-completion",    # TICKET-014
+    "POST /tenners/{tennerId}/restore",            # TICKET-015
+    "GET /dashboard",                              # TICKET-016
+    "GET /tenners/{tennerId}",                     # TICKET-019
+    "GET /history",                                # TICKET-020
+    "GET /tenners/{tennerId}/history",             # TICKET-020
+    "GET /onboarding",                             # HOTFIX-001 (signed in, no household needed)
+    "POST /onboarding/assignment",                 # HOTFIX-001
+    "GET /household",                              # SCHEDULING-008
+    "PUT /household",                              # SCHEDULING-008
+    "GET /analytics/summary",                      # ANALYTICS-001
+    "GET /analytics/trends",                       # ANALYTICS-002
+    "GET /analytics/users",                        # ANALYTICS-003
+    "GET /analytics/categories",                   # ANALYTICS-004
+    "GET /analytics/neglected",                    # ANALYTICS-006
+    "GET /analytics/balance",                      # ANALYTICS-007
+    "GET /analytics/time",                         # ANALYTICS-005
+    "GET /analytics/habits",                       # ANALYTICS-008
+    "GET /analytics/habits/{tennerId}",            # ANALYTICS-008
+    "POST /tenners/{tennerId}/snooze",             # SCHEDULING-003
+    "POST /tenners/{tennerId}/skip",               # SCHEDULING-004
+    "POST /tenners/{tennerId}/pause",              # SCHEDULING-005
+    "POST /tenners/{tennerId}/resume",             # SCHEDULING-005
+    "PUT /household/vacation",                     # SCHEDULING-005
+    "DELETE /household/vacation",                  # SCHEDULING-005
+    "GET /users",                                  # HOUSEHOLD-ADMIN-001
+    "POST /users",                                 # HOUSEHOLD-ADMIN-001
+    "PUT /users/{userId}",                         # HOUSEHOLD-ADMIN-001
+    "POST /users/{userId}/deactivate",             # HOUSEHOLD-ADMIN-004
+    "POST /users/{userId}/reactivate",             # HOUSEHOLD-ADMIN-004
+    "POST /users/{userId}/handover",               # HOUSEHOLD-004
+    "DELETE /users/{userId}/handover",             # HOUSEHOLD-004
+    "GET /categories",                             # HOUSEHOLD-ADMIN-002
+    "POST /categories",                            # HOUSEHOLD-ADMIN-002
+    "GET /household/alexa",                        # ALEXA-002
+    "PUT /household/alexa-speakers/{personId}",    # ALEXA-002
+    "DELETE /household/alexa-speakers/{personId}", # ALEXA-002
+    "PUT /categories/{categoryId}",                # HOUSEHOLD-ADMIN-002
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.
@@ -93,6 +96,14 @@ locals {
   auth_callback_path      = "/auth/callback"
   auth_token_minutes      = 60
   auth_refresh_token_days = 30
+
+  # Alexa account linking (ALEXA-002): own app client with a secret; Alexa refreshes the access token itself,
+  # so the refresh token lives up to the Cognito maximum and the household never has to relink.
+  alexa_auth_enabled            = local.alexa_enabled && length(var.alexa_redirect_urls) > 0
+  alexa_auth_client_name        = "${local.name_prefix}-alexa-${var.environment}"
+  alexa_auth_resource_server    = "tenner"
+  alexa_auth_scope              = "household"
+  alexa_auth_refresh_token_days = 3650
 
   # Google sign-in and household membership (FUTURE-011). A user belongs to the household through exactly one
   # Cognito group "household:<tenantId>:<userId>"; the group arrives in the ID token as cognito:groups.

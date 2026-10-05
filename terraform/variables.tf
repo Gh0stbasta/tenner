@@ -189,3 +189,14 @@ variable "alexa_log_level" {
     error_message = "alexa_log_level must be one of DEBUG, INFO, WARN, ERROR."
   }
 }
+
+variable "alexa_redirect_urls" {
+  description = "Alexa account-linking redirect URLs from the developer console (Build → Account Linking → Alexa Redirect URLs), ALEXA-002. Empty: no Alexa Cognito client. Set as GitHub variable ALEXA_REDIRECT_URLS, e.g. [\"https://layla.amazon.com/api/skill/link/<vendor-id>\", ...]."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for url in var.alexa_redirect_urls : can(regex("^https://[a-z0-9.-]+\\.amazon\\.(com|co\\.jp)/api/skill/link/[A-Za-z0-9]+$", url))])
+    error_message = "alexa_redirect_urls must be the Alexa redirect URLs (https://<host>.amazon.com/api/skill/link/<vendor-id>)."
+  }
+}

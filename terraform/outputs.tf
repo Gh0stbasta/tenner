@@ -132,3 +132,14 @@ output "alexa_skill_lambda_arn" {
   description = "ARN of the Alexa skill Lambda (ALEXA-001); the skill manifest endpoint. Empty until alexa_skill_id is set."
   value       = local.alexa_enabled ? aws_lambda_function.alexa_skill[0].arn : ""
 }
+
+output "alexa_account_linking" {
+  description = "Values for the Alexa developer console → Account Linking (ALEXA-002); null until Alexa linking is set up. The client secret is not output: read it with `aws cognito-idp describe-user-pool-client` (alexa/README.md)."
+  value = local.alexa_auth_enabled ? {
+    authorization_uri = "https://${local.auth_login_domain}/oauth2/authorize"
+    access_token_uri  = "https://${local.auth_login_domain}/oauth2/token"
+    client_id         = aws_cognito_user_pool_client.alexa[0].id
+    scopes            = aws_cognito_user_pool_client.alexa[0].allowed_oauth_scopes
+    user_pool_id      = aws_cognito_user_pool.users.id
+  } : null
+}

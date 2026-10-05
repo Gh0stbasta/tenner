@@ -127,6 +127,8 @@ jobs:
           TF_VAR_cost_anomaly_monitor_arn: ${{ vars.COST_ANOMALY_MONITOR_ARN }}
           # Alexa skill (ALEXA-001): the skill ID is not secret; empty means no Alexa resources.
           TF_VAR_alexa_skill_id: ${{ vars.ALEXA_SKILL_ID }}
+          # Alexa account linking (ALEXA-002): JSON list of the console's redirect URLs; empty means no Alexa client.
+          TF_VAR_alexa_redirect_urls: ${{ vars.ALEXA_REDIRECT_URLS || '[]' }}
         run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m -out=tfplan
 
       - name: Enforce mandatory tags

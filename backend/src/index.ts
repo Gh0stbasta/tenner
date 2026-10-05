@@ -5,8 +5,9 @@
  */
 
 import { AnalyticsService } from "./analytics/index.js";
+import { alexaContextHandler, linkAlexaSpeakerHandler, unlinkAlexaSpeakerHandler, type GetAlexaContext, type LinkAlexaSpeaker, type UnlinkAlexaSpeaker } from "./handlers/alexa.js";
 import { analyticsHandler, type AnalyticsQuery } from "./handlers/analytics.js";
-import { householdGroupName, identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
+import { clientOf, householdGroupName, identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
 import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
 import { loadConfig, type AppConfig } from "./config.js";
@@ -60,6 +61,7 @@ import {
   DynamoDbTennerRepository,
 } from "./repositories/index.js";
 import {
+  AlexaSpeakerService,
   CompleteTennerService,
   CreateTennerService,
   DashboardService,
@@ -115,6 +117,9 @@ export interface Dependencies {
   readonly reactivateMember: ReactivateMember;
   readonly startHandover: StartHandover;
   readonly endHandover: EndHandover;
+  readonly getAlexaContext: GetAlexaContext;
+  readonly linkAlexaSpeaker: LinkAlexaSpeaker;
+  readonly unlinkAlexaSpeaker: UnlinkAlexaSpeaker;
   readonly listCategories: ListCategories;
   readonly createCategory: CreateCategory;
   readonly updateCategory: UpdateCategory;
@@ -201,6 +206,9 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
   "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
   "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHousehold, logger),
+  "GET /household/alexa": ({ deps, identity }) => alexaContextHandler(identity, deps.getAlexaContext),
+  "PUT /household/alexa-speakers/{personId}": ({ event, deps, logger, identity }) => linkAlexaSpeakerHandler(event, identity, deps.linkAlexaSpeaker, logger),
+  "DELETE /household/alexa-speakers/{personId}": ({ event, deps, logger, identity }) => unlinkAlexaSpeakerHandler(event, identity, deps.unlinkAlexaSpeaker, logger),
   "GET /analytics/summary": ({ event, deps, logger, identity }) => analyticsHandler("summary", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsSummary, logger),
   "GET /analytics/trends": ({ event, deps, logger, identity }) => analyticsHandler("trends", analyticsTrendsSchema, event, identity.tenantId, deps.analyticsTrends, logger),
   "GET /analytics/users": ({ event, deps, logger, identity }) => analyticsHandler("users", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsUsers, logger),
@@ -226,6 +234,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     timezone: config.timezone,
     tables: config.tables ?? "not configured",
     onboarding: config.onboarding ?? "not configured",
+    alexa: config.alexaClientId !== undefined ? "configured" : "not configured",
   });
   const tables = config.tables;
   const notConfigured = async (): Promise<never> => {
@@ -273,6 +282,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   // HOUSEHOLD-ADMIN-004: without Cognito configuration there are no groups to revoke.
   const revokeAccess = (tenantId: string, userId: string): Promise<number> =>
     membershipRepository?.removeAllMembers(householdGroupName(tenantId, userId)) ?? Promise.resolve(0);
+  const alexaSpeakerService = householdRepository ? new AlexaSpeakerService(householdRepository, systemClock) : undefined;
   const memberDeactivationService =
     householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
 
@@ -308,6 +318,9 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     reactivateMember: memberDeactivationService ? (identity, userId) => memberDeactivationService.reactivate(identity, userId) : notConfigured,
     startHandover: handoverService ? (identity, userId, request) => handoverService.start(identity, userId, request) : notConfigured,
     endHandover: handoverService ? (identity, userId) => handoverService.end(identity, userId) : notConfigured,
+    getAlexaContext: alexaSpeakerService ? (identity) => alexaSpeakerService.context(identity) : notConfigured,
+    linkAlexaSpeaker: alexaSpeakerService ? (identity, personId, userId) => alexaSpeakerService.link(identity, personId, userId) : notConfigured,
+    unlinkAlexaSpeaker: alexaSpeakerService ? (identity, personId) => alexaSpeakerService.unlink(identity, personId) : notConfigured,
     listCategories: categoryService ? (tenantId) => categoryService.listCategories(tenantId) : notConfigured,
     createCategory: categoryService ? (identity, request) => categoryService.createCategory(identity, request) : notConfigured,
     updateCategory: categoryService ? (identity, categoryId, request) => categoryService.updateCategory(identity, categoryId, request) : notConfigured,
@@ -356,7 +369,8 @@ async function dispatch(event: ApiEvent, deps: Dependencies, requestLogger: Logg
 /** Dispatch a request to its handler. Exported for tests. */
 export async function route(event: ApiEvent, deps: Dependencies): Promise<ApiResult> {
   const correlationId = correlationIdOf(event);
-  const logger = deps.logger.child({ correlationId, routeKey: event.routeKey });
+  // ALEXA-002: every log line of the request names the channel (web app or Alexa skill) for the audit trail.
+  const logger = deps.logger.child({ correlationId, routeKey: event.routeKey, client: clientOf(event, deps.config.alexaClientId) });
   const withCorrelation = (result: ApiResult): ApiResult => ({
     ...result,
     headers: { ...result.headers, [CORRELATION_HEADER]: correlationId },

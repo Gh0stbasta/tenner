@@ -5,6 +5,7 @@ import { PERIOD_SHORTCUTS } from "../analytics/period.js";
 import {
   TENNER_SORT_FIELDS,
   type AssignHouseholdMemberRequest,
+  type LinkAlexaSpeakerRequest,
   type UpdateHouseholdRequest,
   type CompleteTennerRequest,
   type DashboardRequest,
@@ -46,6 +47,7 @@ import {
   userIdSchema,
   utcTimestampSchema,
 } from "./common.js";
+import { ALEXA_PERSON_ID_PATTERN } from "../models/index.js";
 import { isValidTimeZone } from "../utils/timezone.js";
 import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
 import { ASSIGNMENT_MODES, SHARED_ASSIGNEE, WEEK_STARTS, WEEKDAYS, type AssignmentMode, type UserId, type Weekday } from "../models/index.js";
@@ -251,6 +253,12 @@ export const tennerHistoryQuerySchema = z.strictObject({
 
 /** POST /onboarding/assignment (HOTFIX-001). */
 export const assignHouseholdMemberSchema = z.strictObject({ userId: userIdSchema }) satisfies z.ZodType<AssignHouseholdMemberRequest>;
+
+/** ALEXA-002: Amazon person ID in the path of /household/alexa-speakers/{personId}. */
+export const alexaPersonIdSchema = z.string().regex(ALEXA_PERSON_ID_PATTERN, "Invalid Alexa person ID.");
+
+/** PUT /household/alexa-speakers/{personId} (ALEXA-002). */
+export const linkAlexaSpeakerSchema = z.strictObject({ userId: userIdSchema }) satisfies z.ZodType<LinkAlexaSpeakerRequest>;
 
 /** PUT /household (SCHEDULING-008): an IANA timezone the runtime knows; unknown fields rejected. */
 export const updateHouseholdSchema = z
