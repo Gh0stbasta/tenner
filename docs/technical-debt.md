@@ -895,13 +895,15 @@ The ticket requires plain Markdown without external tooling; the ticket files ha
 
 ### Impact
 
-The dashboard drifts when a ticket is completed without refreshing it; the owner may steer on stale numbers.
+The dashboard drifts between pull requests and whenever a refresh is done carelessly; the owner may steer on stale
+numbers. Since REPORTING-002, `CLAUDE.md` requires a refresh in every pull request, which limits the drift to
+unmerged work.
 
 ### Suggested Improvement
 
-Refresh the dashboard as part of each block's completion. Later, add a `Status:` and `Severity:` line to tickets and
+Add a `Status:` and `Severity:` line to tickets and
 debt entries and a small script (or CI job) that regenerates the numbers; record AI spend per session in a log file.
 
 ### Related Work
 
-REPORTING-001, `dashboard.md`.
+REPORTING-001, REPORTING-002, `dashboard.md`, `CLAUDE.md` ("Executive Dashboard").

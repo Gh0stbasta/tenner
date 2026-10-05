@@ -236,6 +236,8 @@ After completing every ticket:
 
 Do not batch multiple unrelated tickets into one commit.
 
+Every pull request includes a `dashboard.md` update (see "Executive Dashboard").
+
 Do not rewrite existing Git history unless explicitly requested.
 
 Do not use destructive Git operations such as:
@@ -380,6 +382,39 @@ Update documentation whenever a change affects:
 Documentation must reflect the actual implementation.
 
 Do not document planned behavior as if it already exists.
+
+---
+
+## Executive Dashboard
+
+`dashboard.md` in the repository root is the owner's primary view of the project (REPORTING-001).
+
+Every pull request must include an update of `dashboard.md`.
+
+Before opening a pull request:
+
+1. Refresh `dashboard.md` so it shows the state after the pull request is merged.
+2. Update the snapshot date, even if nothing else changed.
+3. Recompute the numbers from the sources instead of adjusting them by hand:
+   - Ticket files in `docs/backlog/` and `docs/hotfix/` (done = "Implementation Status" section)
+   - `docs/technical-debt.md`
+   - `docs/security.md`
+   - `docs/roadmap.md`
+   - `docs/decisions/`
+   - GitHub Actions deploy runs
+4. Review every section: executive summary, progress, features, cost, technical debt, security, architecture,
+   recommended next actions.
+5. Commit the refresh as its own commit on the pull request branch:
+
+```text
+docs(dashboard): update for <pull request topic>
+```
+
+This commit is the only allowed exception to "exactly one commit per ticket" and needs no ticket of its own.
+
+Keep the dashboard rules from REPORTING-001: GitHub Markdown only, no HTML, no code, about one screen.
+
+Dependabot pull requests are exempt.
 
 ---
 
@@ -801,5 +836,6 @@ A ticket is complete when:
 - No secrets or sensitive information are included.
 - Exactly one appropriate Git commit has been created.
 - A concise review summary has been provided.
+- Before a pull request: `dashboard.md` has been updated (see "Executive Dashboard").
 
 If any required item is incomplete, clearly identify the ticket as incomplete and document the remaining work.

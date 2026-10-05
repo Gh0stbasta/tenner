@@ -1,6 +1,6 @@
 # 🧭 Tenner — Executive Dashboard
 
-> Snapshot of **2026-10-05**. Updated by hand after each completed block (see *About this dashboard* at the end).
+> Snapshot of **2026-10-05**. Updated with every pull request (see *About this dashboard* at the end).
 
 ## 📌 Executive Summary
 
@@ -15,13 +15,13 @@
 ## 📈 Progress
 
 ```text
-Overall   ████████░░░░░░░░░░░░  38%   58 / 153 tickets
-Phase 1   ████████████████████ 100%   45 / 45   MVP + hotfixes (live since 2026-10-02)
+Overall   ████████░░░░░░░░░░░░  38%   59 / 154 tickets
+Phase 1   ████████████████████ 100%   46 / 46   MVP + hotfixes (live since 2026-10-02)
 Phase 2   ███░░░░░░░░░░░░░░░░░  16%   13 / 79   V2 (2 of 12 themes done)
 Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0 / 29   Long-Term
 ```
 
-✅ Completed: **58** · 🚧 In progress: **0** · 📋 Open: **95** · Total: **153**
+✅ Completed: **59** · 🚧 In progress: **0** · 📋 Open: **95** · Total: **154**
 
 ## 🧩 Feature Status
 
@@ -88,5 +88,5 @@ Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0
 ## ℹ About this dashboard
 
 - **Sources:** the ticket files in `docs/backlog/` and `docs/hotfix/` (a ticket counts as done when it has an "Implementation Status" section), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/architecture.md`](docs/architecture.md) and GitHub Actions.
-- **Counting:** 154 ticket files minus one duplicate (TD-001) gives 153 tickets. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
-- **Updates:** the dashboard is refreshed by hand after each completed block of tickets, so it can lag behind the repository (TD-032).
+- **Counting:** 155 ticket files minus one duplicate (TD-001) gives 154 tickets. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
+- **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).
