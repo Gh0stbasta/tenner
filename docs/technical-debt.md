@@ -458,6 +458,9 @@ SECURITY-014, SECURITY-002, SECURITY-005, TD-003, `terraform/api.tf`
 
 ## TD-017: Frontend bundle is a single 780 kB chunk
 
+> Update 2026-10-05: the chunk has grown to about 1,006 kB (306 kB gzip) with Phase 2; the analytics page
+> (ANALYTICS-009) added 31 kB. Lazy-loading routes such as `/analytics` and `/settings` is the obvious first split.
+
 ### Description
 
 `npm run build` produces one JavaScript chunk of about 780 kB (240 kB gzip). Vite warns about chunks above 500 kB.
@@ -768,6 +771,9 @@ SCHEDULING-001, FRONTEND-008, `frontend/src/features/settings/useNewTennerDefaul
 
 ## TD-028: Snooze and skip events are stored but not readable through the API
 
+> Partly addressed by ANALYTICS-006 (2026-10-05): skips are read internally (`CompletionRepository.listSkips`, base
+> table query on the `skip#` prefix) to excuse skipped cycles. They are still not exposed by a history endpoint.
+
 ### Description
 
 SCHEDULING-003 and SCHEDULING-004 write audit events (`eventType = SNOOZE` / `SKIP`) into `tenner-history`, but no
@@ -907,3 +913,35 @@ debt entries and a small script (or CI job) that regenerates the numbers; record
 ### Related Work
 
 REPORTING-001, REPORTING-002, `dashboard.md`, `CLAUDE.md` ("Executive Dashboard").
+
+## TD-033: Analytics compute on the fly from current state
+
+### Description
+
+The analytics endpoints (ANALYTICS-001 ff.) read the whole period from `tenner-history` and all current Tenners on
+every request and aggregate in the Lambda. Known gaps:
+
+- Completions written before ANALYTICS-001 have no `previousNextDue`; they are left out of `onTimeRate`.
+- Metrics that group by assignee or category use the Tenner's *current* values, not the values at completion time.
+- Read cost and latency grow with the period length (at most 366 days); every view re-reads the same data.
+- The web app has no input for actual minutes, so every new completion is `DEFAULT` and the estimate accuracy of
+  ANALYTICS-005 stays empty until such an input exists.
+
+### Reason
+
+Household volume is small (a few thousand completions per year), so on-the-fly aggregation is the simplest and
+cheapest option (ANALYTICS-001); history snapshots were out of scope.
+
+### Impact
+
+Slightly skewed historical breakdowns after reassignments or category changes; on-time rate only for new data.
+
+### Suggested Improvement
+
+Add an optional "actual minutes" input to the completion flow; store `category` and `assignedTo` on new completion
+records; add pre-aggregation (ANALYTICS-010) or a short-lived
+cache only if measurements show slow responses.
+
+### Related Work
+
+ANALYTICS-001 – 009, `backend/src/analytics/`, `docs/analytics.md`.

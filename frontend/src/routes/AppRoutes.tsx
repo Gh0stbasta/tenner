@@ -9,7 +9,7 @@ import { TennerDetailPage } from "../features/tenner-detail/TennerDetailPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { TennersPage } from "../features/tenners/TennersPage";
 import { AppLayout } from "../layouts/AppLayout";
-import { ComingSoonPage } from "../pages/ComingSoonPage";
+import { AnalyticsPage } from "../features/analytics/AnalyticsPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 
 export interface AppRoutesProps {
@@ -32,7 +32,7 @@ export function AppRoutes({ onLogout }: AppRoutesProps) {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="tenners" element={<TennersPage />} />
         <Route path="tenners/:tennerId" element={<TennerDetailPage />} />
-        <Route path="analytics" element={<ComingSoonPage title="Auswertung" />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

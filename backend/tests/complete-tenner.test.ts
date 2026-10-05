@@ -40,6 +40,8 @@ describe("CompleteTennerService", () => {
       revertedAt: null,
       revertedBy: null,
       revertReason: null,
+      previousNextDue: "2026-10-01",
+      actualMinutesSource: "USER",
     });
     expect(record?.idempotencyKey).toBeUndefined();
     expect(response.completion.completionId).toBe(NEW_ID);

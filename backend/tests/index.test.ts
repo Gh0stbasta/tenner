@@ -94,6 +94,15 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     reactivateMember: vi.fn(async () => ({ userId: "JULIA", displayName: "Julia", color: "PURPLE" as const, active: true })),
     startHandover: vi.fn(async () => ({ handover: { from: "JULIA", to: "STEFAN", until: "2026-10-12", categories: null }, handedOver: 3 })),
     endHandover: vi.fn(async () => ({ returned: 3 })),
+    analyticsTrends: vi.fn(async () => ({ granularity: "week" as const, period: { from: "a", to: "b" }, buckets: [], comparison: { previousPeriod: { from: "a", to: "b" }, previousPeriodCompletions: 0, changePercent: null } })),
+    analyticsUsers: vi.fn(async () => ({ period: { from: "a", to: "b" }, users: [], shared: { assignedActive: 0, assignedOverdue: 0 } })),
+    analyticsCategories: vi.fn(async () => ({ period: { from: "a", to: "b" }, categories: [] })),
+    analyticsNeglected: vi.fn(async () => ({ period: { from: "a", to: "b" }, items: [] })),
+    analyticsBalance: vi.fn(async () => ({ period: { from: "a", to: "b" }, byUser: [], byCategory: [], balanceIndex: null })),
+    analyticsHabits: vi.fn(async () => ({ period: { from: "a", to: "b" }, householdConsistency: null, items: [] })),
+    analyticsHabit: vi.fn(async () => ({ period: { from: "a", to: "b" }, tennerId: "t-1", title: "x", currentStreak: 0, longestStreak: 0, consistencyScore: null, trend: null, frequencyDays: 7, expectedCompletions: 0, actualCompletions: 0, completionDates: [], intervals: [] })),
+    analyticsTime: vi.fn(async () => ({ period: { from: "a", to: "b" }, totalActualMinutes: 0, averageMinutesPerWeek: 0, projectedMinutesPerWeek: 0, estimationAccuracy: null, reportedSamples: 0, tennersExceedingEstimate: [], tennersExceedingTenMinutes: 0 })),
+    analyticsSummary: vi.fn(async () => ({ period: { from: "2026-09-06", to: "2026-10-05" }, completions: 0, totalActualMinutes: 0, activeTenners: 0, distinctTennersCompleted: 0, overdueNow: 0, onTimeRate: null, onTimeSamples: 0 })),
     listCategories: vi.fn(async () => [{ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: false }]),
     createCategory: vi.fn(async () => ({ categoryId: "GARDEN", name: "Garten", icon: "GARDEN" as const, color: "GREEN" as const, sortOrder: 6, archived: false })),
     updateCategory: vi.fn(async () => ({ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: true })),
@@ -661,5 +670,70 @@ describe("household routes (SCHEDULING-008)", () => {
     const put = await route({ routeKey: "PUT /household", headers: {}, body: JSON.stringify({ timezone: "Mars/Olympus" }), requestContext: { requestId: "r" } } as unknown as APIGatewayProxyEventV2, d);
     expect(put.statusCode).toBe(400);
     expect(d.updateHousehold).not.toHaveBeenCalled();
+  });
+});
+
+describe("analytics routes (ANALYTICS-001)", () => {
+  it("validates the period query and returns the summary", async () => {
+    const d = deps();
+    const ok = await route(event("GET /analytics/summary", {}, undefined, { period: "last90" }), d);
+    expect(ok.statusCode).toBe(200);
+    expect(d.analyticsSummary).toHaveBeenCalledWith("default", { period: "last90" });
+    expect((await route(event("GET /analytics/summary", {}, undefined, { period: "decade" }), d)).statusCode).toBe(400);
+    expect((await route(event("GET /analytics/summary", {}, undefined, { from: "1.10.2026" }), d)).statusCode).toBe(400);
+    expect((await route(event("GET /analytics/summary", {}, undefined, { foo: "x" }), d)).statusCode).toBe(400);
+  });
+
+  it("validates trends filters (ANALYTICS-002)", async () => {
+    const d = deps();
+    const query = { granularity: "month", assignedTo: "JULIA", category: "HOME" };
+    expect((await route(event("GET /analytics/trends", {}, undefined, query), d)).statusCode).toBe(200);
+    expect(d.analyticsTrends).toHaveBeenCalledWith("default", query);
+    expect((await route(event("GET /analytics/trends", {}, undefined, { granularity: "hour" }), d)).statusCode).toBe(400);
+    expect((await route(event("GET /analytics/trends", {}, undefined, { assignedTo: "bob" }), d)).statusCode).toBe(400);
+  });
+
+  it("serves user metrics with the period query (ANALYTICS-003)", async () => {
+    const d = deps();
+    expect((await route(event("GET /analytics/users", {}, undefined, { period: "month" }), d)).statusCode).toBe(200);
+    expect(d.analyticsUsers).toHaveBeenCalledWith("default", { period: "month" });
+    expect((await route(event("GET /analytics/users", {}, undefined, { granularity: "day" }), d)).statusCode).toBe(400);
+  });
+
+  it("serves category metrics (ANALYTICS-004)", async () => {
+    const d = deps();
+    expect((await route(event("GET /analytics/categories", {}, undefined, { period: "year" }), d)).statusCode).toBe(200);
+    expect(d.analyticsCategories).toHaveBeenCalledWith("default", { period: "year" });
+  });
+
+  it("serves the household balance (ANALYTICS-007)", async () => {
+    const d = deps();
+    expect((await route(event("GET /analytics/balance", {}, undefined, { period: "quarter" }), d)).statusCode).toBe(200);
+    expect(d.analyticsBalance).toHaveBeenCalledWith("default", { period: "quarter" });
+  });
+
+  it("serves habits and validates the Tenner ID (ANALYTICS-008)", async () => {
+    const d = deps();
+    expect((await route(event("GET /analytics/habits", {}, undefined, { period: "last90" }), d)).statusCode).toBe(200);
+    const detail = { ...event("GET /analytics/habits/{tennerId}", {}, undefined, { period: "month" }), pathParameters: { tennerId: "5c2bfd9b-c8d1-4ab7-af57-b1dfe6ddbf05" } } as APIGatewayProxyEventV2;
+    expect((await route(detail, d)).statusCode).toBe(200);
+    expect(d.analyticsHabit).toHaveBeenCalledWith("default", "5c2bfd9b-c8d1-4ab7-af57-b1dfe6ddbf05", { period: "month" });
+    const bad = { ...event("GET /analytics/habits/{tennerId}"), pathParameters: { tennerId: "../x" } } as APIGatewayProxyEventV2;
+    expect((await route(bad, d)).statusCode).toBe(400);
+  });
+
+  it("serves time investment (ANALYTICS-005)", async () => {
+    const d = deps();
+    expect((await route(event("GET /analytics/time", {}, undefined, { period: "last30" }), d)).statusCode).toBe(200);
+    expect(d.analyticsTime).toHaveBeenCalledWith("default", { period: "last30" });
+  });
+
+  it("validates the neglected limit (ANALYTICS-006)", async () => {
+    const d = deps();
+    expect((await route(event("GET /analytics/neglected", {}, undefined, { limit: "5" }), d)).statusCode).toBe(200);
+    expect(d.analyticsNeglected).toHaveBeenCalledWith("default", { limit: 5 });
+    for (const limit of ["0", "51", "x", "1.5"]) {
+      expect((await route(event("GET /analytics/neglected", {}, undefined, { limit }), d)).statusCode).toBe(400);
+    }
   });
 });

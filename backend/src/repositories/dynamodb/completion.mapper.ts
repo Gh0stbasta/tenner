@@ -29,6 +29,8 @@ export function toCompletionItem(record: CompletionRecord): Record<string, unkno
     revertReason: completion.revertReason,
     ...optional("assignedToBefore", completion.assignedToBefore),
     ...optional("originalAssigneeBefore", completion.originalAssigneeBefore),
+    ...optional("previousNextDue", completion.previousNextDue),
+    ...optional("actualMinutesSource", completion.actualMinutesSource),
     ...optional("idempotencyKey", record.idempotencyKey),
     ...optional("requestHash", record.requestHash),
   };
@@ -90,6 +92,8 @@ export function toCompletion(item: Record<string, unknown>): Completion {
     revertReason: stringOrNull(item.revertReason),
     ...(typeof item.assignedToBefore === "string" ? { assignedToBefore: item.assignedToBefore } : {}),
     ...(typeof item.originalAssigneeBefore === "string" ? { originalAssigneeBefore: item.originalAssigneeBefore } : {}),
+    ...(typeof item.previousNextDue === "string" ? { previousNextDue: item.previousNextDue } : {}),
+    ...(item.actualMinutesSource === "USER" || item.actualMinutesSource === "DEFAULT" ? { actualMinutesSource: item.actualMinutesSource } : {}),
   };
 }
 
@@ -100,5 +104,19 @@ export function toCompletionRecord(item: Record<string, unknown>): CompletionRec
     requestHash: stringOrUndefined(item.requestHash),
     revertIdempotencyKey: stringOrUndefined(item.revertIdempotencyKey),
     revertRequestHash: stringOrUndefined(item.revertRequestHash),
+  };
+}
+
+/** Skip audit item → SkipEvent (ANALYTICS-006 reads skips to exclude skipped cycles). */
+export function toSkipEvent(item: Record<string, unknown>): SkipEvent {
+  return {
+    tenantId: String(item.tenantId),
+    skipId: String(item.historyId).slice(SKIP_HISTORY_PREFIX.length),
+    tennerId: String(item.tennerId),
+    skippedBy: String(item.skippedBy) as UserId,
+    skippedAt: String(item.skippedAt),
+    skippedDue: String(item.skippedDue),
+    nextDue: String(item.nextDue),
+    reason: stringOrNull(item.reason),
   };
 }

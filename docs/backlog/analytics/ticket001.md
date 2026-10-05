@@ -242,3 +242,32 @@ Do not implement:
 - Trends, user, category or habit metrics (ANALYTICS-002 to 008)
 - Analytics UI (ANALYTICS-009)
 - Pre-aggregation (ANALYTICS-010)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Analytics module with pure aggregation functions: `backend/src/analytics/` (`period.ts`, `historyLoader.ts`,
+  `aggregations.ts`, `analyticsService.ts`); `summarize(completions, tenners, period, context)` has no I/O
+- [x] Summary endpoint: `GET /analytics/summary` (route in Terraform)
+- [x] Period handling validated and documented: shortcuts `week`, `month`, `quarter`, `year`, `last30`, `last90`,
+  `from`/`to`, default `last30`, at most 366 days, future `to` clamped, household timezone and week start
+- [x] No Scan: `CompletionRepository.listCompletions` pages through `completedAt-index` with a projection and the
+  not-undone filter
+- [x] Metric definitions documented in `docs/analytics.md`
+- [x] Tests passing: backend 702 (period shortcuts, invalid periods, 366-day limit, empty period, summary, undone
+  filter in the query, deleted Tenners, on-time rate without due data, pagination, timezone cut), Terraform 51;
+  lint and build clean
+- [ ] Deploys through GitHub Actions: one new API route; verified after merge
+
+Decisions and assumptions:
+
+- New completions store `previousNextDue` (due date at completion time); older ones are left out of `onTimeRate`,
+  which is `null` without any samples. `onTimeSamples` shows the basis (TD-033).
+- `overdueNow` excludes paused Tenners (individual pause or vacation), like the dashboard.
+- Completions of deleted Tenners count in `completions` and `distinctTennersCompleted` (history stays).
+- Dates come from the household settings (`HouseholdService.settingsOf`); the unused placeholder interface
+  `AnalyticsService` in `src/services/` was replaced by the real module.
+- Module file names follow the ticket (`historyLoader.ts`, `analyticsService.ts`).

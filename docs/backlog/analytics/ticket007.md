@@ -154,3 +154,25 @@ npm run test
 
 - Automatic rebalancing (AI-006)
 - Leaderboards or competition features
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Balance endpoint: `GET /analytics/balance` (route in Terraform)
+- [x] Shares by user (`shareOfMinutes` by `completedBy`, `shareOfAssignedLoad` by projected weekly minutes of the
+  current assignee) and by category (minute shares per member)
+- [x] `balanceIndex = 1 − (max − min shareOfMinutes)`, documented; `null` without minutes
+- [x] Works for any number of members (one, two, three and more tested)
+- [x] Tests passing: backend 735; lint and build clean
+- [ ] Deploys through GitHub Actions: one new API route; verified after merge
+
+Decisions and assumptions:
+
+- No leaderboard framing: members in member-list order with display names, no ranks.
+- Shared Tenners (HOUSEHOLD-002) are split evenly between active members for the assigned load, as on the dashboard.
+- Deactivated members appear only if they have minutes in the period.
+- Projected weekly minutes (`estimatedMinutes × 7 ÷ frequencyDays`) are defined once (`projectedWeeklyMinutes`)
+  for reuse by ANALYTICS-005.

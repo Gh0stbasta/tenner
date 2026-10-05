@@ -160,3 +160,25 @@ npm run test
 
 - Automatic estimate adjustment
 - AI-based splitting suggestions (AI-009)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Time investment endpoint: `GET /analytics/time` (route in Terraform)
+- [x] Projected weekly load `Σ estimatedMinutes × 7 ÷ frequencyDays` over active Tenners (shared
+  `projectedWeeklyMinutes`)
+- [x] Estimation accuracy excludes defaulted values: new completions store `actualMinutesSource` (`USER` | `DEFAULT`),
+  older records count as `DEFAULT`
+- [x] Tenners exceeding their estimate (median > estimate × 1.5, at least 3 samples) listed
+- [x] Tests passing: backend 754, frontend 309; lint and build clean
+- [ ] Deploys through GitHub Actions: one new API route; verified after merge
+
+Decisions and assumptions:
+
+- The web app sent `actualMinutes = estimatedMinutes` on every completion, which would have made every default look
+  user-reported. It now omits the field; the server stores the same value as `DEFAULT` (no visible change).
+- There is no UI to enter actual minutes yet, so `estimationAccuracy` stays `null` for now (TD-033).
+- `reportedSamples` shows how many completions the accuracy is based on.

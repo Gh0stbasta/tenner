@@ -23,9 +23,7 @@ export function CompleteTennerButton({
       variant={variant}
       color={color}
       startIcon={<CheckCircleIcon />}
-      onClick={() =>
-        complete({ tennerId: tenner.tennerId, title: tenner.title, estimatedMinutes: tenner.estimatedMinutes })
-      }
+      onClick={() => complete({ tennerId: tenner.tennerId, title: tenner.title })}
       disabled={disabled || isCompleting(tenner.tennerId)}
       aria-label={`„${tenner.title}“ erledigen`}
       sx={{ flexShrink: 0, minHeight: 44 }}

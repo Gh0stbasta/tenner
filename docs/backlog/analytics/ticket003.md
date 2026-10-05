@@ -155,3 +155,24 @@ npm run test
 
 - Fairness/balance scoring (ANALYTICS-007)
 - User rankings or leaderboards (FUTURE-006)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] User metrics endpoint: `GET /analytics/users` (route in Terraform)
+- [x] All metrics computed as defined (`completions`, `actualMinutes`, `assignedActive`, `assignedOverdue`,
+  `completedForOthers`)
+- [x] Members without activity included with zero values
+- [x] Single source of truth: the household member list (HOUSEHOLD-ADMIN-001, `membersOf`)
+- [x] Tests passing: backend 713; lint and build clean
+- [ ] Deploys through GitHub Actions: one new API route; verified after merge
+
+Decisions and assumptions:
+
+- Deactivated members stay in the list (`active: false`) so their history remains visible.
+- Shared Tenners (HOUSEHOLD-002) are reported once under `shared` instead of being counted for every member;
+  completing a shared Tenner is not "for others".
+- Assignments use the Tenner's current assignee (TD-033); overdue excludes paused Tenners.

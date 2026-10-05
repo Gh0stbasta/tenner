@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { GRANULARITIES } from "../analytics/aggregations.js";
+import { MAX_NEGLECTED_LIMIT } from "../analytics/neglect.js";
+import { PERIOD_SHORTCUTS } from "../analytics/period.js";
 import {
   TENNER_SORT_FIELDS,
   type AssignHouseholdMemberRequest,
@@ -16,6 +19,9 @@ import {
   type CreateMemberRequest,
   type DeactivateMemberRequest,
   type StartHandoverRequest,
+  type AnalyticsPeriodRequest,
+  type AnalyticsTrendsRequest,
+  type AnalyticsNeglectedRequest,
   type CreateCategoryRequest,
   type UpdateCategoryRequest,
   type UpdateMemberRequest,
@@ -340,3 +346,32 @@ export const startHandoverSchema = z.strictObject({
     .refine((values) => new Set(values).size === values.length, "Categories must be distinct.")
     .optional(),
 }) satisfies z.ZodType<StartHandoverRequest>;
+
+/** Period query of the analytics endpoints (ANALYTICS-001); range rules are checked by resolvePeriod. */
+export const analyticsPeriodShape = {
+  period: z.enum(PERIOD_SHORTCUTS).optional(),
+  from: isoDateSchema.optional(),
+  to: isoDateSchema.optional(),
+};
+
+/** GET /analytics/summary. */
+export const analyticsPeriodSchema = z.strictObject(analyticsPeriodShape) satisfies z.ZodType<AnalyticsPeriodRequest, Record<string, string | undefined>>;
+
+/** GET /analytics/trends (ANALYTICS-002). */
+export const analyticsTrendsSchema = z.strictObject({
+  ...analyticsPeriodShape,
+  granularity: z.enum(GRANULARITIES).optional(),
+  assignedTo: userIdSchema.optional(),
+  category: categorySchema.optional(),
+}) satisfies z.ZodType<AnalyticsTrendsRequest, Record<string, string | undefined>>;
+
+/** GET /analytics/neglected (ANALYTICS-006). */
+export const analyticsNeglectedSchema = z.strictObject({
+  ...analyticsPeriodShape,
+  limit: z
+    .string()
+    .regex(/^\d{1,2}$/, "Must be an integer.")
+    .transform(Number)
+    .pipe(z.number().int().min(1).max(MAX_NEGLECTED_LIMIT))
+    .optional(),
+}) satisfies z.ZodType<AnalyticsNeglectedRequest, Record<string, string | undefined>>;

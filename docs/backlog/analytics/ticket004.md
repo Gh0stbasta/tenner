@@ -161,3 +161,23 @@ npm run test
 
 - Custom categories (HOUSEHOLD-ADMIN-002)
 - Historical category snapshots
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Category metrics endpoint: `GET /analytics/categories` (route in Terraform)
+- [x] `shareOfMinutes` and `healthScore = 1 − overdue ÷ active` computed as defined (null without data)
+- [x] All categories returned: the household category list (HOUSEHOLD-ADMIN-002, the single source), in display
+  order, including archived ones and categories without activity
+- [x] Tests passing: backend 718; lint and build clean
+- [ ] Deploys through GitHub Actions: one new API route; verified after merge
+
+Decisions and assumptions:
+
+- Categories are the managed household categories (HOUSEHOLD-ADMIN-002 now exists), each with its display `name`.
+- The Tenner's current category counts ("Category Changed After Completion" test); completions of deleted Tenners
+  are left out, so the shares of all categories sum to 1.
+- Overdue excludes paused Tenners, as in the summary.

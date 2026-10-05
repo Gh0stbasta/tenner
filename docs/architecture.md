@@ -277,8 +277,32 @@ POST   /tenners/{id}/complete
 
 GET    /dashboard
 
-GET    /analytics
+GET    /analytics/summary      (ANALYTICS-001)
+GET    /analytics/trends       (ANALYTICS-002)
+GET    /analytics/users        (ANALYTICS-003)
+GET    /analytics/categories   (ANALYTICS-004)
+GET    /analytics/neglected    (ANALYTICS-006)
+GET    /analytics/balance      (ANALYTICS-007)
+GET    /analytics/time         (ANALYTICS-005)
+GET    /analytics/habits       (ANALYTICS-008)
+GET    /analytics/habits/{id}  (ANALYTICS-008)
 ```
+
+Analytics are computed on the fly per request from `tenner-history` (Query on `completedAt-index`, never a Scan) and
+the current Tenners, using pure aggregation functions in `backend/src/analytics/`. At household volume (a few
+thousand completions per year) this needs no pre-aggregated tables (ANALYTICS-010 if measurements require it).
+Metric definitions: [`analytics.md`](analytics.md). New completions store `previousNextDue` (the due date at
+completion time) for the on-time rate and `actualMinutesSource` (`USER` or `DEFAULT`) for estimate accuracy; older
+completions are left out of both.
+
+**Decision — analytics charts without a chart library (ANALYTICS-009).** Context: the ticket prefers
+`@mui/x-charts`. Options: (a) `@mui/x-charts` (new dependency, several hundred kB before tree-shaking, on top of the
+single-chunk bundle of TD-017), (b) small HTML components on MUI `Box`. Decision: (b) — the page needs only columns,
+horizontal bars and 100 % stacked bars; together they cost +31 kB raw / +8.5 kB gzip. Consequences: theme-aware via
+MUI tokens, every mark focusable with a tooltip, a table view per chart; no axes library, so richer charts (lines,
+zoom) would need revisiting. Colors: a fixed categorical palette (`frontend/src/features/analytics/chartColors.ts`)
+validated for colorblind separation in light and dark mode; member swatch colors are user-chosen and failed those
+checks, so charts assign colors by member-list position instead.
 
 ---
 

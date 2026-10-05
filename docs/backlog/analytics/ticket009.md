@@ -186,3 +186,36 @@ Bundle size impact must be reported in the pull request.
 - AI-generated insights (AI-007)
 - Export of charts
 - Custom dashboards
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Placeholder replaced: `/analytics` renders `features/analytics/AnalyticsPage` (the unused `ComingSoonPage` is
+  removed)
+- [x] All available sections rendered: summary cards, trend, life areas (bars + health), household balance (stacked
+  shares), neglected Tenners (top 10), habits, time investment; Tenners link to `/tenners/:tennerId`
+- [x] Period selection (Woche, Monat, Quartal, Jahr, eigener Zeitraum) persisted in the URL (`?period=` or
+  `?from=&to=`); trend granularity follows the period
+- [x] Charts accessible and theme-aware: every chart has a table toggle and an accessible summary; marks are
+  focusable with tooltips; health and trend use icon + label, never color alone; light and dark palettes validated
+  (dataviz validator: CVD ΔE ≥ 8.4, normal-vision ΔE ≥ 19.3; light slots below 3:1 are relieved by legends, labels
+  and tables)
+- [x] Sections fail independently (own loading skeleton and error alert); a section whose endpoint answers 404 is
+  hidden
+- [x] Tests passing: frontend 319 (period selection, URL synchronization, loading, errors, hidden sections, data
+  mapping, table alternative, responsive grid; new code ~94 % lines), backend 754; lint and build clean
+- [ ] Deploys through GitHub Actions: frontend only; verified after merge
+
+Bundle size impact: main chunk 974.3 kB → 1,005.7 kB (+31.4 kB raw, +8.5 kB gzip: 297.4 → 305.8 kB).
+
+Decisions and assumptions:
+
+- **No `@mui/x-charts`:** small HTML chart components instead (reason and consequences in `docs/architecture.md`).
+- Charts do not use the member swatch colors (they failed the colorblind and normal-vision checks); members get the
+  validated categorical slots by member-list position, never by rank, with a legend and direct percentages.
+- Default period: month. Archived categories without activity are not drawn (the table lists them).
+- The two tables span the full width; on phones tables scroll inside their card.
+- Checked visually in light and dark mode and at 390 px and 1280 px width.

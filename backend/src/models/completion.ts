@@ -1,5 +1,7 @@
 import type { UserId } from "./enums.js";
 
+export type ActualMinutesSource = "USER" | "DEFAULT";
+
 /** One execution of a Tenner (immutable, stored in tenner-history; completionId = historyId). */
 export interface Completion {
   readonly tenantId: string;
@@ -22,4 +24,14 @@ export interface Completion {
   readonly assignedToBefore?: UserId | undefined;
   /** Handover state before the completion (HOUSEHOLD-004), set only with assignedToBefore when not null. */
   readonly originalAssigneeBefore?: UserId | undefined;
+  /**
+   * Due date (household-local YYYY-MM-DD) the Tenner had when it was completed (ANALYTICS-001), for the on-time
+   * rate. Records written before have none.
+   */
+  readonly previousNextDue?: string | undefined;
+  /**
+   * Where actualMinutes came from (ANALYTICS-005): USER = sent with the request, DEFAULT = the estimate. Records
+   * written before have none and count as DEFAULT.
+   */
+  readonly actualMinutesSource?: ActualMinutesSource | undefined;
 }
