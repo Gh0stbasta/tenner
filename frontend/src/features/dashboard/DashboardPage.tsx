@@ -8,6 +8,7 @@ import { PageLoading } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
 import { formatLongDate, formatMinutes, formatTennerCount } from "../../utils/format";
 import { RecentActivityWidget } from "../completions/RecentActivityWidget";
+import { useSettings } from "../settings/SettingsProvider";
 import { QuickAddTenner } from "../tenners/QuickAddTenner";
 import { useDashboard, type Dashboard } from "./api";
 import { DueTodayList } from "./DueTodayList";
@@ -29,6 +30,7 @@ function headerSubtitle(dashboard: Dashboard): string {
 
 export function DashboardPage() {
   const dashboard = useDashboard();
+  const { preferences } = useSettings();
 
   if (dashboard.isPending) return <PageLoading label="Dashboard wird geladen" />;
   if (dashboard.isError) {
@@ -45,23 +47,27 @@ export function DashboardPage() {
   }
 
   const data = dashboard.data;
+  // FRONTEND-008: sections can be hidden in the settings; without a side column the main column uses the full width.
+  const sideColumn = preferences.showUserSummary || preferences.showCategorySummary;
   return (
     <>
       <PageHeader title="Heute" subtitle={headerSubtitle(data)} />
       <QuickAddTenner />
       <SummaryCards summary={data.summary} />
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 8 }}>
+        <Grid size={{ xs: 12, md: sideColumn ? 8 : 12 }}>
           {data.summary.totalActionableCount === 0 && <NoDashboardData />}
           <DueTodayList tenners={data.dueToday} />
           <OverdueList tenners={data.overdue} />
-          <UpcomingList tenners={data.upcoming} />
-          <RecentActivityWidget />
+          {preferences.showUpcoming && <UpcomingList tenners={data.upcoming} />}
+          {preferences.showRecentActivity && <RecentActivityWidget />}
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <UserSummaryCard byUser={data.byUser} />
-          <CategorySummaryCard byCategory={data.byCategory} />
-        </Grid>
+        {sideColumn && (
+          <Grid size={{ xs: 12, md: 4 }}>
+            {preferences.showUserSummary && <UserSummaryCard byUser={data.byUser} />}
+            {preferences.showCategorySummary && <CategorySummaryCard byCategory={data.byCategory} />}
+          </Grid>
+        )}
       </Grid>
     </>
   );

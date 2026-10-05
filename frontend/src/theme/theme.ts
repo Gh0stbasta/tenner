@@ -1,6 +1,9 @@
-/** Central MUI theme (FRONTEND-001): calm light theme, system fonts (no external font requests, CSP). */
+/**
+ * Central MUI theme (FRONTEND-001): calm theme, system fonts (no external font requests, CSP).
+ * Light and dark variants (FRONTEND-008).
+ */
 
-import { createTheme } from "@mui/material/styles";
+import { createTheme, type Theme } from "@mui/material/styles";
 import type { CSSProperties } from "react";
 
 declare module "@mui/material/styles" {
@@ -28,28 +31,45 @@ const fontFamily = [
   "sans-serif",
 ].join(",");
 
-export const theme = createTheme({
-  palette: {
+export type PaletteMode = "light" | "dark";
+
+const PALETTES = {
+  light: {
     mode: "light",
     primary: { main: "#1976d2" },
     secondary: { main: "#2e7d32" },
     background: { default: "#f6f8fa", paper: "#ffffff" },
   },
-  shape: { borderRadius: 12 },
-  typography: {
-    fontFamily,
-    // Page titles, section titles, body and metric values (FRONTEND-001 typography standards).
-    h1: { fontSize: "1.75rem", fontWeight: 600, lineHeight: 1.3 },
-    h2: { fontSize: "1.25rem", fontWeight: 600, lineHeight: 1.4 },
-    h3: { fontSize: "1.05rem", fontWeight: 600, lineHeight: 1.4 },
-    body1: { fontSize: "1rem" },
-    body2: { fontSize: "0.9rem" },
-    metric: { fontFamily, fontSize: "2rem", fontWeight: 700, lineHeight: 1.1 },
-    button: { textTransform: "none", fontWeight: 600 },
+  dark: {
+    mode: "dark",
+    primary: { main: "#90caf9" },
+    secondary: { main: "#81c784" },
+    background: { default: "#121417", paper: "#1c1f24" },
   },
-  components: {
-    MuiTypography: { defaultProps: { variantMapping: { metric: "p" } } },
-    MuiCard: { defaultProps: { variant: "outlined" } },
-    MuiButton: { defaultProps: { disableElevation: true } },
-  },
-});
+} as const;
+
+export function createAppTheme(mode: PaletteMode): Theme {
+  return createTheme({
+    palette: PALETTES[mode],
+    shape: { borderRadius: 12 },
+    typography: {
+      fontFamily,
+      // Page titles, section titles, body and metric values (FRONTEND-001 typography standards).
+      h1: { fontSize: "1.75rem", fontWeight: 600, lineHeight: 1.3 },
+      h2: { fontSize: "1.25rem", fontWeight: 600, lineHeight: 1.4 },
+      h3: { fontSize: "1.05rem", fontWeight: 600, lineHeight: 1.4 },
+      body1: { fontSize: "1rem" },
+      body2: { fontSize: "0.9rem" },
+      metric: { fontFamily, fontSize: "2rem", fontWeight: 700, lineHeight: 1.1 },
+      button: { textTransform: "none", fontWeight: 600 },
+    },
+    components: {
+      MuiTypography: { defaultProps: { variantMapping: { metric: "p" } } },
+      MuiCard: { defaultProps: { variant: "outlined" } },
+      MuiButton: { defaultProps: { disableElevation: true } },
+    },
+  });
+}
+
+/** Light theme (default for tests and non-React code). */
+export const theme = createAppTheme("light");

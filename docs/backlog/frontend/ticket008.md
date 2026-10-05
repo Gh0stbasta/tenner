@@ -600,15 +600,15 @@ npm run test
 
 # Acceptance Criteria
 
-- Settings page implemented
-- Current user configurable
-- Quick Add defaults configurable
-- Dashboard preferences configurable
-- Theme switching implemented
-- Local storage persistence works
-- Reset settings works
-- Responsive design works
-- Tests passing
+- [x] Settings page implemented
+- [ ] Current user configurable — intentionally not: superseded by the login (see Implementation Status)
+- [x] Quick Add defaults configurable
+- [x] Dashboard preferences configurable
+- [x] Theme switching implemented
+- [x] Local storage persistence works
+- [x] Reset settings works
+- [x] Responsive design works
+- [x] Tests passing
 
 ---
 
@@ -636,3 +636,32 @@ Do not implement:
 - Analytics Settings
 
 These capabilities will be implemented in future tickets.
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- `src/features/settings/`: `preferences.ts` (model, defaults, validation, versioned localStorage envelope),
+  `SettingsProvider` (+ `useSettings`, `useThemePreference`), `useNewTennerDefaults`, `SettingsPage`,
+  `SettingsSection`, `ProfileSettings`, `QuickAddSettings`, `DashboardSettings`, `ApplicationSettings`,
+  `ThemeSelector`, `ResetSettingsDialog`. Route `/settings` replaces the placeholder.
+- Theme: `createAppTheme("light" | "dark")`; `AppProviders` applies Hell/Dunkel/"wie das Gerät"
+  (`prefers-color-scheme`) without reload.
+- Integration: Quick Add (values and hint) and the create dialog use the defaults; the dashboard honours the four
+  section switches and uses the full width without the side column.
+- Tests: 18 new (model load/save/validation/blocked storage, provider, page sections, profile logout, Quick Add
+  defaults, number range, dashboard switch, theme change and system theme, reset with confirm/cancel, full-width
+  controls), plus dashboard and Quick Add integration. Frontend: lint, `format:check`, build, 226 tests.
+- Browser check (Chromium, phone width): dark theme applies immediately and survives a reload.
+
+Deviations (architecture wins over the ticket, CLAUDE.md):
+
+- **Current user not configurable.** Since SECURITY-003/004 the person comes from the Google login and the
+  backend enforces it; a dropdown would show a choice the server rejects. The profile shows the person read-only
+  with "Abmelden". The default assignee for new Tenners can still be another member ("Ich selbst" default).
+- `useCurrentUser()` already existed (login); the theme hook is `useThemePreference()` to avoid confusion with
+  MUI's `useTheme()`.
+- The model has no `currentUser`; it has `defaultAssignedTo: "SELF" | UserId` instead.
+- Export is not implemented; the versioned envelope (`{ version, preferences }`) is the hook for it.

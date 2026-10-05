@@ -5,6 +5,7 @@ import { queryKeys } from "../../api/queryKeys";
 import { fail, mockFetch, ok, type FetchMock } from "../../tests/fetchMock";
 import { tenner } from "../../tests/fixtures";
 import { renderWithProviders } from "../../tests/render";
+import { DEFAULT_PREFERENCES } from "../settings/preferences";
 import { QuickAddTenner } from "./QuickAddTenner";
 
 const input = () => screen.getByRole("textbox", { name: "Was soll ein Tenner werden?" });
@@ -109,5 +110,33 @@ describe("QuickAddTenner", () => {
     renderWithProviders(<QuickAddTenner />);
     await userEvent.type(input(), "Wash Car{Enter}");
     await waitFor(() => expect(posts(fetchMock)).toHaveLength(1));
+  });
+
+  it("uses the quick add defaults from the settings (FRONTEND-008)", async () => {
+    const fetchMock = mockFetch({
+      "GET /tenners": ok([]),
+      "POST /tenners": ok(tenner({ tennerId: "new", title: "Xylofon stimmen" }), 201),
+    });
+    renderWithProviders(<QuickAddTenner />, {
+      user: "STEFAN",
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        defaultCategory: "FINANCE",
+        defaultAssignedTo: "JULIA",
+        defaultEstimatedMinutes: 25,
+        defaultFrequencyDays: 30,
+      },
+    });
+    await userEvent.type(input(), "Xylofon stimmen");
+    expect(screen.getByText("Finanzen · 25 Min. · alle 30 Tage – später änderbar")).toBeInTheDocument();
+    await userEvent.type(input(), "{Enter}");
+    await waitFor(() => expect(posts(fetchMock)).toHaveLength(1));
+    expect(posts(fetchMock)[0]?.body).toEqual({
+      title: "Xylofon stimmen",
+      category: "FINANCE",
+      assignedTo: "JULIA",
+      estimatedMinutes: 25,
+      frequencyDays: 30,
+    });
   });
 });

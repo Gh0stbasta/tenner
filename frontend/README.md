@@ -89,8 +89,9 @@ Features own their components, hooks and API functions, so `components/` stays s
 | `/tenners`                  | Management: live title search (300 ms debounce), filters (status active/archived/all, person, category), sorting, complete, archive (with confirmation), restore                                                                                            | FRONTEND-003 |
 | `/tenners` → "Neuer Tenner" | Create dialog: shared `TennerForm` (React Hook Form + Zod, limits mirror the backend), frequency presets, inline and server-side validation messages, full screen on phones                                                                                 | FRONTEND-004 |
 | `/tenners` → "Bearbeiten"   | Edit dialog: same form plus Active switch and read-only facts, sends only changed fields (`PUT`), asks before discarding unsaved changes                                                                                                                    | FRONTEND-005 |
-| `/dashboard`, `/tenners`    | Quick Add: type a title and press Enter; defaults (Haushalt, current user, 10 min, every 14 days), keyword-based category suggestion, warning for similar titles                                                                                            | FRONTEND-006 |
+| `/dashboard`, `/tenners`    | Quick Add: type a title and press Enter; defaults from the settings (initially Haushalt, current user, 10 min, every 14 days), keyword-based category suggestion, warning for similar titles                                                                                            | FRONTEND-006 |
 | everywhere                  | Completion: one click, optimistic dashboard update with a subtle collapse, snackbar with 10-second "Rückgängig", retries with the same `Idempotency-Key`; "Zuletzt erledigt" (last 10, relative time); "Ich bin" selector in the header                     | FRONTEND-007 |
+| `/settings`                 | Settings: profile (signed-in person, read-only, logout), defaults for new Tenners (category, assignee incl. "Ich selbst", minutes 1–480, frequency 1–3650), dashboard sections, theme (Hell/Dunkel/wie das Gerät), timezone (read-only), reset with confirmation. Stored per browser | FRONTEND-008 |
 | `/tenners/:tennerId`        | Detail: header with status and actions (complete, edit, archive/restore), schedule, consistency (completions in 90 days, average interval vs. frequency), history newest first with "Mehr anzeigen"; not-found page. Titles on dashboard and list link here | FRONTEND-009 |
 
 Queries and mutations share keys from `src/api/queryKeys.ts`. Completing a Tenner invalidates the dashboard,
@@ -125,9 +126,20 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   assigned skip the page automatically; if all members are taken the page shows "Kein freier Platz".
 - **Logout:** clears the tokens and opens the Cognito logout endpoint, which returns to the app.
 
+## Settings (FRONTEND-008)
+
+- Model and storage: `src/features/settings/preferences.ts` (`UserPreferences`, versioned envelope in
+  `localStorage` key `tenner.preferences`; invalid fields fall back to defaults individually; blocked storage
+  is tolerated). `SettingsProvider` (in `AppProviders`, above the theme) loads once and persists every change;
+  hooks `useSettings()`, `useThemePreference()`, `useNewTennerDefaults()`.
+- Consumers: Quick Add and the create dialog use the defaults; the dashboard hides upcoming, per-person,
+  per-category and recent-activity sections when switched off (due today and overdue always show).
+- The current user is **not** selectable: it comes from the Google login (SECURITY-003/004).
+
 ## Theme
 
-`src/theme/theme.ts`: light theme, primary `#1976d2`, secondary `#2e7d32`, rounded corners, system font stack
+`src/theme/theme.ts`: `createAppTheme("light" | "dark")` (FRONTEND-008; the preference "wie das Gerät" follows
+`prefers-color-scheme`), primary `#1976d2` (dark `#90caf9`), secondary `#2e7d32`, rounded corners, system font stack
 (no web fonts, so no external requests; the CloudFront CSP only allows `'self'`). Typography: `h1` page title,
 `h2` section title, `body1`/`body2` text, custom `metric` variant for key numbers.
 
