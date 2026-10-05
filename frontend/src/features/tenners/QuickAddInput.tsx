@@ -1,5 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
 import { Box, Button, TextField } from "@mui/material";
+import { QUICK_ADD_INPUT_ID } from "./quickAdd";
 
 export interface QuickAddInputProps {
   readonly value: string;
@@ -38,6 +39,7 @@ export function QuickAddInput({
         placeholder="z. B. Büro saugen"
         size="small"
         fullWidth
+        id={QUICK_ADD_INPUT_ID}
         autoFocus={autoFocus}
         value={value}
         onChange={(event) => onChange(event.target.value)}

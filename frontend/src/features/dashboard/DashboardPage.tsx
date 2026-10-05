@@ -10,6 +10,9 @@ import { formatLongDate, formatMinutes, formatTennerCount } from "../../utils/fo
 import { RecentActivityWidget } from "../completions/RecentActivityWidget";
 import { useSettings } from "../settings/SettingsProvider";
 import { QuickAddTenner } from "../tenners/QuickAddTenner";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../api/queryKeys";
+import { PullToRefresh } from "../mobile/PullToRefresh";
 import { useDashboard, type Dashboard } from "./api";
 import { DueTodayList } from "./DueTodayList";
 import { OverdueList } from "./OverdueList";
@@ -32,6 +35,13 @@ function headerSubtitle(dashboard: Dashboard): string {
 export function DashboardPage() {
   const dashboard = useDashboard();
   const { preferences } = useSettings();
+  const queryClient = useQueryClient();
+  // Pull-to-refresh (MOBILE-005) reloads everything the dashboard shows.
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.recentActivity }),
+    ]);
 
   if (dashboard.isPending) return <PageLoading label="Dashboard wird geladen" />;
   if (dashboard.isError) {
@@ -51,7 +61,7 @@ export function DashboardPage() {
   // FRONTEND-008: sections can be hidden in the settings; without a side column the main column uses the full width.
   const sideColumn = preferences.showUserSummary || preferences.showCategorySummary;
   return (
-    <>
+    <PullToRefresh onRefresh={refresh}>
       <PageHeader title="Heute" subtitle={headerSubtitle(data)} />
       <QuickAddTenner />
       <SummaryCards summary={data.summary} />
@@ -71,6 +81,6 @@ export function DashboardPage() {
           </Grid>
         )}
       </Grid>
-    </>
+    </PullToRefresh>
   );
 }

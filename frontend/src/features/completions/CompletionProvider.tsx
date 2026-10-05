@@ -77,6 +77,8 @@ export function CompletionProvider({ children }: { readonly children: ReactNode 
     mutationFn: ({ tennerId, idempotencyKey }: Keyed<CompleteRequest>) =>
       completeTenner({ tennerId, completedBy: user, idempotencyKey }),
     onMutate: async ({ tennerId }) => {
+      // Short haptic feedback where supported (MOBILE-005).
+      if ("vibrate" in navigator) navigator.vibrate(15);
       await queryClient.cancelQueries({ queryKey: queryKeys.dashboard });
       const previous = queryClient.getQueryData<Dashboard>(queryKeys.dashboard);
       if (previous) queryClient.setQueryData(queryKeys.dashboard, removeFromDashboard(previous, tennerId));

@@ -33,6 +33,11 @@ const fontFamily = [
 
 export type PaletteMode = "light" | "dark";
 
+/** Media query for touch screens (MOBILE-005). */
+export const COARSE = "@media (pointer: coarse)";
+/** Minimum size of interactive elements on touch screens (WCAG 2.5.5 / Apple HIG: 44 px). */
+export const TOUCH_TARGET = { minWidth: 44, minHeight: 44 } as const;
+
 const PALETTES = {
   light: {
     mode: "light",
@@ -66,7 +71,11 @@ export function createAppTheme(mode: PaletteMode): Theme {
     components: {
       MuiTypography: { defaultProps: { variantMapping: { metric: "p" } } },
       MuiCard: { defaultProps: { variant: "outlined" } },
-      MuiButton: { defaultProps: { disableElevation: true } },
+      // MOBILE-005: touch targets of at least 44 × 44 px on touch screens; mouse layouts stay compact.
+      MuiButton: { defaultProps: { disableElevation: true }, styleOverrides: { root: { [COARSE]: TOUCH_TARGET } } },
+      MuiIconButton: { styleOverrides: { root: { [COARSE]: TOUCH_TARGET } } },
+      MuiToggleButton: { styleOverrides: { root: { [COARSE]: TOUCH_TARGET } } },
+      MuiChip: { styleOverrides: { clickable: { [COARSE]: { minHeight: TOUCH_TARGET.minHeight } } } },
     },
   });
 }

@@ -74,7 +74,9 @@ Features own their components, hooks and API functions, so `components/` stays s
   exponential backoff; 4xx are not retried. Mutations are never retried automatically.
 - **Routing:** `/` redirects to `/dashboard`. `/tenners`, `/analytics` and `/settings` exist; unknown paths
   show a not-found page. CloudFront serves `index.html` for unknown paths (SPA fallback).
-- **Layout:** app bar, permanent side navigation from `md` (900 px), drawer behind a menu button below.
+- **Layout:** app bar, permanent side navigation from `md` (900 px). Below `md` (MOBILE-005): bottom navigation
+  (Dashboard, Tenner, Auswertung, Einstellungen) and a floating Quick Add button within thumb reach; safe-area insets
+  (`viewport-fit=cover`) keep content clear of notches and the home indicator in the installed app.
 - **Errors (UX-005):** a top-level error boundary shows a fallback with a reload button instead of a blank page.
   `src/api/errorMessages.ts` maps API error codes to German messages (e.g. `CONCURRENT_MODIFICATION` → "Jemand anderes
   hat diesen Tenner geändert …", network/5xx → "Tenner ist gerade nicht erreichbar …"); all error alerts and
@@ -170,6 +172,18 @@ Tenner is a Progressive Web App: it can be added to the home screen and starts w
   generates it and handles cleanup of outdated caches. Only `workbox-window` (~2 kB gzip, loaded on demand) ships to
   the browser; `workbox-build` runs at build time.
 - The dev server (`npm run dev`) does not register the worker.
+
+## Touch Interaction (MOBILE-005)
+
+- **Swipe on dashboard cards** (due today and overdue): right → complete (with the usual undo snackbar), left → the
+  snooze menu. A gesture counts only when it moves further sideways than vertically (page scrolling keeps working)
+  and past 80 px; the card follows the finger and shows "Erledigt" / "Verschieben" behind it. The "Erledigt" and
+  "Verschieben" buttons stay on every card as the accessible alternative (`src/features/mobile/useSwipe.ts`).
+- **Pull to refresh** on the dashboard (installed apps have no browser pull-to-refresh): pulling down at the top
+  reloads the dashboard and recent activity (`PullToRefresh.tsx`).
+- **Touch targets:** buttons, icon buttons, toggle buttons and clickable chips are at least 44 × 44 px on touch
+  screens (`@media (pointer: coarse)` in the theme); mouse layouts stay compact.
+- **Haptics:** a short vibration on completion where the browser supports it (Android).
 
 ## Theme
 

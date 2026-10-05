@@ -95,3 +95,6 @@ export function findSimilarTenner(title: string, existing: readonly Tenner[]): T
     return shorter.length >= 4 && longer.includes(shorter);
   });
 }
+
+/** id of the Quick Add input; the mobile Quick Add button focuses it (MOBILE-005). */
+export const QUICK_ADD_INPUT_ID = "quick-add-input";
