@@ -81,8 +81,15 @@ eu-west-1 skill Lambda to the allowed services, and records the cost (Lambda fre
 
 ## Repository Layout
 
+**Owner requirement (2026-10-05):** all Alexa skill code and assets live in their own top-level folder `alexa/` in
+the repository root, next to `backend/`, `frontend/` and `terraform/`. It is a separate npm package with its own
+`package.json`, lockfile, lint/test setup and README; it does not live inside `backend/` or `frontend/`. Terraform
+for the skill stays in `terraform/` (one state), CI jobs run in `alexa/` like the existing ones in `backend/` and
+`frontend/`, and Dependabot gets an `npm` entry for `/alexa`. Later Alexa tickets (APL documents, widget packages)
+add their files under `alexa/` only.
+
 ```text
-alexa/
+alexa/                                      repository root, next to backend/ and frontend/
 ├── skill-package/
 │   ├── skill.json                          manifest: de-DE, custom skill, APL interface, permissions
 │   └── interactionModels/custom/de-DE.json invocation name, intents, slots, samples
@@ -153,7 +160,7 @@ The deploy role needs: Lambda, IAM (role for the skill Lambda), CloudWatch Logs 
 
 ```text
 ADR docs/decisions/0005-alexa-platform.md
-alexa/ package (skill package, Lambda skeleton, tests, README)
+Root folder alexa/ as its own npm package (skill package, Lambda skeleton, tests, README), Dependabot entry
 Terraform: provider alias, Lambda, permission, outputs, tests
 CI: build/test in PRs, skill deployment on main
 Documentation: README (setup, manual steps, CI permissions), architecture.md
@@ -192,7 +199,8 @@ Manual: „Alexa, öffne Tenner“ on a household Echo Show answers with the wel
 # Acceptance Criteria
 
 - ADR accepted by the owner and allowed services updated
-- Skill package and Lambda live in the repository and deploy through GitHub Actions
+- All Alexa code lives in the root folder `alexa/` (own package), not in `backend/` or `frontend/`
+- Skill package and Lambda deploy through GitHub Actions
 - Only the Tenner skill can invoke the Lambda
 - „Alexa, öffne Tenner“ works on a household device
 - Tests passing
