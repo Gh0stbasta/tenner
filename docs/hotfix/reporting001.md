@@ -291,3 +291,39 @@ Not part of this ticket:
 - Finance reporting
 - Investor reporting
 - Real-time metrics
+
+---
+
+## Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] `dashboard.md` exists in the repository root and is linked from `README.md`
+- [x] Readable directly in GitHub: plain Markdown (tables, emojis, text progress bars in a code block); no HTML,
+  no code, no external tooling; about one screen per section group (92 lines)
+- [x] Progress section (overall and per phase, from the ticket files)
+- [x] Feature section (live vs. missing capabilities, in roadmap order)
+- [x] Cost section (AI spend; infrastructure forecast for 2, 100 and 10,000 users, order of magnitude)
+- [x] Security section (only meaningful items; no critical findings)
+- [x] Technical debt section (High / Medium / Low with counts)
+- [x] Architecture section (ADRs, pending owner decisions, open risks)
+- [x] Next actions section (top 5)
+- [x] Information density: every section answers "what should I care about right now?"
+
+Validation: all relative links checked to exist; ticket counts recomputed from the ticket files (154 files, one
+duplicate → 153 tickets; 58 done including this one); deploy status read from GitHub Actions (all recent `main`
+deploys green).
+
+Assumptions and limitations:
+
+- **Done** = the ticket file has an "Implementation Status" section. Phase 1 includes the MVP tickets, the hotfixes
+  and this ticket; FUTURE-011 counts as Phase 1 (pulled forward).
+- **AI spend is shown as "not tracked"**: there is no recorded token or cost data, and an invented figure would
+  mislead. Recording it is suggested in TD-032.
+- **Infrastructure forecast** scales the per-household estimate in `docs/architecture.md` (about 10,000 requests per
+  household and month). Today the system serves one household; larger rows assume multi-household support and higher
+  API limits, which do not exist.
+- Debt levels (High, Medium, Low) are an assessment made for the dashboard (TD-032).
+- The dashboard is in English like the rest of the repository documentation.
+- The deploy checkboxes in the Phase 2 ticket files are still unchecked although the deploys succeeded; updating
+  them is not part of this ticket.

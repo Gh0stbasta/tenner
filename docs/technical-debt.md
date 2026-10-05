@@ -878,3 +878,30 @@ the household item once per request and pass it to all services.
 ### Related Work
 
 HOUSEHOLD-004, `backend/src/services/handover.service.ts`, `backend/src/index.ts`.
+
+## TD-032: Executive dashboard is maintained by hand
+
+### Description
+
+`dashboard.md` (REPORTING-001) is a dated snapshot. Ticket counts, debt levels, risks and next actions are compiled by
+hand from the ticket files, `docs/technical-debt.md`, `docs/security.md`, the roadmap and GitHub Actions. AI spend is
+not recorded anywhere, so the dashboard shows it as "not tracked". The debt levels (High, Medium, Low) are a
+judgement made for the dashboard; `docs/technical-debt.md` has no severity field.
+
+### Reason
+
+The ticket requires plain Markdown without external tooling; the ticket files have no machine-readable status field
+(done = an "Implementation Status" section).
+
+### Impact
+
+The dashboard drifts when a ticket is completed without refreshing it; the owner may steer on stale numbers.
+
+### Suggested Improvement
+
+Refresh the dashboard as part of each block's completion. Later, add a `Status:` and `Severity:` line to tickets and
+debt entries and a small script (or CI job) that regenerates the numbers; record AI spend per session in a log file.
+
+### Related Work
+
+REPORTING-001, `dashboard.md`.
