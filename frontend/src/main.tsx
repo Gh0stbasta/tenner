@@ -10,6 +10,7 @@ import { buildLogoutUrl } from "./auth/session";
 import { createApiAuth, createUserManager } from "./auth/userManager";
 import { config } from "./config";
 import { initInstallPrompt } from "./features/install/installPrompt";
+import { UpdatePrompt } from "./features/install/UpdatePrompt";
 import { AppRoutes } from "./routes/AppRoutes";
 
 // Capture the install prompt before any page is rendered (MOBILE-001).
@@ -40,6 +41,9 @@ function createApp() {
 
 createRoot(root).render(
   <StrictMode>
-    <AppProviders queryClient={createQueryClient()}>{createApp()}</AppProviders>
+    <AppProviders queryClient={createQueryClient()}>
+      {createApp()}
+      <UpdatePrompt />
+    </AppProviders>
   </StrictMode>,
 );

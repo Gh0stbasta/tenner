@@ -43,6 +43,7 @@ Only `src/config.ts` reads `import.meta.env` (ESLint rule).
 | Forms and validation | React Hook Form, Zod                                     |
 | Build                | Vite 8, TypeScript (strict)                              |
 | Tests                | Vitest, React Testing Library, jsdom                     |
+| Service worker       | `vite-plugin-pwa` (Workbox), build time only (MOBILE-002) |
 
 ## Project Structure
 
@@ -150,7 +151,25 @@ Tenner is a Progressive Web App: it can be added to the home screen and starts w
   (e.g. Firefox desktop).
 - Icons in `public/icons/` were rendered from the favicon motif (white "10" on `#1976d2`); the maskable icon keeps the
   motif inside the 80 % safe zone. To change them, render new PNGs of the same sizes.
-- No service worker is needed for installation in current browsers; offline caching follows in MOBILE-002.
+- No service worker is needed for installation in current browsers.
+
+## Service Worker (MOBILE-002)
+
+- **What it does:** `vite-plugin-pwa` generates `dist/sw.js`, which precaches the app shell (`index.html`, hashed
+  assets, icons, manifest) with content revisions. The app starts from the cache, also offline and on deep links
+  (navigation fallback to `index.html`). API requests (other origin) are never intercepted: always network.
+- **Updates:** every deploy changes the precache revisions, so browsers install a new worker. The app shows
+  "Neue Version verfügbar – Neu laden" (`src/features/install/UpdatePrompt.tsx`); "Später" keeps the old version
+  until the next launch. Open sessions check for updates hourly. A stale shell is served for at most one launch.
+- **Deploy:** `sw.js` and `workbox-*.js` are root files, so `scripts/deploy-frontend.sh` uploads them with
+  `no-cache` like `index.html`; CloudFront does not cache them. No infrastructure change.
+- **Kill switch** (if a broken worker ever ships): set `SERVICE_WORKER_KILL_SWITCH = true` in `vite.config.ts`, merge
+  and deploy. The new `sw.js` unregisters itself and deletes its caches on the next visit; the app then loads
+  from the network as before MOBILE-002. Revert the flag once fixed.
+- **Why a dependency:** a correct precache needs the list of built files with revisions on every build; Workbox
+  generates it and handles cleanup of outdated caches. Only `workbox-window` (~2 kB gzip, loaded on demand) ships to
+  the browser; `workbox-build` runs at build time.
+- The dev server (`npm run dev`) does not register the worker.
 
 ## Theme
 
