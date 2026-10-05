@@ -46,7 +46,7 @@ describe("AnalyticsService.categories", () => {
     const repo = mockTennerRepository();
     repo.list.mockResolvedValue([]);
     const custom: HouseholdCategory = { ...(SEED_CATEGORIES[0] as HouseholdCategory), categoryId: "GARTEN", name: "Garten" };
-    const service = new AnalyticsService(repo, { listCompletions: vi.fn(async () => []) }, async () => toHouseholdResponse(undefined, "UTC"), () => new Date(`${TODAY}T10:00:00Z`), undefined, async () => [custom]);
+    const service = new AnalyticsService(repo, { listCompletions: vi.fn(async () => []), listSkips: vi.fn(async () => []) }, async () => toHouseholdResponse(undefined, "UTC"), () => new Date(`${TODAY}T10:00:00Z`), undefined, async () => [custom]);
     expect((await service.categories("default", {})).categories.map((c) => c.name)).toEqual(["Garten"]);
   });
 });

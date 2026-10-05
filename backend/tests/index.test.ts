@@ -97,6 +97,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     analyticsTrends: vi.fn(async () => ({ granularity: "week" as const, period: { from: "a", to: "b" }, buckets: [], comparison: { previousPeriod: { from: "a", to: "b" }, previousPeriodCompletions: 0, changePercent: null } })),
     analyticsUsers: vi.fn(async () => ({ period: { from: "a", to: "b" }, users: [], shared: { assignedActive: 0, assignedOverdue: 0 } })),
     analyticsCategories: vi.fn(async () => ({ period: { from: "a", to: "b" }, categories: [] })),
+    analyticsNeglected: vi.fn(async () => ({ period: { from: "a", to: "b" }, items: [] })),
     analyticsSummary: vi.fn(async () => ({ period: { from: "2026-09-06", to: "2026-10-05" }, completions: 0, totalActualMinutes: 0, activeTenners: 0, distinctTennersCompleted: 0, overdueNow: 0, onTimeRate: null, onTimeSamples: 0 })),
     listCategories: vi.fn(async () => [{ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: false }]),
     createCategory: vi.fn(async () => ({ categoryId: "GARDEN", name: "Garten", icon: "GARDEN" as const, color: "GREEN" as const, sortOrder: 6, archived: false })),
@@ -699,5 +700,14 @@ describe("analytics routes (ANALYTICS-001)", () => {
     const d = deps();
     expect((await route(event("GET /analytics/categories", {}, undefined, { period: "year" }), d)).statusCode).toBe(200);
     expect(d.analyticsCategories).toHaveBeenCalledWith("default", { period: "year" });
+  });
+
+  it("validates the neglected limit (ANALYTICS-006)", async () => {
+    const d = deps();
+    expect((await route(event("GET /analytics/neglected", {}, undefined, { limit: "5" }), d)).statusCode).toBe(200);
+    expect(d.analyticsNeglected).toHaveBeenCalledWith("default", { limit: 5 });
+    for (const limit of ["0", "51", "x", "1.5"]) {
+      expect((await route(event("GET /analytics/neglected", {}, undefined, { limit }), d)).statusCode).toBe(400);
+    }
   });
 });

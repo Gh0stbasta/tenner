@@ -87,3 +87,25 @@ category and are left out.
 | `shareOfMinutes` | Category minutes ÷ minutes of all categories (the shares sum to 1); `null` without minutes |
 | `overdueNow` | Active Tenners overdue *now* (not paused) |
 | `healthScore` | `1 − overdueNow ÷ activeTenners`; `null` without active Tenners |
+
+## Neglected Tenners — `GET /analytics/neglected` (ANALYTICS-006)
+
+Active Tenners (not paused-out, not deleted), period default `last90`, `limit` 1–50 (default 10). Sorted by
+`neglectScore` (highest first), then `daysOverdue`, then title; Tenners with score 0 are left out.
+
+| Metric | Definition |
+|---|---|
+| `daysOverdue` | `max(0, today − nextDue)`; 0 while the Tenner is paused (individually or by the vacation) |
+| `daysSinceCompleted` | Days since the last completion's household-local date; `null` if never completed |
+| `expectedCompletions` | `floor(expected days ÷ frequencyDays) − skipped occurrences`, at least 0 |
+| `actualCompletions` | Completions in the period |
+| `fulfillmentRatio` | `actual ÷ expected`, capped at 1; 1 when nothing is expected yet |
+| `neglectScore` | `(1 − fulfillmentRatio) × 0.6 + min(daysOverdue ÷ frequencyDays, 1) × 0.4` |
+
+- **Expected days** run from the later of period start and the Tenner's creation date to the period end, minus days of
+  the household vacation (if it covers the category) and of the Tenner's current individual pause (only the current
+  pause is stored, SCHEDULING-005).
+- **Skipped occurrences** (SCHEDULING-004) whose due date lies in the period each excuse one cycle. Snoozes only move
+  the due date.
+- **Never completed** Tenners older than one interval (and not paused now) are fully neglected: ratio 0, score 1.
+- Weights are constants in `backend/src/analytics/neglect.ts`. `frequencyDays` is approximate for months and years.

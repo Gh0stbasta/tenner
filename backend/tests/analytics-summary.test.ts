@@ -150,7 +150,7 @@ describe("AnalyticsService.summary", () => {
     tenners.list.mockResolvedValue([tennerFixture()]);
     const completions = { listCompletions: vi.fn(async () => [completionFixture({ completedAt: "2026-10-06T10:00:00Z" })]) };
     const settings = { ...toHouseholdResponse(undefined, "Europe/Berlin") };
-    const service = new AnalyticsService(tenners, completions, async () => settings, () => new Date("2026-10-07T22:30:00Z"));
+    const service = new AnalyticsService(tenners, { ...completions, listSkips: vi.fn(async () => []) }, async () => settings, () => new Date("2026-10-07T22:30:00Z"));
     const summary = await service.summary("default", { period: "week" });
     // 22:30 UTC on 7 Oct is already 8 Oct in Berlin; the week starts on Monday 5 Oct.
     expect(summary).toMatchObject({ period: { from: "2026-10-05", to: "2026-10-08" }, completions: 1, activeTenners: 1 });

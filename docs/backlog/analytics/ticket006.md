@@ -189,3 +189,27 @@ npm run test
 
 - Notifications about neglect (NOTIFICATION-004)
 - AI explanations (AI-004)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Neglected Tenners endpoint: `GET /analytics/neglected` (route in Terraform), `limit` 1–50 (default 10), period
+  default `last90`
+- [x] Neglect score `(1 − fulfillment) × 0.6 + min(daysOverdue ÷ frequencyDays, 1) × 0.4`, centralized in
+  `backend/src/analytics/neglect.ts` and documented in `docs/analytics.md`
+- [x] Edge cases: never completed Tenners older than one interval are fully neglected (score 1); Tenners created in
+  the period start counting at creation; nothing expected yet → ratio 1
+- [x] Sorted by score (ties: days overdue, title) and limited
+- [x] Paused periods (vacation per category, current individual pause) and skipped occurrences excluded from the
+  expected completions; skips are read from the base table (`listSkips`, `skip#` prefix)
+- [x] Tests passing: backend 727; lint and build clean
+- [ ] Deploys through GitHub Actions: one new API route; verified after merge
+
+Decisions and assumptions:
+
+- Tenners with a score of 0 are left out, so the list only shows real neglect (empty when all is well).
+- Paused Tenners are not overdue (`daysOverdue = 0`), and a paused never-completed Tenner is not "abandoned".
+- Only the current individual pause is known; earlier pauses still count as expected days (TD-029).

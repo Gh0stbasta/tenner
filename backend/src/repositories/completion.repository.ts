@@ -1,4 +1,4 @@
-import type { Completion, UserId } from "../models/index.js";
+import type { Completion, SkipEvent, UserId } from "../models/index.js";
 
 export type HistoryKey = Readonly<Record<string, string>>;
 
@@ -55,4 +55,9 @@ export interface CompletionRepository {
    * completedAt-index, oldest first (ANALYTICS-001). Never a Scan.
    */
   listCompletions(tenantId: string, from: string, to: string): Promise<Completion[]>;
+  /**
+   * Skipped occurrences whose due date (`skippedDue`, YYYY-MM-DD) lies in [from, to] (ANALYTICS-006). Skips have no
+   * completedAt, so this queries the base table on the `skip#` historyId prefix (TD-028).
+   */
+  listSkips(tenantId: string, from: string, to: string): Promise<SkipEvent[]>;
 }

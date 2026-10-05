@@ -104,3 +104,17 @@ export function toCompletionRecord(item: Record<string, unknown>): CompletionRec
     revertRequestHash: stringOrUndefined(item.revertRequestHash),
   };
 }
+
+/** Skip audit item → SkipEvent (ANALYTICS-006 reads skips to exclude skipped cycles). */
+export function toSkipEvent(item: Record<string, unknown>): SkipEvent {
+  return {
+    tenantId: String(item.tenantId),
+    skipId: String(item.historyId).slice(SKIP_HISTORY_PREFIX.length),
+    tennerId: String(item.tennerId),
+    skippedBy: String(item.skippedBy) as UserId,
+    skippedAt: String(item.skippedAt),
+    skippedDue: String(item.skippedDue),
+    nextDue: String(item.nextDue),
+    reason: stringOrNull(item.reason),
+  };
+}

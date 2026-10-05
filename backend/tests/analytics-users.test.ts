@@ -49,7 +49,7 @@ describe("AnalyticsService.users", () => {
   it("uses the household members", async () => {
     const repo = mockTennerRepository();
     repo.list.mockResolvedValue([]);
-    const service = new AnalyticsService(repo, { listCompletions: vi.fn(async () => []) }, async () => toHouseholdResponse(undefined, "UTC"), () => new Date(`${TODAY}T10:00:00Z`), async () => [LENA]);
+    const service = new AnalyticsService(repo, { listCompletions: vi.fn(async () => []), listSkips: vi.fn(async () => []) }, async () => toHouseholdResponse(undefined, "UTC"), () => new Date(`${TODAY}T10:00:00Z`), async () => [LENA]);
     const result = await service.users("default", {});
     expect(result.users.map((u) => u.userId)).toEqual(["LENA"]);
     expect(result.period).toEqual({ from: "2026-09-08", to: TODAY });

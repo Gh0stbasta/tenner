@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { GRANULARITIES } from "../analytics/aggregations.js";
+import { MAX_NEGLECTED_LIMIT } from "../analytics/neglect.js";
 import { PERIOD_SHORTCUTS } from "../analytics/period.js";
 import {
   TENNER_SORT_FIELDS,
@@ -20,6 +21,7 @@ import {
   type StartHandoverRequest,
   type AnalyticsPeriodRequest,
   type AnalyticsTrendsRequest,
+  type AnalyticsNeglectedRequest,
   type CreateCategoryRequest,
   type UpdateCategoryRequest,
   type UpdateMemberRequest,
@@ -362,3 +364,14 @@ export const analyticsTrendsSchema = z.strictObject({
   assignedTo: userIdSchema.optional(),
   category: categorySchema.optional(),
 }) satisfies z.ZodType<AnalyticsTrendsRequest, Record<string, string | undefined>>;
+
+/** GET /analytics/neglected (ANALYTICS-006). */
+export const analyticsNeglectedSchema = z.strictObject({
+  ...analyticsPeriodShape,
+  limit: z
+    .string()
+    .regex(/^\d{1,2}$/, "Must be an integer.")
+    .transform(Number)
+    .pipe(z.number().int().min(1).max(MAX_NEGLECTED_LIMIT))
+    .optional(),
+}) satisfies z.ZodType<AnalyticsNeglectedRequest, Record<string, string | undefined>>;

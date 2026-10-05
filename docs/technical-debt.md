@@ -768,6 +768,9 @@ SCHEDULING-001, FRONTEND-008, `frontend/src/features/settings/useNewTennerDefaul
 
 ## TD-028: Snooze and skip events are stored but not readable through the API
 
+> Partly addressed by ANALYTICS-006 (2026-10-05): skips are read internally (`CompletionRepository.listSkips`, base
+> table query on the `skip#` prefix) to excuse skipped cycles. They are still not exposed by a history endpoint.
+
 ### Description
 
 SCHEDULING-003 and SCHEDULING-004 write audit events (`eventType = SNOOZE` / `SKIP`) into `tenner-history`, but no

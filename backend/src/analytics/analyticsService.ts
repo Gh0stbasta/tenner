@@ -3,14 +3,15 @@
  * current Tenners. Household volume is small; pre-aggregation is ANALYTICS-010.
  */
 
-import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, HouseholdResponse } from "../dto/index.js";
+import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, HouseholdResponse } from "../dto/index.js";
 import { SEED_CATEGORIES, SEED_MEMBERS, type HouseholdCategory, type HouseholdMember, type Tenner } from "../models/index.js";
 import type { CompletionRepository, TennerRepository } from "../repositories/index.js";
 import type { Clock } from "../utils/clock.js";
 import { dateInTimeZone } from "../utils/timezone.js";
 import { categoryMetrics, filterCompletions, summarize, trends, userMetrics, type AnalyticsContext } from "./aggregations.js";
 import { loadCompletions } from "./historyLoader.js";
-import { inPeriod, previousPeriod, resolvePeriod, type Period } from "./period.js";
+import { DEFAULT_NEGLECTED_LIMIT, neglectedTenners } from "./neglect.js";
+import { inPeriod, previousPeriod, resolvePeriod, type Period, type PeriodShortcut } from "./period.js";
 
 /** Effective household settings (timezone, week start, vacation). */
 export type HouseholdSettingsSource = (tenantId: string) => Promise<HouseholdResponse>;
@@ -24,7 +25,7 @@ interface Scope {
 export class AnalyticsService {
   constructor(
     private readonly tenners: Pick<TennerRepository, "list">,
-    private readonly completions: Pick<CompletionRepository, "listCompletions">,
+    private readonly completions: Pick<CompletionRepository, "listCompletions" | "listSkips">,
     private readonly settingsOf: HouseholdSettingsSource,
     private readonly clock: Clock,
     private readonly membersOf: (tenantId: string) => Promise<readonly HouseholdMember[]> = async () => SEED_MEMBERS,
@@ -81,11 +82,25 @@ export class AnalyticsService {
     return categoryMetrics(completions, tenners, categories, period, context);
   }
 
+  /** Most neglected active Tenners (ANALYTICS-006); default period last90, default limit 10. */
+  async neglected(tenantId: string, request: AnalyticsNeglectedRequest): Promise<AnalyticsNeglectedResponse> {
+    const { settings, period, context } = await this.scope(tenantId, request, "last90");
+    const [completions, skips, tenners] = await Promise.all([
+      loadCompletions(this.completions, tenantId, period, settings.timezone),
+      this.completions.listSkips(tenantId, period.from, period.to),
+      this.tenners.list(tenantId),
+    ]);
+    return {
+      period: { from: period.from, to: period.to },
+      items: neglectedTenners(completions, skips, tenners, period, context, settings.timezone, request.limit ?? DEFAULT_NEGLECTED_LIMIT),
+    };
+  }
+
   /** Settings, today and the resolved period (400 for invalid periods). */
-  private async scope(tenantId: string, request: AnalyticsPeriodRequest): Promise<Scope> {
+  private async scope(tenantId: string, request: AnalyticsPeriodRequest, fallback?: PeriodShortcut): Promise<Scope> {
     const settings = await this.settingsOf(tenantId);
     const today = dateInTimeZone(this.clock(), settings.timezone);
-    return { settings, period: resolvePeriod(request, today, settings.weekStartsOn), context: { today, vacation: settings.vacation } };
+    return { settings, period: resolvePeriod(request, today, settings.weekStartsOn, fallback), context: { today, vacation: settings.vacation } };
   }
 }
 

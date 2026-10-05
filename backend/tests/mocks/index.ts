@@ -69,7 +69,7 @@ export function mockTennerRepository(): Mocked<TennerRepository> {
 }
 
 export function mockCompletionRepository(): Mocked<CompletionRepository> {
-  return { getById: vi.fn(), getLatestActiveCompletions: vi.fn(), findByRevertIdempotencyKey: vi.fn(), getHistory: vi.fn(), getByTenner: vi.fn(), listCompletions: vi.fn() };
+  return { getById: vi.fn(), getLatestActiveCompletions: vi.fn(), findByRevertIdempotencyKey: vi.fn(), getHistory: vi.fn(), getByTenner: vi.fn(), listCompletions: vi.fn(), listSkips: vi.fn() };
 }
 
 export function mockTennerService(): Mocked<TennerService> {

@@ -69,7 +69,7 @@ describe("AnalyticsService.trends", () => {
       completionFixture({ tennerId: "t-1", completedAt: "2026-10-04T23:30:00Z" }), // Monday 5 Oct in Berlin
       completionFixture({ tennerId: "t-1", completedAt: "2026-09-20T10:00:00Z" }), // previous period
     ]);
-    const service = new AnalyticsService(tenners, { listCompletions }, async () => toHouseholdResponse(undefined, "Europe/Berlin"), () => new Date("2026-10-07T10:00:00Z"));
+    const service = new AnalyticsService(tenners, { listCompletions, listSkips: vi.fn(async () => []) }, async () => toHouseholdResponse(undefined, "Europe/Berlin"), () => new Date("2026-10-07T10:00:00Z"));
     const result = await service.trends("default", { from: "2026-09-28", to: "2026-10-07", assignedTo: "STEFAN" });
     expect(listCompletions).toHaveBeenCalledWith("default", "2026-09-17T00:00:00Z", "2026-10-09T00:00:00Z");
     expect(tenners.list).toHaveBeenCalledWith("default", { includeDeleted: true });

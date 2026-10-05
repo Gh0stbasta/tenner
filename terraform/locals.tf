@@ -58,6 +58,7 @@ locals {
     "GET /analytics/trends",                    # ANALYTICS-002
     "GET /analytics/users",                     # ANALYTICS-003
     "GET /analytics/categories",                # ANALYTICS-004
+    "GET /analytics/neglected",                 # ANALYTICS-006
     "POST /tenners/{tennerId}/snooze",          # SCHEDULING-003
     "POST /tenners/{tennerId}/skip",            # SCHEDULING-004
     "POST /tenners/{tennerId}/pause",           # SCHEDULING-005
