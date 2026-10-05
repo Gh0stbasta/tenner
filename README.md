@@ -275,6 +275,27 @@ The API stage is throttled to protect against cost spikes (SECURITY-014): burst 
 Change the limits through the Terraform variables `api_throttling_burst_limit` and
 `api_throttling_rate_limit` (`terraform/variables.tf`), then merge to `main`.
 
+### Smoke Tests (OPERATIONS-006)
+
+After every deployment, `deploy.yml` runs `scripts/smoke-test.sh <frontend_url> <api_endpoint>`. It only sends
+GET requests and never touches household data:
+
+| Check | Expected |
+|---|---|
+| Frontend `/` | 200, app root element, `Content-Security-Policy` header |
+| Frontend `/dashboard` | 200 (SPA routing through CloudFront) |
+| API `/health` | 200, `"status":"ok"`, `"database":"connected"` |
+| API `/dashboard`, `/onboarding` without a token | 401 (the JWT authorizer protects the API) |
+
+Transient errors (refused connections, timeouts, 429, 5xx) are retried 3 times. Any failure fails the run with a
+GitHub error annotation and points to the rollback section below. Signed-in requests are not covered (TD-024).
+Run it locally with the Terraform outputs:
+
+```bash
+scripts/smoke-test.sh "$(terraform -chdir=terraform output -raw frontend_url)" \
+  "$(terraform -chdir=terraform output -raw api_endpoint)"
+```
+
 ### Rollback
 
 - **Workflow or application changes:** revert the commit on `main`. The deploy workflow then

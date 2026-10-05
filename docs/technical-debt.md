@@ -651,3 +651,32 @@ and keep the main API role without them; or store claims in DynamoDB with a cond
 ### Related Work
 
 HOTFIX-001, `terraform/iam.tf` (`api_cognito`), `backend/src/services/household-assignment.service.ts`
+
+---
+
+## TD-024: Smoke tests cover only unauthenticated requests
+
+### Description
+
+`scripts/smoke-test.sh` (OPERATIONS-006) checks the frontend, `/health` and that protected routes return 401. It
+does not sign in, so a broken household route (e.g. a Lambda error that only occurs with a valid token) passes
+the smoke tests.
+
+### Reason
+
+Sign-in is Google only (ADR 0002). A non-interactive test user would need a password login or a separate app
+client, which reopens a second way into the user pool.
+
+### Impact
+
+Authenticated regressions are found by unit tests and by the household, not by the pipeline.
+
+### Suggested Improvement
+
+A dedicated, read-only smoke-test app client with a client-credentials flow and a resource server scope that the
+backend accepts only for `GET /health`-like read routes, or a synthetic canary with a stored refresh token
+(SECURITY-006 for the secret).
+
+### Related Work
+
+OPERATIONS-006, ADR 0002, `scripts/smoke-test.sh`

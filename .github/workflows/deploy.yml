@@ -161,6 +161,14 @@ jobs:
             "$(terraform -chdir="$TF_DIR" output -raw frontend_bucket_name)" \
             "$(terraform -chdir="$TF_DIR" output -raw cloudfront_distribution_id)"
 
+      # OPERATIONS-006: read-only checks of the live system; a failure fails the deployment run.
+      - name: Smoke tests
+        if: hashFiles('terraform/**/*.tf') != '' && hashFiles('frontend/package.json') != ''
+        run: |
+          scripts/smoke-test.sh \
+            "$(terraform -chdir="$TF_DIR" output -raw frontend_url)" \
+            "$(terraform -chdir="$TF_DIR" output -raw api_endpoint)"
+
       - name: Report skipped frontend deployment
         if: hashFiles('frontend/package.json') == ''
         run: echo "::notice::No frontend/package.json yet - frontend deployment skipped."
