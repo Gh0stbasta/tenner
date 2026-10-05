@@ -259,3 +259,74 @@ export function categoryMetrics(
       }),
   };
 }
+
+/** Expected minutes per week of a Tenner: estimatedMinutes × 7 ÷ frequencyDays (ANALYTICS-005, ANALYTICS-007). */
+export const projectedWeeklyMinutes = (tenner: Tenner): number => (tenner.estimatedMinutes * 7) / tenner.frequencyDays;
+
+export interface BalanceUser {
+  readonly userId: UserId;
+  readonly displayName: string;
+  /** Member's minutes (completedBy) ÷ all minutes in the period; null without minutes. */
+  readonly shareOfMinutes: number | null;
+  /** Member's projected weekly minutes (assignedTo, shared Tenners split evenly) ÷ all; null without load. */
+  readonly shareOfAssignedLoad: number | null;
+}
+
+export interface BalanceMetrics {
+  readonly period: { readonly from: string; readonly to: string };
+  /** In member-list order (no ranking). */
+  readonly byUser: readonly BalanceUser[];
+  /** Per household category: share of the category's minutes per member, or null without minutes. */
+  readonly byCategory: readonly { readonly category: Category; readonly name: string; readonly shares: Readonly<Record<UserId, number>> | null }[];
+  /** 1 − (largest − smallest shareOfMinutes); null without minutes. */
+  readonly balanceIndex: number | null;
+}
+
+/**
+ * GET /analytics/balance (ANALYTICS-007). Members: the active ones plus deactivated members with minutes in the
+ * period. Shared Tenners (HOUSEHOLD-002) count equally for every active member, as on the dashboard.
+ */
+export function balance(
+  completions: readonly AnalyticsCompletion[],
+  tenners: readonly Tenner[],
+  members: readonly HouseholdMember[],
+  categories: readonly HouseholdCategory[],
+  period: Period,
+): BalanceMetrics {
+  const minutesBy = (list: readonly AnalyticsCompletion[], userId: UserId) => sumMinutes(list.filter((completion) => completion.completedBy === userId));
+  const included = members.filter((member) => member.active || minutesBy(completions, member.userId) > 0);
+  const activeMembers = members.filter((member) => member.active).length;
+  const active = tenners.filter(isActiveTenner);
+  const loadOf = (userId: UserId, isActive: boolean) =>
+    active.reduce((sum, tenner) => {
+      if (tenner.assignedTo === userId) return sum + projectedWeeklyMinutes(tenner);
+      return tenner.assignedTo === SHARED_ASSIGNEE && isActive && activeMembers > 0 ? sum + projectedWeeklyMinutes(tenner) / activeMembers : sum;
+    }, 0);
+  const totalMinutes = included.reduce((sum, member) => sum + minutesBy(completions, member.userId), 0);
+  const loads = included.map((member) => loadOf(member.userId, member.active));
+  const totalLoad = loads.reduce((sum, load) => sum + load, 0);
+  const byUser = included.map((member, index) => ({
+    userId: member.userId,
+    displayName: member.displayName,
+    shareOfMinutes: ratio(minutesBy(completions, member.userId), totalMinutes),
+    shareOfAssignedLoad: ratio(loads[index] ?? 0, totalLoad),
+  }));
+  const categoryOf = new Map(tenners.map((tenner) => [tenner.tennerId, tenner.category]));
+  const shares = byUser.map((user) => user.shareOfMinutes ?? 0);
+  return {
+    period: { from: period.from, to: period.to },
+    byUser,
+    byCategory: [...categories]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((category) => {
+        const inCategory = completions.filter((completion) => categoryOf.get(completion.tennerId) === category.categoryId);
+        const total = included.reduce((sum, member) => sum + minutesBy(inCategory, member.userId), 0);
+        return {
+          category: category.categoryId,
+          name: category.name,
+          shares: total === 0 ? null : Object.fromEntries(included.map((member) => [member.userId, ratio(minutesBy(inCategory, member.userId), total) ?? 0])),
+        };
+      }),
+    balanceIndex: totalMinutes === 0 ? null : ratio(1 - (Math.max(...shares) - Math.min(...shares)), 1),
+  };
+}

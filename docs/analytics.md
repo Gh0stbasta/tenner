@@ -109,3 +109,20 @@ Active Tenners (not paused-out, not deleted), period default `last90`, `limit` 1
   the due date.
 - **Never completed** Tenners older than one interval (and not paused now) are fully neglected: ratio 0, score 1.
 - Weights are constants in `backend/src/analytics/neglect.ts`. `frequencyDays` is approximate for months and years.
+
+## Household Balance — `GET /analytics/balance` (ANALYTICS-007)
+
+Transparency, not competition: members are listed in member-list order, never ranked. Members: all active members
+plus deactivated members with minutes in the period.
+
+| Metric | Definition |
+|---|---|
+| `shareOfMinutes` | Member's `actualMinutes` (as `completedBy`) ÷ minutes of all listed members; `null` without minutes |
+| `shareOfAssignedLoad` | Member's projected weekly minutes ÷ all; `null` without load |
+| `byCategory[].shares` | Per household category: each member's share of the category's minutes; `null` without minutes |
+| `balanceIndex` | `1 − (largest shareOfMinutes − smallest shareOfMinutes)`; 1 = perfectly even; `null` without minutes |
+
+- **Projected weekly minutes** of an active Tenner: `estimatedMinutes × 7 ÷ frequencyDays` (same as ANALYTICS-005).
+  It counts for the *current* assignee; shared Tenners (`HOUSEHOLD`) are split evenly between the active members, as
+  on the dashboard.
+- Categories are the Tenners' *current* categories.

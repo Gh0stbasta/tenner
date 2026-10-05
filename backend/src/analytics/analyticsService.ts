@@ -3,12 +3,12 @@
  * current Tenners. Household volume is small; pre-aggregation is ANALYTICS-010.
  */
 
-import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, HouseholdResponse } from "../dto/index.js";
+import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, AnalyticsBalanceResponse, HouseholdResponse } from "../dto/index.js";
 import { SEED_CATEGORIES, SEED_MEMBERS, type HouseholdCategory, type HouseholdMember, type Tenner } from "../models/index.js";
 import type { CompletionRepository, TennerRepository } from "../repositories/index.js";
 import type { Clock } from "../utils/clock.js";
 import { dateInTimeZone } from "../utils/timezone.js";
-import { categoryMetrics, filterCompletions, summarize, trends, userMetrics, type AnalyticsContext } from "./aggregations.js";
+import { balance, categoryMetrics, filterCompletions, summarize, trends, userMetrics, type AnalyticsContext } from "./aggregations.js";
 import { loadCompletions } from "./historyLoader.js";
 import { DEFAULT_NEGLECTED_LIMIT, neglectedTenners } from "./neglect.js";
 import { inPeriod, previousPeriod, resolvePeriod, type Period, type PeriodShortcut } from "./period.js";
@@ -94,6 +94,18 @@ export class AnalyticsService {
       period: { from: period.from, to: period.to },
       items: neglectedTenners(completions, skips, tenners, period, context, settings.timezone, request.limit ?? DEFAULT_NEGLECTED_LIMIT),
     };
+  }
+
+  /** Distribution of done work and planned load between members (ANALYTICS-007). */
+  async balance(tenantId: string, request: AnalyticsPeriodRequest): Promise<AnalyticsBalanceResponse> {
+    const { settings, period } = await this.scope(tenantId, request);
+    const [completions, tenners, members, categories] = await Promise.all([
+      loadCompletions(this.completions, tenantId, period, settings.timezone),
+      this.tenners.list(tenantId),
+      this.membersOf(tenantId),
+      this.categoriesOf(tenantId),
+    ]);
+    return balance(completions, tenners, members, categories, period);
   }
 
   /** Settings, today and the resolved period (400 for invalid periods). */

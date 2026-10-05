@@ -2,7 +2,7 @@
 
 import type { NeglectedTenner } from "../analytics/neglect.js";
 import type { PeriodRequest } from "../analytics/period.js";
-import type { CategoriesMetrics, Granularity, SummaryMetrics, TennerFilter, TrendMetrics, UsersMetrics } from "../analytics/aggregations.js";
+import type { BalanceMetrics, CategoriesMetrics, Granularity, SummaryMetrics, TennerFilter, TrendMetrics, UsersMetrics } from "../analytics/aggregations.js";
 
 /** Query of every period-based analytics endpoint. */
 export type AnalyticsPeriodRequest = PeriodRequest;
@@ -32,3 +32,6 @@ export interface AnalyticsNeglectedResponse {
   readonly period: { readonly from: string; readonly to: string };
   readonly items: readonly NeglectedTenner[];
 }
+
+/** GET /analytics/balance (ANALYTICS-007). */
+export type AnalyticsBalanceResponse = BalanceMetrics;

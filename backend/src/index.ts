@@ -87,7 +87,7 @@ import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
 import { SEED_CATEGORIES, SEED_MEMBERS, type Handover, type HouseholdCategory, type HouseholdMember, type Vacation } from "./models/index.js";
 import { createLogger, errorFields, type Logger } from "./utils/logger.js";
-import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, HouseholdResponse } from "./dto/index.js";
+import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, AnalyticsBalanceResponse, HouseholdResponse } from "./dto/index.js";
 import { analyticsNeglectedSchema, analyticsPeriodSchema, analyticsTrendsSchema } from "./validators/index.js";
 
 /** Dependencies shared by all handlers; replaced in tests. */
@@ -131,6 +131,7 @@ export interface Dependencies {
   readonly analyticsUsers: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsUsersResponse>;
   readonly analyticsCategories: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsCategoriesResponse>;
   readonly analyticsNeglected: AnalyticsQuery<AnalyticsNeglectedRequest, AnalyticsNeglectedResponse>;
+  readonly analyticsBalance: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsBalanceResponse>;
 }
 
 /** Per-request context passed to route handlers. */
@@ -202,6 +203,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /analytics/users": ({ event, deps, logger, identity }) => analyticsHandler("users", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsUsers, logger),
   "GET /analytics/categories": ({ event, deps, logger, identity }) => analyticsHandler("categories", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsCategories, logger),
   "GET /analytics/neglected": ({ event, deps, logger, identity }) => analyticsHandler("neglected", analyticsNeglectedSchema, event, identity.tenantId, deps.analyticsNeglected, logger),
+  "GET /analytics/balance": ({ event, deps, logger, identity }) => analyticsHandler("balance", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsBalance, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -309,6 +311,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     analyticsUsers: analyticsService ? (tenantId, request) => analyticsService.users(tenantId, request) : notConfigured,
     analyticsCategories: analyticsService ? (tenantId, request) => analyticsService.categories(tenantId, request) : notConfigured,
     analyticsNeglected: analyticsService ? (tenantId, request) => analyticsService.neglected(tenantId, request) : notConfigured,
+    analyticsBalance: analyticsService ? (tenantId, request) => analyticsService.balance(tenantId, request) : notConfigured,
   };
 }
 
