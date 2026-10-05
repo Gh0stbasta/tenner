@@ -113,6 +113,7 @@ Allowed:
 - CloudFront
 - EventBridge
 - Cognito
+- Billing features without runtime: AWS Budgets, Cost Anomaly Detection ([ADR 0003](decisions/0003-cost-monitoring.md))
 
 Not Allowed:
 
@@ -138,6 +139,25 @@ Terraform is the single source of truth.
 Tenner should comfortably run inside AWS free tier or near-zero monthly cost.
 
 The architecture should remain affordable for personal use.
+
+### Expected Monthly Cost (OPERATIONS-001, eu-central-1, one household)
+
+Assumption: about 10,000 API requests, a few hundred writes and a few MB of logs per month.
+
+| Service | Usage | Expected cost |
+|---|---|---|
+| API Gateway HTTP API | ~10,000 requests (1.20 USD per million) | < 0.02 USD |
+| Lambda (arm64, 256 MB) | ~10,000 invocations; always-free tier 1M requests / 400,000 GB-s | 0 USD |
+| DynamoDB on-demand + PITR | a few hundred writes, < 1 MB data | < 0.01 USD |
+| S3 (frontend, state) | a few MB, a few hundred requests | < 0.01 USD |
+| CloudFront | always-free tier 1 TB / 10M requests | 0 USD |
+| CloudWatch Logs | a few MB ingestion and storage, 30-day retention | < 0.01 USD |
+| Cognito (Essentials) | 10,000 MAU free | 0 USD |
+| AWS Budgets, Cost Anomaly Detection | first two budgets free; anomaly detection free | 0 USD |
+| **Total** | | **< 0.10 USD per month** |
+
+Monitoring: a 5 USD monthly budget with alerts at 50 %, 80 % and 100 % forecast plus a daily anomaly summary
+(`terraform/costs.tf`). Worst case under abuse is capped by throttling at about 2–3 USD per day (SECURITY-014).
 
 ---
 

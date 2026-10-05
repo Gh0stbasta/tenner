@@ -6,6 +6,7 @@
 variables {
   google_client_id     = "123456789012-abcdefghijklmnop.apps.googleusercontent.com"
   google_client_secret = "placeholder-secret"
+  budget_alert_email   = "owner@example.com"
 }
 
 

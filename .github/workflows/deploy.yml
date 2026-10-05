@@ -114,6 +114,9 @@ jobs:
           # runner (plan file and plan.json are never uploaded).
           TF_VAR_google_client_id: ${{ vars.GOOGLE_CLIENT_ID }}
           TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          # Cost alerts (OPERATIONS-001): e-mail is a secret (personal data); the monitor ARN is optional.
+          TF_VAR_budget_alert_email: ${{ secrets.BUDGET_ALERT_EMAIL }}
+          TF_VAR_cost_anomaly_monitor_arn: ${{ vars.COST_ANOMALY_MONITOR_ARN }}
         run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m -out=tfplan
 
       - name: Enforce mandatory tags

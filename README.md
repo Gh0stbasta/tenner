@@ -81,6 +81,7 @@ For the managed resources so far:
   API Gateway authorizers (`apigateway:*` on `tenner-api-gateway` already covers them) and `sts:GetCallerIdentity`
   (always allowed)
 - IAM: create and manage `tenner-api-role` and its inline policy, plus `iam:PassRole` for that role to Lambda
+- Cost monitoring (OPERATIONS-001): AWS Budgets and Cost Explorer anomaly permissions, see "Cost Monitoring"
 
 For the state backend:
 
@@ -152,6 +153,8 @@ These must exist before the workflows can authenticate. This repository does not
 2. **Repository secret `AWS_ROLE_ARN`** containing the ARN of that role.
 3. **Repository variable `GOOGLE_CLIENT_ID` and secret `GOOGLE_CLIENT_SECRET`** for Google sign-in
    (FUTURE-011, see "Google Sign-In and User Accounts"). `terraform plan` fails in both workflows without them.
+4. **Repository secret `BUDGET_ALERT_EMAIL`** (and optionally the variable `COST_ANOMALY_MONITOR_ARN`) for cost
+   alerts (OPERATIONS-001, see "Cost Monitoring").
 
 If the PR subject is not trusted, `pr.yml` fails at "Configure AWS credentials".
 
@@ -248,6 +251,36 @@ Without a global sign-out, a removed member keeps access until the ID token expi
 Password accounts created before FUTURE-011 can no longer sign in and can be deleted.
 
 Never commit e-mail addresses, client secrets or tokens.
+
+### Cost Monitoring (OPERATIONS-001)
+
+`terraform/costs.tf` creates a monthly AWS Budget (default 5 USD, `monthly_budget_usd`) with e-mail alerts at
+50 % and 80 % of actual and 100 % of forecasted spend, and Cost Anomaly Detection with a daily e-mail summary for
+anomalies of at least 1 USD ([ADR 0003](docs/decisions/0003-cost-monitoring.md)). Expected cost: under 0.10 USD
+per month (table in `docs/architecture.md`).
+
+Before the first deployment with OPERATIONS-001:
+
+1. GitHub → Settings → Secrets and variables → Actions → **Secret** `BUDGET_ALERT_EMAIL` = your e-mail address.
+   `terraform plan` fails without it. AWS sends a confirmation e-mail for the anomaly subscription.
+2. Extend `GitHubActionsDeployRole` (see "CI Permissions"): `budgets:ViewBudget`, `budgets:ModifyBudget`,
+   `budgets:ListTagsForResource`, `budgets:TagResource`, `budgets:UntagResource` on
+   `arn:aws:budgets::<account-id>:budget/tenner-monthly-*`, and `ce:CreateAnomalyMonitor`,
+   `ce:GetAnomalyMonitors`, `ce:UpdateAnomalyMonitor`, `ce:DeleteAnomalyMonitor`, `ce:CreateAnomalySubscription`,
+   `ce:GetAnomalySubscriptions`, `ce:UpdateAnomalySubscription`, `ce:DeleteAnomalySubscription`,
+   `ce:TagResource`, `ce:UntagResource`, `ce:ListTagsForResource` (resource `*`; Cost Explorer has no
+   resource-level permissions for creation).
+3. Check for an existing AWS-services anomaly monitor (only one per account is allowed):
+
+   ```bash
+   aws ce get-anomaly-monitors --query "AnomalyMonitors[?MonitorType=='DIMENSIONAL'].[MonitorName, MonitorArn]" --output table
+   ```
+
+   If one exists, set the GitHub **variable** `COST_ANOMALY_MONITOR_ARN` to its ARN; Terraform then reuses it.
+
+Optional: activate the `Application` cost allocation tag (Billing console → Cost allocation tags), wait up to
+24 hours, then set `budget_filter_by_application_tag = true` to count only Tenner resources. Without activation
+the filtered budget would see no cost, so the default covers the whole account.
 
 ### Security Baseline (SECURITY-005)
 

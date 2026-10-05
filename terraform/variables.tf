@@ -106,3 +106,53 @@ variable "google_client_secret" {
     error_message = "google_client_secret must not be empty. Set the GitHub secret GOOGLE_CLIENT_SECRET."
   }
 }
+
+variable "budget_alert_email" {
+  description = "E-mail address for budget and cost anomaly alerts (OPERATIONS-001). Set as GitHub secret BUDGET_ALERT_EMAIL; never commit it."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.budget_alert_email))
+    error_message = "budget_alert_email must be an e-mail address. Set the GitHub secret BUDGET_ALERT_EMAIL."
+  }
+}
+
+variable "monthly_budget_usd" {
+  description = "Monthly cost budget in USD (OPERATIONS-001)."
+  type        = number
+  default     = 5
+
+  validation {
+    condition     = var.monthly_budget_usd > 0
+    error_message = "monthly_budget_usd must be greater than 0."
+  }
+}
+
+variable "anomaly_alert_threshold_usd" {
+  description = "Minimum total impact in USD for a cost anomaly to be e-mailed (OPERATIONS-001)."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.anomaly_alert_threshold_usd > 0
+    error_message = "anomaly_alert_threshold_usd must be greater than 0."
+  }
+}
+
+variable "budget_filter_by_application_tag" {
+  description = "Limit the budget to resources tagged Application = Tenner. Requires the tag to be activated as a cost allocation tag; otherwise the budget sees no cost. Default: whole account."
+  type        = bool
+  default     = false
+}
+
+variable "cost_anomaly_monitor_arn" {
+  description = "ARN of an existing AWS-services cost anomaly monitor to reuse (only one per account is allowed). Empty: Terraform creates one. Set as GitHub variable COST_ANOMALY_MONITOR_ARN if needed."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.cost_anomaly_monitor_arn == "" || can(regex("^arn:aws:ce::[0-9]{12}:anomalymonitor/", var.cost_anomaly_monitor_arn))
+    error_message = "cost_anomaly_monitor_arn must be empty or a Cost Explorer anomaly monitor ARN."
+  }
+}
