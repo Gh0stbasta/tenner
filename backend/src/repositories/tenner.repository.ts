@@ -26,6 +26,9 @@ export interface SoftDeleteResult {
   readonly tenner: Tenner;
 }
 
+/** Schedule fields changed by pause, resume and vacation rescheduling (SCHEDULING-005). */
+export type ScheduleChange = Partial<Pick<Tenner, "nextDue" | "pausedAt" | "pausedUntil">>;
+
 /** Fields that may change through an update, plus the new updatedAt timestamp (TICKET-011). */
 export type TennerUpdate = {
   readonly [K in "title" | "category" | "estimatedMinutes" | "frequencyDays" | "frequencyUnit" | "frequencyInterval" | "weekdays" | "assignedTo" | "active"]?: Tenner[K] | undefined;
@@ -80,6 +83,12 @@ export interface TennerRepository {
    * Errors: ConflictError CONCURRENT_MODIFICATION if the Tenner changed, PersistenceError otherwise.
    */
   snoozeTenner(updated: Tenner, event: SnoozeEvent, expected: Tenner): Promise<void>;
+
+  /**
+   * Set schedule fields plus updatedAt/updatedBy, locked on `expectedUpdatedAt`, active and not deleted
+   * (SCHEDULING-005). Returns the updated Tenner. Errors: ConflictError CONCURRENT_MODIFICATION, PersistenceError.
+   */
+  updateSchedule(tenantId: string, tennerId: string, changes: ScheduleChange, expectedUpdatedAt: string, timestamp: string, actor: UserId): Promise<Tenner>;
 
   /** Like snoozeTenner, for a skipped occurrence (SCHEDULING-004). */
   skipTenner(updated: Tenner, event: SkipEvent, expected: Tenner): Promise<void>;

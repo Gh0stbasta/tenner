@@ -3,14 +3,23 @@
 import { GetCommand, UpdateCommand, type GetCommandOutput, type UpdateCommandOutput } from "@aws-sdk/lib-dynamodb";
 import type { DocumentSender } from "../../clients/dynamodb.js";
 import { PersistenceError } from "../../exceptions/index.js";
-import type { HouseholdSettings, UserId } from "../../models/index.js";
+import { CATEGORIES, type Category, type HouseholdSettings, type UserId, type Vacation } from "../../models/index.js";
 import type { HouseholdRepository } from "../household.repository.js";
 import { toPersistenceError } from "./errors.js";
+
+function toVacation(value: unknown): Vacation | null {
+  if (typeof value !== "object" || value === null) return null;
+  const { from, until, categories } = value as Record<string, unknown>;
+  if (typeof from !== "string" || typeof until !== "string") return null;
+  const valid = Array.isArray(categories) ? CATEGORIES.filter((category: Category) => categories.includes(category)) : null;
+  return { from, until, categories: valid !== null && valid.length > 0 ? valid : null };
+}
 
 function toSettings(item: Record<string, unknown>): HouseholdSettings {
   return {
     tenantId: String(item.tenantId),
-    timezone: String(item.timezone),
+    timezone: typeof item.timezone === "string" ? item.timezone : null,
+    vacation: toVacation(item.vacation),
     updatedAt: String(item.updatedAt),
     updatedBy: typeof item.updatedBy === "string" ? (item.updatedBy as UserId) : null,
   };
@@ -25,23 +34,32 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
   async get(tenantId: string): Promise<HouseholdSettings | undefined> {
     try {
       const result = (await this.client.send(new GetCommand({ TableName: this.tableName, Key: { tenantId } }))) as GetCommandOutput;
-      return result.Item && typeof result.Item.timezone === "string" ? toSettings(result.Item) : undefined;
+      return result.Item ? toSettings(result.Item) : undefined;
     } catch (error) {
       throw toPersistenceError("load household settings", error);
     }
   }
 
-  /** Upsert of the timezone only, so later settings (HOUSEHOLD-ADMIN-003) are never overwritten. */
+  /** Upsert of the timezone only, so other settings (vacation, HOUSEHOLD-ADMIN-003) are never overwritten. */
   async saveTimezone(tenantId: string, timezone: string, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+    return this.saveAttribute(tenantId, "timezone", timezone, actor, timestamp);
+  }
+
+  /** Upsert of the vacation only (SCHEDULING-005); null ends it. */
+  async saveVacation(tenantId: string, vacation: Vacation | null, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+    return this.saveAttribute(tenantId, "vacation", vacation, actor, timestamp);
+  }
+
+  private async saveAttribute(tenantId: string, name: "timezone" | "vacation", value: unknown, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
     let attributes: Record<string, unknown> | undefined;
     try {
       const result = (await this.client.send(
         new UpdateCommand({
           TableName: this.tableName,
           Key: { tenantId },
-          UpdateExpression: "SET #timezone = :timezone, #updatedAt = :timestamp, #updatedBy = :actor",
-          ExpressionAttributeNames: { "#timezone": "timezone", "#updatedAt": "updatedAt", "#updatedBy": "updatedBy" },
-          ExpressionAttributeValues: { ":timezone": timezone, ":timestamp": timestamp, ":actor": actor },
+          UpdateExpression: "SET #value = :value, #updatedAt = :timestamp, #updatedBy = :actor",
+          ExpressionAttributeNames: { "#value": name, "#updatedAt": "updatedAt", "#updatedBy": "updatedBy" },
+          ExpressionAttributeValues: { ":value": value, ":timestamp": timestamp, ":actor": actor },
           ReturnValues: "ALL_NEW",
         }),
       )) as UpdateCommandOutput;

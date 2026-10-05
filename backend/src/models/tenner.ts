@@ -28,6 +28,10 @@ export interface Tenner {
   readonly nextDue: string;
   /** Date the Tenner was postponed to (SCHEDULING-003), or null. Cleared by the next completion. */
   readonly snoozedUntil: string | null;
+  /** Start of an individual pause (UTC timestamp, SCHEDULING-005), or null. */
+  readonly pausedAt: string | null;
+  /** Last paused day (YYYY-MM-DD) or null for an open-ended pause. Only meaningful with pausedAt. */
+  readonly pausedUntil: string | null;
   readonly active: boolean;
   /** ISO 8601 UTC timestamp of the soft delete, or null if not deleted (TICKET-012). */
   readonly deletedAt: string | null;

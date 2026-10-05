@@ -21,6 +21,9 @@ export const tennerSchema = z.object({
   nextDue: z.string(),
   /** SCHEDULING-003: postponed-to date, cleared by the next completion. */
   snoozedUntil: z.string().nullable(),
+  /** SCHEDULING-005: individual pause; a vacation pause comes from the household settings. */
+  pausedAt: z.string().nullable().default(null),
+  pausedUntil: z.string().nullable().default(null),
   active: z.boolean(),
   deletedAt: z.string().nullable(),
   createdAt: z.string(),

@@ -3,6 +3,8 @@
 import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import PauseCircleOutlineIcon from "@mui/icons-material/PauseCircleOutlineOutlined";
+import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
 import UnarchiveOutlinedIcon from "@mui/icons-material/UnarchiveOutlined";
 import {
   Box,
@@ -25,6 +27,8 @@ import { TennerLink } from "../../components/TennerLink";
 import { CATEGORY_LABELS, USER_LABELS } from "../../types/domain";
 import { CompleteTennerButton } from "../completions/CompleteTennerButton";
 import { formatMinutes, formatShortDate } from "../../utils/format";
+import { useToday } from "../household/api";
+import { isPausedIndividually } from "../pause/pauseStatus";
 import type { Tenner } from "./schemas";
 import { frequencyLabel, type TennerStatus } from "./status";
 import { TennerStatusBadge } from "./TennerStatusBadge";
@@ -33,6 +37,10 @@ export interface TennerCardActions {
   readonly onEdit?: (tenner: Tenner) => void;
   readonly onArchive?: (tenner: Tenner) => void;
   readonly onRestore?: (tenner: Tenner) => void;
+  /** SCHEDULING-005: offered when the Tenner is not paused individually. */
+  readonly onPause?: (tenner: Tenner) => void;
+  /** SCHEDULING-005: offered while the Tenner is paused individually. */
+  readonly onResume?: (tenner: Tenner) => void;
 }
 
 export interface TennerCardProps extends TennerCardActions {
@@ -41,16 +49,37 @@ export interface TennerCardProps extends TennerCardActions {
   readonly busy?: boolean;
 }
 
-export function TennerCard({ tenner, status, busy = false, onEdit, onArchive, onRestore }: TennerCardProps) {
+export function TennerCard({
+  tenner,
+  status,
+  busy = false,
+  onEdit,
+  onArchive,
+  onRestore,
+  onPause,
+  onResume,
+}: TennerCardProps) {
   const theme = useTheme();
   const compact = useMediaQuery(theme.breakpoints.down("sm"));
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const archived = status.kind === "archived";
+  const pausedIndividually = isPausedIndividually(tenner, useToday());
+  const canPause = !archived && tenner.active;
   const name = `„${tenner.title}“`;
 
   const secondary = [
     !archived &&
       onEdit && { label: "Bearbeiten", icon: <EditOutlinedIcon fontSize="small" />, run: () => onEdit(tenner) },
+    canPause &&
+      !pausedIndividually &&
+      onPause && { label: "Pausieren", icon: <PauseCircleOutlineIcon fontSize="small" />, run: () => onPause(tenner) },
+    canPause &&
+      pausedIndividually &&
+      onResume && {
+        label: "Fortsetzen",
+        icon: <PlayCircleOutlineIcon fontSize="small" />,
+        run: () => onResume(tenner),
+      },
     !archived &&
       onArchive && {
         label: "Archivieren",

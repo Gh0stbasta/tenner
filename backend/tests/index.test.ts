@@ -16,6 +16,7 @@ const emptyDashboard = {
   dueToday: [],
   overdue: [],
   upcoming: [],
+  paused: [],
   byUser: {},
   byCategory: {},
 };
@@ -69,8 +70,12 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
       replayed: false,
     })),
     deleteTenner: vi.fn(async () => ({ response: { tennerId: "t-1", deleted: true as const }, outcome: { status: "DELETED" as const, tenner: tennerFixture() } })),
-    getHousehold: vi.fn(async () => ({ timezone: "Europe/Berlin" })),
-    updateHouseholdTimezone: vi.fn(async (_identity, timezone: string) => ({ timezone })),
+    getHousehold: vi.fn(async () => ({ timezone: "Europe/Berlin", vacation: null })),
+    updateHouseholdTimezone: vi.fn(async (_identity, timezone: string) => ({ timezone, vacation: null })),
+    pauseTenner: vi.fn(async () => tennerResponse),
+    resumeTenner: vi.fn(async () => tennerResponse),
+    setVacation: vi.fn(async () => ({ household: { timezone: "Europe/Berlin", vacation: { from: "2026-10-10", until: "2026-10-24", categories: null } }, rescheduled: 2, conflicts: 0 })),
+    endVacation: vi.fn(async () => ({ timezone: "Europe/Berlin", vacation: null })),
     getOnboarding: vi.fn(async () => ({ assignedTo: null, members: [] })),
     assignHouseholdMember: vi.fn(async () => ({ response: { userId: "JULIA" as const }, group: "household:default:JULIA" })),
     ...overrides,
@@ -301,6 +306,27 @@ describe("POST /tenners/{tennerId}/skip (SCHEDULING-004)", () => {
     const response = await route({ ...event("POST /tenners/{tennerId}/skip"), pathParameters: { tennerId: "t-1" } } as APIGatewayProxyEventV2, d);
     expect(response.statusCode).toBe(200);
     expect(d.skipTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", {});
+  });
+});
+
+describe("pause and vacation routes (SCHEDULING-005)", () => {
+  const withId = (routeKey: string, body?: string) => ({ ...event(routeKey, {}, body), pathParameters: { tennerId: "t-1" } }) as APIGatewayProxyEventV2;
+
+  it("pauses and resumes", async () => {
+    const d = deps();
+    expect((await route(withId("POST /tenners/{tennerId}/pause", JSON.stringify({ until: "2026-10-12" })), d)).statusCode).toBe(200);
+    expect(d.pauseTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1", { until: "2026-10-12" });
+    expect((await route(withId("POST /tenners/{tennerId}/resume"), d)).statusCode).toBe(200);
+    expect(d.resumeTenner).toHaveBeenCalledWith(TEST_IDENTITY, "t-1");
+  });
+
+  it("sets and ends the vacation", async () => {
+    const d = deps();
+    const set = await route(event("PUT /household/vacation", {}, JSON.stringify({ from: "2026-10-10", until: "2026-10-24" })), d);
+    expect(set.statusCode).toBe(200);
+    expect(d.setVacation).toHaveBeenCalledWith(TEST_IDENTITY, { from: "2026-10-10", until: "2026-10-24" });
+    expect((await route(event("DELETE /household/vacation"), d)).statusCode).toBe(200);
+    expect(d.endVacation).toHaveBeenCalledWith(TEST_IDENTITY);
   });
 });
 

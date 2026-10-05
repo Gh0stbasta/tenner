@@ -56,6 +56,10 @@ locals {
     "PUT /household",                           # SCHEDULING-008
     "POST /tenners/{tennerId}/snooze",          # SCHEDULING-003
     "POST /tenners/{tennerId}/skip",            # SCHEDULING-004
+    "POST /tenners/{tennerId}/pause",           # SCHEDULING-005
+    "POST /tenners/{tennerId}/resume",          # SCHEDULING-005
+    "PUT /household/vacation",                  # SCHEDULING-005
+    "DELETE /household/vacation",               # SCHEDULING-005
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.

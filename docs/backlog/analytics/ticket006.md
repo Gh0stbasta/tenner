@@ -116,6 +116,11 @@ Sorted by `neglectScore` descending.
 
 ---
 
+## Paused Periods (added by SCHEDULING-005)
+
+Exclude paused periods from expected completions: individual pauses (`pausedAt` … `pausedUntil` on the Tenner;
+only the current pause is stored) and the household vacation (`tenner-households.vacation`, per category).
+
 ## Skipped and Snoozed Occurrences (added by SCHEDULING-004)
 
 Skipped occurrences (`tenner-history` items with `eventType = SKIP`, `historyId` prefix `skip#`) count neither

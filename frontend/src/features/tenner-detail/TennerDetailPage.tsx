@@ -12,6 +12,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { PageLoading } from "../../components/LoadingState";
 import { useArchiveTenner, useRestoreTenner } from "../tenners/api";
+import { usePauseControls } from "../pause/usePauseControls";
 import { ConfirmArchiveDialog } from "../tenners/ConfirmArchiveDialog";
 import { EditTennerDialog } from "../tenners/EditTennerDialog";
 import type { Tenner } from "../tenners/schemas";
@@ -51,6 +52,7 @@ export function TennerDetailPage() {
   const restore = useRestoreTenner();
   const [editing, setEditing] = useState<Tenner | null>(null);
   const [archiveCandidate, setArchiveCandidate] = useState<Tenner | null>(null);
+  const pauseControls = usePauseControls();
 
   if (tenner.isPending) return <PageLoading label="Tenner wird geladen" />;
   if (tenner.isError) {
@@ -88,10 +90,12 @@ export function TennerDetailPage() {
       <BackLink />
       <TennerDetailHeader
         tenner={data}
-        busy={archive.isPending || restore.isPending}
+        busy={archive.isPending || restore.isPending || pauseControls.resumingTennerId === data.tennerId}
         onEdit={() => setEditing(data)}
         onArchive={() => setArchiveCandidate(data)}
         onRestore={() => restore.mutate(data)}
+        onPause={() => pauseControls.requestPause(data)}
+        onResume={() => pauseControls.resume(data)}
       />
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -119,6 +123,7 @@ export function TennerDetailPage() {
         </Grid>
       </Grid>
       <EditTennerDialog tenner={editing} onClose={() => setEditing(null)} />
+      {pauseControls.dialog}
       <ConfirmArchiveDialog
         tenner={archiveCandidate}
         busy={archive.isPending}

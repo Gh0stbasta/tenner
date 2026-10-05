@@ -166,6 +166,8 @@ describe("Snooze on the detail page", () => {
         onEdit={noop}
         onArchive={noop}
         onRestore={noop}
+        onPause={noop}
+        onResume={noop}
       />,
     );
     expect(screen.getByRole("button", { name: "„Büro saugen“ verschieben" })).toHaveTextContent("Verschieben");
@@ -177,6 +179,8 @@ describe("Snooze on the detail page", () => {
         onEdit={noop}
         onArchive={noop}
         onRestore={noop}
+        onPause={noop}
+        onResume={noop}
       />,
     );
     expect(screen.queryByRole("button", { name: /verschieben/ })).not.toBeInTheDocument();

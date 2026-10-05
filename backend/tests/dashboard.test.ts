@@ -27,7 +27,8 @@ const mixed = [
 function setup(candidates: Tenner[] = mixed, now = new Date("2026-10-01T08:00:00Z"), timezone = "Europe/Berlin") {
   const repository = mockTennerRepository();
   repository.getDashboardCandidates.mockResolvedValue(candidates);
-  return { repository, service: new DashboardService(repository, () => now, async () => timezone) };
+  repository.list.mockResolvedValue([]);
+  return { repository, service: new DashboardService(repository, () => now, async () => timezone, async () => null) };
 }
 
 const ids = (items: { tennerId: string }[]) => items.map((i) => i.tennerId);
@@ -109,6 +110,7 @@ describe("DashboardService", () => {
       dueToday: [],
       overdue: [],
       upcoming: [],
+      paused: [],
       byUser: {},
       byCategory: {},
     });

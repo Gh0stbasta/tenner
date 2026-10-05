@@ -6,6 +6,7 @@ import { ConflictError, NotFoundError } from "../exceptions/index.js";
 import type { SkipEvent, Tenner } from "../models/index.js";
 import type { TennerRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
+import { avoidVacation, type VacationSource } from "../utils/pause.js";
 import { calculateNextDue } from "../utils/schedule.js";
 import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
 
@@ -15,6 +16,7 @@ export class SkipTennerService {
     private readonly clock: Clock,
     private readonly newId: IdGenerator,
     private readonly timezoneOf: TimeZoneSource,
+    private readonly vacationOf: VacationSource = async () => null,
   ) {}
 
   /**
@@ -29,7 +31,7 @@ export class SkipTennerService {
 
     const now = this.clock();
     const today = dateInTimeZone(now, await this.timezoneOf(tenantId));
-    const nextDue = nextDueAfterSkip(tenner, today);
+    const nextDue = avoidVacation(nextDueAfterSkip(tenner, today), tenner, await this.vacationOf(tenantId));
     const timestamp = toUtcTimestamp(now);
     const event: SkipEvent = {
       tenantId,

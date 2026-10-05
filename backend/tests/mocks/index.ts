@@ -65,7 +65,7 @@ export function mockLogger(): Mocked<Logger> {
 }
 
 export function mockTennerRepository(): Mocked<TennerRepository> {
-  return { getById: vi.fn(), getTitles: vi.fn(), getDashboardCandidates: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn(), completeTenner: vi.fn(), undoCompletion: vi.fn(), snoozeTenner: vi.fn(), skipTenner: vi.fn(), restore: vi.fn() };
+  return { getById: vi.fn(), getTitles: vi.fn(), getDashboardCandidates: vi.fn(), list: vi.fn(), save: vi.fn(), update: vi.fn(), delete: vi.fn(), completeTenner: vi.fn(), undoCompletion: vi.fn(), snoozeTenner: vi.fn(), skipTenner: vi.fn(), updateSchedule: vi.fn(), restore: vi.fn() };
 }
 
 export function mockCompletionRepository(): Mocked<CompletionRepository> {
@@ -111,6 +111,8 @@ export function tennerFixture(overrides: Partial<Tenner> = {}): Tenner {
     lastCompleted: null,
     nextDue: "2026-10-01",
     snoozedUntil: null,
+    pausedAt: null,
+    pausedUntil: null,
     active: true,
     deletedAt: null,
     createdAt: "2026-10-01T10:00:00Z",

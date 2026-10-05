@@ -59,6 +59,7 @@ export function dashboard(overrides: Partial<Dashboard> = {}): Dashboard {
     dueToday,
     overdue,
     upcoming,
+    paused: overrides.paused ?? [],
   };
 }
 
@@ -76,6 +77,8 @@ export function tenner(overrides: Partial<Tenner> = {}): Tenner {
     lastCompleted: null,
     nextDue: "2026-10-02",
     snoozedUntil: null,
+    pausedAt: null,
+    pausedUntil: null,
     active: true,
     deletedAt: null,
     createdAt: "2026-09-01T08:00:00Z",

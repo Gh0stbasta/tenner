@@ -38,6 +38,8 @@ export class CreateTennerService {
       lastCompleted: null,
       nextDue: dateInTimeZone(now, await this.timezoneOf(identity.tenantId)),
       snoozedUntil: null,
+      pausedAt: null,
+      pausedUntil: null,
       active: true,
       deletedAt: null,
       createdAt: timestamp,

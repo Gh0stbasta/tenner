@@ -785,3 +785,33 @@ needs it; consider a GSI if per-Tenner snooze history is needed at scale.
 ### Related Work
 
 SCHEDULING-003, SCHEDULING-004, ANALYTICS tickets, `backend/src/repositories/dynamodb/completion.mapper.ts` (`toSnoozeItem`, `toSkipItem`).
+
+## TD-029: Pause and vacation simplifications
+
+### Description
+
+SCHEDULING-005 evaluates pauses at read time and moves due dates only when a pause or vacation is set. Known gaps:
+
+- `GET /tenners?due=true|overdue=true` still includes paused Tenners (the UI shows them as "Pausiert").
+- A single pause moves the Tenner to the day after the pause without load spreading; only vacations spread.
+- Ending a vacation early does not pull moved due dates forward; changing it later only moves Tenners again.
+- Undo of a completion does not consider the vacation; no history of past pauses is kept.
+- A vacation reschedules Tenners with sequential conditional writes (not one transaction); concurrently changed
+  Tenners keep their date and are reported as conflicts.
+
+### Reason
+
+Keeps the feature free of a scheduler and new infrastructure for one household (see `docs/architecture.md`).
+
+### Impact
+
+Minor inconsistencies in list filters and edge cases; no data loss.
+
+### Suggested Improvement
+
+Pass the vacation into the list service for due/overdue filters; reuse `distributeResume` for single pauses; add a
+pause history when analytics needs it (ANALYTICS-006/008).
+
+### Related Work
+
+SCHEDULING-005, `backend/src/utils/pause.ts`, `backend/src/services/vacation.service.ts`.

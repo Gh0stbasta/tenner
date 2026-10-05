@@ -10,7 +10,8 @@ import { NoTennersFound } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
-import { useToday } from "../household/api";
+import { useHouseholdVacation, useToday } from "../household/api";
+import { usePauseControls } from "../pause/usePauseControls";
 import { formatMinutes } from "../../utils/format";
 import { trackEvent } from "../../utils/telemetry";
 import { DEFAULT_LIST_PARAMS, useArchiveTenner, useRestoreTenner, useTenners, type TennerListParams } from "./api";
@@ -41,6 +42,8 @@ export function TennersPage() {
   const [editing, setEditing] = useState<Tenner | null>(null);
   const debouncedSearch = useDebouncedValue(search.trim().toLocaleLowerCase("de-DE"), SEARCH_DEBOUNCE_MS);
   const today = useToday();
+  const vacation = useHouseholdVacation();
+  const pauseControls = usePauseControls();
 
   const tenners = useTenners(params);
   const archive = useArchiveTenner();
@@ -106,11 +109,13 @@ export function TennersPage() {
             >
               <TennerCard
                 tenner={tenner}
-                status={tennerStatus(tenner, today)}
-                busy={busyTennerId === tenner.tennerId}
+                status={tennerStatus(tenner, today, vacation)}
+                busy={busyTennerId === tenner.tennerId || pauseControls.resumingTennerId === tenner.tennerId}
                 onEdit={setEditing}
                 onArchive={setArchiveCandidate}
                 onRestore={(t) => restore.mutate(t)}
+                onPause={pauseControls.requestPause}
+                onResume={pauseControls.resume}
               />
             </Grid>
           ))}
@@ -119,6 +124,7 @@ export function TennersPage() {
 
       <CreateTennerDialog open={createOpen} onClose={() => setCreateOpen(false)} />
       <EditTennerDialog tenner={editing} onClose={() => setEditing(null)} />
+      {pauseControls.dialog}
       <ConfirmArchiveDialog
         tenner={archiveCandidate}
         busy={archive.isPending}

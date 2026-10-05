@@ -90,24 +90,24 @@ describe("createDependencies wiring", () => {
     await expect(deps().restoreTenner(TEST_IDENTITY, "t-1")).resolves.toMatchObject({ status: "RESTORED" });
   });
 
-  it("serves the dashboard from one nextDue-index query", async () => {
+  it("serves the dashboard from the nextDue-index query plus the active Tenners for the paused section (SCHEDULING-005)", async () => {
     send.mockResolvedValue({ Items: [tennerFixture({ nextDue: "2026-10-01" })] });
     await expect(deps().getDashboard("default", { date: "2026-10-01" })).resolves.toMatchObject({ summary: { dueTodayCount: 1 } });
     const queries = send.mock.calls.map(([c]) => c).filter((c) => c instanceof QueryCommand) as QueryCommand[];
-    expect(queries.map((q) => q.input.IndexName)).toEqual(["nextDue-index"]);
+    expect(queries.map((q) => q.input.IndexName)).toEqual(["nextDue-index", undefined]);
   });
 
   it("reads and saves the household timezone in the households table (SCHEDULING-008)", async () => {
     send.mockImplementation(async (command: unknown) => (command instanceof GetCommand ? { Item: { tenantId: "default", timezone: "Asia/Tokyo", updatedAt: "x" } } : { Attributes: { tenantId: "default", timezone: "UTC", updatedAt: "y", updatedBy: "STEFAN" } }));
-    await expect(deps().getHousehold("default")).resolves.toEqual({ timezone: "Asia/Tokyo" });
+    await expect(deps().getHousehold("default")).resolves.toEqual({ timezone: "Asia/Tokyo", vacation: null });
     expect((send.mock.calls[0]?.[0] as GetCommand).input).toEqual({ TableName: "tenner-households", Key: { tenantId: "default" } });
-    await expect(deps().updateHouseholdTimezone(TEST_IDENTITY, "UTC")).resolves.toEqual({ timezone: "UTC" });
+    await expect(deps().updateHouseholdTimezone(TEST_IDENTITY, "UTC")).resolves.toEqual({ timezone: "UTC", vacation: null });
     expect((send.mock.calls.at(-1)?.[0] as UpdateCommand).input.TableName).toBe("tenner-households");
   });
 
   it("falls back to the configured timezone when the household has none", async () => {
     send.mockResolvedValue({});
-    await expect(deps().getHousehold("default")).resolves.toEqual({ timezone: "Europe/Berlin" });
+    await expect(deps().getHousehold("default")).resolves.toEqual({ timezone: "Europe/Berlin", vacation: null });
   });
 
   it("reads a single Tenner with GetItem", async () => {

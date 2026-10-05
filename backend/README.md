@@ -100,7 +100,7 @@ The assignment is logged as `HouseholdMemberAssigned` with the Cognito username,
 
 | Model | Fields |
 |---|---|
-| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `frequencyUnit`, `frequencyInterval`, `weekdays`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `snoozedUntil` (YYYY-MM-DD or null, SCHEDULING-003), `active`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy` |
+| `Tenner` | `tenantId`, `tennerId`, `title`, `category`, `estimatedMinutes`, `frequencyDays`, `frequencyUnit`, `frequencyInterval`, `weekdays`, `assignedTo`, `lastCompleted` (UTC timestamp or null), `nextDue` (YYYY-MM-DD), `snoozedUntil` (YYYY-MM-DD or null, SCHEDULING-003), `pausedAt`, `pausedUntil` (SCHEDULING-005), `active`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy` |
 | `Completion` | `tenantId`, `completionId` (stored as `historyId`), `tennerId`, `completedBy`, `recordedBy`, `completedAt`, `actualMinutes` |
 
 `createdBy`, `updatedBy` and `recordedBy` are set from the authenticated user (SECURITY-004). Records written before
@@ -323,7 +323,10 @@ Response: `200 { success: true, data: { tenner: TennerResponse, skip: { skipId, 
 
 ### GET /dashboard
 
-This is the dashboard read model: one request, one DynamoDB Query.
+This is the dashboard read model: one request, two DynamoDB Queries (the `nextDue-index` window and, since
+SCHEDULING-005, the tenant's active Tenners for the `paused` section). Paused Tenners (individual pause or household
+vacation) are excluded from all sections and summaries and listed in `paused` with `pausedUntil` (null = open-ended)
+and `pauseReason` (`PAUSE` or `VACATION`).
 
 | Parameter | Values |
 |---|---|
@@ -429,7 +432,11 @@ and a Tenner fixture.
 | `POST /tenners/{tennerId}/skip` | `200 { success: true, data: { tenner, skip } }` (SCHEDULING-004). Returns `400`, `404`, or `409` with `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
 | `POST /tenners/{tennerId}/restore` | `200 { success: true, data: { tennerId, active, deletedAt } }` (TICKET-015, idempotent). Returns `400`, `404`, or `409` with `TENNER_NOT_DELETED` or `CONCURRENT_MODIFICATION` |
 | `GET /dashboard` | `200 { success: true, data: DashboardResponse }` (TICKET-016). Returns `400 VALIDATION_ERROR` "Invalid dashboard query." |
-| `GET /household` | `200 { success: true, data: { timezone } }` (SCHEDULING-008). Falls back to `APPLICATION_TIMEZONE` |
+| `GET /household` | `200 { success: true, data: { timezone, vacation } }` (SCHEDULING-008/005). Falls back to `APPLICATION_TIMEZONE`; `vacation` is `{ from, until, categories }` or null |
+| `PUT /household/vacation` | Body `{ "from": "YYYY-MM-DD", "until": "YYYY-MM-DD", "categories"?: [...] }` (SCHEDULING-005) → `200 { success: true, data: { household, rescheduled, conflicts } }`. `until` before `from` or in the past, empty or duplicate categories → 400. Moves affected Tenners behind the vacation (spread by daily load); concurrently changed Tenners keep their date and are counted in `conflicts`. Logged as `HouseholdVacationSet` |
+| `DELETE /household/vacation` | `200 { success: true, data: { timezone, vacation: null } }`. Moved due dates stay. Logged as `HouseholdVacationEnded` |
+| `POST /tenners/{tennerId}/pause` | Body optional `{ "until": "YYYY-MM-DD" }` (last paused day, after today) → `200 TennerResponse` with `pausedAt`, `pausedUntil` (SCHEDULING-005). A due date ≤ `until` moves to `until + 1`. 400, 404, 409 `TENNER_INACTIVE` or `CONCURRENT_MODIFICATION` |
+| `POST /tenners/{tennerId}/resume` | `200 TennerResponse` (SCHEDULING-005). Ends an individual pause; a passed due date becomes today. 409 `TENNER_NOT_PAUSED` if not paused (a vacation is ended with `DELETE /household/vacation`) |
 | `PUT /household` | Body `{ "timezone": "<IANA name>" }` → `200 { success: true, data: { timezone } }`. Unknown or malformed timezones → `400 VALIDATION_ERROR`. Affects every household member; logged as `HouseholdTimezoneChanged` |
 | `GET /history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `400` for invalid filters or cursor |
 | `GET /tenners/{tennerId}/history` | `200 { success: true, data: { items, nextCursor } }` (TICKET-020). Returns `404` for an unknown Tenner |

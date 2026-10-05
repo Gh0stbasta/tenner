@@ -358,6 +358,8 @@ python3 scripts/backfill_frequency_unit.py --apply   # conditional, idempotent w
 - **Calendar frequencies (SCHEDULING-001):** code before SCHEDULING-001 ignores `frequencyUnit` and uses
   `frequencyDays`, so after a revert monthly/yearly Tenners recur every 30/365 days. No data is lost.
   Code before SCHEDULING-002 ignores `weekdays`; weekday-bound Tenners then recur every 7 × interval days.
+- **Pause and vacation (SCHEDULING-005):** code before it ignores `pausedAt`/`pausedUntil` and the stored vacation;
+  paused Tenners then appear as due again. Due dates already moved by a vacation stay moved.
 - **Infrastructure changes:** reverting the Terraform code and letting `deploy.yml` apply it
   is the only supported way. Manual changes in AWS are not allowed (see `docs/architecture.md`).
 

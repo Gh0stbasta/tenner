@@ -5,3 +5,4 @@ export * from "./user.js";
 export * from "./household.js";
 export * from "./snooze.js";
 export * from "./skip.js";
+export * from "./vacation.js";

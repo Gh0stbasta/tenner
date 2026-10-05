@@ -12,6 +12,8 @@ import {
   type RestoreTennerRequest,
   type SnoozeTennerRequest,
   type SkipTennerRequest,
+  type PauseTennerRequest,
+  type VacationRequest,
   type UndoCompletionRequest,
   type UpdateTennerRequest,
 } from "../dto/index.js";
@@ -220,3 +222,19 @@ export const snoozeTennerSchema = z
 export const skipTennerSchema = z.strictObject({
   reason: z.string().trim().min(1, "Reason must not be blank.").max(200).optional(),
 }) satisfies z.ZodType<SkipTennerRequest>;
+
+/** Pause (SCHEDULING-005): optional last paused day; "after today" is checked by the service (household timezone). */
+export const pauseTennerSchema = z.strictObject({ until: isoDateSchema.optional() }) satisfies z.ZodType<PauseTennerRequest>;
+
+/** Vacation (SCHEDULING-005): from <= until; categories optional (default all), distinct. */
+export const vacationSchema = z
+  .strictObject({
+    from: isoDateSchema,
+    until: isoDateSchema,
+    categories: z
+      .array(categorySchema)
+      .min(1)
+      .refine((values) => new Set(values).size === values.length, "Categories must be distinct.")
+      .optional(),
+  })
+  .refine((value) => value.from <= value.until, { path: ["until"], message: "Must not be before from." }) satisfies z.ZodType<VacationRequest>;

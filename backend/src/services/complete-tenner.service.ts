@@ -6,6 +6,7 @@ import { ConflictError, NotFoundError, ValidationError } from "../exceptions/ind
 import type { Completion, Tenner } from "../models/index.js";
 import type { CompletionRecord, CompletionRepository, TennerRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock, type IdGenerator } from "../utils/clock.js";
+import { avoidVacation, type VacationSource } from "../utils/pause.js";
 import { calculateNextDue, type Frequency } from "../utils/schedule.js";
 import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
 import { sha256Json, uuidV5 } from "../utils/uuid.js";
@@ -26,6 +27,7 @@ export class CompleteTennerService {
     private readonly clock: Clock,
     private readonly newId: IdGenerator,
     private readonly timezoneOf: TimeZoneSource,
+    private readonly vacationOf: VacationSource = async () => null,
   ) {}
 
   /**
@@ -66,8 +68,12 @@ export class CompleteTennerService {
     const updated: Tenner = {
       ...tenner,
       lastCompleted: completedAt,
-      nextDue: nextDueAfter(completedAt, tenner, await this.timezoneOf(tenantId)),
+      // A due date inside the household vacation moves behind it (SCHEDULING-005).
+      nextDue: avoidVacation(nextDueAfter(completedAt, tenner, await this.timezoneOf(tenantId)), tenner, await this.vacationOf(tenantId)),
       snoozedUntil: null,
+      // Completing a paused Tenner ends its pause.
+      pausedAt: null,
+      pausedUntil: null,
       updatedAt: toUtcTimestamp(now),
       updatedBy: identity.userId,
     };

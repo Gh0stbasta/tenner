@@ -1014,7 +1014,7 @@ Introduced by TICKET-006 (`terraform/dynamodb.tf`).
 |---|---|---|---|
 | `tenner-tenners` | `tenantId` (PK), `tennerId` (SK) | `nextDue-index` (`tenantId`, `nextDue`), `assignedTo-index` (`tenantId`, `assignedTo`) | Current state of Tenners |
 | `tenner-history` | `tenantId` (PK), `historyId` (SK) | `completedAt-index` (`tenantId`, `completedAt`), `tennerId-completedAt-index` (`tenantTennerId`, `completedAt`, TICKET-014) | Immutable completion history |
-| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone`, `updatedAt`, `updatedBy` (SCHEDULING-008) |
+| `tenner-households` | `tenantId` (PK) | – | Household settings: `timezone` (SCHEDULING-008), `vacation` (SCHEDULING-005), `updatedAt`, `updatedBy` |
 
 All tables use:
 - `PAY_PER_REQUEST` billing
@@ -1173,6 +1173,23 @@ index.ts (routing, correlation, error mapping)
     (consistency on the detail page), which ignore skips automatically. ANALYTICS-006/008 must exclude skipped
     cycles from expected completions (noted in those tickets).
   - The reason is free text and is not logged.
+- **Pause and vacation (SCHEDULING-005):**
+  - Individual pause: `POST /tenners/{tennerId}/pause` (`until` = last paused day, optional) and `/resume`. Stored as
+    `pausedAt` + `pausedUntil` on the Tenner. Household vacation: `PUT`/`DELETE /household/vacation`
+    (`from`, `until`, optional `categories`, default all), stored in `tenner-households`.
+  - **Decision: no scheduler.** A Tenner is paused while `pausedAt` is set and `pausedUntil` is null or ≥ today, or
+    while the vacation covers today and its category. This is evaluated at read time, so a pause with an end date
+    ends on its own ("automatic resume"). Considered: a daily EventBridge job (new infrastructure, IAM changes for
+    the deploy role, a Scan) — rejected as unnecessary for one household.
+  - Due dates move when the pause is set, not when it ends: a pause until D moves a due date ≤ D to D + 1; a vacation
+    moves Tenners due within it (and overdue ones once it has started) behind it, spread by `distributeResume`
+    so that no day exceeds the average daily load (Σ minutes / frequencyDays) + 50 %, at least one Tenner per day.
+    Manual resume of an open-ended pause sets a passed due date to today. Completion and skip move a new due date
+    out of the vacation; completion also ends an individual pause.
+  - Effects: the dashboard leaves paused Tenners out of all sections and summaries and lists them in `paused` (a
+    second Query on the tenant's active Tenners). The frontend shows "Pausiert bis …". Notifications
+    (NOTIFICATION-001) and analytics (ANALYTICS-006/008) do not exist yet; their tickets now require excluding
+    paused Tenners and periods.
 - **Dashboard read model (TICKET-016):** `GET /dashboard` returns due today, overdue, upcoming (next 7 days),
   a summary and actionable workload per user and category in one response. It is backed by one `nextDue-index`
   Query (`nextDue <= reference + 7`, active and not deleted). The reference date is "today" in the household timezone, or the `date` parameter.

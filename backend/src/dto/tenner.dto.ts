@@ -42,6 +42,9 @@ export interface TennerResponse {
   readonly lastCompleted: string | null;
   readonly nextDue: string;
   readonly snoozedUntil: string | null;
+  /** Individual pause (SCHEDULING-005); a vacation pause is derived from GET /household. */
+  readonly pausedAt: string | null;
+  readonly pausedUntil: string | null;
   readonly active: boolean;
   readonly deletedAt: string | null;
   readonly createdAt: string;
@@ -83,6 +86,8 @@ export function toTennerResponse(tenner: Tenner): TennerResponse {
     lastCompleted: tenner.lastCompleted,
     nextDue: tenner.nextDue,
     snoozedUntil: tenner.snoozedUntil,
+    pausedAt: tenner.pausedAt,
+    pausedUntil: tenner.pausedUntil,
     active: tenner.active,
     deletedAt: tenner.deletedAt,
     createdAt: tenner.createdAt,
@@ -90,4 +95,9 @@ export function toTennerResponse(tenner: Tenner): TennerResponse {
     createdBy: tenner.createdBy,
     updatedBy: tenner.updatedBy,
   };
+}
+
+/** POST /tenners/{tennerId}/pause (SCHEDULING-005): until = last paused day; omitted = until resumed. */
+export interface PauseTennerRequest {
+  readonly until?: string | undefined;
 }

@@ -24,6 +24,13 @@ export interface DashboardTennerResponse {
   readonly daysUntilDue?: number;
 }
 
+export interface DashboardPausedTennerResponse extends DashboardTennerResponse {
+  /** Last paused day, or null while paused until resumed. */
+  readonly pausedUntil: string | null;
+  /** "PAUSE" for an individual pause, "VACATION" for the household vacation (individual wins). */
+  readonly pauseReason: "PAUSE" | "VACATION";
+}
+
 export interface DashboardSummaryResponse {
   readonly dueTodayCount: number;
   readonly overdueCount: number;
@@ -48,6 +55,8 @@ export interface DashboardResponse {
   readonly dueToday: DashboardTennerResponse[];
   readonly overdue: DashboardTennerResponse[];
   readonly upcoming: DashboardTennerResponse[];
+  /** Paused Tenners (SCHEDULING-005), excluded from all other sections and summaries. */
+  readonly paused: DashboardPausedTennerResponse[];
   /** Actionable workload per assigned user (users without actionable Tenners omitted). */
   readonly byUser: Partial<Record<UserId, DashboardGroupSummary>>;
   /** Actionable workload per category (categories without actionable Tenners omitted). */

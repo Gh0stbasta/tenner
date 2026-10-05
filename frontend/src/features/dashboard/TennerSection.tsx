@@ -3,17 +3,17 @@ import { useId, type ReactNode } from "react";
 import { TransitionGroup } from "react-transition-group";
 import type { DashboardTenner } from "./api";
 
-export interface TennerSectionProps {
+export interface TennerSectionProps<T extends DashboardTenner> {
   readonly title: string;
-  readonly items: readonly DashboardTenner[];
-  readonly children: (tenner: DashboardTenner) => ReactNode;
+  readonly items: readonly T[];
+  readonly children: (tenner: T) => ReactNode;
 }
 
 /**
  * A titled list section on the dashboard. Renders nothing when empty (no empty tables).
  * Completed items collapse out subtly (FRONTEND-007 completion animation).
  */
-export function TennerSection({ title, items, children }: TennerSectionProps) {
+export function TennerSection<T extends DashboardTenner>({ title, items, children }: TennerSectionProps<T>) {
   const headingId = useId();
   if (items.length === 0) return null;
   return (
