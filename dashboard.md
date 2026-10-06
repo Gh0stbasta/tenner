@@ -6,22 +6,22 @@
 
 | | |
 |---|---|
-| **Project health** | 🟢 **Healthy**: every deploy to `main` is green and all automated tests pass (backend 863, alexa 146, frontend 356, Terraform 74, scripts 43) |
+| **Project health** | 🟡 **Deploy blocked until this PR**: the deploy after PR #21 failed at Terraform apply (CloudWatch rejected the dashboard, HOTFIX-003); all automated tests pass (backend 863, alexa 146, frontend 356, Terraform 74, scripts 43) |
 | **Current phase** | Phase 2 (V2, "daily usefulness"). Phase 1 (MVP) is live |
-| **Current focus** | This pull request: the whole Alexa & Echo Show feature, reminders (daily digest, overdue alerts), secrets, monitoring and alarms |
-| **Biggest blocker** | None in the code. Going live needs your activation steps after the merge (account linking, Parameter Store values, SNS confirmations) |
+| **Current focus** | This pull request: HOTFIX-003, the CloudWatch dashboard fix that unblocks the Alexa, reminders and monitoring deploy |
+| **Biggest blocker** | The failed deploy; this PR fixes it. Afterwards going live needs your activation steps (account linking, Parameter Store values, SNS confirmations) |
 | **Recommended next action** | Merge, watch the deploy, then follow the activation list (`alexa/README.md`) and say „Alexa, öffne Tenner Board“ |
 
 ## 📈 Progress
 
 ```text
-Overall   ███████████░░░░░░░░░  54%   88 / 164 tickets
-Phase 1   ████████████████████ 100%   46 / 46   MVP + hotfixes (live since 2026-10-02)
+Overall   ███████████░░░░░░░░░  54%   89 / 165 tickets
+Phase 1   ████████████████████ 100%   47 / 47   MVP + hotfixes (live since 2026-10-02)
 Phase 2   █████████░░░░░░░░░░░  47%   42 / 89   V2 (Alexa, analytics, household, admin, scheduling complete)
 Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0 / 29   Long-Term
 ```
 
-✅ Completed: **88** · 🚧 In progress: **0** · 📋 Open: **76** · Total: **164**
+✅ Completed: **89** · 🚧 In progress: **0** · 📋 Open: **76** · Total: **165**
 
 ## 🧩 Feature Status
 
@@ -83,7 +83,7 @@ The notifier runs every 15 minutes (~2,900 runs/month, free); Alexa APIs and Par
 
 ## 🎯 Recommended Next Actions
 
-1. **Merge this PR** and check that the deploy, „Deploy Alexa skill package“ and „Alexa health check“ are green.
+1. **Merge this PR** (HOTFIX-003) and check that the deploy, „Deploy Alexa skill package“ and „Alexa health check“ are green.
 2. **Activate Alexa:** confirm the SNS e-mails, enter the account-linking values in the developer console, link in the Alexa app, set the two LWA parameters in Parameter Store, then „Alexa, öffne Tenner Board“.
 3. **Choose Alexa** for the daily digest / overdue alerts in Einstellungen → Benachrichtigungen and allow reminders.
 4. **Echo Show widget test** (1 day) and record the result in `docs/backlog/alexa/ticket007.md`.
@@ -93,6 +93,6 @@ The notifier runs every 15 minutes (~2,900 runs/month, free); Alexa APIs and Par
 
 ## ℹ About this dashboard
 
-- **Sources:** the ticket files in `docs/backlog/` and `docs/hotfix/` (a ticket counts as done when it has an "Implementation Status" section), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/architecture.md`](docs/architecture.md) and GitHub Actions (last 5 deploys green).
-- **Counting:** 165 ticket files minus one duplicate (TD-001) gives 164 tickets; planning tickets with other file names (e.g. `alexaSkill/alexaFoundation.md`) are not counted. Tickets with open manual checks (e.g. device tests) count as done once implemented. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
+- **Sources:** the ticket files in `docs/backlog/` and `docs/hotfix/` (a ticket counts as done when it has an "Implementation Status" section), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/architecture.md`](docs/architecture.md) and GitHub Actions (latest deploy, run 37436385511, failed at Terraform apply; the four before it green).
+- **Counting:** 166 ticket files minus one duplicate (TD-001) gives 165 tickets; planning tickets with other file names (e.g. `alexaSkill/alexaFoundation.md`) are not counted. Tickets with open manual checks (e.g. device tests) count as done once implemented. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).

@@ -117,6 +117,13 @@ run "dashboard_adds_optional_components" {
     condition     = strcontains(aws_cloudwatch_dashboard.tenner[0].dashboard_body, "tenner-alexa-skill") && strcontains(aws_cloudwatch_dashboard.tenner[0].dashboard_body, "eu-west-1")
     error_message = "The Alexa skill Lambda must appear with its own region."
   }
+
+  assert {
+    condition = alltrue([for widget in jsondecode(aws_cloudwatch_dashboard.tenner[0].dashboard_body).widgets :
+      alltrue([for metric in try(widget.properties.metrics, []) : can(length(metric)) && !can(tostring(metric))])
+    ])
+    error_message = "Every dashboard metrics entry must be an array (CloudWatch rejects flattened metric lists)."
+  }
 }
 
 run "alarms_reach_the_owner_by_email" {
