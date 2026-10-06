@@ -1409,6 +1409,10 @@ EventBridge rule rate(15 minutes) ──► Lambda tenner-notifier (backend/src/
   time, overdue threshold, weekly summary, quiet hours, channels (connected ones only), own timezone or the
   household's. Defaults apply until a member saves; `GET/PUT /users/{userId}/notification-preferences`, own member
   only; Settings → "Benachrichtigungen".
+- **Daily digest (NOTIFICATION-003):** due at the member's time (own timezone or the household's), not in quiet
+  hours; content from `DashboardService.getDashboard(tenant, { assignedTo })` (own + shared Tenners, paused and
+  vacation rules as on the dashboard), at most 10 items per section, skipped on empty days, deep link `APP_URL`.
+  Every due notification is also written to the log channel.
 - **Logs:** type, channel, user ID, status, error code — never message bodies or channel addresses.
 - **Infrastructure:** `terraform/notifier.tf`, created only with `notifications_enabled` (GitHub variable
   `NOTIFICATIONS_ENABLED`). EventBridge rule instead of EventBridge Scheduler (no extra invocation role).

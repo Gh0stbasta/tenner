@@ -87,6 +87,19 @@ run "notifier_runs_every_15_minutes" {
   }
 }
 
+run "notifier_reads_tenners_for_the_digest" {
+  command = plan
+
+  variables {
+    notifications_enabled = true
+  }
+
+  assert {
+    condition     = contains(keys(aws_lambda_function.notifier[0].environment[0].variables), "APP_URL")
+    error_message = "The notifier needs the web app URL for deep links."
+  }
+}
+
 run "delivery_log_expires_after_ttl" {
   command = plan
 

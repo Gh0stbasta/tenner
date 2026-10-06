@@ -5,9 +5,9 @@
 
 import { getDocumentClient } from "./clients/dynamodb.js";
 import { loadConfig, type AppConfig } from "./config.js";
-import { LogChannel, runNotifier, type NotificationChannel, type NotificationJob, type NotifierDependencies, type RunSummary } from "./notifications/index.js";
-import { DynamoDbDeliveryLog, DynamoDbHouseholdRepository } from "./repositories/index.js";
-import { HouseholdService, MemberService } from "./services/index.js";
+import { LogChannel, dailyDigestJob, runNotifier, type NotificationChannel, type NotificationJob, type NotifierDependencies, type RunSummary } from "./notifications/index.js";
+import { DynamoDbDeliveryLog, DynamoDbHouseholdRepository, DynamoDbTennerRepository } from "./repositories/index.js";
+import { DashboardService, HouseholdService, MemberService, NotificationPreferencesService } from "./services/index.js";
 import { systemClock } from "./utils/clock.js";
 import { createLogger } from "./utils/logger.js";
 
@@ -33,11 +33,24 @@ export function createNotifierDependencies(config: AppConfig = loadConfig(), ext
   const households = new DynamoDbHouseholdRepository(client, config.tables.households);
   const householdService = new HouseholdService(households, systemClock, config.timezone, async () => []);
   const memberService = new MemberService(households, systemClock);
+  const timezoneOf = (tenantId: string) => householdService.timezoneOf(tenantId);
+  const membersOf = (tenantId: string) => memberService.membersOf(tenantId);
+  const tenners = new DynamoDbTennerRepository(client, config.tables.tenners, config.tables.history);
+  // Same read model as GET /dashboard: due, overdue, shared and paused rules are not duplicated.
+  const dashboardService = new DashboardService(tenners, systemClock, timezoneOf, (tenantId) => householdService.vacationOf(tenantId), membersOf);
+  const preferences = new NotificationPreferencesService(households, systemClock, timezoneOf);
+  const jobs: NotificationJob[] = [
+    dailyDigestJob({
+      preferencesOf: (tenantId, userId) => preferences.preferencesOf(tenantId, userId),
+      dashboard: (tenantId, request) => dashboardService.getDashboard(tenantId, request),
+      appUrl: config.appUrl,
+    }),
+  ];
   return {
     tenantId: config.householdTenantId,
-    members: (tenantId) => memberService.membersOf(tenantId),
-    timezoneOf: (tenantId) => householdService.timezoneOf(tenantId),
-    jobs: extensions?.jobs ?? [],
+    members: membersOf,
+    timezoneOf,
+    jobs: [...jobs, ...(extensions?.jobs ?? [])],
     channels: extensions?.channels ?? [new LogChannel(logger)],
     log: new DynamoDbDeliveryLog(client, config.notificationsTable),
     logger,

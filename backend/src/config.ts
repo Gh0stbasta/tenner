@@ -24,6 +24,8 @@ export interface AppConfig {
   readonly tables: TableConfig | undefined;
   /** Self-assignment to a household member (HOTFIX-001). Undefined when the variables are missing. */
   readonly onboarding: OnboardingConfig | undefined;
+  /** Web app URL for deep links in notifications (APP_URL, NOTIFICATION-003). */
+  readonly appUrl: string | undefined;
   /** The household's tenant (HOUSEHOLD_TENANT_ID), e.g. "default"; the notifier runs for it. */
   readonly householdTenantId: string | undefined;
   /** Notification delivery log table (NOTIFICATIONS_TABLE, NOTIFICATION-001); undefined outside the notifier. */
@@ -70,6 +72,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     alexaClientId: readTrimmed(env.ALEXA_CLIENT_ID),
     notificationsTable: readTrimmed(env.NOTIFICATIONS_TABLE),
     householdTenantId,
+    appUrl: readTrimmed(env.APP_URL),
   };
 }
 

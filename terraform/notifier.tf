@@ -88,6 +88,13 @@ data "aws_iam_policy_document" "notifier" {
     resources = [aws_dynamodb_table.households.arn]
   }
 
+  # Daily digest / overdue alerts (NOTIFICATION-003/004): the dashboard read model queries the Tenner table.
+  statement {
+    sid       = "ReadTenners"
+    actions   = ["dynamodb:GetItem", "dynamodb:Query"]
+    resources = [aws_dynamodb_table.tenners.arn, "${aws_dynamodb_table.tenners.arn}/index/*"]
+  }
+
   statement {
     sid       = "DeliveryLog"
     actions   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
@@ -130,6 +137,7 @@ resource "aws_lambda_function" "notifier" {
       NOTIFICATIONS_TABLE  = aws_dynamodb_table.notifications[0].name
       APPLICATION_TIMEZONE = var.application_timezone
       HOUSEHOLD_TENANT_ID  = local.household_tenant_id
+      APP_URL              = "https://${aws_cloudfront_distribution.frontend.domain_name}" # deep links (NOTIFICATION-003)
     }
   }
 

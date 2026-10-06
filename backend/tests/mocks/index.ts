@@ -51,6 +51,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     alexaClientId: undefined,
     notificationsTable: undefined,
     householdTenantId: "default",
+    appUrl: undefined,
     ...overrides,
   };
 }

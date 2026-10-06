@@ -216,6 +216,6 @@ describe("createNotifierDependencies", () => {
     const deps = createNotifierDependencies(testConfig({ notificationsTable: "tenner-notifications" }));
     expect(deps.tenantId).toBe("default");
     expect(deps.channels.map((channel) => channel.type)).toEqual(["LOG"]);
-    expect(deps.jobs).toEqual([]);
+    expect(deps.jobs.map((job) => job.type)).toEqual(["DAILY_DIGEST"]);
   });
 });
