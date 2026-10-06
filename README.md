@@ -383,7 +383,7 @@ when the GitHub **variable** `NOTIFICATIONS_ENABLED` is `true`. Before setting i
 - IAM: create/manage `tenner-notifier-role` and its inline policy, `iam:PassRole` for it to Lambda
 - CloudWatch Logs: `/tenner/notifier`
 
-Content: the daily digest (NOTIFICATION-003) at each member's time; until a real channel is connected it is
+Content: the daily digest (NOTIFICATION-003) at each member's time and overdue alerts (NOTIFICATION-004) at 17:00; until a real channel is connected it is
 written to the notifier log only (`NotificationLogged`).
 
 ### Secrets (SECURITY-006)

@@ -1413,6 +1413,10 @@ EventBridge rule rate(15 minutes) ──► Lambda tenner-notifier (backend/src/
   hours; content from `DashboardService.getDashboard(tenant, { assignedTo })` (own + shared Tenners, paused and
   vacation rules as on the dashboard), at most 10 items per section, skipped on empty days, deep link `APP_URL`.
   Every due notification is also written to the log channel.
+- **Overdue alerts (NOTIFICATION-004):** checked daily at 17:00 local (outside quiet hours); a Tenner of the member
+  (own or shared) with `overdueDays ≥ minDaysOverdue` is alerted once per overdue cycle (marker
+  `<tenant>#<user>#OVERDUE#<tennerId>#<nextDue>` in the delivery log), one reminder after 2 × `frequencyDays`
+  (`…#ESCALATION`); all Tenners of a member are bundled into one message per day.
 - **Logs:** type, channel, user ID, status, error code — never message bodies or channel addresses.
 - **Infrastructure:** `terraform/notifier.tf`, created only with `notifications_enabled` (GitHub variable
   `NOTIFICATIONS_ENABLED`). EventBridge rule instead of EventBridge Scheduler (no extra invocation role).

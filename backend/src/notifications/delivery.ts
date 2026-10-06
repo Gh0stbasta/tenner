@@ -30,6 +30,23 @@ export interface DeliveryLog {
   claim(record: DeliveryRecord): Promise<boolean>;
   /** Final status after sending. */
   complete(notificationKey: string, status: DeliveryRecord["status"], attempts: number, errorCode: string | null): Promise<void>;
+  /** True if a marker or delivery with this key exists (NOTIFICATION-004: Tenner already alerted in this cycle). */
+  has(notificationKey: string): Promise<boolean>;
+  /** Record a marker (status SENT) without sending, e.g. "this Tenner was part of an alert". */
+  mark(record: DeliveryRecord): Promise<void>;
+}
+
+/** A delivery record for `key`, created now, expiring after the TTL. */
+export function deliveryRecord(key: string, fields: Pick<DeliveryRecord, "type" | "channel" | "userId">, now: Date, status: DeliveryRecord["status"] = "PENDING"): DeliveryRecord {
+  return {
+    notificationKey: key,
+    ...fields,
+    status,
+    attempts: 0,
+    errorCode: null,
+    createdAt: now.toISOString(),
+    expiresAt: Math.floor(now.getTime() / 1000) + DELIVERY_LOG_TTL_DAYS * 86_400,
+  };
 }
 
 export interface DeliveryContext {
@@ -48,17 +65,7 @@ export async function deliver(context: DeliveryContext, key: string, message: No
   const now = context.now();
   const fields = { notificationKey: key, type: message.type, channel: channel.type, userId: recipient.userId };
   try {
-    const claimed = await log.claim({
-      notificationKey: key,
-      type: message.type,
-      channel: channel.type,
-      userId: recipient.userId,
-      status: "PENDING",
-      attempts: 0,
-      errorCode: null,
-      createdAt: now.toISOString(),
-      expiresAt: Math.floor(now.getTime() / 1000) + DELIVERY_LOG_TTL_DAYS * 86_400,
-    });
+    const claimed = await log.claim(deliveryRecord(key, { type: message.type, channel: channel.type, userId: recipient.userId }, now));
     if (!claimed) {
       logger.debug("Notification already delivered", { event: "NotificationDuplicate", ...fields });
       return { status: "SKIPPED", errorCode: "DUPLICATE" };

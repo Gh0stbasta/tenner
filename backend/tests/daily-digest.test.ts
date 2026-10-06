@@ -110,6 +110,8 @@ describe("dailyDigestJob", () => {
     const log: DeliveryLog = {
       claim: async (record) => (records.has(record.notificationKey) ? false : (records.add(record.notificationKey), true)),
       complete: async () => undefined,
+      has: async () => false,
+      mark: async () => undefined,
     };
     const logger = mockLogger();
     const deps = {

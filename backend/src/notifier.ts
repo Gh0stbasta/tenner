@@ -5,7 +5,8 @@
 
 import { getDocumentClient } from "./clients/dynamodb.js";
 import { loadConfig, type AppConfig } from "./config.js";
-import { LogChannel, dailyDigestJob, runNotifier, type NotificationChannel, type NotificationJob, type NotifierDependencies, type RunSummary } from "./notifications/index.js";
+import type { DashboardRequest } from "./dto/index.js";
+import { LogChannel, dailyDigestJob, overdueAlertJob, runNotifier, type NotificationChannel, type NotificationJob, type NotifierDependencies, type RunSummary } from "./notifications/index.js";
 import { DynamoDbDeliveryLog, DynamoDbHouseholdRepository, DynamoDbTennerRepository } from "./repositories/index.js";
 import { DashboardService, HouseholdService, MemberService, NotificationPreferencesService } from "./services/index.js";
 import { systemClock } from "./utils/clock.js";
@@ -39,11 +40,18 @@ export function createNotifierDependencies(config: AppConfig = loadConfig(), ext
   // Same read model as GET /dashboard: due, overdue, shared and paused rules are not duplicated.
   const dashboardService = new DashboardService(tenners, systemClock, timezoneOf, (tenantId) => householdService.vacationOf(tenantId), membersOf);
   const preferences = new NotificationPreferencesService(households, systemClock, timezoneOf);
+  const log = new DynamoDbDeliveryLog(client, config.notificationsTable);
+  const content = {
+    preferencesOf: (tenantId: string, userId: string) => preferences.preferencesOf(tenantId, userId),
+    dashboard: (tenantId: string, request: DashboardRequest) => dashboardService.getDashboard(tenantId, request),
+    appUrl: config.appUrl,
+  };
   const jobs: NotificationJob[] = [
-    dailyDigestJob({
-      preferencesOf: (tenantId, userId) => preferences.preferencesOf(tenantId, userId),
-      dashboard: (tenantId, request) => dashboardService.getDashboard(tenantId, request),
-      appUrl: config.appUrl,
+    dailyDigestJob(content),
+    overdueAlertJob({
+      ...content,
+      frequencies: async (tenantId) => new Map((await tenners.list(tenantId)).map((tenner) => [tenner.tennerId, tenner.frequencyDays])),
+      log,
     }),
   ];
   return {
@@ -52,7 +60,7 @@ export function createNotifierDependencies(config: AppConfig = loadConfig(), ext
     timezoneOf,
     jobs: [...jobs, ...(extensions?.jobs ?? [])],
     channels: extensions?.channels ?? [new LogChannel(logger)],
-    log: new DynamoDbDeliveryLog(client, config.notificationsTable),
+    log,
     logger,
     now: systemClock,
   };

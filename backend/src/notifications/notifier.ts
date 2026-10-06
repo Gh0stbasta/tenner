@@ -17,8 +17,10 @@ export interface NotificationJob {
   channelsDue(recipient: Recipient, now: Date): Promise<readonly ChannelType[]>;
   /** The message, or undefined when there is nothing to say (e.g. an empty day). */
   render(recipient: Recipient, now: Date): Promise<NotificationMessage | undefined>;
-  /** Extra dedup key part (e.g. overdue cycle); default: one per day. */
+  /** Extra dedup key part; default: one message per job, member, channel and day. */
   dedupSuffix?(message: NotificationMessage): string | undefined;
+  /** Called once after the message reached at least one channel (e.g. to remember alerted Tenners). */
+  onDelivered?(message: NotificationMessage, recipient: Recipient, now: Date): Promise<void>;
 }
 
 export interface NotifierDependencies extends DeliveryContext {
@@ -52,12 +54,15 @@ export async function runNotifier(deps: NotifierDependencies): Promise<RunSummar
         const message = await job.render(recipient, now);
         if (message === undefined) continue;
         const date = localTime(now, timezone).date;
+        let delivered = false;
         for (const channel of channels) {
           const suffix = job.dedupSuffix?.(message);
           const key = notificationKey({ tenantId: deps.tenantId, userId: member.userId, type: job.type, channel: channel.type, date, ...(suffix === undefined ? {} : { suffix }) });
           const result = await deliver(deps, key, message, recipient, channel);
           deliveries[result.status] += 1;
+          delivered ||= result.status === "SENT";
         }
+        if (delivered) await job.onDelivered?.(message, recipient, now);
       } catch (error) {
         errors += 1;
         deps.logger.error("Notification job failed", { event: "NotificationJobFailed", type: job.type, userId: member.userId, error: error instanceof Error ? error.name : "UnknownError" });

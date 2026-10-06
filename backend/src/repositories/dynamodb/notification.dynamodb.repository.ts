@@ -1,6 +1,6 @@
 /** Delivery log in tenner-notifications (NOTIFICATION-001): key notificationKey, TTL attribute expiresAt. */
 
-import { UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, UpdateCommand, type GetCommandOutput } from "@aws-sdk/lib-dynamodb";
 import type { DocumentSender } from "../../clients/dynamodb.js";
 import { MAX_TOTAL_ATTEMPTS, type DeliveryLog, type DeliveryRecord } from "../../notifications/delivery.js";
 import { isConditionalCheckFailed, toPersistenceError } from "./errors.js";
@@ -68,6 +68,39 @@ export class DynamoDbDeliveryLog implements DeliveryLog {
       );
     } catch (error) {
       throw toPersistenceError("record notification status", error);
+    }
+  }
+
+  async has(notificationKey: string): Promise<boolean> {
+    try {
+      const result = (await this.client.send(new GetCommand({ TableName: this.tableName, Key: { notificationKey }, ProjectionExpression: "notificationKey" }))) as GetCommandOutput;
+      return result.Item !== undefined;
+    } catch (error) {
+      throw toPersistenceError("read notification", error);
+    }
+  }
+
+  /** Unconditional marker write (UpdateItem keeps the notifier role at GetItem/UpdateItem). */
+  async mark(record: DeliveryRecord): Promise<void> {
+    try {
+      await this.client.send(
+        new UpdateCommand({
+          TableName: this.tableName,
+          Key: { notificationKey: record.notificationKey },
+          UpdateExpression: "SET #type = :type, #channel = :channel, #userId = :userId, #status = :status, #createdAt = :createdAt, #expiresAt = :expiresAt",
+          ExpressionAttributeNames: { "#type": "type", "#channel": "channel", "#userId": "userId", "#status": "status", "#createdAt": "createdAt", "#expiresAt": "expiresAt" },
+          ExpressionAttributeValues: {
+            ":type": record.type,
+            ":channel": record.channel,
+            ":userId": record.userId,
+            ":status": record.status,
+            ":createdAt": record.createdAt,
+            ":expiresAt": record.expiresAt,
+          },
+        }),
+      );
+    } catch (error) {
+      throw toPersistenceError("mark notification", error);
     }
   }
 }

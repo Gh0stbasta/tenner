@@ -5,3 +5,4 @@ export * from "./notifier.js";
 export * from "./schedule.js";
 export * from "./daily-digest.js";
 export * from "./text.js";
+export * from "./overdue-alerts.js";

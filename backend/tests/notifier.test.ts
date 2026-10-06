@@ -21,28 +21,11 @@ import {
 } from "../src/notifications/index.js";
 import { createNotifierDependencies, NotifierNotConfiguredError } from "../src/notifier.js";
 import { DynamoDbDeliveryLog } from "../src/repositories/index.js";
+import { memoryDeliveryLog } from "./mocks/delivery-log.js";
 import { mockLogger, testConfig } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-06T05:30:10Z"); // 07:30 in Berlin
 const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: false, createdAt: "t", updatedAt: "t" };
-
-/** In-memory delivery log with the same claim rules as DynamoDB. */
-function memoryLog() {
-  const records = new Map<string, DeliveryRecord>();
-  const log: DeliveryLog = {
-    claim: vi.fn(async (record: DeliveryRecord) => {
-      const existing = records.get(record.notificationKey);
-      if (existing && !(existing.status === "FAILED" && existing.attempts < 9)) return false;
-      records.set(record.notificationKey, { ...record, attempts: existing?.attempts ?? 0 });
-      return true;
-    }),
-    complete: vi.fn(async (key: string, status: DeliveryRecord["status"], attempts: number, errorCode: string | null) => {
-      const existing = records.get(key) as DeliveryRecord;
-      records.set(key, { ...existing, status, attempts: existing.attempts + attempts, errorCode });
-    }),
-  };
-  return { log, records };
-}
 
 const message = (userId: string): NotificationMessage => ({ type: "DAILY_DIGEST", userId, subject: "Heute", textBody: "3 Tenner" });
 
@@ -57,7 +40,7 @@ function digestJob(overrides: Partial<NotificationJob> = {}): NotificationJob {
 }
 
 function setup(overrides: { jobs?: NotificationJob[]; channels?: NotificationChannel[]; now?: Date } = {}) {
-  const { log, records } = memoryLog();
+  const { log, records } = memoryDeliveryLog();
   const logger = mockLogger();
   const deps = {
     tenantId: "default",
@@ -165,14 +148,14 @@ describe("deliver", () => {
   it("reports an unavailable delivery log without sending", async () => {
     const { deps } = setup();
     const send = vi.fn();
-    const log: DeliveryLog = { claim: async () => Promise.reject(new Error("down")), complete: vi.fn() };
+    const log: DeliveryLog = { claim: async () => Promise.reject(new Error("down")), complete: vi.fn(), has: vi.fn(), mark: vi.fn() };
     expect(await deliver({ ...deps, log }, "k", message("JULIA"), recipient, { type: "LOG", send })).toEqual({ status: "FAILED", errorCode: "DELIVERY_LOG_UNAVAILABLE" });
     expect(send).not.toHaveBeenCalled();
   });
 
   it("still reports the result when recording the status fails", async () => {
     const { deps } = setup();
-    const log: DeliveryLog = { claim: async () => true, complete: async () => Promise.reject(new Error("down")) };
+    const log: DeliveryLog = { claim: async () => true, complete: async () => Promise.reject(new Error("down")), has: vi.fn(), mark: vi.fn() };
     expect((await deliver({ ...deps, log }, "k", message("JULIA"), recipient, { type: "LOG", send: async () => ({ status: "SENT" }) })).status).toBe("SENT");
     expect(deps.logger.error).toHaveBeenCalledWith("Notification status not recorded", expect.anything());
   });
@@ -208,6 +191,26 @@ describe("DynamoDbDeliveryLog", () => {
   });
 });
 
+describe("DynamoDbDeliveryLog markers (NOTIFICATION-004)", () => {
+  const client = (send: () => Promise<unknown>) => ({ send: vi.fn<(command: unknown) => Promise<unknown>>(send) });
+
+  it("checks existence with a key-only read and writes markers unconditionally", async () => {
+    expect(await new DynamoDbDeliveryLog(client(async () => ({ Item: { notificationKey: "k" } })), "t").has("k")).toBe(true);
+    expect(await new DynamoDbDeliveryLog(client(async () => ({})), "t").has("k")).toBe(false);
+    const c = client(async () => ({}));
+    const record: DeliveryRecord = { notificationKey: "m", type: "OVERDUE_ALERT", channel: "ANY", userId: "U", status: "SENT", attempts: 0, errorCode: null, createdAt: "t", expiresAt: 5 };
+    await new DynamoDbDeliveryLog(c, "t").mark(record);
+    expect((c.send.mock.calls[0]?.[0] as UpdateCommand).input).toMatchObject({ Key: { notificationKey: "m" }, ExpressionAttributeValues: { ":status": "SENT", ":expiresAt": 5 } });
+    expect((c.send.mock.calls[0]?.[0] as UpdateCommand).input.ConditionExpression).toBeUndefined();
+  });
+
+  it("wraps storage errors", async () => {
+    const failing = new DynamoDbDeliveryLog(client(async () => Promise.reject(new Error("x"))), "t");
+    await expect(failing.has("k")).rejects.toThrow("Failed to read notification.");
+    await expect(failing.mark({ notificationKey: "m" } as DeliveryRecord)).rejects.toThrow("Failed to mark notification.");
+  });
+});
+
 describe("createNotifierDependencies", () => {
   it("requires tables, the notifications table and the tenant", () => {
     expect(() => createNotifierDependencies(testConfig({ tables: undefined }))).toThrow(NotifierNotConfiguredError);
@@ -216,6 +219,6 @@ describe("createNotifierDependencies", () => {
     const deps = createNotifierDependencies(testConfig({ notificationsTable: "tenner-notifications" }));
     expect(deps.tenantId).toBe("default");
     expect(deps.channels.map((channel) => channel.type)).toEqual(["LOG"]);
-    expect(deps.jobs.map((job) => job.type)).toEqual(["DAILY_DIGEST"]);
+    expect(deps.jobs.map((job) => job.type)).toEqual(["DAILY_DIGEST", "OVERDUE_ALERT"]);
   });
 });
