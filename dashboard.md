@@ -6,22 +6,22 @@
 
 | | |
 |---|---|
-| **Project health** | 🟡 **Deploy blocked until this PR**: infrastructure, web app, smoke tests and the skill package are deployed; only the Alexa health check failed (testing not enabled, HOTFIX-005). All automated tests pass (backend 863, alexa 147, frontend 356, Terraform 74, scripts 44) |
+| **Project health** | 🟡 **Deploy red until this PR**: everything is deployed and the skill answers in the console; only Amazon's skill simulator in the health check fails (HOTFIX-006). All automated tests pass (backend 863, alexa 147, frontend 356, Terraform 74, scripts 45) |
 | **Current phase** | Phase 2 (V2, "daily usefulness"). Phase 1 (MVP) is live |
-| **Current focus** | This pull request: HOTFIX-005, the deploy enables skill testing and the health check shows Amazon's reason on failure |
-| **Biggest blocker** | The failed deploy; this PR fixes it. Afterwards going live needs your activation steps (account linking, Parameter Store values, SNS confirmations) |
+| **Current focus** | This pull request: HOTFIX-006, the health check retries Amazon's simulator and only warns when the simulator itself fails |
+| **Biggest blocker** | None in the code after this PR. Account linking is configured; the remaining activation steps are Parameter Store values, SNS confirmations and the Alexa app permissions |
 | **Recommended next action** | Merge, watch the deploy, then follow the activation list (`alexa/README.md`) and say „Alexa, öffne Tenner Board“ |
 
 ## 📈 Progress
 
 ```text
-Overall   ███████████░░░░░░░░░  54%   91 / 167 tickets
-Phase 1   ████████████████████ 100%   49 / 49   MVP + hotfixes (live since 2026-10-02)
+Overall   ███████████░░░░░░░░░  54%   92 / 168 tickets
+Phase 1   ████████████████████ 100%   50 / 50   MVP + hotfixes (live since 2026-10-02)
 Phase 2   █████████░░░░░░░░░░░  47%   42 / 89   V2 (Alexa, analytics, household, admin, scheduling complete)
 Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0 / 29   Long-Term
 ```
 
-✅ Completed: **91** · 🚧 In progress: **0** · 📋 Open: **76** · Total: **167**
+✅ Completed: **92** · 🚧 In progress: **0** · 📋 Open: **76** · Total: **168**
 
 ## 🧩 Feature Status
 
@@ -83,8 +83,8 @@ The notifier runs every 15 minutes (~2,900 runs/month, free); Alexa APIs and Par
 
 ## 🎯 Recommended Next Actions
 
-1. **Merge this PR** (HOTFIX-005) and check that the deploy, „Deploy Alexa skill package“ and „Alexa health check“ are green.
-2. **Activate Alexa:** confirm the SNS e-mails, enter the account-linking values in the developer console, link in the Alexa app, set the two LWA parameters in Parameter Store, then „Alexa, öffne Tenner Board“.
+1. **Merge this PR** (HOTFIX-006) and check that the deploy, „Deploy Alexa skill package“ and „Alexa health check“ are green.
+2. **Finish Alexa activation:** confirm the SNS e-mails, link in the Alexa app (if not done yet), set the two LWA parameters in Parameter Store, then „Alexa, öffne Tenner Board“.
 3. **Choose Alexa** for the daily digest / overdue alerts in Einstellungen → Benachrichtigungen and allow reminders.
 4. **Echo Show widget test** (1 day) and record the result in `docs/backlog/alexa/ticket007.md`.
 5. **Next block:** phone push notifications (MOBILE-006) or Telegram (NOTIFICATION-006) as a second reminder channel.
@@ -93,6 +93,6 @@ The notifier runs every 15 minutes (~2,900 runs/month, free); Alexa APIs and Par
 
 ## ℹ About this dashboard
 
-- **Sources:** the ticket files in `docs/backlog/` and `docs/hotfix/` (a ticket counts as done when it has an "Implementation Status" section), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/architecture.md`](docs/architecture.md) and GitHub Actions (the last three deploys failed: run 37436385511 at Terraform apply (HOTFIX-003), run 37438739108 at the skill manifest (HOTFIX-004), run 37445434324 at the Alexa health check (HOTFIX-005); the two before them green).
-- **Counting:** 168 ticket files minus one duplicate (TD-001) gives 167 tickets; planning tickets with other file names (e.g. `alexaSkill/alexaFoundation.md`) are not counted. Tickets with open manual checks (e.g. device tests) count as done once implemented. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
+- **Sources:** the ticket files in `docs/backlog/` and `docs/hotfix/` (a ticket counts as done when it has an "Implementation Status" section), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/architecture.md`](docs/architecture.md) and GitHub Actions (the last four deploys failed: run 37436385511 at Terraform apply (HOTFIX-003), run 37438739108 at the skill manifest (HOTFIX-004), run 37445434324 at the Alexa health check (HOTFIX-005), run 37448126167 at Amazon's simulator (HOTFIX-006); the one before them green).
+- **Counting:** 169 ticket files minus one duplicate (TD-001) gives 168 tickets; planning tickets with other file names (e.g. `alexaSkill/alexaFoundation.md`) are not counted. Tickets with open manual checks (e.g. device tests) count as done once implemented. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).
