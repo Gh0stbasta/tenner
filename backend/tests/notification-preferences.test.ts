@@ -39,9 +39,6 @@ describe("NotificationPreferencesService", () => {
     expect(result.preferences).toEqual(DEFAULT_NOTIFICATION_PREFERENCES);
     expect(result.effectiveTimezone).toBe("Europe/Berlin");
     expect(result.channels).toEqual([
-      { type: "EMAIL", connected: false },
-      { type: "TELEGRAM", connected: false },
-      { type: "WEB_PUSH", connected: false },
       { type: "ALEXA", connected: false },
     ]);
   });

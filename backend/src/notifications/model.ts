@@ -5,8 +5,8 @@ import type { UserId } from "../models/index.js";
 export const NOTIFICATION_TYPES = ["DAILY_DIGEST", "OVERDUE_ALERT", "WEEKLY_SUMMARY"] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
-/** LOG is the test/dry-run channel; ALEXA is added by ALEXA-008; the others by NOTIFICATION-005 – 007. */
-export const CHANNEL_TYPES = ["LOG", "EMAIL", "TELEGRAM", "WEB_PUSH", "ALEXA"] as const;
+/** LOG is the test/dry-run channel; ALEXA is added by ALEXA-008 (other channels were dropped, CLEANUP-001). */
+export const CHANNEL_TYPES = ["LOG", "ALEXA"] as const;
 export type ChannelType = (typeof CHANNEL_TYPES)[number];
 
 /** Rendered content; channels decide how to present it. No personal data beyond names and Tenner titles. */

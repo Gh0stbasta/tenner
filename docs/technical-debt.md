@@ -1035,7 +1035,9 @@ ALEXA-007, ALEXA-008, `backend/src/alexa/`, `alexa/widgets/`.
 
 ---
 
-## TD-037: Dropped notification channels still listed in the channel enums
+## TD-037: Dropped notification channels still listed in the channel enums (resolved)
+
+> Resolved by CLEANUP-001 (2026-10-06): the enums contain `LOG` and `ALEXA` (user channels: `ALEXA`) only.
 
 ### Description
 

@@ -11,7 +11,7 @@ import type { HouseholdRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock } from "../utils/clock.js";
 import type { TimeZoneSource } from "../utils/timezone.js";
 
-/** Channels a member has connected (ALEXA-008 adds Alexa; NOTIFICATION-005 – 007 the others). */
+/** Channels a member has connected (ALEXA-008: Alexa, the only user channel). */
 export type ConnectedChannels = (tenantId: string, userId: UserId) => Promise<readonly UserChannel[]>;
 
 export class NotificationPreferencesService {

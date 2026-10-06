@@ -52,9 +52,6 @@ export const DEFAULT_NOTIFICATION_RESPONSE = {
     quietHours: { start: "21:30", end: "07:00" },
   },
   channels: [
-    { type: "EMAIL", connected: false },
-    { type: "TELEGRAM", connected: false },
-    { type: "WEB_PUSH", connected: false },
     { type: "ALEXA", connected: false },
   ],
   effectiveTimezone: "Europe/Berlin",

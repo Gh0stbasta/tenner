@@ -5,13 +5,11 @@ import { z } from "zod";
 import { apiClient } from "../../api/client";
 import { WEEKDAYS } from "../../types/domain";
 
-export const USER_CHANNELS = ["EMAIL", "TELEGRAM", "WEB_PUSH", "ALEXA"] as const;
+/** Alexa only: e-mail, Telegram and push were dropped (BACKLOG-001, CLEANUP-001). */
+export const USER_CHANNELS = ["ALEXA"] as const;
 export type UserChannel = (typeof USER_CHANNELS)[number];
 
 export const CHANNEL_LABELS: Record<UserChannel, string> = {
-  EMAIL: "E-Mail",
-  TELEGRAM: "Telegram",
-  WEB_PUSH: "Push",
   ALEXA: "Alexa",
 };
 
