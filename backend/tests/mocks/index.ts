@@ -52,6 +52,8 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     notificationsTable: undefined,
     householdTenantId: "default",
     appUrl: undefined,
+    householdEventsBus: undefined,
+    alexaApi: undefined,
     ...overrides,
   };
 }
@@ -144,6 +146,8 @@ export function householdSettings(overrides: Partial<HouseholdSettings> = {}): H
     handoversVersion: 0,
     alexaSpeakers: [],
     alexaSpeakersVersion: 0,
+    alexaUsers: [],
+    alexaUsersVersion: 0,
     notificationPreferences: {},
     notificationPreferencesVersion: 0,
     categoriesVersion: 0,

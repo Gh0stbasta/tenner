@@ -48,7 +48,7 @@ import {
   userIdSchema,
   utcTimestampSchema,
 } from "./common.js";
-import { ALEXA_PERSON_ID_PATTERN, USER_CHANNELS, WEEKDAYS as ALL_WEEKDAYS } from "../models/index.js";
+import { ALEXA_PERSON_ID_PATTERN, ALEXA_USER_ID_PATTERN, USER_CHANNELS, WEEKDAYS as ALL_WEEKDAYS } from "../models/index.js";
 import { isValidTimeZone } from "../utils/timezone.js";
 import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
 import { ASSIGNMENT_MODES, SHARED_ASSIGNEE, WEEK_STARTS, WEEKDAYS, type AssignmentMode, type UserId, type Weekday } from "../models/index.js";
@@ -257,6 +257,9 @@ export const assignHouseholdMemberSchema = z.strictObject({ userId: userIdSchema
 
 /** ALEXA-002: Amazon person ID in the path of /household/alexa-speakers/{personId}. */
 export const alexaPersonIdSchema = z.string().regex(ALEXA_PERSON_ID_PATTERN, "Invalid Alexa person ID.");
+
+/** ALEXA-007: Amazon account ID (context.System.user.userId). */
+export const alexaUserIdSchema = z.string().regex(ALEXA_USER_ID_PATTERN, "Invalid Alexa user ID.");
 
 /** PUT /household/alexa-speakers/{personId} (ALEXA-002). */
 export const linkAlexaSpeakerSchema = z.strictObject({ userId: userIdSchema }) satisfies z.ZodType<LinkAlexaSpeakerRequest>;

@@ -83,6 +83,7 @@ locals {
     "GET /household/alexa",                         # ALEXA-002
     "PUT /household/alexa-speakers/{personId}",     # ALEXA-002
     "DELETE /household/alexa-speakers/{personId}",  # ALEXA-002
+    "PUT /household/alexa-users/{alexaUserId}",     # ALEXA-007
     "PUT /categories/{categoryId}",                 # HOUSEHOLD-ADMIN-002
   ]
 
@@ -157,6 +158,14 @@ locals {
   alexa_memory_mb            = 256
   alexa_timeout_seconds      = 7 # Alexa waits at most 8 seconds for a response.
   alexa_invocation_principal = "alexa-appkit.amazon.com"
+
+  # Echo Show widget and Alexa notifications (ALEXA-007/008): need the skill and the notifier. The LWA client of the
+  # skill (developer console → Permissions) lives in Parameter Store (SECURITY-006), set out of band.
+  alexa_notifier_enabled            = local.alexa_enabled && var.notifications_enabled
+  alexa_api_endpoint                = "https://api.eu.amazonalexa.com"
+  alexa_lwa_client_id_parameter     = "${local.secret_parameter_prefix}/alexa/lwa-client-id"
+  alexa_lwa_client_secret_parameter = "${local.secret_parameter_prefix}/alexa/lwa-client-secret"
+  household_events_bus              = "default"
 
   # Persistence layer (TICKET-006).
   tenners_table_name = "${local.name_prefix}-tenners"

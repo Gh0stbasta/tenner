@@ -38,7 +38,7 @@ const household = {
 };
 
 const PREFERENCES_RESPONSE = { preferences: DEFAULT_NOTIFICATION_PREFERENCES, channels: [], effectiveTimezone: "Europe/Berlin" };
-const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [] };
+const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [], alexaAccounts: 0 };
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
   return {
@@ -99,6 +99,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     startHandover: vi.fn(async () => ({ handover: { from: "JULIA", to: "STEFAN", until: "2026-10-12", categories: null }, handedOver: 3 })),
     endHandover: vi.fn(async () => ({ returned: 3 })),
     getAlexaContext: vi.fn(async () => ALEXA_CONTEXT),
+    registerAlexaUser: vi.fn(async () => undefined),
     getNotificationPreferences: vi.fn(async () => PREFERENCES_RESPONSE),
     updateNotificationPreferences: vi.fn(async () => PREFERENCES_RESPONSE),
     linkAlexaSpeaker: vi.fn(async () => ALEXA_CONTEXT),
@@ -191,9 +192,10 @@ describe("route", () => {
     ["PUT /household/alexa-speakers/{personId}", JSON.stringify({ userId: "JULIA" }), "linkAlexaSpeaker"],
     ["DELETE /household/alexa-speakers/{personId}", undefined, "unlinkAlexaSpeaker"],
     ["GET /users/{userId}/notification-preferences", undefined, "getNotificationPreferences"],
+    ["PUT /household/alexa-users/{alexaUserId}", undefined, "registerAlexaUser"],
   ] as const)("routes %s (ALEXA-002)", async (routeKey, body, dependency) => {
     const d = deps();
-    const response = await route({ ...event(routeKey), pathParameters: { personId: "amzn1.ask.person.ABC", userId: "STEFAN" }, ...(body ? { body } : {}) }, d);
+    const response = await route({ ...event(routeKey), pathParameters: { personId: "amzn1.ask.person.ABC", userId: "STEFAN", alexaUserId: "amzn1.ask.account.ABC" }, ...(body ? { body } : {}) }, d);
     expect(response.statusCode).toBe(200);
     expect(d[dependency]).toHaveBeenCalledOnce();
   });

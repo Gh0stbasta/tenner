@@ -5,7 +5,16 @@
  */
 
 import { AnalyticsService } from "./analytics/index.js";
-import { alexaContextHandler, linkAlexaSpeakerHandler, unlinkAlexaSpeakerHandler, type GetAlexaContext, type LinkAlexaSpeaker, type UnlinkAlexaSpeaker } from "./handlers/alexa.js";
+import {
+  alexaContextHandler,
+  linkAlexaSpeakerHandler,
+  registerAlexaUserHandler,
+  unlinkAlexaSpeakerHandler,
+  type GetAlexaContext,
+  type LinkAlexaSpeaker,
+  type RegisterAlexaUser,
+  type UnlinkAlexaSpeaker,
+} from "./handlers/alexa.js";
 import { analyticsHandler, type AnalyticsQuery } from "./handlers/analytics.js";
 import {
   getNotificationPreferencesHandler,
@@ -16,6 +25,8 @@ import {
 import { clientOf, householdGroupName, identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
 import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
+import { getEventBridgeClient } from "./clients/eventbridge.js";
+import { changesHousehold, createHouseholdChangePublisher, type HouseholdChangePublisher } from "./events/household-events.js";
 import { loadConfig, type AppConfig } from "./config.js";
 import { ApplicationError, NotFoundError } from "./exceptions/index.js";
 import { completeTennerHandler, type CompleteTenner } from "./handlers/complete-tenner.js";
@@ -102,6 +113,8 @@ import { analyticsNeglectedSchema, analyticsPeriodSchema, analyticsTrendsSchema,
 /** Dependencies shared by all handlers; replaced in tests. */
 export interface Dependencies {
   readonly config: AppConfig;
+  /** Household change events for the Echo Show widget (ALEXA-007); absent when not configured. */
+  readonly publishHouseholdChange?: HouseholdChangePublisher;
   readonly logger: Logger;
   readonly probeDatabase: DatabaseProbe;
   readonly createTenner: CreateTenner;
@@ -125,6 +138,7 @@ export interface Dependencies {
   readonly startHandover: StartHandover;
   readonly endHandover: EndHandover;
   readonly getAlexaContext: GetAlexaContext;
+  readonly registerAlexaUser: RegisterAlexaUser;
   readonly getNotificationPreferences: GetNotificationPreferences;
   readonly updateNotificationPreferences: UpdateNotificationPreferences;
   readonly linkAlexaSpeaker: LinkAlexaSpeaker;
@@ -218,7 +232,8 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /users/{userId}/notification-preferences": ({ event, deps, identity }) => getNotificationPreferencesHandler(event, identity, deps.getNotificationPreferences),
   "PUT /users/{userId}/notification-preferences": ({ event, deps, logger, identity }) =>
     updateNotificationPreferencesHandler(event, identity, deps.updateNotificationPreferences, logger),
-  "GET /household/alexa": ({ deps, identity }) => alexaContextHandler(identity, deps.getAlexaContext),
+  "GET /household/alexa": ({ event, deps, identity }) => alexaContextHandler(event, identity, deps.getAlexaContext),
+  "PUT /household/alexa-users/{alexaUserId}": ({ event, deps, logger, identity }) => registerAlexaUserHandler(event, identity, deps.registerAlexaUser, logger),
   "PUT /household/alexa-speakers/{personId}": ({ event, deps, logger, identity }) => linkAlexaSpeakerHandler(event, identity, deps.linkAlexaSpeaker, logger),
   "DELETE /household/alexa-speakers/{personId}": ({ event, deps, logger, identity }) => unlinkAlexaSpeakerHandler(event, identity, deps.unlinkAlexaSpeaker, logger),
   "GET /analytics/summary": ({ event, deps, logger, identity }) => analyticsHandler("summary", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsSummary, logger),
@@ -302,6 +317,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   return {
     config,
     logger,
+    ...(config.householdEventsBus === undefined ? {} : { publishHouseholdChange: createHouseholdChangePublisher(getEventBridgeClient(), config.householdEventsBus) }),
     probeDatabase: (t) => probeTables(getDocumentClient(), t),
     createTenner: createTennerService ? (identity, request) => createTennerService.createTenner(identity, request) : notConfigured,
     listTenners: listTennersService ? async (tenantId, request) => (await expireHandovers(tenantId), listTennersService.listTenners(tenantId, request)) : notConfigured,
@@ -335,7 +351,8 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     updateNotificationPreferences: notificationPreferencesService
       ? (identity, userId, request) => notificationPreferencesService.update(identity, userId, request)
       : notConfigured,
-    getAlexaContext: alexaSpeakerService ? (identity) => alexaSpeakerService.context(identity) : notConfigured,
+    getAlexaContext: alexaSpeakerService ? (identity, alexaUserId) => alexaSpeakerService.context(identity, alexaUserId) : notConfigured,
+    registerAlexaUser: alexaSpeakerService ? (identity, alexaUserId) => alexaSpeakerService.registerAlexaUser(identity, alexaUserId) : notConfigured,
     linkAlexaSpeaker: alexaSpeakerService ? (identity, personId, userId) => alexaSpeakerService.link(identity, personId, userId) : notConfigured,
     unlinkAlexaSpeaker: alexaSpeakerService ? (identity, personId) => alexaSpeakerService.unlink(identity, personId) : notConfigured,
     listCategories: categoryService ? (tenantId) => categoryService.listCategories(tenantId) : notConfigured,
@@ -380,7 +397,11 @@ async function dispatch(event: ApiEvent, deps: Dependencies, requestLogger: Logg
   const routeHandler = ROUTES[event.routeKey];
   if (!routeHandler) throw new NotFoundError("Route not found.");
   const identity = identityFromEvent(event);
-  return routeHandler({ event, deps, identity, logger: requestLogger.child({ userId: identity.userId }) });
+  const logger = requestLogger.child({ userId: identity.userId });
+  const result = await routeHandler({ event, deps, identity, logger });
+  // ALEXA-007: let the notifier refresh the Echo Show widget (awaited, ~1 s timeout, never fails the request).
+  if (deps.publishHouseholdChange && changesHousehold(event.routeKey, result.statusCode ?? 200)) await deps.publishHouseholdChange(identity.tenantId, event.routeKey, logger);
+  return result;
 }
 
 /** Dispatch a request to its handler. Exported for tests. */

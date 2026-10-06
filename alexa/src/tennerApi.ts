@@ -34,6 +34,8 @@ export interface AlexaContext {
   readonly timezone: string;
   readonly members: readonly AlexaMember[];
   readonly speakers: readonly AlexaSpeaker[];
+  /** Whether the calling Alexa account is registered for the Echo Show widget (ALEXA-007). */
+  readonly alexaUserKnown?: boolean;
 }
 
 export interface ApiClientOptions {
@@ -49,7 +51,8 @@ export type HttpMethod = "GET" | "PUT" | "POST" | "DELETE";
 
 export interface TennerApi {
   request<T>(method: HttpMethod, path: string, body?: unknown, headers?: Readonly<Record<string, string>>): Promise<T>;
-  alexaContext(): Promise<AlexaContext>;
+  alexaContext(alexaUserId?: string): Promise<AlexaContext>;
+  registerAlexaUser(alexaUserId: string): Promise<void>;
   linkSpeaker(personId: string, userId: string): Promise<AlexaContext>;
 }
 
@@ -81,7 +84,10 @@ export function createTennerApi(options: ApiClientOptions): TennerApi {
 
   return {
     request,
-    alexaContext: () => request<AlexaContext>("GET", "/household/alexa"),
+    alexaContext: (alexaUserId) => request<AlexaContext>("GET", `/household/alexa${alexaUserId === undefined ? "" : `?alexaUserId=${encodeURIComponent(alexaUserId)}`}`),
+    registerAlexaUser: async (alexaUserId) => {
+      await request("PUT", `/household/alexa-users/${encodeURIComponent(alexaUserId)}`);
+    },
     linkSpeaker: (personId, userId) => request<AlexaContext>("PUT", `/household/alexa-speakers/${encodeURIComponent(personId)}`, { userId }),
   };
 }

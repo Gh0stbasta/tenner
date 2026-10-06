@@ -9,10 +9,12 @@ import {
   MEMBER_COLORS,
   USER_ID_PATTERN,
   ALEXA_PERSON_ID_PATTERN,
+  ALEXA_USER_ID_PATTERN,
   WEEK_STARTS,
   WEEKDAYS,
   type CategoryIcon,
   type AlexaSpeaker,
+  type AlexaUser,
   type NotificationPreferences,
   type NotificationPreferencesByMember,
   type Handover,
@@ -113,6 +115,17 @@ function toAlexaSpeakers(value: unknown): AlexaSpeaker[] {
   });
 }
 
+/** Stored Alexa accounts; malformed entries are dropped (ALEXA-007). */
+function toAlexaUsers(value: unknown): AlexaUser[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry): AlexaUser[] => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const { alexaUserId, linkedBy, createdAt } = entry as Record<string, unknown>;
+    if (typeof alexaUserId !== "string" || !ALEXA_USER_ID_PATTERN.test(alexaUserId) || typeof linkedBy !== "string" || !USER_ID_PATTERN.test(linkedBy)) return [];
+    return [{ alexaUserId, linkedBy, createdAt: typeof createdAt === "string" ? createdAt : "" }];
+  });
+}
+
 /** Stored preferences per member; entries for invalid member IDs or without the expected shape are dropped. */
 function toNotificationPreferences(value: unknown): NotificationPreferencesByMember {
   if (typeof value !== "object" || value === null) return {};
@@ -149,6 +162,8 @@ function toSettings(item: Record<string, unknown>): HouseholdSettings {
     handoversVersion: typeof item.handoversVersion === "number" ? item.handoversVersion : 0,
     alexaSpeakers: toAlexaSpeakers(item.alexaSpeakers),
     alexaSpeakersVersion: typeof item.alexaSpeakersVersion === "number" ? item.alexaSpeakersVersion : 0,
+    alexaUsers: toAlexaUsers(item.alexaUsers),
+    alexaUsersVersion: typeof item.alexaUsersVersion === "number" ? item.alexaUsersVersion : 0,
     notificationPreferences: toNotificationPreferences(item.notificationPreferences),
     notificationPreferencesVersion: typeof item.notificationPreferencesVersion === "number" ? item.notificationPreferencesVersion : 0,
     updatedAt: String(item.updatedAt),
@@ -208,6 +223,11 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
     return this.saveVersionedList(tenantId, "notificationPreferences", preferences, expectedVersion, actor, timestamp);
   }
 
+  /** Replace the Alexa accounts with optimistic locking (ALEXA-007). */
+  async saveAlexaUsers(tenantId: string, users: readonly AlexaUser[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+    return this.saveVersionedList(tenantId, "alexaUsers", users, expectedVersion, actor, timestamp);
+  }
+
   /** Replace the Alexa speaker mappings with optimistic locking on alexaSpeakersVersion (ALEXA-002). */
   async saveAlexaSpeakers(tenantId: string, speakers: readonly AlexaSpeaker[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
     return this.saveVersionedList(tenantId, "alexaSpeakers", speakers, expectedVersion, actor, timestamp);
@@ -216,7 +236,7 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
   /** SET <list> (a list or map) and <list>Version = expected + 1, if the stored version still equals `expectedVersion` (0 = none). */
   private async saveVersionedList(
     tenantId: string,
-    name: "members" | "categories" | "handovers" | "alexaSpeakers" | "notificationPreferences",
+    name: "members" | "categories" | "handovers" | "alexaSpeakers" | "notificationPreferences" | "alexaUsers",
     list: readonly unknown[] | object,
     expectedVersion: number,
     actor: UserId,

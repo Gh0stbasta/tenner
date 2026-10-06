@@ -87,7 +87,7 @@ export async function loadHousehold(input: HandlerInput): Promise<Household> {
   const session = input.attributesManager.getSessionAttributes();
   let context = session[HOUSEHOLD_ATTRIBUTE] as AlexaContext | undefined;
   if (context === undefined) {
-    context = await apiOf(input).alexaContext();
+    context = await apiOf(input).alexaContext(input.requestEnvelope.context?.System?.user?.userId);
     rememberHousehold(input, context);
   }
   return { context, ...resolveSpeaker(context, link) };

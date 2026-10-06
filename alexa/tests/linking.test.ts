@@ -38,7 +38,7 @@ describe("account linking", () => {
     const { skill, api } = setup();
     await skill.invoke(launchRequest());
     const [url, init] = api.calls[0] ?? [];
-    expect(url).toBe(`${API_BASE}/household/alexa`);
+    expect(url).toBe(`${API_BASE}/household/alexa?alexaUserId=amzn1.ask.account.TEST`);
     expect(init?.headers).toMatchObject({ authorization: `Bearer ${ACCOUNT_TOKEN}`, "x-correlation-id": "amzn1.echo-api.request.test" });
   });
 
@@ -92,6 +92,27 @@ describe("account linking", () => {
   });
 });
 
+describe("widget registration (ALEXA-007)", () => {
+  it("registers an unknown Alexa account once on launch", async () => {
+    const register = vi.fn(() => ({ data: { registered: true } }));
+    const { skill } = setup({
+      "GET /household/alexa": { data: { ...CONTEXT, alexaUserKnown: false } },
+      "PUT /household/alexa-users/amzn1.ask.account.TEST": register,
+    });
+    await skill.invoke(launchRequest());
+    expect(register).toHaveBeenCalledOnce();
+  });
+
+  it("skips known accounts and survives a failed registration", async () => {
+    const known = setup({ "GET /household/alexa": { data: { ...CONTEXT, alexaUserKnown: true } } });
+    await known.skill.invoke(launchRequest());
+    expect(known.api.calls.some(([, init]) => init.method === "PUT")).toBe(false);
+    quiet();
+    const failing = setup({ "GET /household/alexa": { data: { ...CONTEXT, alexaUserKnown: false } }, "PUT /household/alexa-users/amzn1.ask.account.TEST": { status: 503 } });
+    expect(ssml(await failing.skill.invoke(launchRequest()))).toBe(`<speak>${SPEECH.welcome}</speak>`);
+  });
+});
+
 describe("speakers", () => {
   it("teaches Alexa the member names on launch", async () => {
     const { skill } = setup();
@@ -132,7 +153,7 @@ describe("speakers", () => {
     expect(answer.sessionAttributes?.state).toBeUndefined();
     expect(answer.sessionAttributes?.household).toMatchObject({ speakers: [{ personId: PERSON_ID, userId: "JULIA" }] });
     // The household context came from the session: one GET for the whole dialog.
-    expect(api.calls.filter(([url]) => url.endsWith("/household/alexa"))).toHaveLength(1);
+    expect(api.calls.filter(([url]) => url.includes("/household/alexa?"))).toHaveLength(1);
   });
 
   it("matches a spoken name without entity resolution", async () => {

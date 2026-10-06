@@ -1,0 +1,115 @@
+{
+  "type": "APL",
+  "version": "2023.2",
+  "theme": "dark",
+  "description": "Tenner widget: today's count, open minutes, overdue; medium adds the next two Tenners and members. Bound to the Data Store object tenner/status (WidgetSummary in backend/src/alexa/widget.ts).",
+  "extensions": [
+    {
+      "name": "DataStore",
+      "uri": "alexaext:datastore:10"
+    }
+  ],
+  "settings": {
+    "DataStore": {
+      "dataBindings": [
+        {
+          "namespace": "tenner",
+          "key": "status",
+          "dataBindingName": "status",
+          "dataType": "OBJECT"
+        }
+      ]
+    }
+  },
+  "resources": [
+    {
+      "colors": {
+        "background": "#1c1f24",
+        "text": "#ffffff",
+        "muted": "#b8bec6",
+        "primary": "#1976d2",
+        "warning": "#ffd479"
+      },
+      "dimensions": {
+        "titleSize": "28dp",
+        "bigSize": "40dp",
+        "bodySize": "24dp",
+        "pad": "16dp"
+      }
+    }
+  ],
+  "mainTemplate": {
+    "parameters": [
+      "payload"
+    ],
+    "items": [
+      {
+        "type": "TouchWrapper",
+        "width": "100%",
+        "height": "100%",
+        "role": "button",
+        "accessibilityLabel": "Tenner öffnen",
+        "onPress": [
+          {
+            "type": "SendEvent",
+            "arguments": [
+              "openDashboard"
+            ]
+          }
+        ],
+        "item": {
+          "type": "Container",
+          "width": "100%",
+          "height": "100%",
+          "backgroundColor": "@background",
+          "paddingLeft": "@pad",
+          "paddingRight": "@pad",
+          "paddingTop": "@pad",
+          "items": [
+            {
+              "type": "Text",
+              "text": "Tenner",
+              "fontSize": "@titleSize",
+              "fontWeight": "bold",
+              "color": "@primary"
+            },
+            {
+              "type": "Text",
+              "text": "${status.dueToday == null ? 'Öffnen zum Laden' : 'Heute: ' + status.dueToday}",
+              "fontSize": "@bigSize",
+              "color": "@text"
+            },
+            {
+              "type": "Text",
+              "text": "${status.openMinutes == null ? '' : status.openMinutes + ' Min. offen'}",
+              "fontSize": "@bodySize",
+              "color": "@muted"
+            },
+            {
+              "type": "Text",
+              "text": "${status.overdue > 0 ? '⚠ ' + status.overdue + ' überfällig' : ''}",
+              "display": "${status.overdue > 0 ? 'normal' : 'none'}",
+              "fontSize": "@bodySize",
+              "color": "@warning"
+            },
+            {
+              "type": "Container",
+              "when": "${viewport.width > 400}",
+              "paddingTop": "8dp",
+              "data": "${status.next}",
+              "items": [
+                {
+                  "type": "Text",
+                  "text": "• ${data.title} (${data.minutes} Min., ${data.member})",
+                  "fontSize": "@bodySize",
+                  "color": "@text",
+                  "maxLines": 1
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

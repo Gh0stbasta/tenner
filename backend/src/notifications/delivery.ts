@@ -32,6 +32,8 @@ export interface DeliveryLog {
   complete(notificationKey: string, status: DeliveryRecord["status"], attempts: number, errorCode: string | null): Promise<void>;
   /** True if a marker or delivery with this key exists (NOTIFICATION-004: Tenner already alerted in this cycle). */
   has(notificationKey: string): Promise<boolean>;
+  /** The record with this key, if any (ALEXA-007: last widget push). */
+  get(notificationKey: string): Promise<Pick<DeliveryRecord, "notificationKey" | "status" | "createdAt"> | undefined>;
   /** Record a marker (status SENT) without sending, e.g. "this Tenner was part of an alert". */
   mark(record: DeliveryRecord): Promise<void>;
 }

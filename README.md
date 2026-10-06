@@ -427,7 +427,12 @@ aws ssm describe-parameters --parameter-filters Key=Name,Values=/tenner/prod/<co
 aws ssm delete-parameter --name /tenner/prod/<component>/<name>
 ```
 
-Secrets in use are listed with their feature (none before ALEXA-007). A missing secret only disables the feature
+Secrets in use:
+
+| Parameter | Feature | Value |
+|---|---|---|
+| `/tenner/prod/alexa/lwa-client-id` | Echo Show widget, Alexa notifications (ALEXA-007/008) | Alexa developer console → Tenner → Build → Permissions → "Alexa Skill Messaging" Client ID |
+| `/tenner/prod/alexa/lwa-client-secret` | same | Client Secret from the same page | A missing secret only disables the feature
 that needs it; the Lambda logs `secret unavailable` with the parameter name.
 
 ### Alexa Skill (ALEXA-001)

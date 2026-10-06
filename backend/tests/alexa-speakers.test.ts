@@ -4,7 +4,7 @@ import type { UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it, vi } from "vitest";
 import { clientOf, identityFromEvent, principalFromEvent } from "../src/auth/index.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../src/exceptions/index.js";
-import { linkAlexaSpeakerHandler, unlinkAlexaSpeakerHandler, alexaContextHandler } from "../src/handlers/alexa.js";
+import { linkAlexaSpeakerHandler, registerAlexaUserHandler, unlinkAlexaSpeakerHandler, alexaContextHandler } from "../src/handlers/alexa.js";
 import { SEED_MEMBERS, type AlexaSpeaker, type HouseholdMember, type HouseholdSettings } from "../src/models/index.js";
 import { DynamoDbHouseholdRepository } from "../src/repositories/index.js";
 import { AlexaSpeakerService } from "../src/services/index.js";
@@ -63,6 +63,12 @@ function world(settings: Partial<HouseholdSettings> | undefined = {}) {
       household = { ...current, alexaSpeakers, alexaSpeakersVersion: expectedVersion + 1 };
       return household;
     }),
+    saveAlexaUsers: vi.fn(async (_tenantId: string, alexaUsers: HouseholdSettings["alexaUsers"], expectedVersion: number) => {
+      const current = household ?? householdSettings();
+      if (expectedVersion !== current.alexaUsersVersion) throw new ConflictError("changed", "CONCURRENT_MODIFICATION");
+      household = { ...current, alexaUsers, alexaUsersVersion: expectedVersion + 1 };
+      return household;
+    }),
   };
   return { service: new AlexaSpeakerService(households, () => NOW, "Europe/Berlin"), households, household: () => household };
 }
@@ -81,6 +87,7 @@ describe("AlexaSpeakerService", () => {
       ],
       // LENA is deactivated: her mapping is hidden.
       speakers: [{ personId: PERSON, userId: "JULIA" }],
+      alexaAccounts: 0,
     });
   });
 
@@ -135,10 +142,59 @@ describe("AlexaSpeakerService", () => {
   });
 });
 
+describe("Alexa accounts (ALEXA-007)", () => {
+  const ACCOUNT = "amzn1.ask.account.AFAKEACCOUNTID";
+
+  it("registers an Alexa account once and reports it in the context", async () => {
+    const w = world();
+    expect((await w.service.context(TEST_IDENTITY, ACCOUNT)).alexaUserKnown).toBe(false);
+    await w.service.registerAlexaUser(TEST_IDENTITY, ACCOUNT);
+    await w.service.registerAlexaUser(TEST_IDENTITY, ACCOUNT);
+    expect(w.households.saveAlexaUsers).toHaveBeenCalledOnce();
+    expect(w.household()?.alexaUsers).toEqual([{ alexaUserId: ACCOUNT, linkedBy: "STEFAN", createdAt: "2026-10-05T08:00:00Z" }]);
+    expect(await w.service.context(TEST_IDENTITY, ACCOUNT)).toMatchObject({ alexaUserKnown: true, alexaAccounts: 1 });
+    expect(await w.service.alexaUsersOf("default")).toEqual([ACCOUNT]);
+    expect("alexaUserKnown" in (await w.service.context(TEST_IDENTITY))).toBe(false);
+  });
+
+  it("limits accounts and removes gone ones", async () => {
+    const many = Array.from({ length: 10 }, (_, index) => ({ alexaUserId: `amzn1.ask.account.A${index}`, linkedBy: "STEFAN", createdAt: "t" }));
+    await expect(world({ alexaUsers: many, alexaUsersVersion: 1 }).service.registerAlexaUser(TEST_IDENTITY, ACCOUNT)).rejects.toMatchObject({ code: "LIMIT_REACHED" });
+    const w = world({ alexaUsers: many.slice(0, 2), alexaUsersVersion: 1 });
+    await w.service.removeAlexaUser("default", "amzn1.ask.account.A0");
+    expect(w.household()?.alexaUsers.map((user) => user.alexaUserId)).toEqual(["amzn1.ask.account.A1"]);
+    expect(w.households.saveAlexaUsers).toHaveBeenCalledWith("default", expect.anything(), 1, "SYSTEM", expect.any(String));
+    await w.service.removeAlexaUser("default", "amzn1.ask.account.A0");
+    expect(w.households.saveAlexaUsers).toHaveBeenCalledOnce();
+  });
+
+  it("validates the account ID in path and query and logs no Amazon IDs", async () => {
+    const logger = mockLogger();
+    const register = vi.fn(async () => undefined);
+    const event = authenticatedEvent({ pathParameters: { alexaUserId: ACCOUNT } });
+    expect((await registerAlexaUserHandler(event, TEST_IDENTITY, register, logger)).statusCode).toBe(200);
+    expect(JSON.stringify(logger.info.mock.calls)).not.toContain(ACCOUNT);
+    await expect(registerAlexaUserHandler(authenticatedEvent({ pathParameters: { alexaUserId: "x" } }), TEST_IDENTITY, register, logger)).rejects.toThrow(ValidationError);
+    const getContext = vi.fn(async () => ({ account: { userId: "STEFAN" }, timezone: "UTC", members: [], speakers: [], alexaAccounts: 0 }));
+    await alexaContextHandler(authenticatedEvent({ queryStringParameters: { alexaUserId: ACCOUNT } }), TEST_IDENTITY, getContext);
+    expect(getContext).toHaveBeenCalledWith(TEST_IDENTITY, ACCOUNT);
+    await expect(alexaContextHandler(authenticatedEvent({ queryStringParameters: { alexaUserId: "bad" } }), TEST_IDENTITY, getContext)).rejects.toThrow(ValidationError);
+  });
+
+  it("maps stored accounts and drops malformed ones", async () => {
+    const client = { send: vi.fn<(command: unknown) => Promise<unknown>>(async () => ({ Item: { tenantId: "default", alexaUsersVersion: 1, alexaUsers: [{ alexaUserId: ACCOUNT, linkedBy: "STEFAN" }, { alexaUserId: "bad", linkedBy: "STEFAN" }, null] } })) };
+    const settings = await new DynamoDbHouseholdRepository(client, "t").get("default");
+    expect(settings?.alexaUsers).toEqual([{ alexaUserId: ACCOUNT, linkedBy: "STEFAN", createdAt: "" }]);
+    const save = { send: vi.fn<(command: unknown) => Promise<unknown>>(async () => ({ Attributes: { tenantId: "default" } })) };
+    await new DynamoDbHouseholdRepository(save, "t").saveAlexaUsers("default", [], 1, "STEFAN", "t");
+    expect((save.send.mock.calls[0]?.[0] as UpdateCommand).input.ExpressionAttributeNames).toMatchObject({ "#list": "alexaUsers" });
+  });
+});
+
 describe("Alexa handlers", () => {
   const pathEvent = (personId: string | undefined, body?: string) =>
     authenticatedEvent({ routeKey: "PUT /household/alexa-speakers/{personId}", pathParameters: personId === undefined ? {} : { personId }, ...(body ? { body } : {}) });
-  const context = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [], speakers: [] };
+  const context = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [], speakers: [], alexaAccounts: 0 };
 
   it("validates the person ID and body and logs without the person ID", async () => {
     const logger = mockLogger();
@@ -156,7 +212,7 @@ describe("Alexa handlers", () => {
     const unlink = vi.fn(async () => context);
     expect((await unlinkAlexaSpeakerHandler(pathEvent(PERSON), TEST_IDENTITY, unlink, logger)).statusCode).toBe(200);
     await expect(unlinkAlexaSpeakerHandler(pathEvent(undefined), TEST_IDENTITY, unlink, logger)).rejects.toThrow(ValidationError);
-    expect(JSON.parse((await alexaContextHandler(TEST_IDENTITY, async () => context)).body ?? "").data).toEqual(context);
+    expect(JSON.parse((await alexaContextHandler(pathEvent(undefined), TEST_IDENTITY, async () => context)).body ?? "").data).toEqual(context);
   });
 });
 

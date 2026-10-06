@@ -122,3 +122,45 @@ run "delivery_log_expires_after_ttl" {
     error_message = "Notifier logs must be kept 30 days."
   }
 }
+
+run "alexa_widget_wiring" {
+  command = plan
+
+  variables {
+    notifications_enabled = true
+    alexa_skill_id        = "amzn1.ask.skill.12345678-90ab-cdef-1234-567890abcdef"
+  }
+
+  assert {
+    condition     = jsondecode(aws_cloudwatch_event_rule.household_changed[0].event_pattern) == { source = ["tenner.api"], "detail-type" = ["HouseholdChanged"] }
+    error_message = "Household change events from the API must reach the notifier."
+  }
+
+  assert {
+    condition     = aws_lambda_permission.notifier_household_changed[0].principal == "events.amazonaws.com" && aws_lambda_function.api.environment[0].variables["HOUSEHOLD_EVENTS_BUS"] == "default"
+    error_message = "The API must publish to the default bus and EventBridge may invoke the notifier."
+  }
+
+  assert {
+    condition     = aws_lambda_function.notifier[0].environment[0].variables["ALEXA_LWA_CLIENT_SECRET_PARAMETER"] == "/tenner/prod/alexa/lwa-client-secret" && aws_lambda_function.notifier[0].environment[0].variables["ALEXA_API_ENDPOINT"] == "https://api.eu.amazonalexa.com"
+    error_message = "The notifier gets the parameter names (never values) and the EU Alexa API endpoint."
+  }
+
+  assert {
+    condition     = length(aws_iam_role_policy.api_events) == 1
+    error_message = "The API needs events:PutEvents when the widget is enabled."
+  }
+}
+
+run "no_widget_wiring_without_skill" {
+  command = plan
+
+  variables {
+    notifications_enabled = true
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_event_rule.household_changed) == 0 && aws_lambda_function.notifier[0].environment[0].variables["ALEXA_API_ENDPOINT"] == "" && aws_lambda_function.api.environment[0].variables["HOUSEHOLD_EVENTS_BUS"] == ""
+    error_message = "Without the skill there is no widget wiring."
+  }
+}

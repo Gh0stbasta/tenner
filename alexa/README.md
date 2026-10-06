@@ -15,6 +15,7 @@ Alexa app. Help, stop, cancel, fallback and session end are handled.
 
 ```text
 alexa/
+├── widgets/tenner-status/                 home-screen widget APL package (ALEXA-007)
 ├── apl/                                    APL documents: dashboard.json, list.json (ALEXA-006)
 ├── skill-package/
 │   ├── skill.json                          manifest (de-DE, development stage); endpoint filled at deploy time
@@ -36,6 +37,36 @@ alexa/
 │   └── log.ts                              JSON log lines without personal data
 └── tests/                                  vitest, request envelopes in tests/envelopes.ts
 ```
+
+## Echo Show Widget (ALEXA-007)
+
+A home-screen widget (`widgets/tenner-status/`: manifest, APL document bound to the Data Store object
+`tenner/status`, sample data) shows „Heute: 3“, open minutes, overdue and — in the medium size — the next two
+Tenners. Tapping it opens the skill on the dashboard.
+
+How the data gets there (no request to the skill when the widget renders):
+
+```text
+API write (complete, undo, create, …) ──PutEvents "HouseholdChanged"──► EventBridge ──► tenner-notifier
+tenner-notifier (every 15 min) ── day start in the household timezone / pending change ──┘
+   └── household dashboard → WidgetSummary → LWA token (alexa::datastore) → Data Store PUT_OBJECT (target USER)
+```
+
+- Debounce: at most one push per minute; changes inside that minute are pushed by the next scheduled run.
+- Targets: Alexa accounts registered by the skill on their first launch (`PUT /household/alexa-users/{id}`); an
+  account Amazon rejects (404/410) is removed. Failures are retried once and logged; the next change or day start
+  repairs the widget.
+- Needs: the skill (`ALEXA_SKILL_ID`), the notifier (`NOTIFICATIONS_ENABLED`) and the LWA client in Parameter Store
+  (README → "Secrets": `/tenner/prod/alexa/lwa-client-id`, `/tenner/prod/alexa/lwa-client-secret`).
+
+**Spike (owner, manual, 1 day):** install the dev-stage skill's widget on a household Echo Show (de-DE), push once,
+and record in `docs/backlog/alexa/ticket007.md`: devices, sizes, update latency, behavior after reboot and with
+Alexa+. The widget package format and the Data Store request shape are taken from the documentation as of
+2026-10 and are verified there (TD-036).
+
+**Fallback (no-go or devices without widgets):** the daily briefing as a morning routine on the Echo Show
+(ALEXA-005, shows the dashboard while speaking) and Alexa notifications for overdue Tenners (ALEXA-008) keep the
+status visible.
 
 ## Daily Briefing and Routine (ALEXA-005)
 

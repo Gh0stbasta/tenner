@@ -72,9 +72,21 @@ export class DynamoDbDeliveryLog implements DeliveryLog {
   }
 
   async has(notificationKey: string): Promise<boolean> {
+    return (await this.get(notificationKey)) !== undefined;
+  }
+
+  async get(notificationKey: string): Promise<Pick<DeliveryRecord, "notificationKey" | "status" | "createdAt"> | undefined> {
     try {
-      const result = (await this.client.send(new GetCommand({ TableName: this.tableName, Key: { notificationKey }, ProjectionExpression: "notificationKey" }))) as GetCommandOutput;
-      return result.Item !== undefined;
+      const result = (await this.client.send(
+        new GetCommand({
+          TableName: this.tableName,
+          Key: { notificationKey },
+          ProjectionExpression: "notificationKey, #status, createdAt",
+          ExpressionAttributeNames: { "#status": "status" },
+        }),
+      )) as GetCommandOutput;
+      if (!result.Item) return undefined;
+      return { notificationKey, status: result.Item.status as DeliveryRecord["status"], createdAt: String(result.Item.createdAt) };
     } catch (error) {
       throw toPersistenceError("read notification", error);
     }

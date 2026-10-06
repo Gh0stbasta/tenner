@@ -7,19 +7,53 @@
 import type { Identity } from "../auth/index.js";
 import type { AlexaContextResponse } from "../dto/index.js";
 import { ConflictError, NotFoundError, ValidationError } from "../exceptions/index.js";
-import { MAX_ALEXA_SPEAKERS, SEED_MEMBERS, type AlexaSpeaker, type HouseholdSettings, type UserId } from "../models/index.js";
+import { MAX_ALEXA_SPEAKERS, MAX_ALEXA_USERS, SEED_MEMBERS, type AlexaSpeaker, type HouseholdSettings, type UserId } from "../models/index.js";
 import type { HouseholdRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock } from "../utils/clock.js";
 
+/** Actor of automatic changes made by the notifier. */
+const SYSTEM_ACTOR = "SYSTEM";
+
 export class AlexaSpeakerService {
   constructor(
-    private readonly households: Pick<HouseholdRepository, "get" | "saveAlexaSpeakers">,
+    private readonly households: Pick<HouseholdRepository, "get" | "saveAlexaSpeakers" | "saveAlexaUsers">,
     private readonly clock: Clock,
     private readonly defaultTimezone: string,
   ) {}
 
-  async context(identity: Identity): Promise<AlexaContextResponse> {
-    return toContext(identity, await this.households.get(identity.tenantId), this.defaultTimezone);
+  async context(identity: Identity, alexaUserId?: string): Promise<AlexaContextResponse> {
+    const settings = await this.households.get(identity.tenantId);
+    const context = toContext(identity, settings, this.defaultTimezone);
+    if (alexaUserId === undefined) return context;
+    return { ...context, alexaUserKnown: (settings?.alexaUsers ?? []).some((user) => user.alexaUserId === alexaUserId) };
+  }
+
+  /** Register the calling Alexa account as widget/notification target (ALEXA-007); idempotent. */
+  async registerAlexaUser(identity: Identity, alexaUserId: string): Promise<void> {
+    const settings = await this.households.get(identity.tenantId);
+    const users = settings?.alexaUsers ?? [];
+    if (users.some((user) => user.alexaUserId === alexaUserId)) return;
+    if (users.length >= MAX_ALEXA_USERS) throw new ConflictError(`At most ${MAX_ALEXA_USERS} Alexa accounts can be linked.`, "LIMIT_REACHED");
+    const timestamp = toUtcTimestamp(this.clock());
+    await this.households.saveAlexaUsers(identity.tenantId, [...users, { alexaUserId, linkedBy: identity.userId, createdAt: timestamp }], settings?.alexaUsersVersion ?? 0, identity.userId, timestamp);
+  }
+
+  /** Alexa account IDs of the household (notifier). */
+  async alexaUsersOf(tenantId: string): Promise<readonly string[]> {
+    return ((await this.households.get(tenantId))?.alexaUsers ?? []).map((user) => user.alexaUserId);
+  }
+
+  /** Remove an Alexa account that Amazon no longer accepts (skill disabled); no-op if already gone. */
+  async removeAlexaUser(tenantId: string, alexaUserId: string): Promise<void> {
+    const settings = await this.households.get(tenantId);
+    if (!settings || !settings.alexaUsers.some((user) => user.alexaUserId === alexaUserId)) return;
+    await this.households.saveAlexaUsers(
+      tenantId,
+      settings.alexaUsers.filter((user) => user.alexaUserId !== alexaUserId),
+      settings.alexaUsersVersion,
+      SYSTEM_ACTOR,
+      toUtcTimestamp(this.clock()),
+    );
   }
 
   /**
@@ -69,5 +103,6 @@ function toContext(identity: Identity, settings: HouseholdSettings | undefined, 
     speakers: (settings?.alexaSpeakers ?? [])
       .filter((speaker) => members.some((member) => member.userId === speaker.userId))
       .map((speaker) => ({ personId: speaker.personId, userId: speaker.userId })),
+    alexaAccounts: (settings?.alexaUsers ?? []).length,
   };
 }

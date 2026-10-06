@@ -10,6 +10,10 @@ export interface AlexaContextResponse {
   readonly members: readonly AlexaMemberResponse[];
   /** Recognized speakers mapped to members. */
   readonly speakers: readonly AlexaSpeakerResponse[];
+  /** Only with ?alexaUserId=…: whether that Alexa account is already registered for widget pushes (ALEXA-007). */
+  readonly alexaUserKnown?: boolean;
+  /** Number of Alexa accounts using the skill (Settings → Alexa). */
+  readonly alexaAccounts: number;
 }
 
 export interface AlexaMemberResponse {

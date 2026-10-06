@@ -19,7 +19,7 @@ import {
   type NotificationMessage,
   type Recipient,
 } from "../src/notifications/index.js";
-import { createNotifierDependencies, NotifierNotConfiguredError } from "../src/notifier.js";
+import { createNotifierRuntime, NotifierNotConfiguredError } from "../src/notifier.js";
 import { DynamoDbDeliveryLog } from "../src/repositories/index.js";
 import { memoryDeliveryLog } from "./mocks/delivery-log.js";
 import { mockLogger, testConfig } from "./mocks/index.js";
@@ -148,14 +148,14 @@ describe("deliver", () => {
   it("reports an unavailable delivery log without sending", async () => {
     const { deps } = setup();
     const send = vi.fn();
-    const log: DeliveryLog = { claim: async () => Promise.reject(new Error("down")), complete: vi.fn(), has: vi.fn(), mark: vi.fn() };
+    const log: DeliveryLog = { claim: async () => Promise.reject(new Error("down")), complete: vi.fn(), has: vi.fn(), get: vi.fn(), mark: vi.fn() };
     expect(await deliver({ ...deps, log }, "k", message("JULIA"), recipient, { type: "LOG", send })).toEqual({ status: "FAILED", errorCode: "DELIVERY_LOG_UNAVAILABLE" });
     expect(send).not.toHaveBeenCalled();
   });
 
   it("still reports the result when recording the status fails", async () => {
     const { deps } = setup();
-    const log: DeliveryLog = { claim: async () => true, complete: async () => Promise.reject(new Error("down")), has: vi.fn(), mark: vi.fn() };
+    const log: DeliveryLog = { claim: async () => true, complete: async () => Promise.reject(new Error("down")), has: vi.fn(), get: vi.fn(), mark: vi.fn() };
     expect((await deliver({ ...deps, log }, "k", message("JULIA"), recipient, { type: "LOG", send: async () => ({ status: "SENT" }) })).status).toBe("SENT");
     expect(deps.logger.error).toHaveBeenCalledWith("Notification status not recorded", expect.anything());
   });
@@ -196,6 +196,7 @@ describe("DynamoDbDeliveryLog markers (NOTIFICATION-004)", () => {
 
   it("checks existence with a key-only read and writes markers unconditionally", async () => {
     expect(await new DynamoDbDeliveryLog(client(async () => ({ Item: { notificationKey: "k" } })), "t").has("k")).toBe(true);
+    expect(await new DynamoDbDeliveryLog(client(async () => ({ Item: { notificationKey: "k", status: "SENT", createdAt: "c" } })), "t").get("k")).toEqual({ notificationKey: "k", status: "SENT", createdAt: "c" });
     expect(await new DynamoDbDeliveryLog(client(async () => ({})), "t").has("k")).toBe(false);
     const c = client(async () => ({}));
     const record: DeliveryRecord = { notificationKey: "m", type: "OVERDUE_ALERT", channel: "ANY", userId: "U", status: "SENT", attempts: 0, errorCode: null, createdAt: "t", expiresAt: 5 };
@@ -211,12 +212,14 @@ describe("DynamoDbDeliveryLog markers (NOTIFICATION-004)", () => {
   });
 });
 
-describe("createNotifierDependencies", () => {
+describe("createNotifierRuntime", () => {
   it("requires tables, the notifications table and the tenant", () => {
-    expect(() => createNotifierDependencies(testConfig({ tables: undefined }))).toThrow(NotifierNotConfiguredError);
-    expect(() => createNotifierDependencies(testConfig())).toThrow("NOTIFICATIONS_TABLE");
-    expect(() => createNotifierDependencies(testConfig({ notificationsTable: "n", householdTenantId: undefined }))).toThrow("HOUSEHOLD_TENANT_ID");
-    const deps = createNotifierDependencies(testConfig({ notificationsTable: "tenner-notifications" }));
+    expect(() => createNotifierRuntime(testConfig({ tables: undefined }))).toThrow(NotifierNotConfiguredError);
+    expect(() => createNotifierRuntime(testConfig())).toThrow("NOTIFICATIONS_TABLE");
+    expect(() => createNotifierRuntime(testConfig({ notificationsTable: "n", householdTenantId: undefined }))).toThrow("HOUSEHOLD_TENANT_ID");
+    const runtime = createNotifierRuntime(testConfig({ notificationsTable: "tenner-notifications" }));
+    expect(runtime.widget).toBeUndefined();
+    const deps = runtime.notifier;
     expect(deps.tenantId).toBe("default");
     expect(deps.channels.map((channel) => channel.type)).toEqual(["LOG"]);
     expect(deps.jobs.map((job) => job.type)).toEqual(["DAILY_DIGEST", "OVERDUE_ALERT"]);

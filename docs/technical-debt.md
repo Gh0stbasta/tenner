@@ -1004,3 +1004,31 @@ Move the web app to access tokens (they also carry `cognito:groups`), then put `
 ### Related Work
 
 ALEXA-002, `terraform/auth.tf`, `backend/src/auth/identity.ts`, `docs/security.md` → "Residual Risks".
+
+## TD-036: Alexa widget package and Data Store/Proactive API shapes unverified
+
+### Description
+
+The widget APL package (`alexa/widgets/tenner-status/`), its Data Store binding, the Data Store request
+(`/v1/datastore/commands`, `PUT_OBJECT`, target `USER`), the Proactive Events and Skill Messaging requests
+(ALEXA-008) follow Amazon's documentation as researched in 2026-10 but were never run against Amazon. The widget is
+not yet declared in the skill manifest, because the declaration format is to be confirmed in the spike.
+
+### Reason
+
+The developer site was not reachable from the development environment, and no Amazon developer account or device
+was available (ALEXA-007 spike is an owner task).
+
+### Impact
+
+Widget pushes or Alexa notifications may be rejected (logged as `WidgetPushFailed` / delivery `FAILED`) until the
+shapes are corrected; the rest of Tenner is unaffected.
+
+### Suggested Improvement
+
+Run the ALEXA-007 spike, correct the request shapes and package format, add the widget to `skill.json`, and
+record the results in the ticket.
+
+### Related Work
+
+ALEXA-007, ALEXA-008, `backend/src/alexa/`, `alexa/widgets/`.

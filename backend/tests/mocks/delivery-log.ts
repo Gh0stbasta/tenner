@@ -16,6 +16,7 @@ export function memoryDeliveryLog() {
       records.set(key, { ...existing, status, attempts: existing.attempts + attempts, errorCode });
     }),
     has: vi.fn(async (key: string) => records.has(key)),
+    get: vi.fn(async (key: string) => records.get(key)),
     mark: vi.fn(async (record: DeliveryRecord) => {
       records.set(record.notificationKey, record);
     }),

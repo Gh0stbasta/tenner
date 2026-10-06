@@ -180,3 +180,38 @@ reset to the new day.
 
 - Editing Tenners from the widget beyond an optional "Erledigt"
 - Widgets on non-Echo devices (Fire TV, phones)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06 — "go" path in code; the spike on a household Echo Show is an owner task (manual, later).
+
+- [ ] Spike documented with a go/no-go decision — **open (owner)**: devices, sizes, update latency, reboot,
+  Alexa+; steps in `alexa/README.md` → "Echo Show Widget"
+- [x] (Go, code) Widget APL package `alexa/widgets/tenner-status/` (manifest, document bound to the Data Store
+  object `tenner/status`, sample data; small: today, minutes, overdue; medium: next two Tenners), tap → skill
+  dashboard (`OpenDashboardHandler`)
+- [x] Summary payload `{ date, dueToday, openMinutes, overdue, next, members, updatedAt }` (`backend/src/alexa/widget.ts`)
+- [x] Data push: API writes publish `HouseholdChanged` to EventBridge (awaited, 1 s timeout, never fails the
+  request) → rule → notifier → Data Store (`PUT_OBJECT`, target `USER`); day-start push in the household timezone
+  by the scheduled run; debounce one push per minute (pending changes pushed by the next run)
+- [x] LWA client credentials (`alexa::datastore`) from Parameter Store (SECURITY-006), token cached until expiry
+- [x] Alexa accounts: registered by the skill on first launch (`PUT /household/alexa-users/{alexaUserId}`,
+  `alexaUsers` on the household item); accounts Amazon rejects (404/410) are removed
+- [x] Terraform: EventBridge rule/target/permission, API `events:PutEvents` on the default bus, notifier
+  `ssm:GetParameter` on the two LWA parameters and `UpdateItem` on the household item, env with parameter names
+  only; all gated by skill + notifier
+- [x] (No-go) Fallback plan documented (briefing routine ALEXA-005, overdue notifications ALEXA-008)
+- [x] Tests passing: backend 854 (+13 widget/LWA/Data Store/routing, +5 events, +4 Alexa accounts), alexa 131
+  (+6: registration, widget package, tap), Terraform 72 (+2); lint and builds clean
+- [ ] Widget appears on the Echo Show and updates without voice — after the spike and activation (manual)
+
+Decisions and assumptions:
+
+- The widget is not yet declared in `skill.json`; the declaration format is confirmed in the spike (TD-036).
+- Debounce is "first push immediately, later ones within the minute by the next 15-minute run" — the widget is at
+  most 15 minutes stale after a burst of changes.
+- Unlinking without the SkillDisabled event: Amazon's 404/410 on push removes the account; a skill event
+  subscription can be added after the spike.
+- All members' Tenners are pushed household-wide (the widget is a household view).

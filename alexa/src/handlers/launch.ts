@@ -20,6 +20,7 @@ export const LaunchRequestHandler: RequestHandler = {
   },
   async handle(input: HandlerInput): Promise<Response> {
     const household = await loadHousehold(input);
+    await registerForWidget(input, household.context.alexaUserKnown);
     const names = household.context.members.map((member) => member.displayName);
     const builder = input.responseBuilder.addDirective(entitiesDirective(household.context.members, await titlesForEntities(input)));
     if (household.unknownSpeaker && names.length > 0) {
@@ -44,5 +45,20 @@ async function titlesForEntities(input: HandlerInput): Promise<readonly TennerSu
     if (!(error instanceof TennerApiError)) throw error;
     logEvent("info", "entities_skipped", { requestId: input.requestEnvelope.request.requestId, kind: error.kind });
     return [];
+  }
+}
+
+/**
+ * ALEXA-007: the first launch of an Alexa account registers it as Echo Show widget target. A failure only delays the
+ * widget (retried on the next launch); the Amazon user ID is never logged.
+ */
+async function registerForWidget(input: HandlerInput, known: boolean | undefined): Promise<void> {
+  const alexaUserId = input.requestEnvelope.context?.System?.user?.userId;
+  if (known !== false || alexaUserId === undefined) return;
+  try {
+    await apiOf(input).registerAlexaUser(alexaUserId);
+  } catch (error) {
+    if (!(error instanceof TennerApiError)) throw error;
+    logEvent("info", "widget_registration_skipped", { requestId: input.requestEnvelope.request.requestId, kind: error.kind });
   }
 }

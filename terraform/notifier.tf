@@ -95,6 +95,29 @@ data "aws_iam_policy_document" "notifier" {
     resources = [aws_dynamodb_table.tenners.arn, "${aws_dynamodb_table.tenners.arn}/index/*"]
   }
 
+  # ALEXA-007/008: LWA client of the skill (exact parameters only; aws/ssm needs no KMS statement) and removal of
+  # Alexa accounts Amazon no longer accepts (household item update).
+  dynamic "statement" {
+    for_each = local.alexa_notifier_enabled ? [1] : []
+    content {
+      sid     = "ReadAlexaLwaClient"
+      actions = ["ssm:GetParameter"]
+      resources = [
+        "${local.secret_parameter_arn_prefix}/alexa/lwa-client-id",
+        "${local.secret_parameter_arn_prefix}/alexa/lwa-client-secret",
+      ]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = local.alexa_notifier_enabled ? [1] : []
+    content {
+      sid       = "UpdateAlexaTargets"
+      actions   = ["dynamodb:UpdateItem"]
+      resources = [aws_dynamodb_table.households.arn]
+    }
+  }
+
   statement {
     sid       = "DeliveryLog"
     actions   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
@@ -138,6 +161,11 @@ resource "aws_lambda_function" "notifier" {
       APPLICATION_TIMEZONE = var.application_timezone
       HOUSEHOLD_TENANT_ID  = local.household_tenant_id
       APP_URL              = "https://${aws_cloudfront_distribution.frontend.domain_name}" # deep links (NOTIFICATION-003)
+      # ALEXA-007/008: Alexa APIs; only parameter names, the values stay in Parameter Store.
+      ALEXA_API_ENDPOINT                = local.alexa_notifier_enabled ? local.alexa_api_endpoint : ""
+      ALEXA_LWA_CLIENT_ID_PARAMETER     = local.alexa_notifier_enabled ? local.alexa_lwa_client_id_parameter : ""
+      ALEXA_LWA_CLIENT_SECRET_PARAMETER = local.alexa_notifier_enabled ? local.alexa_lwa_client_secret_parameter : ""
+      ALEXA_SKILL_STAGE                 = "development"
     }
   }
 
@@ -185,4 +213,56 @@ resource "aws_lambda_permission" "notifier_schedule" {
   function_name = aws_lambda_function.notifier[0].function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.notifier[0].arn
+}
+
+# ALEXA-007: household changes from the API refresh the Echo Show widget through the notifier.
+resource "aws_cloudwatch_event_rule" "household_changed" {
+  count = local.alexa_notifier_enabled ? 1 : 0
+
+  name           = "${local.name_prefix}-household-changed"
+  description    = "Household writes from the Tenner API (refreshes the Echo Show widget)."
+  event_bus_name = local.household_events_bus
+  event_pattern  = jsonencode({ source = ["tenner.api"], "detail-type" = ["HouseholdChanged"] })
+
+  tags = {
+    Name        = "${local.name_prefix}-household-changed"
+    Purpose     = "Widget refresh trigger."
+    Description = "Routes household change events to the notifier."
+  }
+}
+
+resource "aws_cloudwatch_event_target" "household_changed" {
+  count = local.alexa_notifier_enabled ? 1 : 0
+
+  rule = aws_cloudwatch_event_rule.household_changed[0].name
+  arn  = aws_lambda_function.notifier[0].arn
+}
+
+resource "aws_lambda_permission" "notifier_household_changed" {
+  count = local.alexa_notifier_enabled ? 1 : 0
+
+  statement_id  = "AllowHouseholdChangedEvents"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.notifier[0].function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.household_changed[0].arn
+}
+
+# The API publishes the events (ALEXA-007).
+data "aws_iam_policy_document" "api_events" {
+  count = local.alexa_notifier_enabled ? 1 : 0
+
+  statement {
+    sid       = "PublishHouseholdChanged"
+    actions   = ["events:PutEvents"]
+    resources = ["arn:aws:events:${var.aws_region}:${data.aws_caller_identity.current.account_id}:event-bus/${local.household_events_bus}"]
+  }
+}
+
+resource "aws_iam_role_policy" "api_events" {
+  count = local.alexa_notifier_enabled ? 1 : 0
+
+  name   = "${local.api_role_name}-events"
+  role   = aws_iam_role.api.id
+  policy = data.aws_iam_policy_document.api_events[0].json
 }
