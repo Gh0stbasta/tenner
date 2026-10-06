@@ -125,3 +125,32 @@ Manually trigger one alarm (e.g. test Lambda error) and confirm delivery.
 
 - On-call rotation
 - Paging services
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06 (deployed with `OBSERVABILITY_ENABLED`; the owner confirms the SNS e-mail once).
+
+- [x] ADR `docs/decisions/0006-alarm-notifications.md`: SNS topic with e-mail subscription (allowed services and
+  roadmap updated)
+- [x] Alarms (`terraform/alarms.tf`): API 5xx rate > 5 % over 5 minutes (metric math, missing = not breaching);
+  Lambda errors > 0 in 2 of 3 periods and throttles > 0 per function (API, notifier when enabled); DynamoDB system
+  errors and throttles across all tables (one alarm each, metric math); notifier without a successful run for
+  2 hours (missing = breaching); cost anomalies stay with OPERATIONS-001
+- [x] Thresholds centralized in `var.alarm_thresholds`; notifications through SNS `tenner-alarms` to the
+  `BUDGET_ALERT_EMAIL` address (OK notifications for the main alarms)
+- [x] Each alarm description links to `docs/runbooks/alarms.md#<section>` (new runbook)
+- [x] Cost: at most 8 alarms here (free tier: 10)
+- [x] Tests passing: Terraform 70 (+2: topic and subscription, 2-of-3, thresholds, runbook links, ≤ 10 alarms,
+  notifier alarm only with the notifier)
+- [ ] Alerts reach the owner — after deploy and subscription confirmation (manual: trigger one alarm)
+- [ ] False-positive rate acceptable — after one week in operation
+
+Decisions and assumptions:
+
+- DynamoDB alarms are aggregated over all tables to stay within the free tier; the dashboard shows per-table detail.
+- The SNS topic is not KMS-encrypted (CloudWatch cannot publish to topics with the AWS managed SNS key; messages
+  carry no personal data) — ADR 0006.
+- OPERATIONS-002 runbooks do not exist yet; `docs/runbooks/alarms.md` covers the alarms and can be merged into
+  them later.

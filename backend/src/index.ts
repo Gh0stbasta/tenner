@@ -5,10 +5,28 @@
  */
 
 import { AnalyticsService } from "./analytics/index.js";
+import {
+  alexaContextHandler,
+  linkAlexaSpeakerHandler,
+  registerAlexaUserHandler,
+  unlinkAlexaSpeakerHandler,
+  type GetAlexaContext,
+  type LinkAlexaSpeaker,
+  type RegisterAlexaUser,
+  type UnlinkAlexaSpeaker,
+} from "./handlers/alexa.js";
 import { analyticsHandler, type AnalyticsQuery } from "./handlers/analytics.js";
-import { householdGroupName, identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
+import {
+  getNotificationPreferencesHandler,
+  updateNotificationPreferencesHandler,
+  type GetNotificationPreferences,
+  type UpdateNotificationPreferences,
+} from "./handlers/notification-preferences.js";
+import { clientOf, householdGroupName, identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
 import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
+import { getEventBridgeClient } from "./clients/eventbridge.js";
+import { changesHousehold, createHouseholdChangePublisher, type HouseholdChangePublisher } from "./events/household-events.js";
 import { loadConfig, type AppConfig } from "./config.js";
 import { ApplicationError, NotFoundError } from "./exceptions/index.js";
 import { completeTennerHandler, type CompleteTenner } from "./handlers/complete-tenner.js";
@@ -60,6 +78,8 @@ import {
   DynamoDbTennerRepository,
 } from "./repositories/index.js";
 import {
+  AlexaSpeakerService,
+  NotificationPreferencesService,
   CompleteTennerService,
   CreateTennerService,
   DashboardService,
@@ -85,7 +105,7 @@ import {
 import { systemClock, uuidGenerator } from "./utils/clock.js";
 import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
-import { SEED_CATEGORIES, SEED_MEMBERS, type Handover, type HouseholdCategory, type HouseholdMember, type Vacation } from "./models/index.js";
+import { SEED_CATEGORIES, SEED_MEMBERS, type Handover, type HouseholdCategory, type HouseholdMember, type UserChannel, type Vacation } from "./models/index.js";
 import { createLogger, errorFields, type Logger } from "./utils/logger.js";
 import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, AnalyticsBalanceResponse, AnalyticsHabitResponse, AnalyticsHabitsResponse, AnalyticsTimeResponse, HouseholdResponse } from "./dto/index.js";
 import { analyticsNeglectedSchema, analyticsPeriodSchema, analyticsTrendsSchema, tennerIdSchema, validate } from "./validators/index.js";
@@ -93,6 +113,8 @@ import { analyticsNeglectedSchema, analyticsPeriodSchema, analyticsTrendsSchema,
 /** Dependencies shared by all handlers; replaced in tests. */
 export interface Dependencies {
   readonly config: AppConfig;
+  /** Household change events for the Echo Show widget (ALEXA-007); absent when not configured. */
+  readonly publishHouseholdChange?: HouseholdChangePublisher;
   readonly logger: Logger;
   readonly probeDatabase: DatabaseProbe;
   readonly createTenner: CreateTenner;
@@ -115,6 +137,12 @@ export interface Dependencies {
   readonly reactivateMember: ReactivateMember;
   readonly startHandover: StartHandover;
   readonly endHandover: EndHandover;
+  readonly getAlexaContext: GetAlexaContext;
+  readonly registerAlexaUser: RegisterAlexaUser;
+  readonly getNotificationPreferences: GetNotificationPreferences;
+  readonly updateNotificationPreferences: UpdateNotificationPreferences;
+  readonly linkAlexaSpeaker: LinkAlexaSpeaker;
+  readonly unlinkAlexaSpeaker: UnlinkAlexaSpeaker;
   readonly listCategories: ListCategories;
   readonly createCategory: CreateCategory;
   readonly updateCategory: UpdateCategory;
@@ -201,6 +229,13 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
   "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
   "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHousehold, logger),
+  "GET /users/{userId}/notification-preferences": ({ event, deps, identity }) => getNotificationPreferencesHandler(event, identity, deps.getNotificationPreferences),
+  "PUT /users/{userId}/notification-preferences": ({ event, deps, logger, identity }) =>
+    updateNotificationPreferencesHandler(event, identity, deps.updateNotificationPreferences, logger),
+  "GET /household/alexa": ({ event, deps, identity }) => alexaContextHandler(event, identity, deps.getAlexaContext),
+  "PUT /household/alexa-users/{alexaUserId}": ({ event, deps, logger, identity }) => registerAlexaUserHandler(event, identity, deps.registerAlexaUser, logger),
+  "PUT /household/alexa-speakers/{personId}": ({ event, deps, logger, identity }) => linkAlexaSpeakerHandler(event, identity, deps.linkAlexaSpeaker, logger),
+  "DELETE /household/alexa-speakers/{personId}": ({ event, deps, logger, identity }) => unlinkAlexaSpeakerHandler(event, identity, deps.unlinkAlexaSpeaker, logger),
   "GET /analytics/summary": ({ event, deps, logger, identity }) => analyticsHandler("summary", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsSummary, logger),
   "GET /analytics/trends": ({ event, deps, logger, identity }) => analyticsHandler("trends", analyticsTrendsSchema, event, identity.tenantId, deps.analyticsTrends, logger),
   "GET /analytics/users": ({ event, deps, logger, identity }) => analyticsHandler("users", analyticsPeriodSchema, event, identity.tenantId, deps.analyticsUsers, logger),
@@ -226,6 +261,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     timezone: config.timezone,
     tables: config.tables ?? "not configured",
     onboarding: config.onboarding ?? "not configured",
+    alexa: config.alexaClientId !== undefined ? "configured" : "not configured",
   });
   const tables = config.tables;
   const notConfigured = async (): Promise<never> => {
@@ -273,12 +309,17 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   // HOUSEHOLD-ADMIN-004: without Cognito configuration there are no groups to revoke.
   const revokeAccess = (tenantId: string, userId: string): Promise<number> =>
     membershipRepository?.removeAllMembers(householdGroupName(tenantId, userId)) ?? Promise.resolve(0);
+  const alexaSpeakerService = householdRepository ? new AlexaSpeakerService(householdRepository, systemClock, config.timezone) : undefined;
+  // ALEXA-008: Alexa is a connected channel for every member once an Alexa account of the household uses the skill.
+  const connectedChannels = async (tenantId: string): Promise<UserChannel[]> => ((await alexaSpeakerService?.alexaUsersOf(tenantId))?.length ? ["ALEXA"] : []);
+  const notificationPreferencesService = householdRepository ? new NotificationPreferencesService(householdRepository, systemClock, timezoneOf, connectedChannels) : undefined;
   const memberDeactivationService =
     householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
 
   return {
     config,
     logger,
+    ...(config.householdEventsBus === undefined ? {} : { publishHouseholdChange: createHouseholdChangePublisher(getEventBridgeClient(), config.householdEventsBus) }),
     probeDatabase: (t) => probeTables(getDocumentClient(), t),
     createTenner: createTennerService ? (identity, request) => createTennerService.createTenner(identity, request) : notConfigured,
     listTenners: listTennersService ? async (tenantId, request) => (await expireHandovers(tenantId), listTennersService.listTenners(tenantId, request)) : notConfigured,
@@ -308,6 +349,14 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     reactivateMember: memberDeactivationService ? (identity, userId) => memberDeactivationService.reactivate(identity, userId) : notConfigured,
     startHandover: handoverService ? (identity, userId, request) => handoverService.start(identity, userId, request) : notConfigured,
     endHandover: handoverService ? (identity, userId) => handoverService.end(identity, userId) : notConfigured,
+    getNotificationPreferences: notificationPreferencesService ? (identity, userId) => notificationPreferencesService.get(identity, userId) : notConfigured,
+    updateNotificationPreferences: notificationPreferencesService
+      ? (identity, userId, request) => notificationPreferencesService.update(identity, userId, request)
+      : notConfigured,
+    getAlexaContext: alexaSpeakerService ? (identity, alexaUserId) => alexaSpeakerService.context(identity, alexaUserId) : notConfigured,
+    registerAlexaUser: alexaSpeakerService ? (identity, alexaUserId) => alexaSpeakerService.registerAlexaUser(identity, alexaUserId) : notConfigured,
+    linkAlexaSpeaker: alexaSpeakerService ? (identity, personId, userId) => alexaSpeakerService.link(identity, personId, userId) : notConfigured,
+    unlinkAlexaSpeaker: alexaSpeakerService ? (identity, personId) => alexaSpeakerService.unlink(identity, personId) : notConfigured,
     listCategories: categoryService ? (tenantId) => categoryService.listCategories(tenantId) : notConfigured,
     createCategory: categoryService ? (identity, request) => categoryService.createCategory(identity, request) : notConfigured,
     updateCategory: categoryService ? (identity, categoryId, request) => categoryService.updateCategory(identity, categoryId, request) : notConfigured,
@@ -350,13 +399,18 @@ async function dispatch(event: ApiEvent, deps: Dependencies, requestLogger: Logg
   const routeHandler = ROUTES[event.routeKey];
   if (!routeHandler) throw new NotFoundError("Route not found.");
   const identity = identityFromEvent(event);
-  return routeHandler({ event, deps, identity, logger: requestLogger.child({ userId: identity.userId }) });
+  const logger = requestLogger.child({ userId: identity.userId });
+  const result = await routeHandler({ event, deps, identity, logger });
+  // ALEXA-007: let the notifier refresh the Echo Show widget (awaited, ~1 s timeout, never fails the request).
+  if (deps.publishHouseholdChange && changesHousehold(event.routeKey, result.statusCode ?? 200)) await deps.publishHouseholdChange(identity.tenantId, event.routeKey, logger);
+  return result;
 }
 
 /** Dispatch a request to its handler. Exported for tests. */
 export async function route(event: ApiEvent, deps: Dependencies): Promise<ApiResult> {
   const correlationId = correlationIdOf(event);
-  const logger = deps.logger.child({ correlationId, routeKey: event.routeKey });
+  // ALEXA-002: every log line of the request names the channel (web app or Alexa skill) for the audit trail.
+  const logger = deps.logger.child({ correlationId, routeKey: event.routeKey, client: clientOf(event, deps.config.alexaClientId) });
   const withCorrelation = (result: ApiResult): ApiResult => ({
     ...result,
     headers: { ...result.headers, [CORRELATION_HEADER]: correlationId },

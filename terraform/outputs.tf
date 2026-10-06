@@ -127,3 +127,34 @@ output "cognito_household_groups" {
   description = "Cognito groups that grant household membership (FUTURE-011)."
   value       = values(local.household_groups)
 }
+
+output "alexa_skill_lambda_arn" {
+  description = "ARN of the Alexa skill Lambda (ALEXA-001); the skill manifest endpoint. Empty until alexa_skill_id is set."
+  value       = local.alexa_enabled ? aws_lambda_function.alexa_skill[0].arn : ""
+}
+
+output "alexa_account_linking" {
+  description = "Values for the Alexa developer console → Account Linking (ALEXA-002); null until Alexa linking is set up. The client secret is not output: read it with `aws cognito-idp describe-user-pool-client` (alexa/README.md)."
+  value = local.alexa_auth_enabled ? {
+    authorization_uri = "https://${local.auth_login_domain}/oauth2/authorize"
+    access_token_uri  = "https://${local.auth_login_domain}/oauth2/token"
+    client_id         = aws_cognito_user_pool_client.alexa[0].id
+    scopes            = aws_cognito_user_pool_client.alexa[0].allowed_oauth_scopes
+    user_pool_id      = aws_cognito_user_pool.users.id
+  } : null
+}
+
+output "secret_parameter_prefix" {
+  description = "SSM Parameter Store prefix for runtime secrets (SECURITY-006): /tenner/<environment>/<component>/<name>. Values are set out of band (README → Secrets)."
+  value       = local.secret_parameter_prefix
+}
+
+output "notifier_function_name" {
+  description = "Notifier Lambda (NOTIFICATION-001); empty while notifications_enabled is false."
+  value       = var.notifications_enabled ? aws_lambda_function.notifier[0].function_name : ""
+}
+
+output "cloudwatch_dashboard_url" {
+  description = "CloudWatch dashboard (OBSERVABILITY-001); empty while observability_enabled is false."
+  value       = var.observability_enabled ? "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards/dashboard/${local.dashboard_name}" : ""
+}

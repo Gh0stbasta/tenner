@@ -17,6 +17,7 @@ terraform.rc
 # Node
 node_modules/
 dist/
+dist-notifier/
 coverage/
 
 # Environment files

@@ -6,3 +6,4 @@ export * from "./household-membership.repository.js";
 export * from "./cognito/household-membership.cognito.repository.js";
 export * from "./household.repository.js";
 export * from "./dynamodb/household.dynamodb.repository.js";
+export * from "./dynamodb/notification.dynamodb.repository.js";

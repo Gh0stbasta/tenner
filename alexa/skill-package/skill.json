@@ -1,0 +1,79 @@
+{
+  "manifest": {
+    "manifestVersion": "1.0",
+    "publishingInformation": {
+      "locales": {
+        "de-DE": {
+          "name": "Tenner",
+          "summary": "Die kleinen Aufgaben im Haushalt im Blick.",
+          "description": "Tenner sagt dir, welche kleinen Haushaltsaufgaben heute fällig sind.",
+          "examplePhrases": [
+            "Alexa, öffne Tenner Board",
+            "Alexa, frag Tenner Board, was heute fällig ist",
+            "Alexa, sag Tenner Board, starte meinen Tag"
+          ],
+          "keywords": [
+            "Haushalt",
+            "Aufgaben"
+          ]
+        }
+      },
+      "isAvailableWorldwide": false,
+      "distributionCountries": [
+        "DE"
+      ],
+      "testingInstructions": "Private household skill. Development stage only; never submitted for certification or published.",
+      "category": "ORGANIZERS_AND_ASSISTANTS"
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "${SKILL_LAMBDA_ARN}"
+        },
+        "interfaces": [
+          {
+            "type": "ALEXA_PRESENTATION_APL",
+            "supportedViewports": [
+              {
+                "mode": "HUB",
+                "shape": "RECTANGLE",
+                "minWidth": 960,
+                "maxWidth": 1920,
+                "minHeight": 480,
+                "maxHeight": 1920
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": false,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false,
+      "locales": {
+        "de-DE": {}
+      }
+    },
+    "permissions": [
+      {
+        "name": "alexa::person_id:read"
+      },
+      {
+        "name": "alexa::alerts:reminders:skill:readwrite"
+      }
+    ],
+    "events": {
+      "publications": [
+        {
+          "eventName": "AMAZON.MessageAlert.Activated"
+        }
+      ],
+      "endpoint": {
+        "uri": "${SKILL_LAMBDA_ARN}"
+      }
+    }
+  }
+}

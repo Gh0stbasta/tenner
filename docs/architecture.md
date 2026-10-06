@@ -114,6 +114,10 @@ Allowed:
 - EventBridge
 - Cognito
 - Billing features without runtime: AWS Budgets, Cost Anomaly Detection ([ADR 0003](decisions/0003-cost-monitoring.md))
+- SNS for alarm notifications only (e-mail subscription, [ADR 0006](decisions/0006-alarm-notifications.md))
+- SSM Parameter Store (SecureString, AWS managed key `aws/ssm`) for runtime secrets ([ADR 0004](decisions/0004-secrets-management.md)); values set out of band, never in Terraform state or environment variables
+- Alexa Skills Kit (custom skill, APL, Reminders, Proactive Events, Data Store) and the skill Lambda in eu-west-1
+  ([ADR 0005](decisions/0005-alexa-platform.md)); the only resources outside eu-central-1, no data stored there
 
 Not Allowed:
 
@@ -154,6 +158,10 @@ Assumption: about 10,000 API requests, a few hundred writes and a few MB of logs
 | CloudWatch Logs | a few MB ingestion and storage, 30-day retention | < 0.01 USD |
 | Cognito (Essentials) | 10,000 MAU free | 0 USD |
 | AWS Budgets, Cost Anomaly Detection | first two budgets free; anomaly detection free | 0 USD |
+| Notifier Lambda + EventBridge rule + delivery log (NOTIFICATION-001) | ~2,900 runs per month, a few writes per day | 0 USD |
+| SSM Parameter Store (ADR 0004) | a few standard SecureString parameters, cached reads | 0 USD |
+| Alexa skill Lambda + logs (eu-west-1, ADR 0005) | a few hundred voice requests; Lambda free tier, Alexa APIs free | 0 USD |
+| CloudWatch alarms (OBSERVABILITY-002, ALEXA-009) | up to 11 standard alarms, 10 free | ≤ 0.10 USD |
 | **Total** | | **< 0.10 USD per month** |
 
 Monitoring: a 5 USD monthly budget with alerts at 50 %, 80 % and 100 % forecast plus a daily anomaly summary
@@ -642,7 +650,8 @@ Decided in [`decisions/0001-authentication.md`](decisions/0001-authentication.md
   `household:<tenantId>:<userId>`. On the first login the user picks a household member; each member can be
   claimed by one account only (HOTFIX-001, ADR 0002 amendment).
 - The API Gateway JWT authorizer protects every route except `GET /health`. The browser sends the
-  Cognito **ID token** because it carries `cognito:groups`.
+  Cognito **ID token** because it carries `cognito:groups`. The Alexa skill sends the **access token** of the
+  linked account (also with `cognito:groups`; ALEXA-002); the authorizer accepts both app clients.
 - The backend derives tenant and acting user only from verified claims (SECURITY-004).
 - Tokens are kept in `localStorage` for up to 30 days (refresh token), so a device stays logged in.
 
@@ -670,7 +679,8 @@ Browser ──(Authorization Code + PKCE, identity_provider=Google)──► Cog
 | `aws_cognito_user_group.household` | `household:default:STEFAN`, `household:default:JULIA` (seed members; groups of members added in the app are created by the API, HOUSEHOLD-ADMIN-001) |
 | `aws_iam_role_policy.api_cognito` | API Lambda may add/remove the caller to/from household groups, read group membership and create member groups on this pool only (HOTFIX-001, HOUSEHOLD-ADMIN-001, TD-023) |
 | `aws_cognito_user_pool_domain.login` | managed login v2, prefix `tenner-prod-<first 8 hex of sha1(account id)>` |
-| `aws_apigatewayv2_authorizer.cognito` | JWT authorizer on every route except `GET /health` (`local.api_public_routes`) |
+| `aws_apigatewayv2_authorizer.cognito` | JWT authorizer on every route except `GET /health` (`local.api_public_routes`); audience = web client plus, once set up, the Alexa client |
+| `aws_cognito_user_pool_client.alexa` (`tenner-alexa-prod`, ALEXA-002) | only when `alexa_skill_id` and `alexa_redirect_urls` are set: confidential client (secret), code grant, scopes `openid tenner/household` (resource server `tenner`), Google only, callbacks = Alexa redirect URLs, access 60 min, refresh 3,650 days, revocation on; output `alexa_account_linking` (URLs, client ID — not the secret) |
 
 The CloudFront CSP allows `connect-src` to `cognito-idp.eu-central-1.amazonaws.com` (discovery, JWKS) and the
 managed login domain (token endpoint). Outputs: `cognito_user_pool_id`, `cognito_client_id`, `cognito_issuer_url`,
@@ -809,6 +819,8 @@ tenner/
 ├── frontend/
 │
 ├── backend/
+│
+├── alexa/            Alexa skill package + skill Lambda (ADR 0005)
 │
 ├── terraform/
 │
@@ -1378,10 +1390,39 @@ Out of scope for MVP.
 
 ## Notifications
 
-- Telegram
-- WhatsApp
-- Email
-- Push Notifications
+Foundation implemented (NOTIFICATION-001); channels Telegram, WhatsApp, Email and Push are future tickets.
+
+```text
+EventBridge rule rate(15 minutes) ──► Lambda tenner-notifier (backend/src/notifier.ts, own role)
+  for each active member × job (daily digest, overdue alerts, …):
+    job.channelsDue(recipient, now)   → time window, quiet hours, preferences
+    job.render(recipient, now)        → NotificationMessage (rendering separate from delivery)
+    for each channel: deliver()       → claim key in tenner-notifications (conditional update)
+                                         → channel.send() with up to 3 attempts and backoff
+                                         → status SENT | FAILED | SKIPPED, TTL 90 days
+```
+
+- **Deduplication:** key `<tenantId>#<userId>#<type>#<channel>#<local date>[#suffix]`; a key is claimed once; only
+  FAILED keys can be claimed again by later runs (at most 9 attempts in total). A run interrupted after claiming
+  leaves the key PENDING, so that notification is not sent (at most once).
+- **Isolation:** a failing member, job or channel is logged and never stops the others.
+- **Channels:** `NotificationChannel.send(message, recipient)`; only `LogChannel` (structured log, no body) exists.
+- **Preferences (NOTIFICATION-002):** per member on the household item (`notificationPreferences`): daily digest
+  time, overdue threshold, weekly summary, quiet hours, channels (connected ones only), own timezone or the
+  household's. Defaults apply until a member saves; `GET/PUT /users/{userId}/notification-preferences`, own member
+  only; Settings → "Benachrichtigungen".
+- **Daily digest (NOTIFICATION-003):** due at the member's time (own timezone or the household's), not in quiet
+  hours; content from `DashboardService.getDashboard(tenant, { assignedTo })` (own + shared Tenners, paused and
+  vacation rules as on the dashboard), at most 10 items per section, skipped on empty days, deep link `APP_URL`.
+  Every due notification is also written to the log channel.
+- **Overdue alerts (NOTIFICATION-004):** checked daily at 17:00 local (outside quiet hours); a Tenner of the member
+  (own or shared) with `overdueDays ≥ minDaysOverdue` is alerted once per overdue cycle (marker
+  `<tenant>#<user>#OVERDUE#<tennerId>#<nextDue>` in the delivery log), one reminder after 2 × `frequencyDays`
+  (`…#ESCALATION`); all Tenners of a member are bundled into one message per day.
+- **Logs:** type, channel, user ID, status, error code — never message bodies or channel addresses.
+- **Infrastructure:** `terraform/notifier.tf`, created only with `notifications_enabled` (GitHub variable
+  `NOTIFICATIONS_ENABLED`). EventBridge rule instead of EventBridge Scheduler (no extra invocation role).
+  Cost: ~2,900 invocations per month, within the free tier.
 
 ## Smart Scheduling
 
@@ -1396,6 +1437,13 @@ Examples:
 - Garmin
 - Strava
 - Zwift
+
+## Alexa Skill (ADR 0005)
+
+German custom skill "Tenner" in `alexa/` (own npm package). The skill Lambda `tenner-alexa-skill` runs in
+eu-west-1 (Alexa Skills Kit trigger region), may only be invoked by the Tenner skill ID and has a logs-only role.
+From ALEXA-002 on it calls the Tenner API in eu-central-1 with the linked user's Cognito token; it never accesses
+DynamoDB. Terraform creates it only when `alexa_skill_id` is set. Status and setup: `alexa/README.md`.
 
 ## Mobile App
 

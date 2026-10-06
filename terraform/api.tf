@@ -29,6 +29,8 @@ resource "aws_lambda_function" "api" {
       APPLICATION_TIMEZONE = var.application_timezone
       COGNITO_USER_POOL_ID = aws_cognito_user_pool.users.id # HOTFIX-001 self-assignment
       HOUSEHOLD_TENANT_ID  = local.household_tenant_id
+      ALEXA_CLIENT_ID      = local.alexa_auth_enabled ? aws_cognito_user_pool_client.alexa[0].id : "" # ALEXA-002 audit channel
+      HOUSEHOLD_EVENTS_BUS = local.alexa_notifier_enabled ? local.household_events_bus : ""           # ALEXA-007 widget refresh
     }
   }
 

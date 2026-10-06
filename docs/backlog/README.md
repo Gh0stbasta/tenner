@@ -275,6 +275,7 @@ custom skill in development stage; skill Lambda in eu-west-1 calling the Tenner 
 | [ALEXA-007](alexa/ticket007.md) | Implement Echo Show Home Screen Widget (Flagship) | High | V2 |
 | [ALEXA-008](alexa/ticket008.md) | Implement Alexa Notifications and Reminders | Medium | V2 |
 | [ALEXA-009](alexa/ticket009.md) | Implement Alexa Operations and Monitoring | Medium | V2 |
+| [ALEXA-010](alexa/ticket010.md) | Use the Invocation Name "tenner board" and Keep the Skill Private | High | V2 |
 
 ### Integrations (`integrations/`, prefix `INTEGRATION-`)
 

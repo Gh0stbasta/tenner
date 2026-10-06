@@ -1,0 +1,31 @@
+{
+  "status": {
+    "date": "2026-10-06",
+    "dueToday": 3,
+    "openMinutes": 15,
+    "overdue": 1,
+    "next": [
+      {
+        "title": "Haustür putzen",
+        "minutes": 10,
+        "member": "Julia"
+      },
+      {
+        "title": "Altglas",
+        "minutes": 5,
+        "member": "Stefan"
+      }
+    ],
+    "members": [
+      {
+        "name": "Stefan",
+        "count": 2
+      },
+      {
+        "name": "Julia",
+        "count": 2
+      }
+    ],
+    "updatedAt": "2026-10-06T07:00:00.000Z"
+  }
+}

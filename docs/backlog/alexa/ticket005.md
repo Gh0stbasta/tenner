@@ -139,3 +139,31 @@ Manual: run via voice and via a scheduled Alexa routine.
 
 - Skill-provided routines (Routines Kit is discontinued)
 - Weather, calendar or news in the briefing
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06.
+
+- [x] `BriefingIntent` („starte meinen Tag“, „guten Morgen“, „was ist heute los“, „gib mir einen Überblick“, …)
+- [x] Pure builder `alexa/src/briefing.ts` (`buildBriefing`): greeting with name (time of day in the household
+  timezone), today (≤ 3 titles, „und … weitere“), overdue (longest first), household total and other members'
+  counts (only with > 1 member), vacation notice (from paused Tenners with reason `VACATION`), closing question
+  with the suggestion rule of ALEXA-003; ≤ 100 words (≈ 40 s) — titles dropped first, then the household sentence
+- [x] „ja“ names the first Tenner (then „erledigt“ completes it, ALEXA-004); „nein“ ends politely
+- [x] One household-wide `GET /dashboard`; the Echo Show shows the dashboard while speaking (ALEXA-006)
+- [x] README: routine setup in the Alexa app (household-wide when run by a routine)
+- [x] Tests passing: alexa 125 (+10: full order, known/unknown speaker, single overdue, empty day,
+  single-member household, vacation notice, length limit, time-of-day greeting incl. other timezone, handler with
+  one dashboard call, yes/no); lint and build clean
+- [ ] Run from a scheduled Alexa routine — manual after activation
+
+Decisions and assumptions:
+
+- Optional part 6 („Gestern habt ihr 6 Tenner erledigt“) is not included: it would need a third API call
+  (analytics) and is optional in the ticket.
+- NOTIFICATION-003 does not exist yet, so the content rules live in `alexa/src/briefing.ts`; when the written
+  digest is built it should reuse them (shared package or a shared fixture).
+- The vacation notice only appears when the vacation pauses at least one Tenner (read from the dashboard, no
+  extra call).

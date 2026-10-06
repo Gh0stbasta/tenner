@@ -39,46 +39,52 @@ locals {
   # API routes served by the tenner-api Lambda.
   api_routes = [
     "GET /health",
-    "POST /tenners",                            # TICKET-009
-    "GET /tenners",                             # TICKET-010
-    "PUT /tenners/{tennerId}",                  # TICKET-011
-    "DELETE /tenners/{tennerId}",               # TICKET-012 (soft delete)
-    "POST /tenners/{tennerId}/complete",        # TICKET-013
-    "POST /tenners/{tennerId}/undo-completion", # TICKET-014
-    "POST /tenners/{tennerId}/restore",         # TICKET-015
-    "GET /dashboard",                           # TICKET-016
-    "GET /tenners/{tennerId}",                  # TICKET-019
-    "GET /history",                             # TICKET-020
-    "GET /tenners/{tennerId}/history",          # TICKET-020
-    "GET /onboarding",                          # HOTFIX-001 (signed in, no household needed)
-    "POST /onboarding/assignment",              # HOTFIX-001
-    "GET /household",                           # SCHEDULING-008
-    "PUT /household",                           # SCHEDULING-008
-    "GET /analytics/summary",                   # ANALYTICS-001
-    "GET /analytics/trends",                    # ANALYTICS-002
-    "GET /analytics/users",                     # ANALYTICS-003
-    "GET /analytics/categories",                # ANALYTICS-004
-    "GET /analytics/neglected",                 # ANALYTICS-006
-    "GET /analytics/balance",                   # ANALYTICS-007
-    "GET /analytics/time",                      # ANALYTICS-005
-    "GET /analytics/habits",                    # ANALYTICS-008
-    "GET /analytics/habits/{tennerId}",         # ANALYTICS-008
-    "POST /tenners/{tennerId}/snooze",          # SCHEDULING-003
-    "POST /tenners/{tennerId}/skip",            # SCHEDULING-004
-    "POST /tenners/{tennerId}/pause",           # SCHEDULING-005
-    "POST /tenners/{tennerId}/resume",          # SCHEDULING-005
-    "PUT /household/vacation",                  # SCHEDULING-005
-    "DELETE /household/vacation",               # SCHEDULING-005
-    "GET /users",                               # HOUSEHOLD-ADMIN-001
-    "POST /users",                              # HOUSEHOLD-ADMIN-001
-    "PUT /users/{userId}",                      # HOUSEHOLD-ADMIN-001
-    "POST /users/{userId}/deactivate",          # HOUSEHOLD-ADMIN-004
-    "POST /users/{userId}/reactivate",          # HOUSEHOLD-ADMIN-004
-    "POST /users/{userId}/handover",            # HOUSEHOLD-004
-    "DELETE /users/{userId}/handover",          # HOUSEHOLD-004
-    "GET /categories",                          # HOUSEHOLD-ADMIN-002
-    "POST /categories",                         # HOUSEHOLD-ADMIN-002
-    "PUT /categories/{categoryId}",             # HOUSEHOLD-ADMIN-002
+    "POST /tenners",                                # TICKET-009
+    "GET /tenners",                                 # TICKET-010
+    "PUT /tenners/{tennerId}",                      # TICKET-011
+    "DELETE /tenners/{tennerId}",                   # TICKET-012 (soft delete)
+    "POST /tenners/{tennerId}/complete",            # TICKET-013
+    "POST /tenners/{tennerId}/undo-completion",     # TICKET-014
+    "POST /tenners/{tennerId}/restore",             # TICKET-015
+    "GET /dashboard",                               # TICKET-016
+    "GET /tenners/{tennerId}",                      # TICKET-019
+    "GET /history",                                 # TICKET-020
+    "GET /tenners/{tennerId}/history",              # TICKET-020
+    "GET /onboarding",                              # HOTFIX-001 (signed in, no household needed)
+    "POST /onboarding/assignment",                  # HOTFIX-001
+    "GET /household",                               # SCHEDULING-008
+    "PUT /household",                               # SCHEDULING-008
+    "GET /analytics/summary",                       # ANALYTICS-001
+    "GET /analytics/trends",                        # ANALYTICS-002
+    "GET /analytics/users",                         # ANALYTICS-003
+    "GET /analytics/categories",                    # ANALYTICS-004
+    "GET /analytics/neglected",                     # ANALYTICS-006
+    "GET /analytics/balance",                       # ANALYTICS-007
+    "GET /analytics/time",                          # ANALYTICS-005
+    "GET /analytics/habits",                        # ANALYTICS-008
+    "GET /analytics/habits/{tennerId}",             # ANALYTICS-008
+    "POST /tenners/{tennerId}/snooze",              # SCHEDULING-003
+    "POST /tenners/{tennerId}/skip",                # SCHEDULING-004
+    "POST /tenners/{tennerId}/pause",               # SCHEDULING-005
+    "POST /tenners/{tennerId}/resume",              # SCHEDULING-005
+    "PUT /household/vacation",                      # SCHEDULING-005
+    "DELETE /household/vacation",                   # SCHEDULING-005
+    "GET /users",                                   # HOUSEHOLD-ADMIN-001
+    "POST /users",                                  # HOUSEHOLD-ADMIN-001
+    "PUT /users/{userId}",                          # HOUSEHOLD-ADMIN-001
+    "POST /users/{userId}/deactivate",              # HOUSEHOLD-ADMIN-004
+    "POST /users/{userId}/reactivate",              # HOUSEHOLD-ADMIN-004
+    "POST /users/{userId}/handover",                # HOUSEHOLD-004
+    "DELETE /users/{userId}/handover",              # HOUSEHOLD-004
+    "GET /categories",                              # HOUSEHOLD-ADMIN-002
+    "POST /categories",                             # HOUSEHOLD-ADMIN-002
+    "GET /users/{userId}/notification-preferences", # NOTIFICATION-002
+    "PUT /users/{userId}/notification-preferences", # NOTIFICATION-002
+    "GET /household/alexa",                         # ALEXA-002
+    "PUT /household/alexa-speakers/{personId}",     # ALEXA-002
+    "DELETE /household/alexa-speakers/{personId}",  # ALEXA-002
+    "PUT /household/alexa-users/{alexaUserId}",     # ALEXA-007
+    "PUT /categories/{categoryId}",                 # HOUSEHOLD-ADMIN-002
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.
@@ -93,6 +99,14 @@ locals {
   auth_callback_path      = "/auth/callback"
   auth_token_minutes      = 60
   auth_refresh_token_days = 30
+
+  # Alexa account linking (ALEXA-002): own app client with a secret; Alexa refreshes the access token itself,
+  # so the refresh token lives up to the Cognito maximum and the household never has to relink.
+  alexa_auth_enabled            = local.alexa_enabled && length(var.alexa_redirect_urls) > 0
+  alexa_auth_client_name        = "${local.name_prefix}-alexa-${var.environment}"
+  alexa_auth_resource_server    = "tenner"
+  alexa_auth_scope              = "household"
+  alexa_auth_refresh_token_days = 3650
 
   # Google sign-in and household membership (FUTURE-011). A user belongs to the household through exactly one
   # Cognito group "household:<tenantId>:<userId>"; the group arrives in the ID token as cognito:groups.
@@ -116,6 +130,42 @@ locals {
   # Lambda bundle built by `npm run build` in backend/ (dist/index.mjs).
   api_source_dir  = "${path.module}/../backend/dist"
   api_package_zip = "${path.module}/../.build/tenner-api.zip"
+
+  # Notifier (NOTIFICATION-001): scheduled Lambda separate from the API, delivery log with 90-day TTL.
+  notifier_function_name   = "${local.name_prefix}-notifier"
+  notifier_role_name       = "${local.name_prefix}-notifier-role"
+  notifier_log_group_name  = "/${local.name_prefix}/notifier"
+  notifier_source_dir      = "${path.module}/../backend/dist-notifier"
+  notifier_package_zip     = "${path.module}/../.build/tenner-notifier.zip"
+  notifier_timeout_seconds = 60
+  notifier_schedule        = "rate(15 minutes)"
+  notifications_table_name = "${local.name_prefix}-notifications"
+
+  # Runtime secrets (SECURITY-006, ADR 0004): SSM SecureString parameters below this prefix. Terraform knows only
+  # the names (IAM, Lambda configuration); values are set out of band so they never enter the state.
+  secret_parameter_prefix     = "/${local.name_prefix}/${var.environment}"
+  secret_parameter_arn_prefix = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.secret_parameter_prefix}"
+
+  # Alexa skill Lambda (ALEXA-001, ADR 0005). Created only once the skill exists (var.alexa_skill_id set).
+  alexa_enabled              = var.alexa_skill_id != ""
+  alexa_function_name        = "${local.name_prefix}-alexa-skill"
+  alexa_role_name            = "${local.name_prefix}-alexa-skill-role"
+  alexa_log_group_name       = "/${local.name_prefix}/alexa-skill"
+  alexa_source_dir           = "${path.module}/../alexa/dist"
+  alexa_package_zip          = "${path.module}/../.build/tenner-alexa-skill.zip"
+  alexa_runtime              = "nodejs22.x"
+  alexa_architecture         = "arm64"
+  alexa_memory_mb            = 256
+  alexa_timeout_seconds      = 7 # Alexa waits at most 8 seconds for a response.
+  alexa_invocation_principal = "alexa-appkit.amazon.com"
+
+  # Echo Show widget and Alexa notifications (ALEXA-007/008): need the skill and the notifier. The LWA client of the
+  # skill (developer console → Permissions) lives in Parameter Store (SECURITY-006), set out of band.
+  alexa_notifier_enabled            = local.alexa_enabled && var.notifications_enabled
+  alexa_api_endpoint                = "https://api.eu.amazonalexa.com"
+  alexa_lwa_client_id_parameter     = "${local.secret_parameter_prefix}/alexa/lwa-client-id"
+  alexa_lwa_client_secret_parameter = "${local.secret_parameter_prefix}/alexa/lwa-client-secret"
+  household_events_bus              = "default"
 
   # Persistence layer (TICKET-006).
   tenners_table_name = "${local.name_prefix}-tenners"

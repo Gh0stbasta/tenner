@@ -5,6 +5,8 @@ import { PERIOD_SHORTCUTS } from "../analytics/period.js";
 import {
   TENNER_SORT_FIELDS,
   type AssignHouseholdMemberRequest,
+  type LinkAlexaSpeakerRequest,
+  type UpdateNotificationPreferencesRequest,
   type UpdateHouseholdRequest,
   type CompleteTennerRequest,
   type DashboardRequest,
@@ -46,6 +48,7 @@ import {
   userIdSchema,
   utcTimestampSchema,
 } from "./common.js";
+import { ALEXA_PERSON_ID_PATTERN, ALEXA_USER_ID_PATTERN, USER_CHANNELS, WEEKDAYS as ALL_WEEKDAYS } from "../models/index.js";
 import { isValidTimeZone } from "../utils/timezone.js";
 import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
 import { ASSIGNMENT_MODES, SHARED_ASSIGNEE, WEEK_STARTS, WEEKDAYS, type AssignmentMode, type UserId, type Weekday } from "../models/index.js";
@@ -251,6 +254,31 @@ export const tennerHistoryQuerySchema = z.strictObject({
 
 /** POST /onboarding/assignment (HOTFIX-001). */
 export const assignHouseholdMemberSchema = z.strictObject({ userId: userIdSchema }) satisfies z.ZodType<AssignHouseholdMemberRequest>;
+
+/** ALEXA-002: Amazon person ID in the path of /household/alexa-speakers/{personId}. */
+export const alexaPersonIdSchema = z.string().regex(ALEXA_PERSON_ID_PATTERN, "Invalid Alexa person ID.");
+
+/** ALEXA-007: Amazon account ID (context.System.user.userId). */
+export const alexaUserIdSchema = z.string().regex(ALEXA_USER_ID_PATTERN, "Invalid Alexa user ID.");
+
+/** PUT /household/alexa-speakers/{personId} (ALEXA-002). */
+export const linkAlexaSpeakerSchema = z.strictObject({ userId: userIdSchema }) satisfies z.ZodType<LinkAlexaSpeakerRequest>;
+
+/** NOTIFICATION-002: send times in 15-minute steps (the notifier's schedule). */
+export const quarterHourSchema = z.string().regex(/^([01]\d|2[0-3]):(00|15|30|45)$/, "Must be HH:mm in 15-minute steps.");
+const userChannelsSchema = z
+  .array(z.enum(USER_CHANNELS))
+  .max(USER_CHANNELS.length)
+  .refine((channels) => new Set(channels).size === channels.length, "Channels must be distinct.");
+
+/** PUT /users/{userId}/notification-preferences (NOTIFICATION-002): the full preferences, unknown fields rejected. */
+export const notificationPreferencesSchema = z.strictObject({
+  timezone: z.string().refine(isValidTimeZone, "Must be an IANA timezone.").nullable(),
+  dailyDigest: z.strictObject({ enabled: z.boolean(), time: quarterHourSchema, channels: userChannelsSchema }),
+  overdueAlerts: z.strictObject({ enabled: z.boolean(), minDaysOverdue: z.number().int().min(0).max(30), channels: userChannelsSchema }),
+  weeklySummary: z.strictObject({ enabled: z.boolean(), dayOfWeek: z.enum(ALL_WEEKDAYS), time: quarterHourSchema, channels: userChannelsSchema }),
+  quietHours: z.strictObject({ start: quarterHourSchema, end: quarterHourSchema }).nullable(),
+}) satisfies z.ZodType<UpdateNotificationPreferencesRequest>;
 
 /** PUT /household (SCHEDULING-008): an IANA timezone the runtime knows; unknown fields rejected. */
 export const updateHouseholdSchema = z

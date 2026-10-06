@@ -138,3 +138,33 @@ Manual: each phrase on an Echo device; dialog simulation in the developer consol
 # Out of Scope
 
 - Completing by voice (ALEXA-004), daily briefing (ALEXA-005), visuals (ALEXA-006)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05.
+
+- [x] Interaction model: `TodayIntent`, `OverdueIntent`, `SuggestIntent`, `WorkLeftIntent` (with optional
+  `member` slot, type `TennerMember` filled by dynamic entities on launch), `AMAZON.YesIntent`/`NoIntent`;
+  one-shot phrasings („was heute fällig ist“) included
+- [x] One `GET /dashboard` per question (`assignedTo` = named member or recognized speaker, else household-wide);
+  the household context comes from the session (ALEXA-002) — at most two API calls for a one-shot question
+- [x] Speech builders in `alexa/src/answers.ts` (pure): answers start with the number, number words up to twelve,
+  at most three items per turn with „Soll ich die restlichen … vorlesen?“, „seit gestern / seit 4 Tagen“,
+  „morgen / übermorgen / in 5 Tagen“; titles XML-escaped for SSML, plain in the card
+- [x] Nothing due → „Heute ist nichts fällig.“ plus the next upcoming Tenner; overdue as a hint
+- [x] Paused Tenners and the vacation are never read (the API excludes them; tested)
+- [x] Simple card per answer until ALEXA-006 adds APL
+- [x] README: supported phrases
+- [x] Tests passing: alexa 68 (+29: known/unknown speaker, named member, own name, unknown name, nothing due,
+  overdue order and wording, suggestion rule and ties, work left per member, Yes/No continuation, SSML escaping,
+  paused not read, API error, one-shot vs. open session); lint and build clean
+
+Decisions and assumptions:
+
+- One-shot requests end the session after the answer; inside an open session Tenner waits for the next question.
+- `SuggestIntent` stores the suggested Tenner ID in the session for ALEXA-004 („erledigt“).
+- Category names are not read (titles are enough for voice), so `GET /categories` is not called.
+- Shared Tenners are part of a member's answer (the API includes them with `assignedTo`); titles are not prefixed
+  with the assignee to keep answers short.

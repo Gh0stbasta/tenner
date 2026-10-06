@@ -1,0 +1,166 @@
+{
+  "type": "APL",
+  "version": "2023.2",
+  "theme": "dark",
+  "description": "Tenner list (ALEXA-006): overdue and 'mehr zeigen'. Datasource: payload.view = ListView (alexa/src/apl.ts).",
+  "settings": {
+    "idleTimeout": 120000
+  },
+  "resources": [
+    {
+      "description": "Dark surface and text tokens; member colors come from the datasource.",
+      "colors": {
+        "background": "#1c1f24",
+        "surface": "#262a31",
+        "text": "#ffffff",
+        "muted": "#b8bec6",
+        "primary": "#1976d2",
+        "banner": "#123b63",
+        "warning": "#ffd479"
+      },
+      "dimensions": {
+        "pad": "32dp",
+        "gap": "16dp",
+        "bodySize": "32dp",
+        "detailSize": "26dp",
+        "titleSize": "44dp",
+        "summarySize": "30dp",
+        "rowMinHeight": "64dp",
+        "boxSize": "36dp"
+      }
+    },
+    {
+      "description": "Echo Show 15/21 (1920 dp wide): larger type for viewing distance.",
+      "when": "${viewport.width >= 1600}",
+      "dimensions": {
+        "pad": "56dp",
+        "gap": "24dp",
+        "bodySize": "40dp",
+        "detailSize": "32dp",
+        "titleSize": "60dp",
+        "summarySize": "38dp",
+        "rowMinHeight": "80dp",
+        "boxSize": "44dp"
+      }
+    },
+    {
+      "description": "Echo Show 5 (960x480 dp): less padding, large type.",
+      "when": "${viewport.width < 1100 && viewport.height < 600}",
+      "dimensions": {
+        "pad": "24dp",
+        "gap": "8dp",
+        "titleSize": "40dp",
+        "summarySize": "28dp",
+        "rowMinHeight": "64dp"
+      }
+    }
+  ],
+  "layouts": {
+    "TennerRow": {
+      "description": "One touchable Tenner (>= 48 dp target); 'Erledigt' via SendEvent.",
+      "parameters": [
+        "row"
+      ],
+      "item": {
+        "type": "TouchWrapper",
+        "role": "button",
+        "accessibilityLabel": "${row.accessibilityLabel}",
+        "minHeight": "@rowMinHeight",
+        "spacing": "4dp",
+        "onPress": [
+          {
+            "type": "SendEvent",
+            "arguments": [
+              "complete",
+              "${row.tennerId}",
+              "${row.title}"
+            ]
+          }
+        ],
+        "item": {
+          "type": "Container",
+          "direction": "row",
+          "alignItems": "center",
+          "minHeight": "@rowMinHeight",
+          "items": [
+            {
+              "type": "Frame",
+              "width": "@boxSize",
+              "height": "@boxSize",
+              "borderWidth": "3dp",
+              "borderColor": "@muted",
+              "borderRadius": "8dp"
+            },
+            {
+              "type": "Container",
+              "grow": 1,
+              "shrink": 1,
+              "paddingLeft": "16dp",
+              "items": [
+                {
+                  "type": "Text",
+                  "text": "${row.label}",
+                  "fontSize": "@bodySize",
+                  "color": "@text",
+                  "maxLines": 2
+                },
+                {
+                  "type": "Text",
+                  "text": "${row.detail}",
+                  "display": "${row.detail == '' ? 'none' : 'normal'}",
+                  "fontSize": "@detailSize",
+                  "color": "@warning",
+                  "maxLines": 1
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "mainTemplate": {
+    "parameters": [
+      "payload"
+    ],
+    "items": [
+      {
+        "type": "Container",
+        "width": "100vw",
+        "height": "100vh",
+        "backgroundColor": "@background",
+        "paddingLeft": "@pad",
+        "paddingRight": "@pad",
+        "paddingTop": "@pad",
+        "items": [
+          {
+            "type": "Text",
+            "text": "${payload.view.title}",
+            "fontSize": "@titleSize",
+            "fontWeight": "bold",
+            "color": "@primary",
+            "paddingBottom": "@gap"
+          },
+          {
+            "type": "Text",
+            "text": "${payload.view.empty}",
+            "display": "${payload.view.empty == '' ? 'none' : 'normal'}",
+            "fontSize": "@bodySize",
+            "color": "@text"
+          },
+          {
+            "type": "Sequence",
+            "grow": 1,
+            "data": "${payload.view.rows}",
+            "items": [
+              {
+                "type": "TennerRow",
+                "row": "${data}"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

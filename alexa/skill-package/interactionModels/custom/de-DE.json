@@ -1,0 +1,216 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "tenner board",
+      "intents": [
+        {
+          "name": "EnableRemindersIntent",
+          "samples": [
+            "aktiviere erinnerungen",
+            "erinnerungen aktivieren",
+            "aktiviere benachrichtigungen",
+            "benachrichtigungen aktivieren",
+            "erinnere mich"
+          ]
+        },
+        {
+          "name": "BriefingIntent",
+          "samples": [
+            "starte meinen tag",
+            "starte den tag",
+            "guten morgen",
+            "was ist heute los",
+            "gib mir einen überblick",
+            "überblick",
+            "tagesüberblick",
+            "wie sieht mein tag aus"
+          ]
+        },
+        {
+          "name": "CompleteIntent",
+          "slots": [
+            {
+              "name": "tenner",
+              "type": "TennerTitle"
+            }
+          ],
+          "samples": [
+            "{tenner}",
+            "{tenner} ist erledigt",
+            "{tenner} erledigt",
+            "erledige {tenner}",
+            "ich habe {tenner} gemacht",
+            "ich habe {tenner} erledigt",
+            "hake {tenner} ab",
+            "{tenner} ist fertig",
+            "{tenner} abhaken",
+            "erledigt",
+            "ist erledigt",
+            "das ist erledigt",
+            "hab ich gemacht",
+            "fertig"
+          ]
+        },
+        {
+          "name": "UndoIntent",
+          "samples": [
+            "mach das rückgängig",
+            "das war falsch",
+            "letzte erledigung rückgängig",
+            "rückgängig",
+            "nimm das zurück"
+          ]
+        },
+        {
+          "name": "TodayIntent",
+          "slots": [
+            {
+              "name": "member",
+              "type": "TennerMember"
+            }
+          ],
+          "samples": [
+            "was ist heute fällig",
+            "was heute fällig ist",
+            "was muss ich heute machen",
+            "was ich heute machen muss",
+            "was steht heute an",
+            "was heute ansteht",
+            "welche tenner sind heute fällig",
+            "was ist heute für {member} fällig",
+            "was muss {member} heute machen",
+            "was steht heute für {member} an",
+            "was {member} heute machen muss"
+          ]
+        },
+        {
+          "name": "OverdueIntent",
+          "slots": [
+            {
+              "name": "member",
+              "type": "TennerMember"
+            }
+          ],
+          "samples": [
+            "was ist überfällig",
+            "was überfällig ist",
+            "was habe ich vergessen",
+            "was ich vergessen habe",
+            "welche tenner sind überfällig",
+            "was ist bei {member} überfällig",
+            "was hat {member} vergessen"
+          ]
+        },
+        {
+          "name": "SuggestIntent",
+          "slots": [
+            {
+              "name": "member",
+              "type": "TennerMember"
+            }
+          ],
+          "samples": [
+            "was soll ich jetzt machen",
+            "was ich jetzt machen soll",
+            "was mache ich als nächstes",
+            "was soll ich als nächstes machen",
+            "hast du einen vorschlag",
+            "was soll {member} jetzt machen"
+          ]
+        },
+        {
+          "name": "WorkLeftIntent",
+          "slots": [
+            {
+              "name": "member",
+              "type": "TennerMember"
+            }
+          ],
+          "samples": [
+            "wie viel ist noch zu tun",
+            "wie viel noch zu tun ist",
+            "wie viel arbeit ist übrig",
+            "wie viel arbeit noch übrig ist",
+            "wie lange brauche ich noch",
+            "wie viel muss {member} noch machen"
+          ]
+        },
+        {
+          "name": "AMAZON.YesIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NoIntent",
+          "samples": []
+        },
+        {
+          "name": "SpeakerIntent",
+          "slots": [
+            {
+              "name": "member",
+              "type": "TennerMember"
+            }
+          ],
+          "samples": [
+            "{member}",
+            "ich bin {member}",
+            "hier ist {member}",
+            "hier spricht {member}",
+            "das ist {member}",
+            "ich heiße {member}"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": [
+            "was kann ich fragen",
+            "wie funktioniert tenner"
+          ]
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        }
+      ],
+      "types": [
+        {
+          "name": "TennerMember",
+          "values": [
+            {
+              "id": "PLACEHOLDER",
+              "name": {
+                "value": "mitglied",
+                "synonyms": []
+              }
+            }
+          ]
+        },
+        {
+          "name": "TennerTitle",
+          "values": [
+            {
+              "id": "PLACEHOLDER",
+              "name": {
+                "value": "aufgabe",
+                "synonyms": []
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "version": "1"
+}

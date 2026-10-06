@@ -6,6 +6,7 @@ import { Box, Button, Typography } from "@mui/material";
 import { useState } from "react";
 import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
+import { AlexaSettings } from "./AlexaSettings";
 import { CategoriesSettings } from "./CategoriesSettings";
 import { DashboardSettings } from "./DashboardSettings";
 import { HouseholdSettings } from "./HouseholdSettings";
@@ -13,6 +14,7 @@ import { InstallAppSettings } from "../install/InstallAppSettings";
 import { PersonalSettings } from "./PersonalSettings";
 import { TennerDefaultsSettings } from "./TennerDefaultsSettings";
 import { MembersSettings } from "./MembersSettings";
+import { NotificationSettings } from "./NotificationSettings";
 import { ProfileSettings } from "./ProfileSettings";
 import { ResetSettingsDialog } from "./ResetSettingsDialog";
 import { useSettings } from "./SettingsProvider";
@@ -25,10 +27,11 @@ export function SettingsPage() {
     <Box sx={{ maxWidth: 720 }}>
       <PageHeader title="Einstellungen" subtitle="Änderungen werden sofort gespeichert." />
       <Typography variant="overline" component="h2" color="text.secondary">
-        Für mich (nur auf diesem Gerät)
+        Für mich
       </Typography>
       <ProfileSettings />
       <PersonalSettings />
+      <NotificationSettings />
       <InstallAppSettings />
       <DashboardSettings />
       <Typography variant="overline" component="h2" color="text.secondary" sx={{ display: "block", mt: 3 }}>
@@ -38,6 +41,7 @@ export function SettingsPage() {
       <TennerDefaultsSettings />
       <MembersSettings />
       <CategoriesSettings />
+      <AlexaSettings />
       <Box
         sx={{
           mt: 3,

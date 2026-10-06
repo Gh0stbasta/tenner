@@ -1,0 +1,19 @@
+{
+  "description": "Tenner status widget (ALEXA-007). APL package for the Echo Show home screen; data comes from the Alexa Data Store (namespace tenner, key status) pushed by the notifier. Verify the package format in the spike.",
+  "id": "tenner-status",
+  "version": "1.0.0",
+  "sizes": [
+    "small",
+    "medium"
+  ],
+  "dataStore": {
+    "namespace": "tenner",
+    "key": "status"
+  },
+  "tapAction": {
+    "type": "SendEvent",
+    "arguments": [
+      "openDashboard"
+    ]
+  }
+}

@@ -80,6 +80,11 @@ override_resource {
   }
 }
 
+# Alexa skill region (ALEXA-001): mocked like the default provider.
+mock_provider "aws" {
+  alias = "alexa"
+}
+
 run "dynamodb_policy_is_scoped_to_tenner_tables" {
   command = plan
 

@@ -31,6 +31,11 @@ mock_provider "aws" {
   }
 }
 
+# Alexa skill region (ALEXA-001): mocked like the default provider.
+mock_provider "aws" {
+  alias = "alexa"
+}
+
 run "state_bucket_is_hardened" {
   command = plan
 

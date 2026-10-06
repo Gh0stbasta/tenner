@@ -945,3 +945,90 @@ cache only if measurements show slow responses.
 ### Related Work
 
 ANALYTICS-001 – 009, `backend/src/analytics/`, `docs/analytics.md`.
+
+## TD-034: Alexa skill package deployment not yet exercised; second region outside the Resource Group
+
+### Description
+
+`scripts/deploy-alexa-skill.sh` deploys the skill manifest and interaction model with ASK CLI 2.30.7 (SMAPI) and
+environment credentials. It could not be run from the development environment (no Amazon developer account, the
+Amazon developer site was unreachable), so the CLI flags, the environment-profile mechanism and the status JSON
+paths are unverified. The eu-west-1 skill resources are also not part of the tag-based Resource Group `Tenner`,
+which is regional (eu-central-1).
+
+### Reason
+
+ALEXA-001 had to be implemented before the owner created the skill and the CI credentials (ADR 0005).
+
+### Impact
+
+The first deployment with `ALEXA_SKILL_ID` set may fail in the "Deploy Alexa skill package" step (Terraform has
+already applied by then, so the Lambda exists; only the console-side update is missing). The Resource Group view
+misses three resources.
+
+### Suggested Improvement
+
+Fix the script on the first run (or switch to direct SMAPI REST calls with `curl` if the CLI's environment profile
+does not work); add the ALEXA-009 health check. Add a second Resource Group in eu-west-1 if the overview is needed.
+
+### Related Work
+
+ALEXA-001, ADR 0005, `scripts/deploy-alexa-skill.sh`, `terraform/alexa.tf`.
+
+## TD-035: Alexa link has full member rights and a 10-year refresh token
+
+### Description
+
+The Alexa Cognito client (`tenner-alexa`, ALEXA-002) requests the custom scope `tenner/household`, but no API route
+checks scopes: the linked Alexa account can call every route its member can, including member and category
+administration. The refresh token lives 3,650 days. Rotating the client secret requires replacing the client and
+relinking.
+
+### Reason
+
+HTTP API route scopes (`authorization_scopes`) only work with access tokens; the web app sends ID tokens, which
+carry no `scope` claim, so adding scopes to routes would lock out the web app. A long refresh token is how Alexa
+account linking avoids regular relinking.
+
+### Impact
+
+A compromised Alexa account (or Amazon-side token leak) has the member's full rights until the member is
+deactivated (group removed), the skill is unlinked or tokens are revoked. Voice-only use needs far fewer routes.
+
+### Suggested Improvement
+
+Move the web app to access tokens (they also carry `cognito:groups`), then put `tenner/household` (and a narrower
+`tenner/voice` scope for the Alexa client) on the routes. Alternatively deny administration routes for
+`client = alexa` in the backend router. Add a documented secret rotation with `replace_triggered_by`.
+
+### Related Work
+
+ALEXA-002, `terraform/auth.tf`, `backend/src/auth/identity.ts`, `docs/security.md` → "Residual Risks".
+
+## TD-036: Alexa widget package and Data Store/Proactive API shapes unverified
+
+### Description
+
+The widget APL package (`alexa/widgets/tenner-status/`), its Data Store binding, the Data Store request
+(`/v1/datastore/commands`, `PUT_OBJECT`, target `USER`), the Proactive Events and Skill Messaging requests
+(ALEXA-008) follow Amazon's documentation as researched in 2026-10 but were never run against Amazon. The widget is
+not yet declared in the skill manifest, because the declaration format is to be confirmed in the spike.
+
+### Reason
+
+The developer site was not reachable from the development environment, and no Amazon developer account or device
+was available (ALEXA-007 spike is an owner task).
+
+### Impact
+
+Widget pushes or Alexa notifications may be rejected (logged as `WidgetPushFailed` / delivery `FAILED`) until the
+shapes are corrected; the rest of Tenner is unaffected.
+
+### Suggested Improvement
+
+Run the ALEXA-007 spike, correct the request shapes and package format, add the widget to `skill.json`, and
+record the results in the ticket.
+
+### Related Work
+
+ALEXA-007, ALEXA-008, `backend/src/alexa/`, `alexa/widgets/`.

@@ -127,3 +127,28 @@ npm run test
 
 - Escalating to other household members automatically
 - SMS or phone calls
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06.
+
+- [x] Job `overdueAlertJob` (`backend/src/notifications/overdue-alerts.ts`) registered in the notifier
+- [x] Trigger `overdueDays ≥ minDaysOverdue` (at least 1) for the member's own and shared Tenners from the dashboard
+  read model (snoozed and paused Tenners are not overdue there)
+- [x] Once per overdue cycle: marker `<tenantId>#<userId>#OVERDUE#<tennerId>#<nextDue>` written after delivery;
+  completion/snooze changes `nextDue` and starts a new cycle
+- [x] One escalation reminder after `2 × frequencyDays` (marker `…#ESCALATION`), then none
+- [x] Bundled: one message per member per day (daily dedup key), „(Erinnerung)“ marks escalations
+- [x] Delivery log: `has` (key-only read) and `mark` (UpdateItem, same IAM as before)
+- [x] Tests passing: backend 831 (+10: threshold, below threshold, bundling, once per cycle, escalation,
+  completion resets, snoozed ignored, timing/quiet hours/disabled, rendering, marker storage); lint and build clean
+
+Decisions and assumptions:
+
+- Alerts are checked once per day at 17:00 local time (`ALERT_TIME`); the ticket names no time, and the morning
+  is covered by the daily digest.
+- Recipients: the assigned member; shared Tenners alert every member (each gets them through their own dashboard
+  view).
+- `frequencyDays` comes from one Tenner list query per run and member (household volume).

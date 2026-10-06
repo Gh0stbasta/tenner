@@ -27,6 +27,7 @@ The repository contains:
 - the German web app in [`frontend/`](frontend/README.md) (FRONTEND-001 – 007, FRONTEND-009, UX-005): dashboard,
   Tenner management with search and filters, create/edit dialogs, Quick Add, complete with undo, recent activity,
   Tenner detail with history, central error handling. It is published to CloudFront by `deploy.yml`.
+- the Alexa skill foundation in [`alexa/`](alexa/README.md) (ALEXA-001, [ADR 0005](docs/decisions/0005-alexa-platform.md)): German skill skeleton, skill Lambda `tenner-alexa-skill` in eu-west-1 (created once the GitHub variable `ALEXA_SKILL_ID` is set)
 - the project documentation
 
 ## Terraform (local)
@@ -83,6 +84,8 @@ For the managed resources so far:
   (always allowed)
 - IAM: create and manage `tenner-api-role` and its inline policy, plus `iam:PassRole` for that role to Lambda
 - Cost monitoring (OPERATIONS-001): AWS Budgets and Cost Explorer anomaly permissions, see "Cost Monitoring"
+- Alexa skill (ALEXA-001): Lambda, IAM role and CloudWatch Logs for `tenner-alexa-skill` in **eu-west-1**, see
+  [`alexa/README.md`](alexa/README.md) → "CI Permissions" (only needed before `ALEXA_SKILL_ID` is set)
 
 For the state backend:
 
@@ -108,8 +111,8 @@ access keys exist in GitHub or in this repository.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| [`pr.yml`](.github/workflows/pr.yml) | `pull_request` | Runs `terraform fmt -check`, `validate` and `test` offline. Then checks AWS identity, builds the Lambda bundle, runs `terraform plan` and enforces mandatory tags on the plan. Runs frontend and backend `npm ci`, `lint`, `test`, `build`. **Never applies.** |
-| [`deploy.yml`](.github/workflows/deploy.yml) | push to `main` | Builds frontend and backend as a gate, checks AWS identity, then runs `terraform init` and `plan`, enforces mandatory tags, applies the checked plan, calls `GET /health` on the deployed API, then builds the frontend against that API and publishes it to S3/CloudFront (`scripts/deploy-frontend.sh`). |
+| [`pr.yml`](.github/workflows/pr.yml) | `pull_request` | Runs `terraform fmt -check`, `validate` and `test` offline. Then checks AWS identity, builds the Lambda bundle, runs `terraform plan` and enforces mandatory tags on the plan. Runs frontend, backend and alexa `npm ci`, `lint`, `test`, `build`. **Never applies.** |
+| [`deploy.yml`](.github/workflows/deploy.yml) | push to `main` | Builds frontend and backend as a gate, checks AWS identity, then runs `terraform init` and `plan`, enforces mandatory tags, applies the checked plan, calls `GET /health` on the deployed API, then builds the frontend against that API and publishes it to S3/CloudFront (`scripts/deploy-frontend.sh`). When `ALEXA_SKILL_ID` is set, it also deploys the Alexa skill package (`scripts/deploy-alexa-skill.sh`). |
 
 Settings:
 
@@ -119,7 +122,7 @@ Settings:
 | Terraform version | `1.16.4` (`TF_VERSION` in both workflows) |
 | Node.js version | `22` (`NODE_VERSION` in both workflows) |
 | Terraform directory | `terraform/` |
-| Application directories | `frontend/`, `backend/` |
+| Application directories | `frontend/`, `backend/`, `alexa/` |
 
 If `terraform/` contains no `*.tf` files, the Terraform steps are skipped with a notice.
 If `frontend/package.json` or `backend/package.json` is missing, that build is skipped.
@@ -365,6 +368,87 @@ python3 scripts/backfill_frequency_unit.py --apply   # conditional, idempotent w
   paused Tenners then appear as due again. Due dates already moved by a vacation stay moved.
 - **Infrastructure changes:** reverting the Terraform code and letting `deploy.yml` apply it
   is the only supported way. Manual changes in AWS are not allowed (see `docs/architecture.md`).
+
+### Monitoring (OBSERVABILITY-001)
+
+The CloudWatch dashboard `tenner-<environment>` shows API Gateway (requests, 4xx, 5xx, latency p50/p95), every
+Lambda (invocations, errors, throttles, concurrency, duration p95 — the Alexa skill from eu-west-1, the notifier when
+enabled), DynamoDB per table (capacity, throttles, system errors) and CloudFront (requests, 4xx/5xx rate, us-east-1
+metrics). Link: Terraform output `cloudwatch_dashboard_url`. Cost: 0 USD (3 dashboards are free).
+
+**Alarms (OBSERVABILITY-002, [ADR 0006](docs/decisions/0006-alarm-notifications.md)):** API 5xx rate > 5 % for 5
+minutes, Lambda errors in 2 of 3 periods and throttles per function, DynamoDB system errors and throttles (all
+tables), no successful notifier run for 2 hours. Thresholds: Terraform variable `alarm_thresholds`. They e-mail
+the `BUDGET_ALERT_EMAIL` address through SNS topic `tenner-alarms`; confirm the subscription e-mail AWS sends after
+the first deploy. Each alarm links its section in [`docs/runbooks/alarms.md`](docs/runbooks/alarms.md). At most 10
+standard alarms: free.
+
+Dashboard and alarms are created when the GitHub **variable** `OBSERVABILITY_ENABLED` is `true`; before that, allow
+for `GitHubActionsDeployRole`: `cloudwatch:PutDashboard`, `GetDashboard`, `DeleteDashboards` on
+`arn:aws:cloudwatch::<account-id>:dashboard/tenner-*`; `cloudwatch:PutMetricAlarm`, `DeleteAlarms`,
+`DescribeAlarms`, `TagResource`, `UntagResource`, `ListTagsForResource` on `arn:aws:cloudwatch:*:<account-id>:alarm:tenner-*`;
+`sns:CreateTopic`, `DeleteTopic`, `GetTopicAttributes`, `SetTopicAttributes`, `Subscribe`, `Unsubscribe`,
+`GetSubscriptionAttributes`, `ListSubscriptionsByTopic`, `TagResource`, `UntagResource`, `ListTagsForResource` on
+`arn:aws:sns:*:<account-id>:tenner-alarms`; for the Alexa monitoring (ALEXA-009) also `logs:PutMetricFilter`,
+`DeleteMetricFilter`, `DescribeMetricFilters` on `/tenner/alexa-skill` (eu-west-1) and `/tenner/notifier`.
+
+**Alexa (ALEXA-009):** skill error rate > 5 % in 15 minutes and p95 duration > 5 s (alarms and SNS topic
+`tenner-alarms` in eu-west-1, confirm that subscription too), widget push or Alexa notification failures
+(eu-central-1); metrics from log lines (namespace `Tenner/Alexa`); dashboard section with requests per intent and
+outcome; runbook [`docs/runbooks/alexa.md`](docs/runbooks/alexa.md). Every deploy with `ALEXA_SKILL_ID` ends with
+a simulated „öffne tenner board“ (`scripts/alexa-health-check.sh`). Up to 11 alarms in total: about 0.10 USD per month
+beyond the free 10.
+
+### Notifications (NOTIFICATION-001)
+
+The notifier Lambda `tenner-notifier` runs every 15 minutes (EventBridge rule) and sends notifications through
+pluggable channels, deduplicated by the delivery log table `tenner-notifications` (TTL 90 days). It is created only
+when the GitHub **variable** `NOTIFICATIONS_ENABLED` is `true`. Before setting it, extend `GitHubActionsDeployRole`:
+
+- Lambda: manage `tenner-notifier` (create/update/delete function, configuration, tags, `AddPermission`,
+  `RemovePermission`, `GetPolicy`)
+- EventBridge: `events:PutRule`, `DescribeRule`, `DeleteRule`, `PutTargets`, `RemoveTargets`, `ListTargetsByRule`,
+  `TagResource`, `UntagResource`, `ListTagsForResource` on `arn:aws:events:eu-central-1:<account-id>:rule/tenner-notifier-schedule`
+- DynamoDB: create/update/tag the table `tenner-notifications` incl. `UpdateTimeToLive`, `DescribeTimeToLive`
+- IAM: create/manage `tenner-notifier-role` and its inline policy, `iam:PassRole` for it to Lambda
+- CloudWatch Logs: `/tenner/notifier`
+
+Content: the daily digest (NOTIFICATION-003) at each member's time and overdue alerts (NOTIFICATION-004) at 17:00; until a real channel is connected it is
+written to the notifier log only (`NotificationLogged`).
+
+### Secrets (SECURITY-006)
+
+Runtime secrets live in SSM Parameter Store as `SecureString` (AWS managed key `aws/ssm`) below
+`/tenner/<environment>/<component>/<name>` ([ADR 0004](docs/decisions/0004-secrets-management.md)). Terraform
+knows only the names (IAM and Lambda configuration) and never the values; an administrator sets them with AWS
+access (placeholders, never commit or paste real values):
+
+```bash
+# create or rotate (warm Lambdas pick up a new value within 5 minutes)
+aws ssm put-parameter --name /tenner/prod/<component>/<name> --type SecureString --value '<secret>' --overwrite
+# mandatory tags (only needed once, after the first put-parameter)
+aws ssm add-tags-to-resource --resource-type Parameter --resource-id /tenner/prod/<component>/<name> \
+  --tags Key=Application,Value=Tenner Key=Project,Value=Tenner Key=Environment,Value=prod Key=ManagedBy,Value=Manual
+# check that it exists (prints the name and version, not the value)
+aws ssm describe-parameters --parameter-filters Key=Name,Values=/tenner/prod/<component>/<name>
+# remove
+aws ssm delete-parameter --name /tenner/prod/<component>/<name>
+```
+
+Secrets in use:
+
+| Parameter | Feature | Value |
+|---|---|---|
+| `/tenner/prod/alexa/lwa-client-id` | Echo Show widget, Alexa notifications (ALEXA-007/008) | Alexa developer console → Tenner → Build → Permissions → "Alexa Skill Messaging" Client ID |
+| `/tenner/prod/alexa/lwa-client-secret` | same | Client Secret from the same page | A missing secret only disables the feature
+that needs it; the Lambda logs `secret unavailable` with the parameter name.
+
+### Alexa Skill (ALEXA-001)
+
+Setup, the one-time activation in the Alexa developer console, the GitHub variables `ALEXA_SKILL_ID` and
+`ALEXA_REDIRECT_URLS` (account linking, ALEXA-002), the secrets `ASK_REFRESH_TOKEN` and `ASK_VENDOR_ID`, and
+rollback are described in [`alexa/README.md`](alexa/README.md).
+Without `ALEXA_SKILL_ID` nothing Alexa-related is deployed.
 
 ### Known Limitations
 

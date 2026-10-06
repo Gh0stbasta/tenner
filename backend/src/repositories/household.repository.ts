@@ -1,4 +1,4 @@
-import type { Handover, HouseholdCategory, HouseholdMember, HouseholdSettings, HouseholdSettingsChange, UserId, Vacation } from "../models/index.js";
+import type { AlexaSpeaker, AlexaUser, NotificationPreferencesByMember, Handover, HouseholdCategory, HouseholdMember, HouseholdSettings, HouseholdSettingsChange, UserId, Vacation } from "../models/index.js";
 
 /** Persistence of household settings (SCHEDULING-008). Storage failures become PersistenceError. */
 export interface HouseholdRepository {
@@ -17,4 +17,16 @@ export interface HouseholdRepository {
   saveCategories(tenantId: string, categories: readonly HouseholdCategory[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
   /** Same as saveMembers for the running handovers (HOUSEHOLD-004). */
   saveHandovers(tenantId: string, handovers: readonly Handover[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
+  /** Same as saveMembers for the Alexa speaker mappings (ALEXA-002). */
+  /** Replace the notification preferences of all members with optimistic locking (NOTIFICATION-002). */
+  saveNotificationPreferences(
+    tenantId: string,
+    preferences: NotificationPreferencesByMember,
+    expectedVersion: number,
+    actor: UserId,
+    timestamp: string,
+  ): Promise<HouseholdSettings>;
+  /** Same as saveMembers for the Alexa accounts (ALEXA-007). */
+  saveAlexaUsers(tenantId: string, users: readonly AlexaUser[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
+  saveAlexaSpeakers(tenantId: string, speakers: readonly AlexaSpeaker[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
 }

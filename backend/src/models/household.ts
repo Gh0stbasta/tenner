@@ -1,3 +1,5 @@
+import type { AlexaSpeaker, AlexaUser } from "./alexa.js";
+import type { NotificationPreferencesByMember } from "./notification-preferences.js";
 import type { Category, UserId, WeekStart, Weekday } from "./enums.js";
 import type { HouseholdCategory } from "./category.js";
 import type { Handover } from "./handover.js";
@@ -29,6 +31,15 @@ export interface HouseholdSettings {
   /** Running handovers (HOUSEHOLD-004), at most one per member; expired ones are removed lazily. */
   readonly handovers: readonly Handover[];
   readonly handoversVersion: number;
+  /** Alexa speaker → member mappings (ALEXA-002). */
+  readonly alexaSpeakers: readonly AlexaSpeaker[];
+  readonly alexaSpeakersVersion: number;
+  /** Alexa accounts using the skill (ALEXA-007). */
+  readonly alexaUsers: readonly AlexaUser[];
+  readonly alexaUsersVersion: number;
+  /** Notification preferences per member (NOTIFICATION-002); missing members use the defaults. */
+  readonly notificationPreferences: NotificationPreferencesByMember;
+  readonly notificationPreferencesVersion: number;
   readonly updatedAt: string;
   readonly updatedBy: UserId | null;
 }

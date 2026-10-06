@@ -161,3 +161,35 @@ Manual: an overdue Tenner produces an Alexa notification; the briefing reminder 
 
 - Free-text announcements on speakers (no public API)
 - Push notifications on phones (MOBILE-006)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06 (verification against Amazon pending activation, TD-036).
+
+- [x] `AlexaChannel` (`backend/src/alexa/alexa-channel.ts`) implements the notifier channel interface; delivery
+  status and dedup come from the notifier (NOTIFICATION-001)
+- [x] Overdue alert → Proactive Event `AMAZON.MessageAlert.Activated` (count only, unicast to each household Alexa
+  account, development or live endpoint per `ALEXA_SKILL_STAGE`)
+- [x] Daily digest → Skill Messaging → skill creates a one-time reminder (60 s) with the request's API token
+  (`Messaging.MessageReceived` handler); text names counts and points to the briefing
+- [x] Users control Alexa per type: „Alexa“ is a connected channel in Settings → Benachrichtigungen once an Alexa
+  account of the household used the skill; quiet hours apply; at most one alert and one digest per member and day
+- [x] Permission UX: „Alexa, sag Tenner, aktiviere Erinnerungen“ → AskFor voice consent; consent result answered;
+  missing permission logged (`reminder_permission_missing`); README steps for the Alexa app
+- [x] Credentials: LWA client from Parameter Store (shared with ALEXA-007), tokens cached per scope
+- [x] Manifest: reminder permission, `events.publications` and events endpoint (placeholder rendered at deploy)
+- [x] Tests passing: backend 863 (+9: schema mapping, reminder via messaging, skipped types, no account, error
+  status and gone accounts, request bodies, selectable channel, notifier wiring), alexa 137 (+6: reminder creation,
+  missing permission, ignored messages, network error, AskFor, consent results), scripts 36; lint and builds clean
+- [ ] An overdue Tenner produces an Alexa notification; the briefing reminder speaks — manual after activation
+
+Decisions and assumptions:
+
+- **Not included (follow-ups):** per-Tenner due-today reminders (opt-in) and household status change notifications
+  from the ticket's table; reminder IDs are not stored because each reminder is a one-time, relative reminder
+  created once per day by the deduplicated digest (no update/delete needed).
+- Recipients are the household's Alexa accounts (Echo devices are shared): a member's alert goes to every household
+  Echo; with two members choosing Alexa, the indicator can show two alerts.
+- The briefing reminder is created 60 seconds after the digest time instead of "at" it.

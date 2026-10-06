@@ -43,6 +43,7 @@ describe("SettingsPage", () => {
       "Standardwerte für neue Tenner",
       "Haushaltsmitglieder",
       "Kategorien",
+      "Alexa",
     ]) {
       expect(screen.getByRole("region", { name })).toBeInTheDocument();
     }

@@ -32,6 +32,11 @@ mock_provider "aws" {
   }
 }
 
+# Alexa skill region (ALEXA-001): mocked like the default provider.
+mock_provider "aws" {
+  alias = "alexa"
+}
+
 run "common_tags_contain_mandatory_values" {
   command = plan
 

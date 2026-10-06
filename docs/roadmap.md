@@ -120,12 +120,12 @@ Several tickets need AWS services that are **not** on the allowed-services list 
 
 | Service | Needed by |
 |---|---|
-| SSM Parameter Store / Secrets Manager | SECURITY-006 |
+| SSM Parameter Store / Secrets Manager | SECURITY-006 (accepted: [ADR 0004](decisions/0004-secrets-management.md), Parameter Store) |
 | SES | NOTIFICATION-005 |
-| SNS (alarm actions) | OBSERVABILITY-002 |
+| SNS (alarm actions) | OBSERVABILITY-002 (accepted: [ADR 0006](decisions/0006-alarm-notifications.md)) |
 | Route53 / ACM | TICKET-022 |
 | X-Ray | OBSERVABILITY-004 |
 | CloudTrail trail | SECURITY-012 |
 | Bedrock or an external LLM API | AI-001 |
-| Alexa Skills Kit (custom skill, APL, Reminders, Proactive Events, Data Store), skill Lambda in eu-west-1 | ALEXA-001 |
+| Alexa Skills Kit (custom skill, APL, Reminders, Proactive Events, Data Store), skill Lambda in eu-west-1 | ALEXA-001 (accepted: [ADR 0005](decisions/0005-alexa-platform.md)) |
 | AWS Budgets / Cost Anomaly Detection | OPERATIONS-001 (billing features, no runtime cost) |

@@ -178,3 +178,50 @@ Manual: link in the Alexa app (Google sign-in), then „Alexa, öffne Tenner“ 
 - Multiple households per Alexa account
 - Voice PIN / voice-code confirmation for actions
 - Linking for other voice assistants
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-05 (repository side). Linking needs the owner's console steps (`alexa/README.md` →
+"Account Linking").
+
+- [x] Cognito (Terraform, `terraform/auth.tf`): resource server `tenner` (scope `household`), app client
+  `tenner-alexa-<env>` (secret, code grant, Google only, scopes `openid tenner/household`, callbacks =
+  `alexa_redirect_urls`, access 60 min, refresh 3,650 days, revocation on), managed login branding; authorizer
+  audience = web client + Alexa client; output `alexa_account_linking` (URIs, client ID, scopes — never the
+  secret); `ALEXA_CLIENT_ID` for the API; gated by `alexa_skill_id` and `alexa_redirect_urls` (GitHub variable
+  `ALEXA_REDIRECT_URLS`, validated to Amazon's account-linking URLs)
+- [x] Backend: `principalFromEvent` reads `cognito:username` or `username`; `identityFromEvent` unchanged
+  (groups claim); `clientOf` → every request log line carries `client: "alexa" | "web"`
+- [x] Speaker mapping: `alexaSpeakers` + `alexaSpeakersVersion` on the household item (optimistic locking like
+  `members`); `GET /household/alexa`, `PUT` and `DELETE /household/alexa-speakers/{personId}` (routes in Terraform)
+- [x] Skill: link interceptor (person token preferred over account token), `tennerApi.ts` (3 s timeout per call,
+  correlation ID = Alexa request ID, error kinds), error handler (not linked / 401 → LinkAccount card, 403 → not in
+  a household, 5xx/timeouts → retry message), launch greets the recognized member, „Wer spricht gerade?“ +
+  `SpeakerIntent` with dynamic entities `TennerMember`, household context cached in the session; manifest
+  permission `alexa::person_id:read`
+- [x] Web: Settings → "Alexa" lists „Stimme von <Name>“ and removes mappings; person IDs are not shown
+- [x] No Alexa or Cognito tokens are stored by Tenner or logged (tests check log output); person IDs are not logged
+- [x] Tests passing: backend 773 (+19: access token accepted, no group → 403, channel, config, context, mapping
+  create/use/replace/limit/delete, handlers, repository mapping and locking, routing), alexa 39 (+19: missing
+  token → link prompt, person token preferred, 401 → relink, 403, 5xx/network/invalid body, API timeout within
+  limit, dynamic entities, speaker question and mapping, name matching, SSML escaping), frontend 351 (+4),
+  Terraform 60 (+3: no client without URLs, client settings and audience, invalid URL)
+- [ ] Linking with Google in the Alexa app and „Alexa, öffne Tenner“ greeting by name — after the owner's console
+  steps (manual)
+
+Decisions and assumptions:
+
+- **New endpoint `GET /household/alexa`** (the ticket said none is needed): the skill needs the account's member,
+  member names and mappings in one call to stay inside the 8-second budget; the web settings reuse it.
+- `PUT /household/alexa-speakers/{personId}` was added next to the ticket's `DELETE` so the skill can store
+  mappings. Any member may map a voice (household-level setting, like other household settings).
+- **Per-route scopes evaluated, not implemented:** HTTP API route scopes need access tokens; the web app uses ID
+  tokens without `scope`. The Alexa link therefore has the member's full rights (TD-035).
+- The audit is the request log (`client` field); the history items do not store the channel (optional analytics in
+  ALEXA-009).
+- Account linking itself (URIs, secret) is configured in the developer console, not via SMAPI from CI, because CI
+  never sees the client secret.
+- `usesPersonalInfo` stays `false` in the manifest (development stage, not published); publishing would need a
+  privacy policy.

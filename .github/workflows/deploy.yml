@@ -1,5 +1,5 @@
 # Main branch deployment (TICKET-001, TICKET-018).
-# Builds frontend/backend as a gate, applies Terraform using GitHub OIDC, verifies /health,
+# Builds frontend/backend/alexa as a gate, applies Terraform using GitHub OIDC, verifies /health,
 # then builds the frontend against the deployed API and publishes it to S3/CloudFront.
 # Steps for terraform/, frontend/ and backend/ are skipped until those directories exist.
 name: Deploy
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        project: [frontend, backend]
+        project: [frontend, backend, alexa]
     defaults:
       run:
         working-directory: ${{ matrix.project }}
@@ -107,6 +107,14 @@ jobs:
           npm ci
           npm run build
 
+      # ALEXA-001: the skill Lambda bundle is only needed once the skill exists (GitHub variable ALEXA_SKILL_ID).
+      - name: Build Alexa skill bundle
+        if: hashFiles('terraform/**/*.tf') != '' && vars.ALEXA_SKILL_ID != ''
+        working-directory: alexa
+        run: |
+          npm ci
+          npm run build
+
       - name: Terraform plan
         if: hashFiles('terraform/**/*.tf') != ''
         env:
@@ -117,6 +125,14 @@ jobs:
           # Cost alerts (OPERATIONS-001): e-mail is a secret (personal data); the monitor ARN is optional.
           TF_VAR_budget_alert_email: ${{ secrets.BUDGET_ALERT_EMAIL }}
           TF_VAR_cost_anomaly_monitor_arn: ${{ vars.COST_ANOMALY_MONITOR_ARN }}
+          # Alexa skill (ALEXA-001): the skill ID is not secret; empty means no Alexa resources.
+          TF_VAR_alexa_skill_id: ${{ vars.ALEXA_SKILL_ID }}
+          # Alexa account linking (ALEXA-002): JSON list of the console's redirect URLs; empty means no Alexa client.
+          TF_VAR_alexa_redirect_urls: ${{ vars.ALEXA_REDIRECT_URLS || '[]' }}
+          # Notifier (NOTIFICATION-001): off until the deploy role has the notifier permissions.
+          TF_VAR_notifications_enabled: ${{ vars.NOTIFICATIONS_ENABLED || 'false' }}
+          # Monitoring (OBSERVABILITY-001/002): off until the deploy role has the CloudWatch/SNS permissions.
+          TF_VAR_observability_enabled: ${{ vars.OBSERVABILITY_ENABLED || 'false' }}
         run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m -out=tfplan
 
       - name: Enforce mandatory tags
@@ -171,6 +187,31 @@ jobs:
           scripts/smoke-test.sh \
             "$(terraform -chdir="$TF_DIR" output -raw frontend_url)" \
             "$(terraform -chdir="$TF_DIR" output -raw api_endpoint)"
+
+      # ALEXA-001: manifest + interaction model to the development stage via SMAPI (after apply, so the
+      # endpoint Lambda and its permission exist). Skipped until the skill exists (GitHub variable ALEXA_SKILL_ID).
+      - name: Deploy Alexa skill package
+        if: hashFiles('terraform/**/*.tf') != '' && vars.ALEXA_SKILL_ID != ''
+        env:
+          ASK_REFRESH_TOKEN: ${{ secrets.ASK_REFRESH_TOKEN }}
+          ASK_VENDOR_ID: ${{ secrets.ASK_VENDOR_ID }}
+          ALEXA_SKILL_ID: ${{ vars.ALEXA_SKILL_ID }}
+        run: |
+          scripts/deploy-alexa-skill.sh alexa/skill-package "$ALEXA_SKILL_ID" \
+            "$(terraform -chdir="$TF_DIR" output -raw alexa_skill_lambda_arn)"
+
+      # ALEXA-009: simulated „öffne tenner board“ against the development stage; fails the deployment on a wrong answer.
+      - name: Alexa health check
+        if: hashFiles('terraform/**/*.tf') != '' && vars.ALEXA_SKILL_ID != ''
+        env:
+          ASK_REFRESH_TOKEN: ${{ secrets.ASK_REFRESH_TOKEN }}
+          ASK_VENDOR_ID: ${{ secrets.ASK_VENDOR_ID }}
+          ALEXA_SKILL_ID: ${{ vars.ALEXA_SKILL_ID }}
+        run: scripts/alexa-health-check.sh "$ALEXA_SKILL_ID"
+
+      - name: Report skipped Alexa skill deployment
+        if: vars.ALEXA_SKILL_ID == ''
+        run: echo "::notice::GitHub variable ALEXA_SKILL_ID not set - Alexa skill deployment skipped (see alexa/README.md)."
 
       - name: Report skipped frontend deployment
         if: hashFiles('frontend/package.json') == ''

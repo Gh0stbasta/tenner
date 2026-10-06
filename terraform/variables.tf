@@ -156,3 +156,84 @@ variable "cost_anomaly_monitor_arn" {
     error_message = "cost_anomaly_monitor_arn must be empty or a Cost Explorer anomaly monitor ARN."
   }
 }
+
+variable "alexa_region" {
+  description = "Region of the Alexa skill Lambda (ALEXA-001, ADR 0005). Must offer the Alexa Skills Kit trigger; eu-west-1 is recommended for de-DE skills."
+  type        = string
+  default     = "eu-west-1"
+
+  validation {
+    condition     = contains(["us-east-1", "eu-west-1", "us-west-2", "ap-northeast-1"], var.alexa_region)
+    error_message = "alexa_region must be a region with the Alexa Skills Kit Lambda trigger: us-east-1, eu-west-1, us-west-2 or ap-northeast-1."
+  }
+}
+
+variable "alexa_skill_id" {
+  description = "Alexa skill ID of the Tenner skill (amzn1.ask.skill.<uuid>), from the Alexa developer console. Empty: no Alexa resources are created. Set as GitHub variable ALEXA_SKILL_ID."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.alexa_skill_id == "" || can(regex("^amzn1\\.ask\\.skill\\.[0-9a-f-]{36}$", var.alexa_skill_id))
+    error_message = "alexa_skill_id must be empty or an Alexa skill ID (amzn1.ask.skill.<uuid>)."
+  }
+}
+
+variable "alexa_log_level" {
+  description = "Log level of the Alexa skill Lambda."
+  type        = string
+  default     = "INFO"
+
+  validation {
+    condition     = contains(["DEBUG", "INFO", "WARN", "ERROR"], var.alexa_log_level)
+    error_message = "alexa_log_level must be one of DEBUG, INFO, WARN, ERROR."
+  }
+}
+
+variable "alexa_redirect_urls" {
+  description = "Alexa account-linking redirect URLs from the developer console (Build → Account Linking → Alexa Redirect URLs), ALEXA-002. Empty: no Alexa Cognito client. Set as GitHub variable ALEXA_REDIRECT_URLS, e.g. [\"https://layla.amazon.com/api/skill/link/<vendor-id>\", ...]."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for url in var.alexa_redirect_urls : can(regex("^https://[a-z0-9.-]+\\.amazon\\.(com|co\\.jp)/api/skill/link/[A-Za-z0-9]+$", url))])
+    error_message = "alexa_redirect_urls must be the Alexa redirect URLs (https://<host>.amazon.com/api/skill/link/<vendor-id>)."
+  }
+}
+
+variable "notifications_enabled" {
+  description = "Create the notifier (NOTIFICATION-001): Lambda, 15-minute EventBridge schedule and delivery log table. Enable after the deploy role has the notifier permissions (README → Notifications). Set as GitHub variable NOTIFICATIONS_ENABLED."
+  type        = bool
+  default     = false
+}
+
+variable "notifier_log_level" {
+  description = "Log level of the notifier Lambda."
+  type        = string
+  default     = "INFO"
+
+  validation {
+    condition     = contains(["DEBUG", "INFO", "WARN", "ERROR"], var.notifier_log_level)
+    error_message = "notifier_log_level must be one of DEBUG, INFO, WARN, ERROR."
+  }
+}
+
+variable "observability_enabled" {
+  description = "Create the CloudWatch dashboard (OBSERVABILITY-001) and alarms (OBSERVABILITY-002). Enable after the deploy role has the CloudWatch/SNS permissions (README → Monitoring). Set as GitHub variable OBSERVABILITY_ENABLED."
+  type        = bool
+  default     = false
+}
+
+variable "alarm_thresholds" {
+  description = "Alarm thresholds (OBSERVABILITY-002), centralized: API 5xx rate in percent over 5 minutes, Lambda errors per 5 minutes (alarm on 2 of 3 periods), hours without a successful notifier run."
+  type = object({
+    api_5xx_rate_percent   = number
+    lambda_errors          = number
+    notifier_silence_hours = number
+  })
+  default = {
+    api_5xx_rate_percent   = 5
+    lambda_errors          = 0
+    notifier_silence_hours = 2
+  }
+}

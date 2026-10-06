@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConflictError, NotFoundError, PersistenceError, ValidationError } from "../src/exceptions/index.js";
 import { correlationIdOf, createDependencies, handler, route as routeEvent, type Dependencies } from "../src/index.js";
 import { toTennerResponse } from "../src/dto/index.js";
+import { DEFAULT_NOTIFICATION_PREFERENCES } from "../src/models/index.js";
 import { authenticatedEvent, jwtClaims, mockLogger, tennerFixture, testConfig, TEST_IDENTITY } from "./mocks/index.js";
 
 /** Most tests exercise authenticated requests: the event carries the default test user's verified claims. */
@@ -35,6 +36,9 @@ const household = {
   handovers: [],
   vacation: null,
 };
+
+const PREFERENCES_RESPONSE = { preferences: DEFAULT_NOTIFICATION_PREFERENCES, channels: [], effectiveTimezone: "Europe/Berlin" };
+const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [], alexaAccounts: 0 };
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
   return {
@@ -94,6 +98,12 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     reactivateMember: vi.fn(async () => ({ userId: "JULIA", displayName: "Julia", color: "PURPLE" as const, active: true })),
     startHandover: vi.fn(async () => ({ handover: { from: "JULIA", to: "STEFAN", until: "2026-10-12", categories: null }, handedOver: 3 })),
     endHandover: vi.fn(async () => ({ returned: 3 })),
+    getAlexaContext: vi.fn(async () => ALEXA_CONTEXT),
+    registerAlexaUser: vi.fn(async () => undefined),
+    getNotificationPreferences: vi.fn(async () => PREFERENCES_RESPONSE),
+    updateNotificationPreferences: vi.fn(async () => PREFERENCES_RESPONSE),
+    linkAlexaSpeaker: vi.fn(async () => ALEXA_CONTEXT),
+    unlinkAlexaSpeaker: vi.fn(async () => ALEXA_CONTEXT),
     analyticsTrends: vi.fn(async () => ({ granularity: "week" as const, period: { from: "a", to: "b" }, buckets: [], comparison: { previousPeriod: { from: "a", to: "b" }, previousPeriodCompletions: 0, changePercent: null } })),
     analyticsUsers: vi.fn(async () => ({ period: { from: "a", to: "b" }, users: [], shared: { assignedActive: 0, assignedOverdue: 0 } })),
     analyticsCategories: vi.fn(async () => ({ period: { from: "a", to: "b" }, categories: [] })),
@@ -166,7 +176,28 @@ describe("route", () => {
     const d = deps();
     const response = await route(event("GET /health", { "x-correlation-id": "abc-123" }), d);
     expect(response.headers?.["x-correlation-id"]).toBe("abc-123");
-    expect(d.logger.child).toHaveBeenCalledWith({ correlationId: "abc-123", routeKey: "GET /health" });
+    expect(d.logger.child).toHaveBeenCalledWith({ correlationId: "abc-123", routeKey: "GET /health", client: "web" });
+  });
+
+  it("names the Alexa channel in the request logger for the Alexa app client (ALEXA-002)", async () => {
+    const d = deps({ config: testConfig({ alexaClientId: "alexa-client" }) });
+    const alexaEvent = authenticatedEvent(event("GET /dashboard"), { "cognito:groups": "[household:default:STEFAN]", username: "google_1", client_id: "alexa-client" });
+    const response = await routeEvent(alexaEvent, d);
+    expect(response.statusCode).toBe(200);
+    expect(d.logger.child).toHaveBeenCalledWith(expect.objectContaining({ client: "alexa" }));
+  });
+
+  it.each([
+    ["GET /household/alexa", undefined, "getAlexaContext"],
+    ["PUT /household/alexa-speakers/{personId}", JSON.stringify({ userId: "JULIA" }), "linkAlexaSpeaker"],
+    ["DELETE /household/alexa-speakers/{personId}", undefined, "unlinkAlexaSpeaker"],
+    ["GET /users/{userId}/notification-preferences", undefined, "getNotificationPreferences"],
+    ["PUT /household/alexa-users/{alexaUserId}", undefined, "registerAlexaUser"],
+  ] as const)("routes %s (ALEXA-002)", async (routeKey, body, dependency) => {
+    const d = deps();
+    const response = await route({ ...event(routeKey), pathParameters: { personId: "amzn1.ask.person.ABC", userId: "STEFAN", alexaUserId: "amzn1.ask.account.ABC" }, ...(body ? { body } : {}) }, d);
+    expect(response.statusCode).toBe(200);
+    expect(d[dependency]).toHaveBeenCalledOnce();
   });
 });
 
@@ -640,6 +671,7 @@ describe("createDependencies", () => {
       timezone: "Europe/Berlin",
       tables: { tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" },
       onboarding: { userPoolId: "eu-central-1_TEST", tenantId: "default" },
+      alexa: "not configured",
     });
   });
 });
