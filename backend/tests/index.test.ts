@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConflictError, NotFoundError, PersistenceError, ValidationError } from "../src/exceptions/index.js";
 import { correlationIdOf, createDependencies, handler, route as routeEvent, type Dependencies } from "../src/index.js";
 import { toTennerResponse } from "../src/dto/index.js";
+import { DEFAULT_NOTIFICATION_PREFERENCES } from "../src/models/index.js";
 import { authenticatedEvent, jwtClaims, mockLogger, tennerFixture, testConfig, TEST_IDENTITY } from "./mocks/index.js";
 
 /** Most tests exercise authenticated requests: the event carries the default test user's verified claims. */
@@ -36,6 +37,7 @@ const household = {
   vacation: null,
 };
 
+const PREFERENCES_RESPONSE = { preferences: DEFAULT_NOTIFICATION_PREFERENCES, channels: [], effectiveTimezone: "Europe/Berlin" };
 const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [] };
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
@@ -97,6 +99,8 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     startHandover: vi.fn(async () => ({ handover: { from: "JULIA", to: "STEFAN", until: "2026-10-12", categories: null }, handedOver: 3 })),
     endHandover: vi.fn(async () => ({ returned: 3 })),
     getAlexaContext: vi.fn(async () => ALEXA_CONTEXT),
+    getNotificationPreferences: vi.fn(async () => PREFERENCES_RESPONSE),
+    updateNotificationPreferences: vi.fn(async () => PREFERENCES_RESPONSE),
     linkAlexaSpeaker: vi.fn(async () => ALEXA_CONTEXT),
     unlinkAlexaSpeaker: vi.fn(async () => ALEXA_CONTEXT),
     analyticsTrends: vi.fn(async () => ({ granularity: "week" as const, period: { from: "a", to: "b" }, buckets: [], comparison: { previousPeriod: { from: "a", to: "b" }, previousPeriodCompletions: 0, changePercent: null } })),
@@ -186,9 +190,10 @@ describe("route", () => {
     ["GET /household/alexa", undefined, "getAlexaContext"],
     ["PUT /household/alexa-speakers/{personId}", JSON.stringify({ userId: "JULIA" }), "linkAlexaSpeaker"],
     ["DELETE /household/alexa-speakers/{personId}", undefined, "unlinkAlexaSpeaker"],
+    ["GET /users/{userId}/notification-preferences", undefined, "getNotificationPreferences"],
   ] as const)("routes %s (ALEXA-002)", async (routeKey, body, dependency) => {
     const d = deps();
-    const response = await route({ ...event(routeKey), pathParameters: { personId: "amzn1.ask.person.ABC" }, ...(body ? { body } : {}) }, d);
+    const response = await route({ ...event(routeKey), pathParameters: { personId: "amzn1.ask.person.ABC", userId: "STEFAN" }, ...(body ? { body } : {}) }, d);
     expect(response.statusCode).toBe(200);
     expect(d[dependency]).toHaveBeenCalledOnce();
   });

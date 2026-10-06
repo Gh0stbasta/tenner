@@ -42,10 +42,30 @@ export const DEFAULT_CATEGORIES = [
   { categoryId: "FINANCE", name: "Finanzen", icon: "MONEY", color: "TEAL", sortOrder: 5, archived: false },
 ];
 
+/** Default notification preferences (NOTIFICATION-002), no channel connected. */
+export const DEFAULT_NOTIFICATION_RESPONSE = {
+  preferences: {
+    timezone: null,
+    dailyDigest: { enabled: true, time: "07:30", channels: [] },
+    overdueAlerts: { enabled: true, minDaysOverdue: 2, channels: [] },
+    weeklySummary: { enabled: false, dayOfWeek: "SUN", time: "18:00", channels: [] },
+    quietHours: { start: "21:30", end: "07:00" },
+  },
+  channels: [
+    { type: "EMAIL", connected: false },
+    { type: "TELEGRAM", connected: false },
+    { type: "WEB_PUSH", connected: false },
+    { type: "ALEXA", connected: false },
+  ],
+  effectiveTimezone: "Europe/Berlin",
+};
+
 export function mockFetch(routes: Record<string, MockHandler>): FetchMock {
   const handlers: Record<string, MockHandler> = {
     "GET /users": ok(DEFAULT_MEMBERS),
     "GET /categories": ok(DEFAULT_CATEGORIES),
+    "GET /users/STEFAN/notification-preferences": ok(DEFAULT_NOTIFICATION_RESPONSE),
+    "GET /users/JULIA/notification-preferences": ok(DEFAULT_NOTIFICATION_RESPONSE),
     "GET /household/alexa": ok({ account: { userId: "STEFAN" }, members: DEFAULT_MEMBERS, speakers: [] }),
     ...routes,
   };

@@ -143,6 +143,8 @@ export function householdSettings(overrides: Partial<HouseholdSettings> = {}): H
     handoversVersion: 0,
     alexaSpeakers: [],
     alexaSpeakersVersion: 0,
+    notificationPreferences: {},
+    notificationPreferencesVersion: 0,
     categoriesVersion: 0,
     updatedAt: "t",
     updatedBy: null,

@@ -174,3 +174,33 @@ npm run test
 
 - Channel linking flows (NOTIFICATION-005, 006, 007)
 - Per-Tenner notification overrides
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06.
+
+- [x] `GET`/`PUT /users/{userId}/notification-preferences` (routes in Terraform); only the member themselves (403),
+  unknown member 404
+- [x] Storage: map `notificationPreferences` (+ version, optimistic locking) on the existing household item
+  (HOUSEHOLD-ADMIN-001 exists, so no new table); `NotificationPreferencesService.preferencesOf` for the notifier
+- [x] Defaults: digest 07:30 on, overdue alerts from 2 days on, weekly summary off (Sunday 18:00), quiet hours
+  21:30–07:00, no channels, household timezone
+- [x] Validation: HH:mm in 15-minute steps, `minDaysOverdue` 0–30, IANA timezone or null, weekday MON–SUN, known
+  and distinct channels, only connected channels (`ConnectedChannels`, empty until a channel ticket connects one),
+  unknown fields rejected
+- [x] Settings → "Benachrichtigungen": toggles, times, days, weekday, quiet hours, channel checkboxes for connected
+  channels only, connection hint, effective timezone; saved on every change
+- [x] Personal data not logged (log: user and enabled flags only)
+- [x] Tests passing: backend 813 (+18), frontend 356 (+5: defaults and save/reload, 15-minute times, invalid days,
+  connected channels only, quiet hours off, load error), Terraform 64; lint, format and builds clean
+
+Decisions and assumptions:
+
+- Preferences are personal: a member cannot change another member's preferences.
+- The model follows the ticket except channel addresses (`channels.EMAIL.address` etc.): they belong to the channel
+  tickets; the response shows connection status only.
+- Weekday values use the existing `MON`–`SUN` enum instead of `SUNDAY`.
+- The settings heading "Für mich (nur auf diesem Gerät)" became "Für mich", because notifications are stored on the
+  server.

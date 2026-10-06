@@ -5,7 +5,11 @@ import { DEFAULT_MEMBERS, fail, mockFetch, ok } from "../../tests/fetchMock";
 import { renderWithProviders } from "../../tests/render";
 import { AlexaSettings } from "./AlexaSettings";
 
-const context = (speakers: { personId: string; userId: string }[]) => ({ account: { userId: "STEFAN" }, members: DEFAULT_MEMBERS, speakers });
+const context = (speakers: { personId: string; userId: string }[]) => ({
+  account: { userId: "STEFAN" },
+  members: DEFAULT_MEMBERS,
+  speakers,
+});
 
 describe("AlexaSettings (ALEXA-002)", () => {
   it("lists mapped voices with member names and numbers several voices of one member", async () => {

@@ -9,3 +9,4 @@ export * from "./vacation.js";
 export * from "./category.js";
 export * from "./handover.js";
 export * from "./alexa.js";
+export * from "./notification-preferences.js";

@@ -30,7 +30,9 @@ export function AlexaSettings() {
       title="Alexa"
       description="Stimmen, die der Tenner-Skill auf euren Echo-Geräten erkennt. Eine Zuordnung entsteht, wenn jemand auf „Wer spricht gerade?“ antwortet."
     >
-      {alexa.isError && <Alert severity="error">Alexa-Zuordnungen konnten nicht geladen werden. {errorMessage(alexa.error)}</Alert>}
+      {alexa.isError && (
+        <Alert severity="error">Alexa-Zuordnungen konnten nicht geladen werden. {errorMessage(alexa.error)}</Alert>
+      )}
       {alexa.data && alexa.data.speakers.length === 0 && (
         <Typography variant="body2" color="text.secondary">
           Noch keine Stimmen zugeordnet.
@@ -47,8 +49,10 @@ export function AlexaSettings() {
               aria-label={`Zuordnung entfernen: ${labels[index] ?? ""}`}
               onClick={() =>
                 unlink.mutate(speaker.personId, {
-                  onSuccess: () => notify({ message: "Zuordnung entfernt. Alexa fragt beim nächsten Mal wieder nach." }),
-                  onError: (error) => notify({ message: `Entfernen fehlgeschlagen. ${errorMessage(error)}`, severity: "error" }),
+                  onSuccess: () =>
+                    notify({ message: "Zuordnung entfernt. Alexa fragt beim nächsten Mal wieder nach." }),
+                  onError: (error) =>
+                    notify({ message: `Entfernen fehlgeschlagen. ${errorMessage(error)}`, severity: "error" }),
                 })
               }
             >

@@ -7,6 +7,12 @@
 import { AnalyticsService } from "./analytics/index.js";
 import { alexaContextHandler, linkAlexaSpeakerHandler, unlinkAlexaSpeakerHandler, type GetAlexaContext, type LinkAlexaSpeaker, type UnlinkAlexaSpeaker } from "./handlers/alexa.js";
 import { analyticsHandler, type AnalyticsQuery } from "./handlers/analytics.js";
+import {
+  getNotificationPreferencesHandler,
+  updateNotificationPreferencesHandler,
+  type GetNotificationPreferences,
+  type UpdateNotificationPreferences,
+} from "./handlers/notification-preferences.js";
 import { clientOf, householdGroupName, identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
 import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
@@ -62,6 +68,7 @@ import {
 } from "./repositories/index.js";
 import {
   AlexaSpeakerService,
+  NotificationPreferencesService,
   CompleteTennerService,
   CreateTennerService,
   DashboardService,
@@ -118,6 +125,8 @@ export interface Dependencies {
   readonly startHandover: StartHandover;
   readonly endHandover: EndHandover;
   readonly getAlexaContext: GetAlexaContext;
+  readonly getNotificationPreferences: GetNotificationPreferences;
+  readonly updateNotificationPreferences: UpdateNotificationPreferences;
   readonly linkAlexaSpeaker: LinkAlexaSpeaker;
   readonly unlinkAlexaSpeaker: UnlinkAlexaSpeaker;
   readonly listCategories: ListCategories;
@@ -206,6 +215,9 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
   "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
   "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHousehold, logger),
+  "GET /users/{userId}/notification-preferences": ({ event, deps, identity }) => getNotificationPreferencesHandler(event, identity, deps.getNotificationPreferences),
+  "PUT /users/{userId}/notification-preferences": ({ event, deps, logger, identity }) =>
+    updateNotificationPreferencesHandler(event, identity, deps.updateNotificationPreferences, logger),
   "GET /household/alexa": ({ deps, identity }) => alexaContextHandler(identity, deps.getAlexaContext),
   "PUT /household/alexa-speakers/{personId}": ({ event, deps, logger, identity }) => linkAlexaSpeakerHandler(event, identity, deps.linkAlexaSpeaker, logger),
   "DELETE /household/alexa-speakers/{personId}": ({ event, deps, logger, identity }) => unlinkAlexaSpeakerHandler(event, identity, deps.unlinkAlexaSpeaker, logger),
@@ -282,6 +294,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   // HOUSEHOLD-ADMIN-004: without Cognito configuration there are no groups to revoke.
   const revokeAccess = (tenantId: string, userId: string): Promise<number> =>
     membershipRepository?.removeAllMembers(householdGroupName(tenantId, userId)) ?? Promise.resolve(0);
+  const notificationPreferencesService = householdRepository ? new NotificationPreferencesService(householdRepository, systemClock, timezoneOf) : undefined;
   const alexaSpeakerService = householdRepository ? new AlexaSpeakerService(householdRepository, systemClock, config.timezone) : undefined;
   const memberDeactivationService =
     householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
@@ -318,6 +331,10 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     reactivateMember: memberDeactivationService ? (identity, userId) => memberDeactivationService.reactivate(identity, userId) : notConfigured,
     startHandover: handoverService ? (identity, userId, request) => handoverService.start(identity, userId, request) : notConfigured,
     endHandover: handoverService ? (identity, userId) => handoverService.end(identity, userId) : notConfigured,
+    getNotificationPreferences: notificationPreferencesService ? (identity, userId) => notificationPreferencesService.get(identity, userId) : notConfigured,
+    updateNotificationPreferences: notificationPreferencesService
+      ? (identity, userId, request) => notificationPreferencesService.update(identity, userId, request)
+      : notConfigured,
     getAlexaContext: alexaSpeakerService ? (identity) => alexaSpeakerService.context(identity) : notConfigured,
     linkAlexaSpeaker: alexaSpeakerService ? (identity, personId, userId) => alexaSpeakerService.link(identity, personId, userId) : notConfigured,
     unlinkAlexaSpeaker: alexaSpeakerService ? (identity, personId) => alexaSpeakerService.unlink(identity, personId) : notConfigured,

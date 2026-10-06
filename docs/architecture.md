@@ -1405,6 +1405,10 @@ EventBridge rule rate(15 minutes) ──► Lambda tenner-notifier (backend/src/
   leaves the key PENDING, so that notification is not sent (at most once).
 - **Isolation:** a failing member, job or channel is logged and never stops the others.
 - **Channels:** `NotificationChannel.send(message, recipient)`; only `LogChannel` (structured log, no body) exists.
+- **Preferences (NOTIFICATION-002):** per member on the household item (`notificationPreferences`): daily digest
+  time, overdue threshold, weekly summary, quiet hours, channels (connected ones only), own timezone or the
+  household's. Defaults apply until a member saves; `GET/PUT /users/{userId}/notification-preferences`, own member
+  only; Settings → "Benachrichtigungen".
 - **Logs:** type, channel, user ID, status, error code — never message bodies or channel addresses.
 - **Infrastructure:** `terraform/notifier.tf`, created only with `notifications_enabled` (GitHub variable
   `NOTIFICATIONS_ENABLED`). EventBridge rule instead of EventBridge Scheduler (no extra invocation role).

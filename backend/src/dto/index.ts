@@ -13,3 +13,4 @@ export * from "./skip.dto.js";
 export * from "./member.dto.js";
 export * from "./category.dto.js";
 export * from "./alexa.dto.js";
+export * from "./notification-preferences.dto.js";
