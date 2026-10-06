@@ -223,3 +223,17 @@ variable "observability_enabled" {
   type        = bool
   default     = false
 }
+
+variable "alarm_thresholds" {
+  description = "Alarm thresholds (OBSERVABILITY-002), centralized: API 5xx rate in percent over 5 minutes, Lambda errors per 5 minutes (alarm on 2 of 3 periods), hours without a successful notifier run."
+  type = object({
+    api_5xx_rate_percent   = number
+    lambda_errors          = number
+    notifier_silence_hours = number
+  })
+  default = {
+    api_5xx_rate_percent   = 5
+    lambda_errors          = 0
+    notifier_silence_hours = 2
+  }
+}

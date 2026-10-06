@@ -114,6 +114,7 @@ Allowed:
 - EventBridge
 - Cognito
 - Billing features without runtime: AWS Budgets, Cost Anomaly Detection ([ADR 0003](decisions/0003-cost-monitoring.md))
+- SNS for alarm notifications only (e-mail subscription, [ADR 0006](decisions/0006-alarm-notifications.md))
 - SSM Parameter Store (SecureString, AWS managed key `aws/ssm`) for runtime secrets ([ADR 0004](decisions/0004-secrets-management.md)); values set out of band, never in Terraform state or environment variables
 - Alexa Skills Kit (custom skill, APL, Reminders, Proactive Events, Data Store) and the skill Lambda in eu-west-1
   ([ADR 0005](decisions/0005-alexa-platform.md)); the only resources outside eu-central-1, no data stored there

@@ -376,9 +376,20 @@ Lambda (invocations, errors, throttles, concurrency, duration p95 — the Alexa 
 enabled), DynamoDB per table (capacity, throttles, system errors) and CloudFront (requests, 4xx/5xx rate, us-east-1
 metrics). Link: Terraform output `cloudwatch_dashboard_url`. Cost: 0 USD (3 dashboards are free).
 
-It is created when the GitHub **variable** `OBSERVABILITY_ENABLED` is `true`; before that, allow
-`cloudwatch:PutDashboard`, `GetDashboard`, `DeleteDashboards` on `arn:aws:cloudwatch::<account-id>:dashboard/tenner-*`
-for `GitHubActionsDeployRole`.
+**Alarms (OBSERVABILITY-002, [ADR 0006](docs/decisions/0006-alarm-notifications.md)):** API 5xx rate > 5 % for 5
+minutes, Lambda errors in 2 of 3 periods and throttles per function, DynamoDB system errors and throttles (all
+tables), no successful notifier run for 2 hours. Thresholds: Terraform variable `alarm_thresholds`. They e-mail
+the `BUDGET_ALERT_EMAIL` address through SNS topic `tenner-alarms`; confirm the subscription e-mail AWS sends after
+the first deploy. Each alarm links its section in [`docs/runbooks/alarms.md`](docs/runbooks/alarms.md). At most 10
+standard alarms: free.
+
+Dashboard and alarms are created when the GitHub **variable** `OBSERVABILITY_ENABLED` is `true`; before that, allow
+for `GitHubActionsDeployRole`: `cloudwatch:PutDashboard`, `GetDashboard`, `DeleteDashboards` on
+`arn:aws:cloudwatch::<account-id>:dashboard/tenner-*`; `cloudwatch:PutMetricAlarm`, `DeleteAlarms`,
+`DescribeAlarms`, `TagResource`, `UntagResource`, `ListTagsForResource` on `arn:aws:cloudwatch:*:<account-id>:alarm:tenner-*`;
+`sns:CreateTopic`, `DeleteTopic`, `GetTopicAttributes`, `SetTopicAttributes`, `Subscribe`, `Unsubscribe`,
+`GetSubscriptionAttributes`, `ListSubscriptionsByTopic`, `TagResource`, `UntagResource`, `ListTagsForResource` on
+`arn:aws:sns:*:<account-id>:tenner-alarms`.
 
 ### Notifications (NOTIFICATION-001)
 

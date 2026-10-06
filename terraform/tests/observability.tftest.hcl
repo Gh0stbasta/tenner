@@ -118,3 +118,59 @@ run "dashboard_adds_optional_components" {
     error_message = "The Alexa skill Lambda must appear with its own region."
   }
 }
+
+run "alarms_reach_the_owner_by_email" {
+  command = plan
+
+  variables {
+    observability_enabled = true
+    notifications_enabled = true
+  }
+
+  assert {
+    condition     = aws_sns_topic.alarms[0].name == "tenner-alarms" && aws_sns_topic_subscription.alarms_email[0].protocol == "email" && aws_sns_topic_subscription.alarms_email[0].endpoint == "owner@example.com"
+    error_message = "Alarms must go to the owner by e-mail through tenner-alarms."
+  }
+
+  assert {
+    condition     = toset(keys(aws_cloudwatch_metric_alarm.lambda_errors)) == toset(["tenner-api", "tenner-notifier"]) && aws_cloudwatch_metric_alarm.lambda_errors["tenner-api"].datapoints_to_alarm == 2 && aws_cloudwatch_metric_alarm.lambda_errors["tenner-api"].evaluation_periods == 3
+    error_message = "Lambda errors must alarm on 2 of 3 periods per function."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.api_5xx_rate[0].threshold == 5 && aws_cloudwatch_metric_alarm.api_5xx_rate[0].treat_missing_data == "notBreaching"
+    error_message = "API 5xx rate alarm must use 5 % and ignore missing data."
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.dynamodb) == 2 && length(aws_cloudwatch_metric_alarm.notifier_silent) == 1 && aws_cloudwatch_metric_alarm.notifier_silent[0].treat_missing_data == "breaching"
+    error_message = "DynamoDB and notifier alarms must exist; a silent notifier is breaching."
+  }
+
+  assert {
+    condition = alltrue(concat(
+      [for alarm in values(aws_cloudwatch_metric_alarm.lambda_errors) : strcontains(alarm.alarm_description, "docs/runbooks/alarms.md#")],
+      [for alarm in values(aws_cloudwatch_metric_alarm.dynamodb) : strcontains(alarm.alarm_description, "docs/runbooks/alarms.md#")],
+      [strcontains(aws_cloudwatch_metric_alarm.api_5xx_rate[0].alarm_description, "#api-5xx-rate")],
+    ))
+    error_message = "Every alarm must link its runbook."
+  }
+
+  assert {
+    condition     = 1 + length(aws_cloudwatch_metric_alarm.lambda_errors) + length(aws_cloudwatch_metric_alarm.lambda_throttles) + length(aws_cloudwatch_metric_alarm.dynamodb) + length(aws_cloudwatch_metric_alarm.notifier_silent) <= 10
+    error_message = "Keep the alarms within the 10 free standard alarms."
+  }
+}
+
+run "no_notifier_alarm_without_notifier" {
+  command = plan
+
+  variables {
+    observability_enabled = true
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.notifier_silent) == 0 && toset(keys(aws_cloudwatch_metric_alarm.lambda_errors)) == toset(["tenner-api"])
+    error_message = "Notifier alarms only exist with the notifier."
+  }
+}
