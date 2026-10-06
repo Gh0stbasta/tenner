@@ -10,6 +10,7 @@ import { NoIntentHandler, OverdueIntentHandler, SuggestIntentHandler, TodayInten
 import { SessionEndedRequestHandler } from "./handlers/sessionEnded.js";
 import { SpeakerIntentHandler } from "./handlers/speaker.js";
 import { StopIntentHandler } from "./handlers/stop.js";
+import { TouchCompleteHandler } from "./handlers/touch.js";
 import { linkInterceptor } from "./session.js";
 
 /**
@@ -21,6 +22,7 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
     .addRequestInterceptors(linkInterceptor(config, fetchImpl))
     .addRequestHandlers(
       LaunchRequestHandler,
+      TouchCompleteHandler,
       // Answers to open completion questions come before the general handlers of the same intents.
       CompletedByAnswerHandler,
       ConfirmYesHandler,

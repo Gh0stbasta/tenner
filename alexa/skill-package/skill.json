@@ -28,7 +28,22 @@
       "custom": {
         "endpoint": {
           "uri": "${SKILL_LAMBDA_ARN}"
-        }
+        },
+        "interfaces": [
+          {
+            "type": "ALEXA_PRESENTATION_APL",
+            "supportedViewports": [
+              {
+                "mode": "HUB",
+                "shape": "RECTANGLE",
+                "minWidth": 960,
+                "maxWidth": 1920,
+                "minHeight": 480,
+                "maxHeight": 1920
+              }
+            ]
+          }
+        ]
       }
     },
     "privacyAndCompliance": {

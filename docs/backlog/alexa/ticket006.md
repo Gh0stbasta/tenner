@@ -164,3 +164,40 @@ Manual: Echo Show 5, 8 (or 10) and 15 — launch, complete by touch, return to d
 - Permanent home-screen visibility (ALEXA-007)
 - Analytics charts on the Echo Show
 - Video or animations beyond simple transitions
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06 (repository side; device verification pending activation).
+
+- [x] Manifest interface `ALEXA_PRESENTATION_APL` (HUB rectangle 960–1920 dp); APL only when the request declares
+  `Alexa.Presentation.APL`, voice-only devices unchanged (tested)
+- [x] APL documents `alexa/apl/dashboard.json` and `alexa/apl/list.json` (APL 2023.2, core components only, data
+  via `payload.view`); datasource builders `alexa/src/apl.ts` (pure)
+- [x] Views: dashboard on launch / today / after completion (confirmation as banner on the refreshed dashboard),
+  overdue list; header with date, counts, open minutes; member columns (max. 3 + „Weitere: …“) plus „Alle“;
+  overdue band with „⚠ seit … · Name“
+- [x] Layout per device class with `when` on viewport size: Show 5 next three; Show 8/10 columns; ≥ 1600 dp (Show
+  15/21) overdue band and larger type; portrait stacked
+- [x] Touch: rows are `TouchWrapper` (≥ 64 dp, accessibility label) sending `["complete", tennerId, title]` →
+  `Alexa.Presentation.APL.UserEvent` → completion path of ALEXA-004 (speaker / asked member, request ID as
+  idempotency key) → spoken „Erledigt: …“ and refreshed dashboard
+- [x] Look: dark surface `#1c1f24`, primary `#1976d2`, high-contrast text, member colors from the ANALYTICS-009
+  dark palette by position, name always written; body ≥ 32 dp (Show 8/10), 40 dp from 1600 dp
+- [x] Session: view stays while the session is open, no reprompt / open microphone
+- [x] Tests passing: alexa 115 (+21: APL only on screen devices, datasource mapping, > 3 members → weitere,
+  truncation, empty day, banner, document structure, size < 100 KB, touch targets and text sizes, launch without
+  microphone, voice-only unchanged, touch completion with refresh, unknown speaker, unknown events, failed
+  refresh); lint and build clean
+- [ ] Dashboard renders legibly on Echo Show 5, 8, 10 and 15 — manual check in the APL authoring tool / on devices
+- [ ] Screenshots per device class in the README — after that check
+
+Decisions and assumptions:
+
+- The confirmation view is a banner on the refreshed dashboard instead of a separate document (one document, no
+  timed navigation).
+- No `alexa-layouts` import: core components keep the documents self-contained.
+- The refresh after a voice completion happens only when a view was shown in this session (keeps one-shot
+  completions at three API calls).
+- The actual on-screen timeout per device is not verified (document `idleTimeout` 2 minutes).

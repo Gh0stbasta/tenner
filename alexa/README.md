@@ -4,7 +4,8 @@ German (de-DE) Alexa custom skill "Tenner" ([ADR 0005](../docs/decisions/0005-al
 [`docs/backlog/alexa/`](../docs/backlog/alexa/)). This folder is its own npm package, next to `backend/` and
 `frontend/`; Terraform for the skill Lambda lives in [`terraform/alexa.tf`](../terraform/alexa.tf).
 
-**Current state (ALEXA-004):** completing and undoing Tenners by voice, today/overdue/suggestion/work-left
+**Current state (ALEXA-006):** Echo Show dashboard with touch completion, completing and undoing Tenners by voice
+(ALEXA-004), today/overdue/suggestion/work-left
 questions (ALEXA-003, see "Supported Phrases"), account linking and speaker recognition (ALEXA-002). „Alexa, öffne Tenner“ greets the recognized
 member by name, asks an unknown voice once „Wer spricht gerade?“ and asks unlinked accounts to link Tenner in the
 Alexa app. Help, stop, cancel, fallback and session end are handled.
@@ -13,6 +14,7 @@ Alexa app. Help, stop, cancel, fallback and session end are handled.
 
 ```text
 alexa/
+├── apl/                                    APL documents: dashboard.json, list.json (ALEXA-006)
 ├── skill-package/
 │   ├── skill.json                          manifest (de-DE, development stage); endpoint filled at deploy time
 │   └── interactionModels/custom/de-DE.json invocation name "tenner", intents, samples
@@ -21,6 +23,7 @@ alexa/
 │   ├── skill.ts                            skill builder, handler order
 │   ├── handlers/                           one file per request/intent type
 │   ├── speech.ts                           all German response texts
+│   ├── apl.ts                              Echo Show datasources (pure, ALEXA-006)
 │   ├── answers.ts                          spoken answers from the dashboard (pure, ALEXA-003)
 │   ├── dashboard.ts                        GET /dashboard types and call
 │   ├── matcher.ts                          spoken text → Tenner (pure, ALEXA-004)
@@ -31,6 +34,31 @@ alexa/
 │   └── log.ts                              JSON log lines without personal data
 └── tests/                                  vitest, request envelopes in tests/envelopes.ts
 ```
+
+## Echo Show (ALEXA-006)
+
+Screen devices (`Alexa.Presentation.APL` in the request) get APL documents from `apl/`; voice-only devices are
+unchanged. Documents only bind to datasources built in `src/apl.ts` (pure, tested).
+
+| View | Shown on | Content |
+|---|---|---|
+| Dashboard (`apl/dashboard.json`) | launch (household-wide), „was ist heute fällig“ (filtered like the answer), after a completion (with „✓ Erledigt: …“ banner) | date, „Heute: 3 Tenner · 25 Minuten offen · 1 überfällig“, columns per member (max. 3, then „Weitere: …“) plus „Alle“, overdue band |
+| List (`apl/list.json`) | „was ist überfällig“ | scrollable overdue list, „⚠ seit 4 Tagen · Julia“ |
+
+Layout by viewport (no pixel layouts): Echo Show 5 (< 1100 × 600 dp) shows summary + the next three Tenners;
+Echo Show 8/10 member columns; from 1600 dp (Show 15/21) additionally the overdue band and larger type (body
+40 dp instead of 32 dp); portrait (Show 15 upright) stacks columns and overdue. Dark surface `#1c1f24`, primary
+`#1976d2`, member accent colors from the ANALYTICS-009 dark palette by member position — always with the written
+name; overdue uses icon + text, not color alone.
+
+Tapping a Tenner row (touch target ≥ 64 dp) sends `SendEvent ["complete", tennerId, title]`; the skill completes
+it like a voice completion (speaker or „Wer hat … gemacht?“, request ID as idempotency key), says „Erledigt: …“
+and re-renders the dashboard with the banner. While a view is on screen the session stays open **without** an open
+microphone (no reprompt); the device returns to its home screen after its own inactivity timeout (document
+`idleTimeout` 2 minutes; verify the actual behavior per device).
+
+**Not yet done:** screenshots per device class (needs the APL authoring tool in the developer console or the
+devices); rendering was verified structurally by tests only.
 
 ## Supported Phrases (de-DE)
 

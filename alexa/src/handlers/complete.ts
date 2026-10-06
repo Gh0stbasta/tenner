@@ -17,6 +17,7 @@ import { memberFromSlot } from "./members.js";
 import { lastCompletedOf, pendingOf, setLastCompleted, setPending, type PendingTenner } from "./pending.js";
 import { suggestedTennerId } from "./questions.js";
 import { answer } from "./respond.js";
+import { refreshAfterCompletion } from "./screen.js";
 
 const requestIdOf = (input: HandlerInput): string => input.requestEnvelope.request.requestId;
 
@@ -44,7 +45,7 @@ function ask(input: HandlerInput, text: string): Response {
 }
 
 /** Step 2: who did it — the recognized speaker, the only member, or ask. */
-async function completeBy(input: HandlerInput, household: Household, tenner: PendingTenner): Promise<Response> {
+export async function completeBy(input: HandlerInput, household: Household, tenner: PendingTenner): Promise<Response> {
   const members = household.context.members;
   const completedBy = household.speaker?.userId ?? (members.length === 1 ? members[0]?.userId : undefined);
   if (completedBy === undefined) {
@@ -64,11 +65,22 @@ async function finishComplete(input: HandlerInput, household: Household, tenner:
     const next = result.tenner;
     const nextMember = household.context.members.find((member) => member.userId === next.assignedTo);
     const rotation = next.assignmentMode === "ROTATING" && next.assignedTo !== SHARED_ASSIGNEE && next.assignedTo !== completedBy && nextMember ? ` ${SPEECH.rotationNext(nextMember.displayName)}` : "";
+    await refreshScreen(input, household, tenner.title);
     return answer(input, `${SPEECH.completed(tenner.title, spokenDate(next.nextDue))}${rotation}`);
   } catch (error) {
     if (error instanceof TennerApiError && error.code === "TENNER_INACTIVE") return answer(input, SPEECH.cannotComplete(tenner.title));
     if (error instanceof TennerApiError && error.kind === "NOT_FOUND") return answer(input, SPEECH.tennerGone);
     throw error;
+  }
+}
+
+/** ALEXA-006: a dashboard on screen shows the confirmation and the updated day; a failed refresh is only logged. */
+async function refreshScreen(input: HandlerInput, household: Household, title: string): Promise<void> {
+  try {
+    await refreshAfterCompletion(input, household.context.members, `✓ Erledigt: ${title}`);
+  } catch (error) {
+    if (!(error instanceof TennerApiError)) throw error;
+    logEvent("info", "screen_refresh_skipped", { requestId: requestIdOf(input), kind: error.kind });
   }
 }
 
