@@ -26,6 +26,7 @@ import {
 import type { ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { ConnectivityBanner } from "../components/ConnectivityBanner";
+import { PendingSyncIndicator } from "../features/offline/PendingSyncIndicator";
 import { QUICK_ADD_INPUT_ID } from "../features/tenners/quickAdd";
 import { NAVIGATION_ITEMS } from "./navigation";
 
@@ -177,6 +178,7 @@ export function AppLayout({ headerActions }: AppLayoutProps) {
       >
         <Toolbar sx={{ mt: "env(safe-area-inset-top)" }} />
         <ConnectivityBanner />
+        <PendingSyncIndicator />
         <Outlet />
       </Box>
       <QuickAddFab />

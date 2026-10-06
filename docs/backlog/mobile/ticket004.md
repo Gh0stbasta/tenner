@@ -14,7 +14,7 @@ Low
 
 ## Phase
 
-Long-Term
+V2 (moved from Long-Term by the owner on 2026-10-06, BACKLOG-001)
 
 ---
 
@@ -120,3 +120,34 @@ npm run test
 
 - Offline create/edit
 - Multi-device conflict resolution beyond documented rules
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06.
+
+- [x] Completions possible offline: queue in `localStorage` with tennerId, title, completedBy, completedAt (device
+  time, UTC) and an Idempotency-Key from the action time; optimistic removal from the dashboard (also after a
+  refetch, until synced); „⏳ … wartet auf die Übertragung“ indicator; undo takes it out of the queue
+- [x] Sync is idempotent: replay in order on start, `online` and every 60 s with the stored key and `completedAt`
+- [x] Conflicts handled visibly: concurrent modification retried once; deleted/archived, already completed later,
+  future time beyond 5 min and other refusals dropped with a message in one snackbar; transient errors keep
+  the entry
+- [x] Tests passing: frontend 385 (queue, sync rules, clock skew, offline → online flow, dropped connection, restart,
+  duplicate, undo, logout confirmation); `src/features/offline/` 100 % covered; lint, typecheck, build clean
+- [ ] Verified on a phone in flight mode — manual after deploy (owner)
+
+Decisions and assumptions:
+
+- `localStorage` instead of IndexedDB, as in MOBILE-003 (a handful of entries; no extra library).
+- No Background Sync API: the app replays when it is open (start, `online`, interval). Background Sync is
+  Chromium-only and would need custom service-worker code (MOBILE-002 uses a generated worker).
+- „Completed later by someone else“ (TD-038): the backend rejects a `completedAt` before the last completion, so the
+  offline completion is dropped with a notice instead of being kept in the history (ticket scope differs; changing
+  the backend's history rules is out of scope).
+- `actualMinutes` is not queued: the UI does not ask for it (server default = estimate, ANALYTICS-005).
+- Also queued: an online request without any response (status 0); a replay with the same key returns the original
+  completion if the first request had reached the server.
+- Logout with waiting entries asks for confirmation, then deletes the queue (privacy, MOBILE-003).
+

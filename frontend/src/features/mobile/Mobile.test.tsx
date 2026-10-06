@@ -31,7 +31,10 @@ describe("swipe on dashboard cards", () => {
 
   it("completes on a swipe to the right, with haptic feedback", async () => {
     const vibrate = vi.fn();
-    vi.stubGlobal("navigator", Object.assign(Object.create(navigator), { vibrate }));
+    vi.stubGlobal(
+      "navigator",
+      Object.create(navigator, { vibrate: { value: vibrate }, onLine: { value: true } }) as Navigator,
+    );
     const fetchMock = mockFetch({ "POST /tenners/t-1/complete": ok(completeResponse()) });
     renderWithProviders(<DashboardTennerCard tenner={dashboardTenner()} variant="dueToday" completable />);
     swipe(cardOf("Büro saugen"), SWIPE_THRESHOLD + 20);

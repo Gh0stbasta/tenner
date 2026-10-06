@@ -123,6 +123,7 @@ These are outside Terraform or need the live system. Run them in AWS CloudShell 
 | API Lambda can change Cognito group membership | TD-023 |
 | Tokens in `localStorage` (XSS would expose them; mitigated by CSP) | ADR 0001 |
 | Offline cache: household Tenner data in `localStorage` for up to 7 days or until logout (readable on an unlocked device; same XSS exposure as the tokens) | MOBILE-003, `frontend/README.md` |
+| Offline completions carry a client-chosen `completedAt` (device clock; the backend rejects future and out-of-order times, so it can only move a completion back to the last one) | MOBILE-004 |
 | Google client secret in Terraform state | TD-021 |
 | Throttling is global, not per client | TD-016 |
 | No Lambda reserved concurrency | TD-014 |

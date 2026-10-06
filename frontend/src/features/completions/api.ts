@@ -16,6 +16,8 @@ export interface CompleteTennerInput {
   readonly actualMinutes?: number;
   /** Makes retries safe: the backend returns the original completion for the same key. */
   readonly idempotencyKey: string;
+  /** When it was done (UTC); default: now on the server. Offline replays send the device time (MOBILE-004). */
+  readonly completedAt?: string;
 }
 
 export function completeTenner({
@@ -23,10 +25,15 @@ export function completeTenner({
   completedBy,
   actualMinutes,
   idempotencyKey,
+  completedAt,
 }: CompleteTennerInput): Promise<CompleteTennerResponse> {
   return apiClient.post(`/tenners/${encodeURIComponent(tennerId)}/complete`, {
     schema: completeTennerResponseSchema,
-    body: { completedBy, ...(actualMinutes === undefined ? {} : { actualMinutes }) },
+    body: {
+      completedBy,
+      ...(actualMinutes === undefined ? {} : { actualMinutes }),
+      ...(completedAt === undefined ? {} : { completedAt }),
+    },
     headers: { "Idempotency-Key": idempotencyKey },
   });
 }

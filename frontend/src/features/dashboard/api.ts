@@ -1,9 +1,12 @@
 /** GET /dashboard (TICKET-016). */
 
 import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { z } from "zod";
 import { apiClient } from "../../api/client";
 import { queryKeys } from "../../api/queryKeys";
+import { usePendingCompletionIds } from "../completions/CompletionProvider";
+import { removeFromDashboard } from "../completions/optimistic";
 import { categorySchema, userIdSchema } from "../tenners/schemas";
 
 const dashboardTennerSchema = z.object({
@@ -61,7 +64,12 @@ export function fetchDashboard(): Promise<Dashboard> {
   return apiClient.get("/dashboard", { schema: dashboardSchema });
 }
 
-/** The dashboard response is the single source of truth for the page (FRONTEND-002). */
+/**
+ * The dashboard response is the single source of truth for the page (FRONTEND-002); Tenners completed offline and
+ * not yet synced stay hidden, also after a refetch (MOBILE-004).
+ */
 export function useDashboard() {
-  return useQuery({ queryKey: queryKeys.dashboard, queryFn: fetchDashboard });
+  const pendingIds = usePendingCompletionIds();
+  const select = useCallback((dashboard: Dashboard) => pendingIds.reduce(removeFromDashboard, dashboard), [pendingIds]);
+  return useQuery({ queryKey: queryKeys.dashboard, queryFn: fetchDashboard, select });
 }

@@ -1061,3 +1061,32 @@ small ticket.
 ### Related Work
 
 BACKLOG-001, NOTIFICATION-001, NOTIFICATION-002, ALEXA-008.
+
+---
+
+## TD-038: An offline completion is dropped when the Tenner was completed later online
+
+### Description
+
+When a member completes a Tenner offline and someone else completes it online before the queue syncs, the backend
+rejects the older `completedAt` ("Must not be earlier than the last completion"). The offline completion is dropped
+with a notice and does not appear in the history or analytics.
+
+### Reason
+
+MOBILE-004 asked to keep such completions in the history, but the backend only appends completions in time order
+(nextDue, rotation and undo depend on the latest completion). Changing that was out of scope for a frontend ticket.
+
+### Impact
+
+Rare (two people, one offline, same Tenner, same cycle). The member's work is missing from the history and the
+household balance; the Tenner itself is correct.
+
+### Suggested Improvement
+
+A backend option to record a "late" completion as history only (no nextDue or rotation change), used by the offline
+sync on this specific validation error.
+
+### Related Work
+
+MOBILE-004, TICKET-013 (`backend/src/services/complete-tenner.service.ts`), `frontend/src/features/offline/`.
