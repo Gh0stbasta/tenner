@@ -161,6 +161,7 @@ Assumption: about 10,000 API requests, a few hundred writes and a few MB of logs
 | Notifier Lambda + EventBridge rule + delivery log (NOTIFICATION-001) | ~2,900 runs per month, a few writes per day | 0 USD |
 | SSM Parameter Store (ADR 0004) | a few standard SecureString parameters, cached reads | 0 USD |
 | Alexa skill Lambda + logs (eu-west-1, ADR 0005) | a few hundred voice requests; Lambda free tier, Alexa APIs free | 0 USD |
+| CloudWatch alarms (OBSERVABILITY-002, ALEXA-009) | up to 11 standard alarms, 10 free | ≤ 0.10 USD |
 | **Total** | | **< 0.10 USD per month** |
 
 Monitoring: a 5 USD monthly budget with alerts at 50 %, 80 % and 100 % forecast plus a daily anomaly summary

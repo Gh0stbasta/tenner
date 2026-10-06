@@ -51,7 +51,7 @@ describe("Tenner skill (ALEXA-001)", () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const response = await skill.invoke(sessionEndedRequest("USER_INITIATED"));
     expect(response.response.outputSpeech).toBeUndefined();
-    expect(info).toHaveBeenCalledOnce();
+    expect(info.mock.calls.map(([line]) => JSON.parse(String(line)).event)).toEqual(["session_ended", "skill_request"]);
   });
 
   it("answers unknown request types with a spoken error instead of failing", async () => {

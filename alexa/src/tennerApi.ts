@@ -45,6 +45,8 @@ export interface ApiClientOptions {
   /** Per-call timeout; the whole skill response must stay inside Alexa's 8 seconds. */
   readonly timeoutMs: number;
   readonly fetch: typeof fetch;
+  /** Observes every call (status 0 = network error/timeout) for the request log (ALEXA-009). */
+  readonly onCall?: (status: number, durationMs: number) => void;
 }
 
 export type HttpMethod = "GET" | "PUT" | "POST" | "DELETE";
@@ -60,6 +62,7 @@ export function createTennerApi(options: ApiClientOptions): TennerApi {
   async function request<T>(method: HttpMethod, path: string, body?: unknown, headers: Readonly<Record<string, string>> = {}): Promise<T> {
     if (options.baseUrl === "") throw new TennerApiError("UNAVAILABLE", undefined, "NOT_CONFIGURED");
     let response: Response;
+    const started = Date.now();
     try {
       response = await options.fetch(`${options.baseUrl}${path}`, {
         method,
@@ -74,8 +77,10 @@ export function createTennerApi(options: ApiClientOptions): TennerApi {
       });
     } catch {
       // Timeout, DNS or connection failure.
+      options.onCall?.(0, Date.now() - started);
       throw new TennerApiError("UNAVAILABLE", undefined, "NETWORK");
     }
+    options.onCall?.(response.status, Date.now() - started);
     const payload = (await response.json().catch(() => undefined)) as { data?: T; error?: { code?: string } } | undefined;
     if (!response.ok) throw new TennerApiError(kindOf(response.status), response.status, payload?.error?.code);
     if (payload === undefined || !("data" in payload)) throw new TennerApiError("UNAVAILABLE", response.status, "INVALID_RESPONSE");

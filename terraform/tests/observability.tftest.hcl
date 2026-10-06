@@ -174,3 +174,51 @@ run "no_notifier_alarm_without_notifier" {
     error_message = "Notifier alarms only exist with the notifier."
   }
 }
+
+run "alexa_monitoring" {
+  command = plan
+
+  variables {
+    observability_enabled = true
+    notifications_enabled = true
+    alexa_skill_id        = "amzn1.ask.skill.12345678-90ab-cdef-1234-567890abcdef"
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.alexa_skill_error_rate[0].threshold == 5 && aws_cloudwatch_metric_alarm.alexa_skill_duration[0].threshold == 5000 && aws_cloudwatch_metric_alarm.alexa_skill_duration[0].extended_statistic == "p95"
+    error_message = "Skill alarms: error rate > 5 % in 15 minutes and p95 duration > 5 s."
+  }
+
+  assert {
+    condition     = aws_sns_topic_subscription.alexa_alarms_email[0].protocol == "email" && aws_cloudwatch_log_metric_filter.alexa_skill_errors[0].pattern == "\"skill_request\" \"ERROR\""
+    error_message = "Skill alarms go to an eu-west-1 topic by e-mail; errors are counted from the request log."
+  }
+
+  assert {
+    condition     = toset(keys(aws_cloudwatch_log_metric_filter.alexa_push_failures)) == toset(["WidgetPushFailures", "AlexaNotificationFailures"]) && length(aws_cloudwatch_metric_alarm.alexa_delivery_failures) == 1
+    error_message = "Widget push and Alexa notification failures must be measured and alarmed."
+  }
+
+  assert {
+    condition     = strcontains(aws_cloudwatch_dashboard.tenner[0].dashboard_body, "Alexa skill: requests per intent") && strcontains(aws_cloudwatch_dashboard.tenner[0].dashboard_body, "WidgetPushFailures")
+    error_message = "The dashboard needs an Alexa section."
+  }
+
+  assert {
+    condition     = strcontains(aws_cloudwatch_metric_alarm.alexa_skill_error_rate[0].alarm_description, "docs/runbooks/alexa.md#")
+    error_message = "Alexa alarms link the Alexa runbook."
+  }
+}
+
+run "no_alexa_monitoring_without_skill" {
+  command = plan
+
+  variables {
+    observability_enabled = true
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.alexa_skill_error_rate) == 0 && length(aws_sns_topic.alexa_alarms) == 0 && length(aws_cloudwatch_metric_alarm.alexa_delivery_failures) == 0
+    error_message = "Alexa monitoring exists only with the skill."
+  }
+}

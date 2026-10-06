@@ -9,6 +9,7 @@
 import type { HandlerInput, RequestInterceptor } from "ask-sdk-core";
 import type { RequestEnvelope } from "ask-sdk-model";
 import type { SkillConfig } from "./config.js";
+import { recordApiCall } from "./requestLog.js";
 import { createTennerApi, type AlexaContext, type AlexaMember, type TennerApi } from "./tennerApi.js";
 
 export interface Link {
@@ -54,6 +55,7 @@ export function linkInterceptor(config: SkillConfig, fetchImpl: typeof fetch): R
         correlationId: input.requestEnvelope.request.requestId,
         timeoutMs: config.apiTimeoutMs,
         fetch: fetchImpl,
+        onCall: (status, durationMs) => recordApiCall(input, status, durationMs),
       });
     },
   };

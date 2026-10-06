@@ -6,6 +6,7 @@
 import type { HandlerInput, RequestHandler } from "ask-sdk-core";
 import type { IntentRequest, Response } from "ask-sdk-model";
 import { logEvent } from "../log.js";
+import { setOutcome } from "../requestLog.js";
 import { findMemberByName, apiOf, loadHousehold, type Household } from "../session.js";
 import { matchTenner, type MatchCandidate } from "../matcher.js";
 import { SPEECH } from "../speech.js";
@@ -61,6 +62,7 @@ async function finishComplete(input: HandlerInput, household: Household, tenner:
   try {
     const result = await completeTenner(apiOf(input), tenner.tennerId, completedBy, requestIdOf(input));
     setLastCompleted(input, { tennerId: tenner.tennerId, title: tenner.title });
+    setOutcome(input, "COMPLETED");
     logEvent("info", "tenner_completed", { requestId: requestIdOf(input), tennerId: tenner.tennerId });
     const next = result.tenner;
     const nextMember = household.context.members.find((member) => member.userId === next.assignedTo);

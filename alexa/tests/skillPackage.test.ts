@@ -41,3 +41,27 @@ describe("skill package", () => {
     expect(manifest.manifest.apis.custom.endpoint.uri).toBe("${SKILL_LAMBDA_ARN}");
   });
 });
+
+describe("utterance conflicts (ALEXA-009)", () => {
+  const model = (readJson("interactionModels/custom/de-DE.json") as { interactionModel: { languageModel: LanguageModel } }).interactionModel.languageModel;
+
+  it("has no sample that two intents share once slots are normalized (except the deliberate slot-only answers)", () => {
+    const owners = new Map<string, Set<string>>();
+    for (const intent of model.intents) {
+      for (const sample of intent.samples) {
+        const normalized = sample.replace(/\{[^}]+\}/g, "{}");
+        owners.set(normalized, (owners.get(normalized) ?? new Set()).add(intent.name));
+      }
+    }
+    const conflicts = [...owners].filter(([sample, intents]) => intents.size > 1 && sample !== "{}");
+    expect(conflicts).toEqual([]);
+    // Slot-only answers: SpeakerIntent ({member}) and CompleteIntent ({tenner}); both handlers accept either (ALEXA-004).
+    expect([...(owners.get("{}") ?? [])].sort()).toEqual(["CompleteIntent", "SpeakerIntent"]);
+  });
+
+  it("declares every slot type it uses", () => {
+    const declared = new Set((model as unknown as { types: { name: string }[] }).types.map((type) => type.name));
+    const used = model.intents.flatMap((intent) => ((intent as unknown as { slots?: { type: string }[] }).slots ?? []).map((slot) => slot.type)).filter((type) => !type.startsWith("AMAZON."));
+    for (const type of used) expect(declared.has(type)).toBe(true);
+  });
+});

@@ -1,6 +1,7 @@
 import type { ErrorHandler, HandlerInput } from "ask-sdk-core";
 import type { Response } from "ask-sdk-model";
 import { logEvent } from "../log.js";
+import { logRequest } from "../requestLog.js";
 import { NotLinkedError } from "../session.js";
 import { SPEECH } from "../speech.js";
 import { TennerApiError } from "../tennerApi.js";
@@ -17,10 +18,12 @@ export const ApiErrorHandler: ErrorHandler = {
     const requestId = input.requestEnvelope.request.requestId;
     if (error instanceof NotLinkedError) {
       logEvent("info", "link_required", { requestId });
+      logRequest(input, undefined, "LINK_REQUIRED");
       return input.responseBuilder.speak(SPEECH.linkAccount).withLinkAccountCard().withShouldEndSession(true).getResponse();
     }
     const apiError = error as TennerApiError;
     logEvent(apiError.kind === "UNAVAILABLE" ? "error" : "info", "api_error", { requestId, kind: apiError.kind, status: apiError.status, code: apiError.code });
+    logRequest(input, undefined, apiError.kind === "UNAUTHORIZED" ? "LINK_REQUIRED" : "ERROR");
     if (apiError.kind === "UNAUTHORIZED") {
       return input.responseBuilder.speak(SPEECH.relink).withLinkAccountCard().withShouldEndSession(true).getResponse();
     }

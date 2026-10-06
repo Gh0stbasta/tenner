@@ -14,6 +14,7 @@ import { SpeakerIntentHandler } from "./handlers/speaker.js";
 import { StopIntentHandler } from "./handlers/stop.js";
 import { TouchCompleteHandler } from "./handlers/touch.js";
 import { OpenDashboardHandler } from "./handlers/widget.js";
+import { logResponse, startTimer } from "./requestLog.js";
 import { linkInterceptor } from "./session.js";
 
 /**
@@ -22,7 +23,8 @@ import { linkInterceptor } from "./session.js";
  */
 export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globalThis.fetch): Skill {
   const builder = SkillBuilders.custom()
-    .addRequestInterceptors(linkInterceptor(config, fetchImpl))
+    .addRequestInterceptors(startTimer, linkInterceptor(config, fetchImpl))
+    .addResponseInterceptors(logResponse)
     .addRequestHandlers(
       LaunchRequestHandler,
       messageReceivedHandler(fetchImpl),

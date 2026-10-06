@@ -156,3 +156,37 @@ Manual: break the API URL in a test deploy → alarm fires and the health check 
 
 - Third-party APM tools
 - Publishing metrics to the public skill store
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06 (alarms and health check active once the owner enables monitoring and the skill).
+
+- [x] Structured skill logs (`alexa/src/requestLog.ts`): one `skill_request` line per request with request type,
+  intent, locale, device class (viewport profile or VOICE), duration, API calls/latency/status and outcome
+  (`ANSWERED`, `ASKED`, `COMPLETED`, `LINK_REQUIRED`, `ERROR`); no tokens, person/account IDs or titles (tested)
+- [x] Correlation: `x-correlation-id` = Alexa request ID on every Tenner API call (since ALEXA-002)
+- [x] Metrics (namespace `Tenner/Alexa`) from log lines with metric filters: skill requests and errors, widget push
+  failures, Alexa notification failures; p95 duration from the Lambda metric
+- [x] Alarms: skill error rate > 5 % in 15 minutes and p95 duration > 5 s (eu-west-1, own SNS topic, e-mail),
+  widget/notification failures (eu-central-1, existing topic); dashboard "Alexa" section incl. requests per intent
+  and outcome (Logs Insights)
+- [x] Health check after every skill deploy: `scripts/alexa-health-check.sh` (SMAPI simulation „öffne tenner“,
+  answer must name Tenner) with the tested checker `scripts/check_alexa_simulation.py`; fails the deployment
+- [x] PR checks: interaction model JSON, unique samples and utterance conflicts after slot normalization, declared
+  slot types (alexa tests)
+- [x] Runbook `docs/runbooks/alexa.md`: linking, speaker recognition, beta expiry, widget, notifications, Lambda
+  errors/timeouts, Alexa+, rollback; cost in architecture and README
+- [x] Tests passing: alexa 146 (+9), Terraform 74 (+2), scripts 40 (+4); lint and builds clean
+- [ ] Manual: break the API URL in a test deploy → alarm fires and the health check fails (owner, after activation)
+
+Decisions and assumptions:
+
+- Metric filters on event names instead of the embedded metric format: the Lambdas use the JSON log format, and
+  plain term filters work regardless of how the runtime wraps the message.
+- The second-scenario health check („was ist heute fällig“ with a test account) is not included: the simulation
+  runs as the developer account, whose link state is not controlled by CI; the welcome/link answer proves the
+  skill, endpoint and Lambda work.
+- Optional analytics by channel (`client: "alexa"`) stays a Logs Insights query on the API logs.
+- `ask smapi simulate-skill` usage is unverified like the deploy script (TD-034).

@@ -89,7 +89,7 @@ locals {
         }
       },
       {
-        type = "metric", x = 0, y = 31, width = 24, height = 6
+        type = "metric", x = 0, y = 37, width = 24, height = 6
         properties = {
           title  = "CloudFront (us-east-1 metrics)"
           region = "us-east-1"
@@ -102,6 +102,40 @@ locals {
         }
       },
     ],
+    # ALEXA-009: Alexa section — outcomes from the skill log (eu-west-1) and delivery failures (notifier).
+    [for widget in [
+      {
+        type = "metric", x = 0, y = 31, width = 12, height = 6
+        properties = {
+          title   = "Alexa skill: requests and errors (eu-west-1)"
+          region  = var.alexa_region
+          stat    = "Sum"
+          period  = 300
+          metrics = [[local.alexa_metrics_namespace, "SkillRequests"], [local.alexa_metrics_namespace, "SkillRequestErrors"]]
+        }
+      },
+      {
+        type = "log", x = 12, y = 31, width = 12, height = 6
+        properties = {
+          title  = "Alexa skill: requests per intent and outcome"
+          region = var.alexa_region
+          view   = "table"
+          query  = "SOURCE '${local.alexa_log_group_name}' | filter event = \"skill_request\" | stats count(*) as requests, pct(durationMs, 95) as p95ms by intent, outcome | sort requests desc"
+        }
+      },
+    ] : widget if local.alexa_enabled],
+    [for widget in [
+      {
+        type = "metric", x = 0, y = 43, width = 24, height = 6
+        properties = {
+          title   = "Alexa deliveries: widget push and notification failures"
+          region  = var.aws_region
+          stat    = "Sum"
+          period  = 3600
+          metrics = [[local.alexa_metrics_namespace, "WidgetPushFailures"], [local.alexa_metrics_namespace, "AlexaNotificationFailures"]]
+        }
+      },
+    ] : widget if local.alexa_notifier_enabled],
   )
 }
 

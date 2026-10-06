@@ -1,6 +1,7 @@
 import type { ErrorHandler, HandlerInput } from "ask-sdk-core";
 import type { Response } from "ask-sdk-model";
 import { logEvent } from "../log.js";
+import { logRequest } from "../requestLog.js";
 import { SPEECH } from "../speech.js";
 
 /** Last line of defense: never let Alexa answer with its generic error; log without request content. */
@@ -15,6 +16,7 @@ export const GenericErrorHandler: ErrorHandler = {
       errorName: error.name,
       errorMessage: error.message,
     });
+    logRequest(input, undefined, "ERROR");
     return input.responseBuilder.speak(SPEECH.error).withShouldEndSession(true).getResponse();
   },
 };

@@ -389,7 +389,15 @@ for `GitHubActionsDeployRole`: `cloudwatch:PutDashboard`, `GetDashboard`, `Delet
 `DescribeAlarms`, `TagResource`, `UntagResource`, `ListTagsForResource` on `arn:aws:cloudwatch:*:<account-id>:alarm:tenner-*`;
 `sns:CreateTopic`, `DeleteTopic`, `GetTopicAttributes`, `SetTopicAttributes`, `Subscribe`, `Unsubscribe`,
 `GetSubscriptionAttributes`, `ListSubscriptionsByTopic`, `TagResource`, `UntagResource`, `ListTagsForResource` on
-`arn:aws:sns:*:<account-id>:tenner-alarms`.
+`arn:aws:sns:*:<account-id>:tenner-alarms`; for the Alexa monitoring (ALEXA-009) also `logs:PutMetricFilter`,
+`DeleteMetricFilter`, `DescribeMetricFilters` on `/tenner/alexa-skill` (eu-west-1) and `/tenner/notifier`.
+
+**Alexa (ALEXA-009):** skill error rate > 5 % in 15 minutes and p95 duration > 5 s (alarms and SNS topic
+`tenner-alarms` in eu-west-1, confirm that subscription too), widget push or Alexa notification failures
+(eu-central-1); metrics from log lines (namespace `Tenner/Alexa`); dashboard section with requests per intent and
+outcome; runbook [`docs/runbooks/alexa.md`](docs/runbooks/alexa.md). Every deploy with `ALEXA_SKILL_ID` ends with
+a simulated „öffne tenner“ (`scripts/alexa-health-check.sh`). Up to 11 alarms in total: about 0.10 USD per month
+beyond the free 10.
 
 ### Notifications (NOTIFICATION-001)
 
