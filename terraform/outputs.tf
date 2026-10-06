@@ -153,3 +153,8 @@ output "notifier_function_name" {
   description = "Notifier Lambda (NOTIFICATION-001); empty while notifications_enabled is false."
   value       = var.notifications_enabled ? aws_lambda_function.notifier[0].function_name : ""
 }
+
+output "cloudwatch_dashboard_url" {
+  description = "CloudWatch dashboard (OBSERVABILITY-001); empty while observability_enabled is false."
+  value       = var.observability_enabled ? "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards/dashboard/${local.dashboard_name}" : ""
+}

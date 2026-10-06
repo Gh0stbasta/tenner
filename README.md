@@ -369,6 +369,17 @@ python3 scripts/backfill_frequency_unit.py --apply   # conditional, idempotent w
 - **Infrastructure changes:** reverting the Terraform code and letting `deploy.yml` apply it
   is the only supported way. Manual changes in AWS are not allowed (see `docs/architecture.md`).
 
+### Monitoring (OBSERVABILITY-001)
+
+The CloudWatch dashboard `tenner-<environment>` shows API Gateway (requests, 4xx, 5xx, latency p50/p95), every
+Lambda (invocations, errors, throttles, concurrency, duration p95 — the Alexa skill from eu-west-1, the notifier when
+enabled), DynamoDB per table (capacity, throttles, system errors) and CloudFront (requests, 4xx/5xx rate, us-east-1
+metrics). Link: Terraform output `cloudwatch_dashboard_url`. Cost: 0 USD (3 dashboards are free).
+
+It is created when the GitHub **variable** `OBSERVABILITY_ENABLED` is `true`; before that, allow
+`cloudwatch:PutDashboard`, `GetDashboard`, `DeleteDashboards` on `arn:aws:cloudwatch::<account-id>:dashboard/tenner-*`
+for `GitHubActionsDeployRole`.
+
 ### Notifications (NOTIFICATION-001)
 
 The notifier Lambda `tenner-notifier` runs every 15 minutes (EventBridge rule) and sends notifications through

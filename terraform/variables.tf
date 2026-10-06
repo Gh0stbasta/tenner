@@ -217,3 +217,9 @@ variable "notifier_log_level" {
     error_message = "notifier_log_level must be one of DEBUG, INFO, WARN, ERROR."
   }
 }
+
+variable "observability_enabled" {
+  description = "Create the CloudWatch dashboard (OBSERVABILITY-001) and alarms (OBSERVABILITY-002). Enable after the deploy role has the CloudWatch/SNS permissions (README → Monitoring). Set as GitHub variable OBSERVABILITY_ENABLED."
+  type        = bool
+  default     = false
+}
