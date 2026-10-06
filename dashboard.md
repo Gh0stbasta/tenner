@@ -8,20 +8,20 @@
 |---|---|
 | **Project health** | 🟢 **Healthy**: the last deploy (HOTFIX-006) is green, the Alexa health check is skipped only when Amazon's simulator fails; all automated tests pass (backend 863, alexa 147, frontend 385, Terraform 74, scripts 45) |
 | **Current phase** | Phase 2 (V2, "daily usefulness"). Phase 1 (MVP) is live |
-| **Current focus** | This pull request: backlog cleanup (push, e-mail/Telegram reminders and "I have X minutes" removed) and offline use of the app: read the last state and complete Tenners without a connection |
+| **Current focus** | This pull request: backlog and code cleanup (push, e-mail/Telegram reminders, Telegram bot and "I have X minutes" removed) and offline use of the app: read the last state and complete Tenners without a connection |
 | **Biggest blocker** | None in the code. Alexa still needs your remaining activation steps (Parameter Store values, SNS confirmations, Alexa app permissions) |
 | **Recommended next action** | Merge, then test offline on your phone: open Tenner in flight mode, complete a Tenner, switch the connection back on |
 
 ## 📈 Progress
 
 ```text
-Overall   ████████████░░░░░░░░  58%   95 / 164 tickets
-Phase 1   ████████████████████ 100%   51 / 51   MVP + hotfixes (live since 2026-10-02)
-Phase 2   ██████████░░░░░░░░░░  52%   44 / 85   V2 (Alexa, analytics, household, admin, scheduling, offline complete)
+Overall   ████████████░░░░░░░░  59%   97 / 165 tickets
+Phase 1   ████████████████████ 100%   53 / 53   MVP + hotfixes (live since 2026-10-02)
+Phase 2   ██████████░░░░░░░░░░  52%   44 / 84   V2 (Alexa, analytics, household, admin, scheduling, offline complete)
 Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0 / 28   Long-Term
 ```
 
-✅ Completed: **95** · 🚧 In progress: **0** · 📋 Open: **69** · Total: **164**
+✅ Completed: **97** · 🚧 In progress: **0** · 📋 Open: **68** · Total: **165**
 
 ## 🧩 Feature Status
 
@@ -36,7 +36,7 @@ Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0
 | ✅ Alexa „Tenner Board“, reminders via Alexa, monitoring and alarms | |
 | 🆕 **Offline:** last known Tenners without a connection (up to 7 days) and completing offline with automatic transfer | |
 
-🗑 Dropped by you (2026-10-06): phone push, e-mail and Telegram reminders, "I have X minutes" suggestions.
+🗑 Dropped by you (2026-10-06): phone push, e-mail and Telegram reminders, the Telegram bot, "I have X minutes" suggestions — removed from backlog and code.
 
 ## 💰 Cost Overview
 
@@ -60,9 +60,9 @@ The notifier runs every 15 minutes (~2,900 runs/month, free); Alexa APIs and Par
 |---|---|---|
 | 🚨 High | **1** | Anyone with a Google account can claim a newly added member until that person signs in (TD-020) |
 | ⚠ Medium | **11** | Deploy role used for PR plans · Google secret in Terraform state · API can change login groups · global rate limit · handover give-back only on app open · pause edge cases · smoke tests without login · planned services lack ADRs · Alexa deploy script and Amazon API shapes not yet run against Amazon (TD-034, TD-036) · Alexa link has full member rights for 10 years (TD-035) |
-| ✅ Low | **22** | Tidiness, bundle size, analytics simplifications, unused channel names in the code (TD-037), offline completion lost if completed later online (TD-038) |
+| ✅ Low | **21** | Tidiness, bundle size, analytics simplifications, offline completion lost if completed later online (TD-038) |
 
-34 open, 4 resolved. Details: [`docs/technical-debt.md`](docs/technical-debt.md).
+33 open, 5 resolved. Details: [`docs/technical-debt.md`](docs/technical-debt.md).
 
 ## 🔐 Security
 
@@ -88,13 +88,12 @@ The notifier runs every 15 minutes (~2,900 runs/month, free); Alexa APIs and Par
 1. **Merge this PR** and check that the deploy is green.
 2. **Test offline on the phone:** flight mode → open Tenner (last state shown) → complete a Tenner → connection on → „✅ … übertragen“.
 3. **Finish Alexa activation:** LWA parameters in Parameter Store, SNS e-mails, reminders/notifications in the Alexa app, then choose Alexa in Einstellungen → Benachrichtigungen.
-4. **Decide INTEGRATION-002** (Telegram bot): it depended on the dropped Telegram channel — drop or rescope.
-5. **Next block:** weekly summary (NOTIFICATION-008) or importance/checklists (PRODUCTIVITY-002 – 005).
+4. **Next block:** weekly summary (NOTIFICATION-008) or importance/checklists (PRODUCTIVITY-002 – 005).
 
 ---
 
 ## ℹ About this dashboard
 
 - **Sources:** the ticket files in `docs/backlog/` and `docs/hotfix/` (a ticket counts as done when it has an "Implementation Status" section), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/architecture.md`](docs/architecture.md) and GitHub Actions (latest deploy after PR #28 green with the Alexa health check skipped; the four before it failed and were fixed by HOTFIX-003 – 006).
-- **Counting:** 165 ticket files minus one duplicate (TD-001) gives 164 tickets (5 tickets removed by BACKLOG-001); planning tickets with other file names (e.g. `alexaSkill/alexaFoundation.md`) are not counted. Tickets with open manual checks (e.g. device tests) count as done once implemented. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
+- **Counting:** 166 ticket files minus one duplicate (TD-001) gives 165 tickets (6 tickets removed by BACKLOG-001/002); planning tickets with other file names (e.g. `alexaSkill/alexaFoundation.md`) are not counted. Tickets with open manual checks (e.g. device tests) count as done once implemented. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).
