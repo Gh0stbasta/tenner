@@ -162,3 +162,28 @@ when this ticket is implemented.
 
 - Automatic rotation
 - Secrets for CI (handled by GitHub OIDC; no AWS keys)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06.
+
+- [x] ADR `docs/decisions/0004-secrets-management.md` (Parameter Store SecureString with `aws/ssm`); allowed
+  services, cost table, roadmap and security baseline updated
+- [x] Secret values never in repo, state, logs or env vars: Terraform does **not** manage `aws_ssm_parameter`
+  resources (a refresh would read the real value into the state even with `ignore_changes`); it knows only the
+  names (`local.secret_parameter_prefix`, `local.secret_parameter_arn_prefix`, output `secret_parameter_prefix`)
+- [x] Least privilege: consumers grant `ssm:GetParameter` on exact parameter ARNs (first consumer: ALEXA-007);
+  no KMS statement needed for the AWS managed key
+- [x] Secret loader `backend/src/secrets/secret-loader.ts`: `WithDecryption`, in-memory cache (5 min TTL), shared
+  in-flight request, `SecretUnavailableError` with parameter name and error name only, placeholder/empty = not set
+- [x] Rotation and setup documented (README → "Secrets", placeholder commands)
+- [x] Tests passing: backend 780 (+6: caching, TTL, concurrency, failure without leaking, placeholder/empty,
+  marker never in logs, naming), Terraform 61 (+1); lint clean
+
+Decisions and assumptions:
+
+- Deviation from the ticket's "Terraform creates the parameter names with a placeholder value": creating the
+  parameters is a documented CLI step instead, because a managed parameter would put the value into the state.
+- New dependency `@aws-sdk/client-ssm` (same pinned SDK version as the other clients).

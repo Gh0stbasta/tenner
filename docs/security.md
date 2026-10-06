@@ -55,6 +55,7 @@ GitHub Actions ──(OIDC, GitHubActionsDeployRole)──► Terraform state (S
 | Cognito | Deletion protection, no self sign-up with password, app client cannot write identity attributes | `tests/auth.tftest.hcl` |
 | Alexa client (ALEXA-002) | Confidential code-grant client, Google only, scopes `openid tenner/household`, redirect URLs validated to Amazon's account-linking hosts; secret never output or committed; tokens never stored or logged by Tenner | `terraform/auth.tf`, `tests/auth.tftest.hcl`, `alexa/src/tennerApi.ts` |
 | Secrets | Google client secret only in GitHub secrets and the encrypted state (TD-021); nothing in the repository | README → "Google Sign-In" |
+| Runtime secrets (SECURITY-006) | SSM Parameter Store SecureString (`aws/ssm`), set out of band, read per exact ARN, cached 5 min, never in state, env vars or logs | ADR 0004, `backend/src/secrets/`, README → "Secrets" |
 | Dependencies | Dependabot; CI fails on high/critical production vulnerabilities | SECURITY-007 |
 | Deployment check | Smoke tests incl. "API requires login" after every deploy | OPERATIONS-006 |
 | Tags | Mandatory tags enforced on every plan | `scripts/check_tags.py` |

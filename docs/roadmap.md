@@ -120,7 +120,7 @@ Several tickets need AWS services that are **not** on the allowed-services list 
 
 | Service | Needed by |
 |---|---|
-| SSM Parameter Store / Secrets Manager | SECURITY-006 |
+| SSM Parameter Store / Secrets Manager | SECURITY-006 (accepted: [ADR 0004](decisions/0004-secrets-management.md), Parameter Store) |
 | SES | NOTIFICATION-005 |
 | SNS (alarm actions) | OBSERVABILITY-002 |
 | Route53 / ACM | TICKET-022 |

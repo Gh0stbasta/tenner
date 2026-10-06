@@ -128,6 +128,11 @@ locals {
   api_source_dir  = "${path.module}/../backend/dist"
   api_package_zip = "${path.module}/../.build/tenner-api.zip"
 
+  # Runtime secrets (SECURITY-006, ADR 0004): SSM SecureString parameters below this prefix. Terraform knows only
+  # the names (IAM, Lambda configuration); values are set out of band so they never enter the state.
+  secret_parameter_prefix     = "/${local.name_prefix}/${var.environment}"
+  secret_parameter_arn_prefix = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.secret_parameter_prefix}"
+
   # Alexa skill Lambda (ALEXA-001, ADR 0005). Created only once the skill exists (var.alexa_skill_id set).
   alexa_enabled              = var.alexa_skill_id != ""
   alexa_function_name        = "${local.name_prefix}-alexa-skill"

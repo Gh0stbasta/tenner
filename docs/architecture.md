@@ -114,6 +114,7 @@ Allowed:
 - EventBridge
 - Cognito
 - Billing features without runtime: AWS Budgets, Cost Anomaly Detection ([ADR 0003](decisions/0003-cost-monitoring.md))
+- SSM Parameter Store (SecureString, AWS managed key `aws/ssm`) for runtime secrets ([ADR 0004](decisions/0004-secrets-management.md)); values set out of band, never in Terraform state or environment variables
 - Alexa Skills Kit (custom skill, APL, Reminders, Proactive Events, Data Store) and the skill Lambda in eu-west-1
   ([ADR 0005](decisions/0005-alexa-platform.md)); the only resources outside eu-central-1, no data stored there
 
@@ -156,6 +157,7 @@ Assumption: about 10,000 API requests, a few hundred writes and a few MB of logs
 | CloudWatch Logs | a few MB ingestion and storage, 30-day retention | < 0.01 USD |
 | Cognito (Essentials) | 10,000 MAU free | 0 USD |
 | AWS Budgets, Cost Anomaly Detection | first two budgets free; anomaly detection free | 0 USD |
+| SSM Parameter Store (ADR 0004) | a few standard SecureString parameters, cached reads | 0 USD |
 | Alexa skill Lambda + logs (eu-west-1, ADR 0005) | a few hundred voice requests; Lambda free tier, Alexa APIs free | 0 USD |
 | **Total** | | **< 0.10 USD per month** |
 

@@ -369,6 +369,28 @@ python3 scripts/backfill_frequency_unit.py --apply   # conditional, idempotent w
 - **Infrastructure changes:** reverting the Terraform code and letting `deploy.yml` apply it
   is the only supported way. Manual changes in AWS are not allowed (see `docs/architecture.md`).
 
+### Secrets (SECURITY-006)
+
+Runtime secrets live in SSM Parameter Store as `SecureString` (AWS managed key `aws/ssm`) below
+`/tenner/<environment>/<component>/<name>` ([ADR 0004](docs/decisions/0004-secrets-management.md)). Terraform
+knows only the names (IAM and Lambda configuration) and never the values; an administrator sets them with AWS
+access (placeholders, never commit or paste real values):
+
+```bash
+# create or rotate (warm Lambdas pick up a new value within 5 minutes)
+aws ssm put-parameter --name /tenner/prod/<component>/<name> --type SecureString --value '<secret>' --overwrite
+# mandatory tags (only needed once, after the first put-parameter)
+aws ssm add-tags-to-resource --resource-type Parameter --resource-id /tenner/prod/<component>/<name> \
+  --tags Key=Application,Value=Tenner Key=Project,Value=Tenner Key=Environment,Value=prod Key=ManagedBy,Value=Manual
+# check that it exists (prints the name and version, not the value)
+aws ssm describe-parameters --parameter-filters Key=Name,Values=/tenner/prod/<component>/<name>
+# remove
+aws ssm delete-parameter --name /tenner/prod/<component>/<name>
+```
+
+Secrets in use are listed with their feature (none before ALEXA-007). A missing secret only disables the feature
+that needs it; the Lambda logs `secret unavailable` with the parameter name.
+
 ### Alexa Skill (ALEXA-001)
 
 Setup, the one-time activation in the Alexa developer console, the GitHub variables `ALEXA_SKILL_ID` and

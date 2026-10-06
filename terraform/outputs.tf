@@ -143,3 +143,8 @@ output "alexa_account_linking" {
     user_pool_id      = aws_cognito_user_pool.users.id
   } : null
 }
+
+output "secret_parameter_prefix" {
+  description = "SSM Parameter Store prefix for runtime secrets (SECURITY-006): /tenner/<environment>/<component>/<name>. Values are set out of band (README → Secrets)."
+  value       = local.secret_parameter_prefix
+}
