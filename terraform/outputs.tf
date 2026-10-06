@@ -148,3 +148,8 @@ output "secret_parameter_prefix" {
   description = "SSM Parameter Store prefix for runtime secrets (SECURITY-006): /tenner/<environment>/<component>/<name>. Values are set out of band (README → Secrets)."
   value       = local.secret_parameter_prefix
 }
+
+output "notifier_function_name" {
+  description = "Notifier Lambda (NOTIFICATION-001); empty while notifications_enabled is false."
+  value       = var.notifications_enabled ? aws_lambda_function.notifier[0].function_name : ""
+}

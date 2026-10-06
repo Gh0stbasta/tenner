@@ -49,6 +49,8 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     tables: { tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" },
     onboarding: { userPoolId: "eu-central-1_TEST", tenantId: "default" },
     alexaClientId: undefined,
+    notificationsTable: undefined,
+    householdTenantId: "default",
     ...overrides,
   };
 }

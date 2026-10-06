@@ -115,6 +115,8 @@ jobs:
           TF_VAR_alexa_skill_id: ${{ vars.ALEXA_SKILL_ID }}
           # Alexa account linking (ALEXA-002): JSON list of the console's redirect URLs; empty means no Alexa client.
           TF_VAR_alexa_redirect_urls: ${{ vars.ALEXA_REDIRECT_URLS || '[]' }}
+          # Notifier (NOTIFICATION-001): off until the deploy role has the notifier permissions.
+          TF_VAR_notifications_enabled: ${{ vars.NOTIFICATIONS_ENABLED || 'false' }}
         run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m -out=tfplan
 
       - name: Enforce mandatory tags

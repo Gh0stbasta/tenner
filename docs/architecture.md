@@ -157,6 +157,7 @@ Assumption: about 10,000 API requests, a few hundred writes and a few MB of logs
 | CloudWatch Logs | a few MB ingestion and storage, 30-day retention | < 0.01 USD |
 | Cognito (Essentials) | 10,000 MAU free | 0 USD |
 | AWS Budgets, Cost Anomaly Detection | first two budgets free; anomaly detection free | 0 USD |
+| Notifier Lambda + EventBridge rule + delivery log (NOTIFICATION-001) | ~2,900 runs per month, a few writes per day | 0 USD |
 | SSM Parameter Store (ADR 0004) | a few standard SecureString parameters, cached reads | 0 USD |
 | Alexa skill Lambda + logs (eu-west-1, ADR 0005) | a few hundred voice requests; Lambda free tier, Alexa APIs free | 0 USD |
 | **Total** | | **< 0.10 USD per month** |
@@ -1387,10 +1388,27 @@ Out of scope for MVP.
 
 ## Notifications
 
-- Telegram
-- WhatsApp
-- Email
-- Push Notifications
+Foundation implemented (NOTIFICATION-001); channels Telegram, WhatsApp, Email and Push are future tickets.
+
+```text
+EventBridge rule rate(15 minutes) ──► Lambda tenner-notifier (backend/src/notifier.ts, own role)
+  for each active member × job (daily digest, overdue alerts, …):
+    job.channelsDue(recipient, now)   → time window, quiet hours, preferences
+    job.render(recipient, now)        → NotificationMessage (rendering separate from delivery)
+    for each channel: deliver()       → claim key in tenner-notifications (conditional update)
+                                         → channel.send() with up to 3 attempts and backoff
+                                         → status SENT | FAILED | SKIPPED, TTL 90 days
+```
+
+- **Deduplication:** key `<tenantId>#<userId>#<type>#<channel>#<local date>[#suffix]`; a key is claimed once; only
+  FAILED keys can be claimed again by later runs (at most 9 attempts in total). A run interrupted after claiming
+  leaves the key PENDING, so that notification is not sent (at most once).
+- **Isolation:** a failing member, job or channel is logged and never stops the others.
+- **Channels:** `NotificationChannel.send(message, recipient)`; only `LogChannel` (structured log, no body) exists.
+- **Logs:** type, channel, user ID, status, error code — never message bodies or channel addresses.
+- **Infrastructure:** `terraform/notifier.tf`, created only with `notifications_enabled` (GitHub variable
+  `NOTIFICATIONS_ENABLED`). EventBridge rule instead of EventBridge Scheduler (no extra invocation role).
+  Cost: ~2,900 invocations per month, within the free tier.
 
 ## Smart Scheduling
 

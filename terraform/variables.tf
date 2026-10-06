@@ -200,3 +200,20 @@ variable "alexa_redirect_urls" {
     error_message = "alexa_redirect_urls must be the Alexa redirect URLs (https://<host>.amazon.com/api/skill/link/<vendor-id>)."
   }
 }
+
+variable "notifications_enabled" {
+  description = "Create the notifier (NOTIFICATION-001): Lambda, 15-minute EventBridge schedule and delivery log table. Enable after the deploy role has the notifier permissions (README → Notifications). Set as GitHub variable NOTIFICATIONS_ENABLED."
+  type        = bool
+  default     = false
+}
+
+variable "notifier_log_level" {
+  description = "Log level of the notifier Lambda."
+  type        = string
+  default     = "INFO"
+
+  validation {
+    condition     = contains(["DEBUG", "INFO", "WARN", "ERROR"], var.notifier_log_level)
+    error_message = "notifier_log_level must be one of DEBUG, INFO, WARN, ERROR."
+  }
+}

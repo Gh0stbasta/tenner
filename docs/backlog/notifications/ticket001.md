@@ -239,3 +239,35 @@ npm run test
 - Real channels (NOTIFICATION-005, 006, 007)
 - Preferences UI (NOTIFICATION-002)
 - Notification content types (NOTIFICATION-003, 004, 008)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06 (repository side; deployed once the owner sets `NOTIFICATIONS_ENABLED` after extending the
+deploy role).
+
+- [x] Notifier Lambda `tenner-notifier` (`backend/src/notifier.ts`, bundle `backend/dist-notifier/`), own role,
+  log group (30 days); runs on an EventBridge rule `rate(15 minutes)`
+- [x] Channel interface `NotificationChannel` + `LogChannel` (structured log with type, user and subject, no body)
+- [x] Message model separate from delivery (`backend/src/notifications/model.ts`); jobs implement
+  `channelsDue` (time window, later preferences/quiet hours) and `render`
+- [x] Deduplication: deterministic key, conditional update on `tenner-notifications`; FAILED keys may be retried by
+  later runs (max. 9 attempts in total)
+- [x] Delivery log with status, attempts, error code, `createdAt`, TTL `expiresAt` (90 days)
+- [x] Failures isolated per member, job and channel; up to 3 attempts with backoff per run
+- [x] IAM least privilege: logs, `GetItem` on the households table, `GetItem`/`UpdateItem` on the delivery log
+- [x] Architecture documented (`docs/architecture.md` → "Notifications"), README (deploy role permissions)
+- [x] Tests passing: backend 795 (+15: job selection by time, quiet hours across midnight, keys, log channel
+  output without body, double run, empty/off-time jobs, failure isolation, retry and later retry, TTL, unavailable
+  delivery log, DynamoDB claim/complete conditions, configuration checks), Terraform 64 (+3); lint and build clean
+
+Decisions and assumptions:
+
+- EventBridge **rule** instead of EventBridge Scheduler: same schedule, no extra invocation role.
+- Shared Tenners (all members) and paused Tenners are handled by the content jobs (NOTIFICATION-003/004), which
+  read the dashboard rules; the foundation iterates over active members only.
+- No reserved concurrency (TD-014: default account limit); overlapping runs are safe through the claim.
+- An interrupted run leaves a key PENDING and that notification is not sent (at most once rather than twice).
+- The notifier is gated by `notifications_enabled` (default false) so CI stays green until the deploy role has the
+  new permissions.

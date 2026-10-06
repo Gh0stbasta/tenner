@@ -369,6 +369,22 @@ python3 scripts/backfill_frequency_unit.py --apply   # conditional, idempotent w
 - **Infrastructure changes:** reverting the Terraform code and letting `deploy.yml` apply it
   is the only supported way. Manual changes in AWS are not allowed (see `docs/architecture.md`).
 
+### Notifications (NOTIFICATION-001)
+
+The notifier Lambda `tenner-notifier` runs every 15 minutes (EventBridge rule) and sends notifications through
+pluggable channels, deduplicated by the delivery log table `tenner-notifications` (TTL 90 days). It is created only
+when the GitHub **variable** `NOTIFICATIONS_ENABLED` is `true`. Before setting it, extend `GitHubActionsDeployRole`:
+
+- Lambda: manage `tenner-notifier` (create/update/delete function, configuration, tags, `AddPermission`,
+  `RemovePermission`, `GetPolicy`)
+- EventBridge: `events:PutRule`, `DescribeRule`, `DeleteRule`, `PutTargets`, `RemoveTargets`, `ListTargetsByRule`,
+  `TagResource`, `UntagResource`, `ListTagsForResource` on `arn:aws:events:eu-central-1:<account-id>:rule/tenner-notifier-schedule`
+- DynamoDB: create/update/tag the table `tenner-notifications` incl. `UpdateTimeToLive`, `DescribeTimeToLive`
+- IAM: create/manage `tenner-notifier-role` and its inline policy, `iam:PassRole` for it to Lambda
+- CloudWatch Logs: `/tenner/notifier`
+
+Until content jobs exist (NOTIFICATION-003/004) a run only logs its summary (`NotifierRun`).
+
 ### Secrets (SECURITY-006)
 
 Runtime secrets live in SSM Parameter Store as `SecureString` (AWS managed key `aws/ssm`) below

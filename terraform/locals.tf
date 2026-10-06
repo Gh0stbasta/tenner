@@ -128,6 +128,16 @@ locals {
   api_source_dir  = "${path.module}/../backend/dist"
   api_package_zip = "${path.module}/../.build/tenner-api.zip"
 
+  # Notifier (NOTIFICATION-001): scheduled Lambda separate from the API, delivery log with 90-day TTL.
+  notifier_function_name   = "${local.name_prefix}-notifier"
+  notifier_role_name       = "${local.name_prefix}-notifier-role"
+  notifier_log_group_name  = "/${local.name_prefix}/notifier"
+  notifier_source_dir      = "${path.module}/../backend/dist-notifier"
+  notifier_package_zip     = "${path.module}/../.build/tenner-notifier.zip"
+  notifier_timeout_seconds = 60
+  notifier_schedule        = "rate(15 minutes)"
+  notifications_table_name = "${local.name_prefix}-notifications"
+
   # Runtime secrets (SECURITY-006, ADR 0004): SSM SecureString parameters below this prefix. Terraform knows only
   # the names (IAM, Lambda configuration); values are set out of band so they never enter the state.
   secret_parameter_prefix     = "/${local.name_prefix}/${var.environment}"

@@ -24,6 +24,10 @@ export interface AppConfig {
   readonly tables: TableConfig | undefined;
   /** Self-assignment to a household member (HOTFIX-001). Undefined when the variables are missing. */
   readonly onboarding: OnboardingConfig | undefined;
+  /** The household's tenant (HOUSEHOLD_TENANT_ID), e.g. "default"; the notifier runs for it. */
+  readonly householdTenantId: string | undefined;
+  /** Notification delivery log table (NOTIFICATIONS_TABLE, NOTIFICATION-001); undefined outside the notifier. */
+  readonly notificationsTable: string | undefined;
   /** Cognito app client of the Alexa skill (ALEXA_CLIENT_ID); undefined while Alexa is not set up (ALEXA-002). */
   readonly alexaClientId: string | undefined;
 }
@@ -64,6 +68,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     tables: tenners && history && households ? { tenners, history, households } : undefined,
     onboarding: userPoolId && householdTenantId ? { userPoolId, tenantId: householdTenantId } : undefined,
     alexaClientId: readTrimmed(env.ALEXA_CLIENT_ID),
+    notificationsTable: readTrimmed(env.NOTIFICATIONS_TABLE),
+    householdTenantId,
   };
 }
 
