@@ -40,6 +40,15 @@ describe("skill package", () => {
     expect(Object.keys(manifest.manifest.publishingInformation.locales)).toEqual(["de-DE"]);
     expect(manifest.manifest.apis.custom.endpoint.uri).toBe("${SKILL_LAMBDA_ARN}");
   });
+
+  it("requests the notifications permission when it publishes events (HOTFIX-004)", () => {
+    const manifest = readJson("skill.json") as {
+      manifest: { permissions: { name: string }[]; events?: { publications?: unknown[] } };
+    };
+    const permissions = manifest.manifest.permissions.map((permission) => permission.name);
+    expect(manifest.manifest.events?.publications?.length).toBeGreaterThan(0);
+    expect(permissions).toContain("alexa::devices:all:notifications:write");
+  });
 });
 
 describe("utterance conflicts (ALEXA-009)", () => {
