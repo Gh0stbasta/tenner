@@ -92,13 +92,14 @@ Running it safely:    OBSERVABILITY-001 → 002 → 003 → 006 → 005; OPERATI
 Data:                 DATA-006 → 001 → 002 → 003 → 004 → 007
 Platform:             TICKET-021, TICKET-022, SECURITY-008 – 013
 Experience:           UX-001, UX-003, UX-004, UX-007, UX-002, UX-006, FRONTEND-010
-Integrations:         INTEGRATION-001 → 006 → 002 → 003
+Integrations:         INTEGRATION-001 → 006 → 003
 AI (opt-in):          AI-001 → 002 → 003
 Alexa & Echo Show:    ALEXA-001 → 002 → 003 → 004 → 006 → 005; SECURITY-006 + NOTIFICATION-001 → ALEXA-007 → 008; ALEXA-009 alongside
 ```
 
 Removed on 2026-10-06 by the owner (BACKLOG-001): phone/web push (MOBILE-006, NOTIFICATION-007), e-mail and
-Telegram reminders (NOTIFICATION-005, 006) and "I have X minutes" suggestions (PRODUCTIVITY-001); see
+Telegram reminders (NOTIFICATION-005, 006), "I have X minutes" suggestions (PRODUCTIVITY-001) and the Telegram bot
+(INTEGRATION-002, BACKLOG-002); see
 [`backlog/README.md`](backlog/README.md#removed-tickets).
 
 ### Phase 3 — Long-Term

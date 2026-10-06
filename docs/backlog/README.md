@@ -277,7 +277,6 @@ custom skill in development stage; skill Lambda in eu-west-1 calling the Tenner 
 | ID | Title | Priority | Phase |
 |---|---|---|---|
 | [INTEGRATION-001](integrations/ticket001.md) | Establish Integration Foundation | Medium | V2 |
-| [INTEGRATION-002](integrations/ticket002.md) | Implement Interactive Telegram Bot | Medium | V2 |
 | [INTEGRATION-003](integrations/ticket003.md) | Implement Strava Activity Auto-Completion | Medium | V2 |
 | [INTEGRATION-004](integrations/ticket004.md) | Evaluate and Implement Garmin Connect Integration | Low | Long-Term |
 | [INTEGRATION-005](integrations/ticket005.md) | Support Zwift Rides via Strava | Low | Long-Term |
@@ -339,3 +338,4 @@ the Git history. Their numbers are not reused.
 | NOTIFICATION-006 | Implement Telegram Notification Channel | Not wanted: reminders stay in Tenner and on Alexa |
 | NOTIFICATION-007 | Implement Web Push Notification Channel | Not wanted: no push notifications |
 | PRODUCTIVITY-001 | Implement "I Have X Minutes" Suggestions | Not wanted |
+| INTEGRATION-002 | Implement Interactive Telegram Bot | Not wanted: needs the dropped Telegram channel (BACKLOG-002, `docs/hotfix/backlog002.md`) |
