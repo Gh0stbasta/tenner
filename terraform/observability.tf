@@ -75,7 +75,7 @@ locals {
           region  = var.aws_region
           stat    = "Sum"
           period  = 300
-          metrics = flatten([for table in local.dashboard_tables : [["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", table], ["AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", table]]])
+          metrics = concat([for table in local.dashboard_tables : ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", table]], [for table in local.dashboard_tables : ["AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", table]])
         }
       },
       {
@@ -85,7 +85,7 @@ locals {
           region  = var.aws_region
           stat    = "Sum"
           period  = 300
-          metrics = flatten([for table in local.dashboard_tables : [["AWS/DynamoDB", "ThrottledRequests", "TableName", table], ["AWS/DynamoDB", "SystemErrors", "TableName", table]]])
+          metrics = concat([for table in local.dashboard_tables : ["AWS/DynamoDB", "ThrottledRequests", "TableName", table]], [for table in local.dashboard_tables : ["AWS/DynamoDB", "SystemErrors", "TableName", table]])
         }
       },
       {
