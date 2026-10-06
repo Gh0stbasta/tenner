@@ -53,7 +53,7 @@ while true; do
   fi
   if [[ "${manifest_status}" == "SUCCEEDED" && "${model_status}" == "SUCCEEDED" ]]; then
     echo "Skill package deployed."
-    exit 0
+    break
   fi
   if (( waited >= MAX_WAIT_SECONDS )); then
     echo "Error: skill update did not finish within ${MAX_WAIT_SECONDS} seconds." >&2
@@ -62,3 +62,8 @@ while true; do
   sleep 10
   waited=$((waited + 10))
 done
+
+# Enable testing on the development stage (as `ask deploy` does); idempotent. It only makes the skill usable on the
+# developer's own Amazon account and by the health check's simulation; it does not publish anything (ALEXA-010).
+echo "Enabling the skill for testing (${STAGE})..."
+ask smapi set-skill-enablement -s "${SKILL_ID}" -g "${STAGE}"

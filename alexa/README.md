@@ -206,9 +206,10 @@ a notice.
      Never commit it. Rotate it by generating a new one and replacing the secret.
 4. Run the deploy workflow (push to `main` or re-run). It builds the skill bundle, applies Terraform (Lambda in
    eu-west-1), then `scripts/deploy-alexa-skill.sh` uploads the manifest with the Lambda ARN and the interaction
-   model to the **development** stage and waits for the model build.
-5. In the developer console → Test, set "Skill testing is enabled in" to **Development**. On a household Echo:
-   „Alexa, öffne Tenner Board“.
+   model to the **development** stage, waits for the model build and enables testing on the development stage
+   (`set-skill-enablement`, the console's "Skill testing is enabled in: Development"; idempotent).
+5. On a household Echo: „Alexa, öffne Tenner Board“. The post-deploy health check prints Amazon's reason when the
+   simulation fails.
 
 The skill stays in the development stage: it works on all Echo devices of the developer account without
 certification. Other Amazon accounts would need a beta test (at most 90 days); the skill is never published.

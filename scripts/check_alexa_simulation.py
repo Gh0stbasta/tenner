@@ -16,10 +16,11 @@ class SimulationError(ValueError):
 
 def spoken_text(simulation: dict) -> str:
     """The caption (spoken text) of the first Alexa response."""
-    if simulation.get("status") != "SUCCESSFUL":
-        raise SimulationError(f"simulation status {simulation.get('status')!r}")
     result = simulation.get("result") or {}
     error = result.get("error")
+    if simulation.get("status") != "SUCCESSFUL":
+        reason = f": {error.get('message', error)}" if error else ""
+        raise SimulationError(f"simulation status {simulation.get('status')!r}{reason}")
     if error:
         raise SimulationError(f"simulation error: {error.get('message', error)}")
     responses = (result.get("alexaExecutionInfo") or {}).get("alexaResponses") or []
