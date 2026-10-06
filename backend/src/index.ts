@@ -105,7 +105,7 @@ import {
 import { systemClock, uuidGenerator } from "./utils/clock.js";
 import type { ApiEvent, ApiResult } from "./types/api.js";
 import { errorResponse } from "./utils/http.js";
-import { SEED_CATEGORIES, SEED_MEMBERS, type Handover, type HouseholdCategory, type HouseholdMember, type Vacation } from "./models/index.js";
+import { SEED_CATEGORIES, SEED_MEMBERS, type Handover, type HouseholdCategory, type HouseholdMember, type UserChannel, type Vacation } from "./models/index.js";
 import { createLogger, errorFields, type Logger } from "./utils/logger.js";
 import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, AnalyticsBalanceResponse, AnalyticsHabitResponse, AnalyticsHabitsResponse, AnalyticsTimeResponse, HouseholdResponse } from "./dto/index.js";
 import { analyticsNeglectedSchema, analyticsPeriodSchema, analyticsTrendsSchema, tennerIdSchema, validate } from "./validators/index.js";
@@ -309,8 +309,10 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   // HOUSEHOLD-ADMIN-004: without Cognito configuration there are no groups to revoke.
   const revokeAccess = (tenantId: string, userId: string): Promise<number> =>
     membershipRepository?.removeAllMembers(householdGroupName(tenantId, userId)) ?? Promise.resolve(0);
-  const notificationPreferencesService = householdRepository ? new NotificationPreferencesService(householdRepository, systemClock, timezoneOf) : undefined;
   const alexaSpeakerService = householdRepository ? new AlexaSpeakerService(householdRepository, systemClock, config.timezone) : undefined;
+  // ALEXA-008: Alexa is a connected channel for every member once an Alexa account of the household uses the skill.
+  const connectedChannels = async (tenantId: string): Promise<UserChannel[]> => ((await alexaSpeakerService?.alexaUsersOf(tenantId))?.length ? ["ALEXA"] : []);
+  const notificationPreferencesService = householdRepository ? new NotificationPreferencesService(householdRepository, systemClock, timezoneOf, connectedChannels) : undefined;
   const memberDeactivationService =
     householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
 

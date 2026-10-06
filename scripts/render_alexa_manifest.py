@@ -1,7 +1,8 @@
 """Render the Alexa skill manifest for deployment (ALEXA-001).
 
-Replaces the ``${SKILL_LAMBDA_ARN}`` endpoint placeholder in ``alexa/skill-package/skill.json`` with the ARN of the
-deployed skill Lambda (Terraform output ``alexa_skill_lambda_arn``), so no account ID is committed.
+Replaces every ``${SKILL_LAMBDA_ARN}`` placeholder in ``alexa/skill-package/skill.json`` (the custom endpoint and,
+since ALEXA-008, the events endpoint) with the ARN of the deployed skill Lambda (Terraform output
+``alexa_skill_lambda_arn``), so no account ID is committed.
 
 Usage: python3 scripts/render_alexa_manifest.py <skill.json> <output.json> <lambda-arn>
 """
@@ -29,9 +30,7 @@ def render_manifest(manifest: dict, lambda_arn: str) -> dict:
         raise ManifestError("manifest has no apis.custom.endpoint") from error
     if endpoint.get("uri") != PLACEHOLDER:
         raise ManifestError(f"endpoint uri must be the placeholder {PLACEHOLDER}")
-    rendered = json.loads(json.dumps(manifest))
-    rendered["manifest"]["apis"]["custom"]["endpoint"]["uri"] = lambda_arn
-    return rendered
+    return json.loads(json.dumps(manifest).replace(PLACEHOLDER, lambda_arn))
 
 
 def main(argv: list[str]) -> int:

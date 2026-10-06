@@ -19,6 +19,8 @@ class RenderManifestTest(unittest.TestCase):
         manifest = json.loads(REPO_MANIFEST.read_text(encoding="utf-8"))
         rendered = render.render_manifest(manifest, ARN)
         self.assertEqual(rendered["manifest"]["apis"]["custom"]["endpoint"]["uri"], ARN)
+        self.assertEqual(rendered["manifest"]["events"]["endpoint"]["uri"], ARN)
+        self.assertNotIn(render.PLACEHOLDER, json.dumps(rendered))
         # The input stays untouched (placeholder remains for the next deployment).
         self.assertEqual(manifest["manifest"]["apis"]["custom"]["endpoint"]["uri"], render.PLACEHOLDER)
 

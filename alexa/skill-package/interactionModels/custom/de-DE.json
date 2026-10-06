@@ -4,6 +4,16 @@
       "invocationName": "tenner",
       "intents": [
         {
+          "name": "EnableRemindersIntent",
+          "samples": [
+            "aktiviere erinnerungen",
+            "erinnerungen aktivieren",
+            "aktiviere benachrichtigungen",
+            "benachrichtigungen aktivieren",
+            "erinnere mich"
+          ]
+        },
+        {
           "name": "BriefingIntent",
           "samples": [
             "starte meinen tag",

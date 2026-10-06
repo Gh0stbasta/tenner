@@ -59,7 +59,20 @@
     "permissions": [
       {
         "name": "alexa::person_id:read"
+      },
+      {
+        "name": "alexa::alerts:reminders:skill:readwrite"
       }
-    ]
+    ],
+    "events": {
+      "publications": [
+        {
+          "eventName": "AMAZON.MessageAlert.Activated"
+        }
+      ],
+      "endpoint": {
+        "uri": "${SKILL_LAMBDA_ARN}"
+      }
+    }
   }
 }

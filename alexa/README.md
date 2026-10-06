@@ -4,7 +4,7 @@ German (de-DE) Alexa custom skill "Tenner" ([ADR 0005](../docs/decisions/0005-al
 [`docs/backlog/alexa/`](../docs/backlog/alexa/)). This folder is its own npm package, next to `backend/` and
 `frontend/`; Terraform for the skill Lambda lives in [`terraform/alexa.tf`](../terraform/alexa.tf).
 
-**Current state (ALEXA-005):** daily briefing („starte meinen Tag“, also from an Alexa routine), Echo Show
+**Current state (ALEXA-008):** Alexa notifications and reminders, Echo Show home-screen widget (ALEXA-007), plus daily briefing („starte meinen Tag“, also from an Alexa routine), Echo Show
 dashboard with touch completion (ALEXA-006), completing and undoing Tenners by voice
 (ALEXA-004), today/overdue/suggestion/work-left
 questions (ALEXA-003, see "Supported Phrases"), account linking and speaker recognition (ALEXA-002). „Alexa, öffne Tenner“ greets the recognized
@@ -67,6 +67,26 @@ Alexa+. The widget package format and the Data Store request shape are taken fro
 **Fallback (no-go or devices without widgets):** the daily briefing as a morning routine on the Echo Show
 (ALEXA-005, shows the dashboard while speaking) and Alexa notifications for overdue Tenners (ALEXA-008) keep the
 status visible.
+
+## Alexa Notifications and Reminders (ALEXA-008)
+
+Alexa is a notification channel of the notifier (NOTIFICATION-001) for every Alexa account of the household:
+
+| Tenner notification | On Alexa |
+|---|---|
+| Overdue alert (NOTIFICATION-004, 17:00) | notification indicator (Proactive Event `AMAZON.MessageAlert.Activated`, count only — schemas allow no titles) |
+| Daily digest (NOTIFICATION-003, member's time) | spoken reminder 60 s later: „Tenner: Heute 4 Tenner, 40 Minuten, 1 überfällig. Sag: Alexa, sag Tenner, starte meinen Tag, für Details.“ — created by the skill from a Skill Messaging message (only way to create reminders out of session) |
+
+Setup (owner, after the widget prerequisites — LWA client in Parameter Store):
+
+1. Web app → Einstellungen → Benachrichtigungen: choose **Alexa** for „Tagesüberblick“ and/or „Überfällig-Hinweise“
+   (offered once an Alexa account of the household used the skill).
+2. Alexa app → Tenner → Berechtigungen: allow **Erinnerungen** and turn on **Benachrichtigungen** — or say „Alexa,
+   sag Tenner, aktiviere Erinnerungen“ (voice consent).
+3. Quiet hours and the per-type toggles in Tenner's settings apply; one alert/digest per member and day.
+
+The manifest declares the reminder permission and the `AMAZON.MessageAlert.Activated` publication; the
+development stage uses the development Proactive Events endpoint (`ALEXA_SKILL_STAGE`).
 
 ## Daily Briefing and Routine (ALEXA-005)
 

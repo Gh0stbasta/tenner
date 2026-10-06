@@ -4,7 +4,14 @@
  * (widget refresh, ALEXA-007).
  */
 
-import { createDataStoreClient, createLwaTokenClient, WidgetPushService } from "./alexa/index.js";
+import {
+  AlexaChannel,
+  createDataStoreClient,
+  createLwaTokenClient,
+  createProactiveEventsClient,
+  createSkillMessagingClient,
+  WidgetPushService,
+} from "./alexa/index.js";
 import { getDocumentClient } from "./clients/dynamodb.js";
 import { getSsmClient } from "./clients/ssm.js";
 import { loadConfig, type AppConfig } from "./config.js";
@@ -76,7 +83,7 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
     members: membersOf,
     timezoneOf,
     jobs: [...jobs, ...(extensions?.jobs ?? [])],
-    channels: extensions?.channels ?? [new LogChannel(logger)],
+    channels: [],
     log,
     logger,
     now: systemClock,
@@ -84,6 +91,7 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
 
   const alexaApi = config.alexaApi;
   let widget: WidgetPushService | undefined;
+  const channels: NotificationChannel[] = [new LogChannel(logger)];
   if (alexaApi) {
     const secrets = createSecretLoader({ client: getSsmClient() });
     const lwa = createLwaTokenClient({
@@ -103,8 +111,19 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
       logger,
       now: systemClock,
     });
+    // ALEXA-008: Alexa notifications (overdue) and reminders (daily digest).
+    channels.push(
+      new AlexaChannel({
+        alexaUsers: (tenantId) => alexaUsers.alexaUsersOf(tenantId),
+        removeAlexaUser: (tenantId, alexaUserId) => alexaUsers.removeAlexaUser(tenantId, alexaUserId),
+        lwa,
+        proactiveEvents: createProactiveEventsClient(alexaApi.endpoint, alexaApi.skillStage, fetchImpl),
+        skillMessaging: createSkillMessagingClient(alexaApi.endpoint, fetchImpl),
+        now: systemClock,
+      }),
+    );
   }
-  return { notifier, widget };
+  return { notifier: { ...notifier, channels: extensions?.channels ?? channels }, widget };
 }
 
 /** EventBridge input: a scheduled event or a HouseholdChanged event from the API. */
