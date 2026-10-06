@@ -57,6 +57,14 @@ days: start a new beta test in the developer console (Distribution → Beta Test
 2. p95 duration > 5 s: slow API calls (`apiMs`); each call times out after 2 s, Alexa's limit is 8 s.
 3. `skill_error` with `requestType`: an unknown request type or a bug in a handler → fix and redeploy.
 
+## Deploy warning "Alexa health check skipped"
+
+The post-deploy health check simulates „öffne tenner board“ through Amazon's SMAPI simulator. That service sometimes
+fails before it reaches the skill (`simulation status 'FAILED': An unexpected error occurred.`), even though the
+skill works on devices and in the console. The check retries three times. If the simulator never answers, the deploy
+stays green with this warning (HOTFIX-006). Check by hand: developer console → Test → `öffne tenner board`, or ask
+an Echo. A wrong answer or a skill error still fails the deploy.
+
 ## Alexa+ behaves differently than classic Alexa
 
 Alexa+ may route phrases differently. Test the phrase list in `alexa/README.md` on both; add sample utterances

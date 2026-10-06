@@ -208,8 +208,8 @@ a notice.
    eu-west-1), then `scripts/deploy-alexa-skill.sh` uploads the manifest with the Lambda ARN and the interaction
    model to the **development** stage, waits for the model build and enables testing on the development stage
    (`set-skill-enablement`, the console's "Skill testing is enabled in: Development"; idempotent).
-5. On a household Echo: „Alexa, öffne Tenner Board“. The post-deploy health check prints Amazon's reason when the
-   simulation fails.
+5. On a household Echo: „Alexa, öffne Tenner Board“. The post-deploy health check fails on a wrong answer or a skill
+   error. When Amazon's simulator itself fails, it only warns (docs/runbooks/alexa.md).
 
 The skill stays in the development stage: it works on all Echo devices of the developer account without
 certification. Other Amazon accounts would need a beta test (at most 90 days); the skill is never published.

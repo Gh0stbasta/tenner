@@ -3,6 +3,9 @@
 Reads the JSON of `ask smapi get-skill-simulation` from stdin and fails unless the simulation succeeded, the skill
 was invoked without an error and the spoken answer contains all expected words.
 
+Exit codes: 0 passed, 1 the skill answered wrongly or with an error, 2 usage, 3 Amazon's simulator itself failed
+(status FAILED, the skill was not reached; HOTFIX-006) - the caller retries and does not block the deploy on it.
+
 Usage: ask smapi get-skill-simulation ... | python3 scripts/check_alexa_simulation.py "Tenner" ["word" ...]
 """
 
@@ -14,13 +17,17 @@ class SimulationError(ValueError):
     """The simulation did not produce the expected answer."""
 
 
+class SimulatorUnavailable(SimulationError):
+    """Amazon's simulation service failed before the skill answered (status FAILED)."""
+
+
 def spoken_text(simulation: dict) -> str:
     """The caption (spoken text) of the first Alexa response."""
     result = simulation.get("result") or {}
     error = result.get("error")
     if simulation.get("status") != "SUCCESSFUL":
         reason = f": {error.get('message', error)}" if error else ""
-        raise SimulationError(f"simulation status {simulation.get('status')!r}{reason}")
+        raise SimulatorUnavailable(f"simulation status {simulation.get('status')!r}{reason}")
     if error:
         raise SimulationError(f"simulation error: {error.get('message', error)}")
     responses = (result.get("alexaExecutionInfo") or {}).get("alexaResponses") or []
@@ -48,6 +55,9 @@ def main(argv: list[str], stdin_text: str) -> int:
         return 2
     try:
         caption = check(json.loads(stdin_text), argv[1:])
+    except SimulatorUnavailable as error:
+        print(f"Alexa simulator unavailable: {error}", file=sys.stderr)
+        return 3
     except (json.JSONDecodeError, SimulationError) as error:
         print(f"Alexa health check failed: {error}", file=sys.stderr)
         return 1
