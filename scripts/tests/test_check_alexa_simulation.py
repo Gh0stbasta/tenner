@@ -32,6 +32,10 @@ class CheckSimulationTest(unittest.TestCase):
             with self.subTest(broken=broken), self.assertRaises(check.SimulationError):
                 check.check(broken, ["Tenner"])
 
+    def test_failed_simulation_reports_amazons_reason(self):
+        with self.assertRaisesRegex(check.SimulationError, "'FAILED': Skill is not enabled"):
+            check.check(simulation(status="FAILED", error="Skill is not enabled"), ["Tenner"])
+
     def test_usage_and_invalid_json(self):
         self.assertEqual(check.main(["x"], "{}"), 2)
         self.assertEqual(check.main(["x", "Tenner"], "not json"), 1)
