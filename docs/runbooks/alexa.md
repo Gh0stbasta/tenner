@@ -36,7 +36,7 @@ days: start a new beta test in the developer console (Distribution → Beta Test
 
 1. Notifier logs: `WidgetPushed` (reason, targets, pushed) / `WidgetPushFailed` (status) / `WidgetUpdateFailed`.
 2. `secret unavailable` → set `/tenner/prod/alexa/lwa-client-id` and `…/lwa-client-secret` (README → "Secrets").
-3. `targets: 0` → no Alexa account registered yet: open the skill once („Alexa, öffne Tenner“).
+3. `targets: 0` → no Alexa account registered yet: open the skill once („Alexa, öffne Tenner Board“).
 4. Status 401/403 → wrong LWA client or missing Data Store permission in the console; 404/410 → the account was
    removed as target (skill disabled), open the skill again.
 5. Remove and re-add the widget on the Echo Show. Request shapes are unverified until the spike (TD-036).
@@ -45,7 +45,7 @@ days: start a new beta test in the developer console (Distribution → Beta Test
 
 1. Web app → Benachrichtigungen: Alexa chosen for the type, not inside quiet hours; digest at its time, overdue
    alerts at 17:00.
-2. Alexa app → Tenner → Berechtigungen: Erinnerungen allowed, Benachrichtigungen on (or „Alexa, sag Tenner,
+2. Alexa app → Tenner → Berechtigungen: Erinnerungen allowed, Benachrichtigungen on (or „Alexa, sag Tenner Board,
    aktiviere Erinnerungen“).
 3. Notifier logs `NotificationDelivery` with `channel ALEXA`: `ALEXA_HTTP_403` = permission or schema rejected;
    skill logs `reminder_permission_missing` for reminders.

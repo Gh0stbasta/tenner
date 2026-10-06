@@ -58,6 +58,12 @@ before the skill exists and before the deploy role has eu-west-1 permissions.
   one-time setup is documented in `alexa/README.md`.
 - Cost: Lambda and logs stay in the free tier at household volume; the Alexa APIs are free.
 
+## Amendment (2026-10-06, ALEXA-010)
+
+- Invocation name **„tenner board“** (registered by the owner in the developer console).
+- The skill stays private: development stage only, never submitted for certification or published; enforced by a
+  repository test on workflows and scripts.
+
 ## Risks
 
 - Amazon changes or retires Alexa capabilities (as with the Routines Kit) — the skill only uses the core custom

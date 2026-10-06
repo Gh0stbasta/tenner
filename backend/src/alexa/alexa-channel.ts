@@ -25,7 +25,7 @@ export function reminderText(message: NotificationMessage): string {
   const minutes = Number(message.facts?.minutes ?? 0);
   const overdue = Number(message.facts?.overdue ?? 0);
   const parts = [`Heute ${due} Tenner, ${minutes} Minuten`, ...(overdue > 0 ? [`${overdue} überfällig`] : [])];
-  return `Tenner: ${parts.join(", ")}. Sag: Alexa, sag Tenner, starte meinen Tag, für Details.`;
+  return `Tenner: ${parts.join(", ")}. Sag: Alexa, sag Tenner Board, starte meinen Tag, für Details.`;
 }
 
 export class AlexaChannel implements NotificationChannel {

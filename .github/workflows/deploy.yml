@@ -200,7 +200,7 @@ jobs:
           scripts/deploy-alexa-skill.sh alexa/skill-package "$ALEXA_SKILL_ID" \
             "$(terraform -chdir="$TF_DIR" output -raw alexa_skill_lambda_arn)"
 
-      # ALEXA-009: simulated „öffne tenner“ against the development stage; fails the deployment on a wrong answer.
+      # ALEXA-009: simulated „öffne tenner board“ against the development stage; fails the deployment on a wrong answer.
       - name: Alexa health check
         if: hashFiles('terraform/**/*.tf') != '' && vars.ALEXA_SKILL_ID != ''
         env:

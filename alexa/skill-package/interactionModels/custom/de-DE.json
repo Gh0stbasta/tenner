@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "tenner",
+      "invocationName": "tenner board",
       "intents": [
         {
           "name": "EnableRemindersIntent",

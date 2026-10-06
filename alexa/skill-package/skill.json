@@ -8,8 +8,9 @@
           "summary": "Die kleinen Aufgaben im Haushalt im Blick.",
           "description": "Tenner sagt dir, welche kleinen Haushaltsaufgaben heute fällig sind.",
           "examplePhrases": [
-            "Alexa, öffne Tenner",
-            "Alexa, frag Tenner, was heute fällig ist"
+            "Alexa, öffne Tenner Board",
+            "Alexa, frag Tenner Board, was heute fällig ist",
+            "Alexa, sag Tenner Board, starte meinen Tag"
           ],
           "keywords": [
             "Haushalt",
@@ -21,7 +22,7 @@
       "distributionCountries": [
         "DE"
       ],
-      "testingInstructions": "Private household skill in development stage; not published.",
+      "testingInstructions": "Private household skill. Development stage only; never submitted for certification or published.",
       "category": "ORGANIZERS_AND_ASSISTANTS"
     },
     "apis": {

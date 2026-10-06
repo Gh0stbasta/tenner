@@ -11,7 +11,7 @@ import { hasScreen, renderDashboard } from "./screen.js";
 import { setDialogState } from "./state.js";
 
 /**
- * „Alexa, öffne Tenner“: greets the recognized member; a recognized but unmapped voice is asked once
+ * „Alexa, öffne Tenner Board“: greets the recognized member; a recognized but unmapped voice is asked once
  * „Wer spricht gerade?“ (ALEXA-002). Without a linked account the error handler answers with the link prompt.
  */
 export const LaunchRequestHandler: RequestHandler = {

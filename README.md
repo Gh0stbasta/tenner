@@ -396,7 +396,7 @@ for `GitHubActionsDeployRole`: `cloudwatch:PutDashboard`, `GetDashboard`, `Delet
 `tenner-alarms` in eu-west-1, confirm that subscription too), widget push or Alexa notification failures
 (eu-central-1); metrics from log lines (namespace `Tenner/Alexa`); dashboard section with requests per intent and
 outcome; runbook [`docs/runbooks/alexa.md`](docs/runbooks/alexa.md). Every deploy with `ALEXA_SKILL_ID` ends with
-a simulated „öffne tenner“ (`scripts/alexa-health-check.sh`). Up to 11 alarms in total: about 0.10 USD per month
+a simulated „öffne tenner board“ (`scripts/alexa-health-check.sh`). Up to 11 alarms in total: about 0.10 USD per month
 beyond the free 10.
 
 ### Notifications (NOTIFICATION-001)
