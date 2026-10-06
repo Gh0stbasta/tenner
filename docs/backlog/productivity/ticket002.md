@@ -1,5 +1,7 @@
 # PRODUCTIVITY-002: Introduce Tenner Importance
 
+> **Note (2026-10-06, BACKLOG-001):** PRODUCTIVITY-001 (suggestions) was removed; the "Suggestions" effect below no longer applies.
+
 ## Type
 
 Full-Stack Feature

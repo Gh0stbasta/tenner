@@ -1,5 +1,7 @@
 # INTEGRATION-002: Implement Interactive Telegram Bot
 
+> **Note (2026-10-06, BACKLOG-001):** its dependency NOTIFICATION-006 (Telegram channel) was removed. The bot needs that account linking and outbound path; keep, rescope or drop this ticket by owner decision before starting it.
+
 ## Type
 
 Backend Feature

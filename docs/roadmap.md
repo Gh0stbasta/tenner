@@ -84,10 +84,10 @@ Grouped by theme. The order inside each group matters; the groups can be done in
 ```text
 Correct scheduling:   SCHEDULING-008 → 001 → 003 → 002 → 004 → 005
 Household setup:      HOUSEHOLD-ADMIN-001 → 002 → 003 → 004; HOUSEHOLD-002 → 001 → 004
-Reminders:            SECURITY-006 → NOTIFICATION-001 → 002 → 003 → 006 → 004 → (005, 007, 008)
-Mobile:               MOBILE-001 → 002 → 005 → 006 → 003
+Reminders:            SECURITY-006 → NOTIFICATION-001 → 002 → 003 → 004 → 008
+Mobile:               MOBILE-001 → 002 → 005 → 003 → 004 (offline completion moved up from Phase 3 by the owner)
 Analytics:            ANALYTICS-001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 → 009
-Productivity:         PRODUCTIVITY-001 → 002 → 004 → 003 → 005
+Productivity:         PRODUCTIVITY-002 → 004 → 003 → 005
 Running it safely:    OBSERVABILITY-001 → 002 → 003 → 006 → 005; OPERATIONS-002 → 003 → 004 → 005 → 007
 Data:                 DATA-006 → 001 → 002 → 003 → 004 → 007
 Platform:             TICKET-021, TICKET-022, SECURITY-008 – 013
@@ -97,6 +97,10 @@ AI (opt-in):          AI-001 → 002 → 003
 Alexa & Echo Show:    ALEXA-001 → 002 → 003 → 004 → 006 → 005; SECURITY-006 + NOTIFICATION-001 → ALEXA-007 → 008; ALEXA-009 alongside
 ```
 
+Removed on 2026-10-06 by the owner (BACKLOG-001): phone/web push (MOBILE-006, NOTIFICATION-007), e-mail and
+Telegram reminders (NOTIFICATION-005, 006) and "I have X minutes" suggestions (PRODUCTIVITY-001); see
+[`backlog/README.md`](backlog/README.md#removed-tickets).
+
 ### Phase 3 — Long-Term
 
 ```text
@@ -104,7 +108,6 @@ SCHEDULING-006, 007
 HOUSEHOLD-003, HOUSEHOLD-ADMIN-005
 ANALYTICS-010 (only if measurements require it)
 OBSERVABILITY-004
-MOBILE-004
 DATA-005
 INTEGRATION-004, 005, 007, 008, 009
 AI-004 – 009
@@ -121,7 +124,6 @@ Several tickets need AWS services that are **not** on the allowed-services list 
 | Service | Needed by |
 |---|---|
 | SSM Parameter Store / Secrets Manager | SECURITY-006 (accepted: [ADR 0004](decisions/0004-secrets-management.md), Parameter Store) |
-| SES | NOTIFICATION-005 |
 | SNS (alarm actions) | OBSERVABILITY-002 (accepted: [ADR 0006](decisions/0006-alarm-notifications.md)) |
 | Route53 / ACM | TICKET-022 |
 | X-Ray | OBSERVABILITY-004 |

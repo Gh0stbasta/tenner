@@ -1,5 +1,7 @@
 # FUTURE-009: Evaluate WhatsApp Notifications
 
+> **Note (2026-10-06, BACKLOG-001):** NOTIFICATION-006 (Telegram), the comparison baseline, was removed; the evaluation compares against the existing channels (in-app log, Alexa).
+
 ## Type
 
 Product Feature (Postponed)
