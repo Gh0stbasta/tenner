@@ -1,6 +1,7 @@
 import { SkillBuilders, type Skill } from "ask-sdk-core";
 import type { SkillConfig } from "./config.js";
 import { ApiErrorHandler } from "./handlers/apiError.js";
+import { BriefingIntentHandler, BriefingNoHandler, BriefingYesHandler } from "./handlers/briefing.js";
 import { CompleteIntentHandler, CompletedByAnswerHandler, ConfirmNoHandler, ConfirmYesHandler, UndoIntentHandler } from "./handlers/complete.js";
 import { GenericErrorHandler } from "./handlers/error.js";
 import { FallbackIntentHandler } from "./handlers/fallback.js";
@@ -30,6 +31,9 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
       CompleteIntentHandler,
       UndoIntentHandler,
       SpeakerIntentHandler,
+      BriefingIntentHandler,
+      BriefingYesHandler,
+      BriefingNoHandler,
       TodayIntentHandler,
       OverdueIntentHandler,
       SuggestIntentHandler,

@@ -4,7 +4,8 @@ German (de-DE) Alexa custom skill "Tenner" ([ADR 0005](../docs/decisions/0005-al
 [`docs/backlog/alexa/`](../docs/backlog/alexa/)). This folder is its own npm package, next to `backend/` and
 `frontend/`; Terraform for the skill Lambda lives in [`terraform/alexa.tf`](../terraform/alexa.tf).
 
-**Current state (ALEXA-006):** Echo Show dashboard with touch completion, completing and undoing Tenners by voice
+**Current state (ALEXA-005):** daily briefing („starte meinen Tag“, also from an Alexa routine), Echo Show
+dashboard with touch completion (ALEXA-006), completing and undoing Tenners by voice
 (ALEXA-004), today/overdue/suggestion/work-left
 questions (ALEXA-003, see "Supported Phrases"), account linking and speaker recognition (ALEXA-002). „Alexa, öffne Tenner“ greets the recognized
 member by name, asks an unknown voice once „Wer spricht gerade?“ and asks unlinked accounts to link Tenner in the
@@ -23,6 +24,7 @@ alexa/
 │   ├── skill.ts                            skill builder, handler order
 │   ├── handlers/                           one file per request/intent type
 │   ├── speech.ts                           all German response texts
+│   ├── briefing.ts                         daily briefing builder (pure, ALEXA-005)
 │   ├── apl.ts                              Echo Show datasources (pure, ALEXA-006)
 │   ├── answers.ts                          spoken answers from the dashboard (pure, ALEXA-003)
 │   ├── dashboard.ts                        GET /dashboard types and call
@@ -34,6 +36,21 @@ alexa/
 │   └── log.ts                              JSON log lines without personal data
 └── tests/                                  vitest, request envelopes in tests/envelopes.ts
 ```
+
+## Daily Briefing and Routine (ALEXA-005)
+
+„Alexa, sag Tenner, starte meinen Tag“ speaks, in this order and only non-empty parts: greeting by time of day in
+the household timezone („Guten Morgen, Stefan.“), today's Tenners of the speaker (own + shared; household-wide
+without a recognized speaker) with up to three titles, overdue ones (longest first), the household total and the
+other members' counts (only with more than one member), a vacation notice, and „Soll ich dir den ersten Tenner
+nennen?“ („ja“ → suggestion, then „erledigt“ completes it). At most about 100 words (≈ 40 s): titles are dropped
+first, then the household sentence. On an Echo Show the dashboard is shown while speaking.
+
+**Every morning automatically (Alexa routine, owner):** Alexa app → Mehr → Routinen → „+“ → Wenn: Zeitplan, z. B.
+7:00 an Werktagen → Aktion hinzufügen: „Benutzerdefiniert“ → „sag Tenner, starte meinen Tag“ (or Skills → Tenner)
+→ Von: Echo Show Küche → Speichern. Routines run without a recognized speaker, so the briefing is household-wide.
+Skills cannot create routines themselves (the Routines Kit was discontinued on 2026-05-13); verify the menu names
+in the current Alexa app.
 
 ## Echo Show (ALEXA-006)
 
@@ -68,6 +85,7 @@ is recognized, for the whole household.
 
 | Question | Examples | Answer |
 |---|---|---|
+| Briefing (ALEXA-005) | „starte meinen Tag“, „guten Morgen“, „was ist heute los“, „gib mir einen Überblick“ | greeting, today (≤ 3 titles), overdue, household totals, vacation; „Soll ich dir den ersten Tenner nennen?“ |
 | Today (ALEXA-003) | „was ist heute fällig“, „was muss ich heute machen“, „was steht heute für Julia an“ | count, minutes, up to three titles; „Soll ich die restlichen … vorlesen?“ → „ja“ / „nein“; nothing due → next upcoming Tenner |
 | Overdue | „was ist überfällig“, „was habe ich vergessen“ | longest overdue first, „seit 4 Tagen“ |
 | Suggestion | „was soll ich jetzt machen“, „hast du einen Vorschlag“ | overdue before due today, shortest first |

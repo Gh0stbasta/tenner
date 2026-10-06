@@ -4,6 +4,19 @@
       "invocationName": "tenner",
       "intents": [
         {
+          "name": "BriefingIntent",
+          "samples": [
+            "starte meinen tag",
+            "starte den tag",
+            "guten morgen",
+            "was ist heute los",
+            "gib mir einen überblick",
+            "überblick",
+            "tagesüberblick",
+            "wie sieht mein tag aus"
+          ]
+        },
+        {
           "name": "CompleteIntent",
           "slots": [
             {
