@@ -14,6 +14,7 @@ fi
 readonly SKILL_ID="$1" STAGE="development" LOCALE="de-DE"
 readonly ASK_CLI_VERSION="2.30.7"
 readonly MAX_WAIT_SECONDS=60
+readonly SIMULATOR_ATTEMPTS=3 SIMULATOR_RETRY_SECONDS=20
 
 : "${ASK_REFRESH_TOKEN:?ASK_REFRESH_TOKEN is not set}"
 : "${ASK_VENDOR_ID:?ASK_VENDOR_ID is not set}"
@@ -23,19 +24,38 @@ ask() {
   npx --yes "ask-cli@${ASK_CLI_VERSION}" "$@"
 }
 
-simulation_id="$(ask smapi simulate-skill -s "${SKILL_ID}" -g "${STAGE}" --input-content "öffne tenner board" --device-locale "${LOCALE}" | jq -r '.id')"
-waited=0
-while true; do
-  result="$(ask smapi get-skill-simulation -s "${SKILL_ID}" -g "${STAGE}" -i "${simulation_id}")"
-  status="$(jq -r '.status' <<<"${result}")"
-  if [[ "${status}" != "IN_PROGRESS" ]]; then
-    python3 "$(dirname "$0")/check_alexa_simulation.py" "Tenner" <<<"${result}"
-    exit $?
+# Amazon's simulation service sometimes fails before the skill is reached ("An unexpected error occurred.", exit
+# code 3 of the checker) while the skill works on devices and in the console (HOTFIX-006). Retry it; if it never
+# answers, report a warning instead of failing the deploy. A wrong answer or a skill error still fails.
+simulate_once() {
+  local simulation_id result status waited=0
+  simulation_id="$(ask smapi simulate-skill -s "${SKILL_ID}" -g "${STAGE}" --input-content "öffne tenner board" --device-locale "${LOCALE}" | jq -r '.id')"
+  while true; do
+    result="$(ask smapi get-skill-simulation -s "${SKILL_ID}" -g "${STAGE}" -i "${simulation_id}")"
+    status="$(jq -r '.status' <<<"${result}")"
+    if [[ "${status}" != "IN_PROGRESS" ]]; then
+      python3 "$(dirname "$0")/check_alexa_simulation.py" "Tenner" <<<"${result}"
+      return $?
+    fi
+    if (( waited >= MAX_WAIT_SECONDS )); then
+      echo "Alexa health check failed: simulation still in progress after ${MAX_WAIT_SECONDS} seconds." >&2
+      return 1
+    fi
+    sleep 5
+    waited=$((waited + 5))
+  done
+}
+
+for attempt in $(seq 1 "${SIMULATOR_ATTEMPTS}"); do
+  code=0
+  simulate_once || code=$?
+  if (( code != 3 )); then
+    exit "${code}"
   fi
-  if (( waited >= MAX_WAIT_SECONDS )); then
-    echo "Alexa health check failed: simulation still in progress after ${MAX_WAIT_SECONDS} seconds." >&2
-    exit 1
+  if (( attempt < SIMULATOR_ATTEMPTS )); then
+    echo "Retrying in ${SIMULATOR_RETRY_SECONDS} seconds (attempt ${attempt}/${SIMULATOR_ATTEMPTS})..." >&2
+    sleep "${SIMULATOR_RETRY_SECONDS}"
   fi
-  sleep 5
-  waited=$((waited + 5))
 done
+echo "::warning title=Alexa health check skipped::Amazon's skill simulator failed ${SIMULATOR_ATTEMPTS} times; the skill was not checked. Test "Alexa, öffne Tenner Board" by hand (docs/runbooks/alexa.md)."
+exit 0
