@@ -9,6 +9,8 @@ import { defineConfig } from "vitest/config";
 const SERVICE_WORKER_KILL_SWITCH = false;
 
 export default defineConfig({
+  // MOBILE-003: a new build discards the persisted offline cache (data shapes may have changed).
+  define: { __APP_BUILD__: JSON.stringify(process.env.GITHUB_SHA ?? String(Date.now())) },
   plugins: [
     react(),
     // MOBILE-002: precaches the app shell (index.html and the hashed assets) with revisions, so every deploy installs
@@ -24,7 +26,8 @@ export default defineConfig({
         // Client-side routes (/settings, /tenners/…) are answered with the cached index.html.
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,
-        // No runtimeCaching: API requests (other origin) always go to the network (offline data: MOBILE-003).
+        // No runtimeCaching: API requests (other origin) always go to the network; offline data comes from the
+        // persisted query cache (MOBILE-003).
       },
     }),
   ],

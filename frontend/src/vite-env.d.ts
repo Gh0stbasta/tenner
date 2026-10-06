@@ -7,3 +7,6 @@ interface ImportMetaEnv {
   readonly VITE_COGNITO_CLIENT_ID?: string;
   readonly VITE_COGNITO_LOGIN_URL?: string;
 }
+
+/** Build id injected by vite.config.ts (MOBILE-003: a new build discards the offline cache). */
+declare const __APP_BUILD__: string;

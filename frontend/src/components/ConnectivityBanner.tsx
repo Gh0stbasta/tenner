@@ -4,11 +4,14 @@
  */
 
 import { Alert, Collapse } from "@mui/material";
+import { useDataAge } from "../features/offline/useDataAge";
 import { useApiUnreachable, useOnline } from "../hooks/useConnectivity";
+import { formatRelativeTime } from "../utils/format";
 
 export function ConnectivityBanner() {
   const online = useOnline();
   const unreachable = useApiUnreachable();
+  const dataAge = useDataAge();
   const message = !online
     ? "Keine Internetverbindung. Tenner aktualisiert sich, sobald du wieder online bist."
     : unreachable
@@ -17,7 +20,11 @@ export function ConnectivityBanner() {
   return (
     <Collapse in={message !== null} unmountOnExit>
       <Alert severity="warning" role="status" sx={{ mb: 2 }}>
-        {message}
+        <div>{message}</div>
+        {/* MOBILE-003: the data shown comes from the offline cache or the last successful read. */}
+        {dataAge !== undefined && (
+          <div>Angezeigt wird der Stand von {formatRelativeTime(new Date(dataAge).toISOString())}.</div>
+        )}
       </Alert>
     </Collapse>
   );

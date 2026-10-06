@@ -122,6 +122,7 @@ These are outside Terraform or need the live system. Run them in AWS CloudShell 
 | A deactivated member's existing ID token stays valid up to 60 minutes (group removal applies at the next refresh) | HOUSEHOLD-ADMIN-004 |
 | API Lambda can change Cognito group membership | TD-023 |
 | Tokens in `localStorage` (XSS would expose them; mitigated by CSP) | ADR 0001 |
+| Offline cache: household Tenner data in `localStorage` for up to 7 days or until logout (readable on an unlocked device; same XSS exposure as the tokens) | MOBILE-003, `frontend/README.md` |
 | Google client secret in Terraform state | TD-021 |
 | Throttling is global, not per client | TD-016 |
 | No Lambda reserved concurrency | TD-014 |

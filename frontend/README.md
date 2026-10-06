@@ -173,6 +173,28 @@ Tenner is a Progressive Web App: it can be added to the home screen and starts w
   the browser; `workbox-build` runs at build time.
 - The dev server (`npm run dev`) does not register the worker.
 
+## Offline Reading (MOBILE-003)
+
+- **What it does:** the TanStack Query cache of the dashboard, Tenner list and detail, history, members and categories
+  is persisted in `localStorage` (key `tenner.offlineCache`, `src/features/offline/`). Offline, the app opens with
+  the last known data; queries pause and refresh on reconnect.
+- **Age shown:** while offline or while the API is unreachable, the banner adds „Angezeigt wird der Stand von …“
+  (oldest update time of the data on screen).
+- **Lifetime:** max. 7 days (older caches are discarded at startup; `gcTime` is 7 days so unobserved pages stay
+  available). A new build or another member on the device discards the cache. Logout deletes it.
+- **Offline session:** offline, a stored login opens the app even if the access token has expired; the login
+  redirect and token refresh wait for the connection. Back online, an expired session is renewed silently (refresh
+  token) before the app falls back to the login page. Without a stored login the app still asks for the login.
+- **Not persisted:** analytics, settings, notification preferences, Alexa links, onboarding.
+- **Privacy:** Tenner titles, notes, due dates, member names and recent completions of the household stay on the
+  device for up to 7 days (or until logout). Anyone with access to the unlocked device and browser profile can read
+  them, as with the login tokens (ADR 0001).
+- **Why `localStorage`, not IndexedDB:** the cache is a few hundred kB at most for one household; synchronous
+  `localStorage` needs no extra library and works the same in tests. Writes that fail (quota, private mode) are
+  ignored; the app works without the cache.
+- **Dependency:** `@tanstack/react-query-persist-client` (same release as `@tanstack/react-query`, official
+  TanStack package) for restore-before-fetch, dehydration filters, max age and cache busting.
+
 ## Touch Interaction (MOBILE-005)
 
 - **Swipe on dashboard cards** (due today and overdue): right → complete (with the usual undo snackbar), left → the

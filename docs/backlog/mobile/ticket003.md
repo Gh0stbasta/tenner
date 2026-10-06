@@ -106,3 +106,31 @@ npm run test
 # Out of Scope
 
 - Offline mutations (MOBILE-004)
+
+---
+
+# Implementation Status
+
+Implemented 2026-10-06.
+
+- [x] Dashboard and lists available offline: `PersistQueryClientProvider` (mounted by the AuthGate per member)
+  persists dashboard, Tenner list and detail, history, members and categories; tested offline restore without a
+  request
+- [x] Data age visible: the connectivity banner adds „Angezeigt wird der Stand von …“ while offline or unreachable
+- [x] Cache cleared on logout (`clearOfflineCache`); discarded after 7 days, on a new build and for another member
+- [x] Tests passing: frontend 369 (persister, restore offline, user and max-age busting, logout, offline AuthGate,
+  banner); coverage of `src/features/offline/` 100 %; lint, typecheck and build clean
+- [ ] Verified on a phone in flight mode — manual after deploy (owner)
+
+Decisions and assumptions:
+
+- `localStorage` instead of IndexedDB (ticket scope): a few hundred kB for one household, no extra library
+  (`idb-keyval`), synchronous and testable; documented in `frontend/README.md`.
+- Dependency `@tanstack/react-query-persist-client` 5.104.0 (exact, same release as `@tanstack/react-query`;
+  `npm audit` 0 vulnerabilities).
+- Offline session: a stored login opens the app offline even with an expired token; otherwise the AuthGate would
+  redirect to the login, which cannot work offline. The data shown is the device's own cache. Back online, an
+  expired session first tries a silent renewal (refresh token) before the login redirect.
+- Default `gcTime` raised to 7 days so pages not visited in the current session stay in the persisted cache.
+- Privacy implication documented in `frontend/README.md` and `docs/security.md` (residual risks).
+
