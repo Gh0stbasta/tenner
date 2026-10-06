@@ -85,7 +85,8 @@ Setup (owner, after the widget prerequisites — LWA client in Parameter Store):
    sag Tenner Board, aktiviere Erinnerungen“ (voice consent).
 3. Quiet hours and the per-type toggles in Tenner's settings apply; one alert/digest per member and day.
 
-The manifest declares the reminder permission and the `AMAZON.MessageAlert.Activated` publication; the
+The manifest declares the reminder and notifications (`alexa::devices:all:notifications:write`, required by Amazon
+for any event publication) permissions and the `AMAZON.MessageAlert.Activated` publication; the
 development stage uses the development Proactive Events endpoint (`ALEXA_SKILL_STAGE`).
 
 ## Daily Briefing and Routine (ALEXA-005)
