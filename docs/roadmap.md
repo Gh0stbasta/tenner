@@ -84,7 +84,7 @@ Grouped by theme. The order inside each group matters; the groups can be done in
 ```text
 Correct scheduling:   SCHEDULING-008 → 001 → 003 → 002 → 004 → 005
 Household setup:      HOUSEHOLD-ADMIN-001 → 002 → 003 → 004; HOUSEHOLD-002 → 001 → 004
-Reminders:            SECURITY-006 → NOTIFICATION-001 → 002 → 003 → 004 → 008
+Reminders:            SECURITY-006 → NOTIFICATION-001 → 002 → 003 → 004 → 009 → 010 → 011 → 008 (push re-added 2026-10-07)
 Mobile:               MOBILE-001 → 002 → 005 → 003 → 004 (offline completion moved up from Phase 3 by the owner)
 Analytics:            ANALYTICS-001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 → 009
 Productivity:         PRODUCTIVITY-002 → 004 → 003 → 005

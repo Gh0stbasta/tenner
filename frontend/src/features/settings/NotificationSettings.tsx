@@ -20,6 +20,7 @@ import { useNotify } from "../../components/NotificationProvider";
 import { WEEKDAYS, type Weekday } from "../../types/domain";
 import { useCurrentUser } from "../completions/CurrentUserProvider";
 import {
+  notificationPreferencesKey,
   CHANNEL_LABELS,
   QUARTER_HOURS,
   useNotificationPreferences,
@@ -27,6 +28,7 @@ import {
   type NotificationPreferences,
   type UserChannel,
 } from "../notifications/api";
+import { PushDeviceSetting } from "../notifications/PushDeviceSetting";
 import { NumberSetting } from "./NumberSetting";
 import { SettingsSection } from "./SettingsSection";
 
@@ -157,11 +159,12 @@ export function NotificationSettings() {
       {query.isError && (
         <Alert severity="error">Benachrichtigungen konnten nicht geladen werden. {errorMessage(query.error)}</Alert>
       )}
+      <PushDeviceSetting userId={userId} preferencesKey={notificationPreferencesKey(userId)} />
       {preferences && (
         <>
           {connected.length === 0 && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Noch kein Kanal verbunden. Sobald z. B. Alexa verbunden ist, kannst du hier auswählen, wohin
+              Noch kein Kanal verbunden. Sobald Push aktiviert oder Alexa verbunden ist, kannst du hier auswählen, wohin
               Benachrichtigungen gehen.
             </Alert>
           )}

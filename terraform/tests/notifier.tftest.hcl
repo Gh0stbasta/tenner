@@ -164,3 +164,40 @@ run "no_widget_wiring_without_skill" {
     error_message = "Without the skill there is no widget wiring."
   }
 }
+
+run "web_push_wiring" {
+  command = plan
+
+  variables {
+    notifications_enabled = true
+    web_push_public_key   = "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4"
+  }
+
+  assert {
+    condition     = aws_lambda_function.notifier[0].environment[0].variables["WEB_PUSH_PRIVATE_KEY_PARAMETER"] == "/tenner/prod/push/vapid-private-key" && aws_lambda_function.notifier[0].environment[0].variables["WEB_PUSH_PUBLIC_KEY"] == var.web_push_public_key
+    error_message = "The notifier gets the VAPID public key and only the name of the private key parameter."
+  }
+
+  assert {
+    condition     = contains([for statement in data.aws_iam_policy_document.notifier[0].statement : statement.sid], "ReadVapidPrivateKey") && contains([for statement in data.aws_iam_policy_document.notifier[0].statement : statement.sid], "UpdateAlexaTargets") && contains(flatten([for statement in data.aws_iam_policy_document.notifier[0].statement : tolist(statement.resources) if statement.sid == "ReadVapidPrivateKey"]), "${local.secret_parameter_arn_prefix}/push/vapid-private-key")
+    error_message = "The notifier may read exactly the VAPID private key and remove gone subscriptions."
+  }
+
+  assert {
+    condition     = output.web_push_public_key == var.web_push_public_key
+    error_message = "The frontend build needs the public key."
+  }
+}
+
+run "no_web_push_without_key" {
+  command = plan
+
+  variables {
+    notifications_enabled = true
+  }
+
+  assert {
+    condition     = aws_lambda_function.notifier[0].environment[0].variables["WEB_PUSH_PRIVATE_KEY_PARAMETER"] == "" && !contains([for statement in data.aws_iam_policy_document.notifier[0].statement : statement.sid], "ReadVapidPrivateKey") && output.web_push_public_key == ""
+    error_message = "Without a VAPID key push stays disabled."
+  }
+}

@@ -27,9 +27,10 @@ import {
   type NotifierDependencies,
   type RunSummary,
 } from "./notifications/index.js";
+import { WebPushChannel } from "./push/index.js";
 import { DynamoDbDeliveryLog, DynamoDbHouseholdRepository, DynamoDbTennerRepository } from "./repositories/index.js";
 import { createSecretLoader } from "./secrets/index.js";
-import { AlexaSpeakerService, DashboardService, HouseholdService, MemberService, NotificationPreferencesService } from "./services/index.js";
+import { AlexaSpeakerService, DashboardService, HouseholdService, MemberService, NotificationPreferencesService, PushSubscriptionService } from "./services/index.js";
 import { systemClock } from "./utils/clock.js";
 import { createLogger, type Logger } from "./utils/logger.js";
 
@@ -92,8 +93,8 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
   const alexaApi = config.alexaApi;
   let widget: WidgetPushService | undefined;
   const channels: NotificationChannel[] = [new LogChannel(logger)];
-  if (alexaApi) {
-    const secrets = createSecretLoader({ client: getSsmClient() });
+  const secrets = alexaApi || config.webPush ? createSecretLoader({ client: getSsmClient() }) : undefined;
+  if (alexaApi && secrets) {
     const lwa = createLwaTokenClient({
       credentials: async () => ({ clientId: await secrets.get(alexaApi.clientIdParameter), clientSecret: await secrets.get(alexaApi.clientSecretParameter) }),
       fetch: fetchImpl,
@@ -119,6 +120,20 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
         lwa,
         proactiveEvents: createProactiveEventsClient(alexaApi.endpoint, alexaApi.skillStage, fetchImpl),
         skillMessaging: createSkillMessagingClient(alexaApi.endpoint, fetchImpl),
+        now: systemClock,
+      }),
+    );
+  }
+  const webPush = config.webPush;
+  if (webPush && secrets) {
+    // NOTIFICATION-009: browser push to every registered device of the member.
+    const subscriptions = new PushSubscriptionService(households, systemClock);
+    channels.push(
+      new WebPushChannel({
+        subscriptionsOf: (tenantId, userId) => subscriptions.subscriptionsOf(tenantId, userId),
+        removeGone: (tenantId, endpoint) => subscriptions.removeGone(tenantId, endpoint),
+        vapidKeys: async () => ({ publicKey: webPush.publicKey, privateKey: await secrets.get(webPush.privateKeyParameter), subject: webPush.subject }),
+        appUrl: config.appUrl,
         now: systemClock,
       }),
     );

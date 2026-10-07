@@ -22,3 +22,4 @@ export * from "./handover.service.js";
 export * from "./alexa-speaker.service.js";
 export * from "./notification-preferences.service.js";
 export * from "./catalog-import.service.js";
+export * from "./push-subscription.service.js";

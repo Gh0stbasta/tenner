@@ -119,6 +119,8 @@ jobs:
           TF_VAR_notifications_enabled: ${{ vars.NOTIFICATIONS_ENABLED || 'false' }}
           # Monitoring (OBSERVABILITY-001/002): off until the deploy role has the CloudWatch/SNS permissions.
           TF_VAR_observability_enabled: ${{ vars.OBSERVABILITY_ENABLED || 'false' }}
+          # NOTIFICATION-009: VAPID public key (not secret); empty = browser push disabled.
+          TF_VAR_web_push_public_key: ${{ vars.WEB_PUSH_PUBLIC_KEY }}
         run: terraform -chdir="$TF_DIR" plan -input=false -lock-timeout=5m -out=tfplan
 
       - name: Enforce mandatory tags

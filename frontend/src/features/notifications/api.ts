@@ -5,12 +5,13 @@ import { z } from "zod";
 import { apiClient } from "../../api/client";
 import { WEEKDAYS } from "../../types/domain";
 
-/** Alexa only: e-mail, Telegram and push were dropped (BACKLOG-001, CLEANUP-001). */
-export const USER_CHANNELS = ["ALEXA"] as const;
+/** Alexa (ALEXA-008) and browser push (NOTIFICATION-009). */
+export const USER_CHANNELS = ["ALEXA", "WEB_PUSH"] as const;
 export type UserChannel = (typeof USER_CHANNELS)[number];
 
 export const CHANNEL_LABELS: Record<UserChannel, string> = {
   ALEXA: "Alexa",
+  WEB_PUSH: "Push aufs Handy",
 };
 
 const channelsSchema = z.array(z.enum(USER_CHANNELS));
@@ -36,7 +37,8 @@ const responseSchema = z.object({
 });
 export type NotificationPreferencesResponse = z.infer<typeof responseSchema>;
 
-const keyOf = (userId: string) => ["notification-preferences", userId] as const;
+export const notificationPreferencesKey = (userId: string) => ["notification-preferences", userId] as const;
+const keyOf = notificationPreferencesKey;
 const pathOf = (userId: string) => `/users/${encodeURIComponent(userId)}/notification-preferences`;
 
 export function useNotificationPreferences(userId: string) {

@@ -18,7 +18,11 @@ import {
 import { analyticsHandler, type AnalyticsQuery } from "./handlers/analytics.js";
 import {
   getNotificationPreferencesHandler,
+  subscribePushHandler,
+  unsubscribePushHandler,
   updateNotificationPreferencesHandler,
+  type SubscribePush,
+  type UnsubscribePush,
   type GetNotificationPreferences,
   type UpdateNotificationPreferences,
 } from "./handlers/notification-preferences.js";
@@ -82,6 +86,7 @@ import {
 import {
   AlexaSpeakerService,
   NotificationPreferencesService,
+  PushSubscriptionService,
   CatalogImportService,
   CompleteTennerService,
   CreateTennerService,
@@ -145,6 +150,8 @@ export interface Dependencies {
   readonly registerAlexaUser: RegisterAlexaUser;
   readonly getNotificationPreferences: GetNotificationPreferences;
   readonly updateNotificationPreferences: UpdateNotificationPreferences;
+  readonly subscribePush: SubscribePush;
+  readonly unsubscribePush: UnsubscribePush;
   readonly linkAlexaSpeaker: LinkAlexaSpeaker;
   readonly unlinkAlexaSpeaker: UnlinkAlexaSpeaker;
   readonly listCategories: ListCategories;
@@ -234,6 +241,8 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
   "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
   "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHousehold, logger),
+  "PUT /users/{userId}/push-subscription": ({ event, deps, logger, identity }) => subscribePushHandler(event, identity, deps.subscribePush, logger),
+  "DELETE /users/{userId}/push-subscription": ({ event, deps, logger, identity }) => unsubscribePushHandler(event, identity, deps.unsubscribePush, logger),
   "GET /users/{userId}/notification-preferences": ({ event, deps, identity }) => getNotificationPreferencesHandler(event, identity, deps.getNotificationPreferences),
   "PUT /users/{userId}/notification-preferences": ({ event, deps, logger, identity }) =>
     updateNotificationPreferencesHandler(event, identity, deps.updateNotificationPreferences, logger),
@@ -315,8 +324,14 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const revokeAccess = (tenantId: string, userId: string): Promise<number> =>
     membershipRepository?.removeAllMembers(householdGroupName(tenantId, userId)) ?? Promise.resolve(0);
   const alexaSpeakerService = householdRepository ? new AlexaSpeakerService(householdRepository, systemClock, config.timezone) : undefined;
-  // ALEXA-008: Alexa is a connected channel for every member once an Alexa account of the household uses the skill.
-  const connectedChannels = async (tenantId: string): Promise<UserChannel[]> => ((await alexaSpeakerService?.alexaUsersOf(tenantId))?.length ? ["ALEXA"] : []);
+  // NOTIFICATION-009: the member's registered browsers.
+  const pushSubscriptionService = householdRepository ? new PushSubscriptionService(householdRepository, systemClock) : undefined;
+  // ALEXA-008: Alexa is a connected channel for every member once an Alexa account of the household uses the skill;
+  // NOTIFICATION-009: push once the member registered a device.
+  const connectedChannels = async (tenantId: string, userId: string): Promise<UserChannel[]> => [
+    ...((await alexaSpeakerService?.alexaUsersOf(tenantId))?.length ? (["ALEXA"] as const) : []),
+    ...((await pushSubscriptionService?.subscriptionsOf(tenantId, userId))?.length ? (["WEB_PUSH"] as const) : []),
+  ];
   const notificationPreferencesService = householdRepository ? new NotificationPreferencesService(householdRepository, systemClock, timezoneOf, connectedChannels) : undefined;
   // DATA-008: the household task catalog, imported through the regular member and Tenner services.
   const catalogImportService =
@@ -367,6 +382,8 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     reactivateMember: memberDeactivationService ? (identity, userId) => memberDeactivationService.reactivate(identity, userId) : notConfigured,
     startHandover: handoverService ? (identity, userId, request) => handoverService.start(identity, userId, request) : notConfigured,
     endHandover: handoverService ? (identity, userId) => handoverService.end(identity, userId) : notConfigured,
+    subscribePush: pushSubscriptionService ? (identity, userId, request) => pushSubscriptionService.subscribe(identity, userId, request) : notConfigured,
+    unsubscribePush: pushSubscriptionService ? (identity, userId, endpoint) => pushSubscriptionService.unsubscribe(identity, userId, endpoint) : notConfigured,
     getNotificationPreferences: notificationPreferencesService ? (identity, userId) => notificationPreferencesService.get(identity, userId) : notConfigured,
     updateNotificationPreferences: notificationPreferencesService
       ? (identity, userId, request) => notificationPreferencesService.update(identity, userId, request)

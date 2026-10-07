@@ -416,6 +416,22 @@ when the GitHub **variable** `NOTIFICATIONS_ENABLED` is `true`. Before setting i
 Content: the daily digest (NOTIFICATION-003) at each member's time and overdue alerts (NOTIFICATION-004) at 17:00; until a real channel is connected it is
 written to the notifier log only (`NotificationLogged`).
 
+#### Browser push (NOTIFICATION-009)
+
+Push to phones and browsers (Android, desktop; iPhone/iPad only with Tenner installed, iOS 16.4+). Setup, once:
+
+1. `node scripts/generate-vapid-keys.mjs` (Node 22, locally or in AWS CloudShell). It prints the public key and the
+   `aws ssm put-parameter` command for the private key.
+2. Run the printed command: SecureString `/tenner/prod/push/vapid-private-key` (add the mandatory tags, see
+   "Secrets"). Never commit or paste the private key elsewhere.
+3. GitHub → Settings → Secrets and variables → Actions → **Variable** `WEB_PUSH_PUBLIC_KEY` = the public key.
+4. Deploy (needs `NOTIFICATIONS_ENABLED=true`). Then each member: Einstellungen → Benachrichtigungen → „Push
+   aktivieren“ on each device, and choose „Push aufs Handy“ for the reminders.
+
+Without `WEB_PUSH_PUBLIC_KEY` push stays off and the settings do not offer it. A new key pair invalidates all device
+registrations (members enable push again). Payloads are end-to-end encrypted (RFC 8291); the push services (Google,
+Mozilla, Apple) only see the device endpoint, size and timing.
+
 ### Secrets (SECURITY-006)
 
 Runtime secrets live in SSM Parameter Store as `SecureString` (AWS managed key `aws/ssm`) below
@@ -439,6 +455,7 @@ Secrets in use:
 
 | Parameter | Feature | Value |
 |---|---|---|
+| `/tenner/prod/push/vapid-private-key` | Browser push (NOTIFICATION-009) | Private key from `node scripts/generate-vapid-keys.mjs` |
 | `/tenner/prod/alexa/lwa-client-id` | Echo Show widget, Alexa notifications (ALEXA-007/008) | Alexa developer console → Tenner → Build → Permissions → "Alexa Skill Messaging" Client ID |
 | `/tenner/prod/alexa/lwa-client-secret` | same | Client Secret from the same page | A missing secret only disables the feature
 that needs it; the Lambda logs `secret unavailable` with the parameter name.

@@ -40,6 +40,7 @@ describe("NotificationPreferencesService", () => {
     expect(result.effectiveTimezone).toBe("Europe/Berlin");
     expect(result.channels).toEqual([
       { type: "ALEXA", connected: false },
+      { type: "WEB_PUSH", connected: false },
     ]);
   });
 

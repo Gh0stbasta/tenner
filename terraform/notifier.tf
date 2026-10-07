@@ -109,8 +109,19 @@ data "aws_iam_policy_document" "notifier" {
     }
   }
 
+  # NOTIFICATION-009: VAPID private key for browser push (exact parameter).
   dynamic "statement" {
-    for_each = local.alexa_notifier_enabled ? [1] : []
+    for_each = local.web_push_enabled ? [1] : []
+    content {
+      sid       = "ReadVapidPrivateKey"
+      actions   = ["ssm:GetParameter"]
+      resources = ["${local.secret_parameter_arn_prefix}/push/vapid-private-key"]
+    }
+  }
+
+  # Removal of Alexa accounts (ALEXA-007/008) and push subscriptions (NOTIFICATION-009) the services no longer accept.
+  dynamic "statement" {
+    for_each = local.alexa_notifier_enabled || local.web_push_enabled ? [1] : []
     content {
       sid       = "UpdateAlexaTargets"
       actions   = ["dynamodb:UpdateItem"]
@@ -166,6 +177,9 @@ resource "aws_lambda_function" "notifier" {
       ALEXA_LWA_CLIENT_ID_PARAMETER     = local.alexa_notifier_enabled ? local.alexa_lwa_client_id_parameter : ""
       ALEXA_LWA_CLIENT_SECRET_PARAMETER = local.alexa_notifier_enabled ? local.alexa_lwa_client_secret_parameter : ""
       ALEXA_SKILL_STAGE                 = "development"
+      # NOTIFICATION-009: browser push; the private key stays in Parameter Store.
+      WEB_PUSH_PUBLIC_KEY            = local.web_push_enabled ? var.web_push_public_key : ""
+      WEB_PUSH_PRIVATE_KEY_PARAMETER = local.web_push_enabled ? local.web_push_private_key_parameter : ""
     }
   }
 

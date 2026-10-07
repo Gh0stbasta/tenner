@@ -40,6 +40,11 @@ export default tseslint.config(
       "no-restricted-globals": ["error", { name: "fetch", message: "Use the API client in src/api/." }],
     },
   },
+  // Service worker extension (NOTIFICATION-009): plain JavaScript imported by the generated worker.
+  {
+    files: ["public/**/*.js"],
+    languageOptions: { globals: globals.serviceworker },
+  },
   // Tests and test helpers may export non-components.
   {
     files: ["src/**/*.test.{ts,tsx}", "src/tests/**"],

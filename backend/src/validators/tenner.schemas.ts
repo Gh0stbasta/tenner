@@ -29,6 +29,8 @@ import {
   type UpdateMemberRequest,
   type VacationRequest,
   type CatalogImportRequest,
+  type PushSubscriptionRequest,
+  type RemovePushSubscriptionRequest,
   type UndoCompletionRequest,
   type UpdateTennerRequest,
 } from "../dto/index.js";
@@ -408,3 +410,17 @@ export const analyticsNeglectedSchema = z.strictObject({
 
 /** POST /household/catalog (DATA-008): an empty body imports; `{ "dryRun": true }` only reports. */
 export const catalogImportSchema = z.strictObject({ dryRun: z.boolean().optional() }) satisfies z.ZodType<CatalogImportRequest>;
+
+/** Push service URLs are HTTPS and short; the endpoint is a capability URL and never logged (NOTIFICATION-009). */
+const pushEndpointSchema = z.url({ protocol: /^https$/ }).max(1000);
+const base64UrlSchema = (min: number, max: number) => z.string().regex(/^[A-Za-z0-9_-]+$/, "Must be base64url.").min(min).max(max);
+
+/** PushSubscription.toJSON() of the browser. */
+export const pushSubscriptionSchema = z.strictObject({
+  endpoint: pushEndpointSchema,
+  expirationTime: z.number().nullable().optional(),
+  // p256dh: 65-byte uncompressed P-256 key (87 base64url chars); auth: 16 bytes (22 chars).
+  keys: z.strictObject({ p256dh: base64UrlSchema(87, 88), auth: base64UrlSchema(22, 24) }),
+}) satisfies z.ZodType<PushSubscriptionRequest>;
+
+export const removePushSubscriptionSchema = z.strictObject({ endpoint: pushEndpointSchema }) satisfies z.ZodType<RemovePushSubscriptionRequest>;

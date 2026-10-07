@@ -15,6 +15,7 @@ import {
   type CategoryIcon,
   type AlexaSpeaker,
   type AlexaUser,
+  type PushSubscriptionRecord,
   type NotificationPreferences,
   type NotificationPreferencesByMember,
   type Handover,
@@ -117,6 +118,17 @@ function toAlexaSpeakers(value: unknown): AlexaSpeaker[] {
   });
 }
 
+/** Stored push subscriptions; malformed entries are dropped (NOTIFICATION-009). */
+function toPushSubscriptions(value: unknown): PushSubscriptionRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry): PushSubscriptionRecord[] => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const { userId, endpoint, p256dh, auth, createdAt } = entry as Record<string, unknown>;
+    if (typeof userId !== "string" || !USER_ID_PATTERN.test(userId) || typeof endpoint !== "string" || typeof p256dh !== "string" || typeof auth !== "string") return [];
+    return [{ userId, endpoint, p256dh, auth, createdAt: typeof createdAt === "string" ? createdAt : "" }];
+  });
+}
+
 /** Stored Alexa accounts; malformed entries are dropped (ALEXA-007). */
 function toAlexaUsers(value: unknown): AlexaUser[] {
   if (!Array.isArray(value)) return [];
@@ -166,6 +178,8 @@ function toSettings(item: Record<string, unknown>): HouseholdSettings {
     alexaSpeakersVersion: typeof item.alexaSpeakersVersion === "number" ? item.alexaSpeakersVersion : 0,
     alexaUsers: toAlexaUsers(item.alexaUsers),
     alexaUsersVersion: typeof item.alexaUsersVersion === "number" ? item.alexaUsersVersion : 0,
+    pushSubscriptions: toPushSubscriptions(item.pushSubscriptions),
+    pushSubscriptionsVersion: typeof item.pushSubscriptionsVersion === "number" ? item.pushSubscriptionsVersion : 0,
     notificationPreferences: toNotificationPreferences(item.notificationPreferences),
     notificationPreferencesVersion: typeof item.notificationPreferencesVersion === "number" ? item.notificationPreferencesVersion : 0,
     updatedAt: String(item.updatedAt),
@@ -230,6 +244,11 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
     return this.saveVersionedList(tenantId, "alexaUsers", users, expectedVersion, actor, timestamp);
   }
 
+  /** Replace the push subscriptions with optimistic locking (NOTIFICATION-009). */
+  async savePushSubscriptions(tenantId: string, subscriptions: readonly PushSubscriptionRecord[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+    return this.saveVersionedList(tenantId, "pushSubscriptions", subscriptions, expectedVersion, actor, timestamp);
+  }
+
   /** Replace the Alexa speaker mappings with optimistic locking on alexaSpeakersVersion (ALEXA-002). */
   async saveAlexaSpeakers(tenantId: string, speakers: readonly AlexaSpeaker[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
     return this.saveVersionedList(tenantId, "alexaSpeakers", speakers, expectedVersion, actor, timestamp);
@@ -238,7 +257,7 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
   /** SET <list> (a list or map) and <list>Version = expected + 1, if the stored version still equals `expectedVersion` (0 = none). */
   private async saveVersionedList(
     tenantId: string,
-    name: "members" | "categories" | "handovers" | "alexaSpeakers" | "notificationPreferences" | "alexaUsers",
+    name: "members" | "categories" | "handovers" | "alexaSpeakers" | "notificationPreferences" | "alexaUsers" | "pushSubscriptions",
     list: readonly unknown[] | object,
     expectedVersion: number,
     actor: UserId,

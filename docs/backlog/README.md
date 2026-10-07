@@ -136,6 +136,7 @@ docs/backlog/
 | [NOTIFICATION-003](notifications/ticket003.md) | Implement Daily Digest | High | V2 |
 | [NOTIFICATION-004](notifications/ticket004.md) | Implement Overdue Alerts | Medium | V2 |
 | [NOTIFICATION-008](notifications/ticket008.md) | Implement Weekly Summary | Low | V2 |
+| [NOTIFICATION-009](notifications/ticket009.md) | Implement Browser Push Channel | High | V2 |
 
 ### Scheduling (`scheduling/`, prefix `SCHEDULING-`)
 
@@ -338,6 +339,6 @@ the Git history. Their numbers are not reused.
 | MOBILE-006 | Implement Push Notification Subscription | Not wanted: no phone push notifications |
 | NOTIFICATION-005 | Implement Email Notification Channel | Not wanted: reminders stay in Tenner and on Alexa |
 | NOTIFICATION-006 | Implement Telegram Notification Channel | Not wanted: reminders stay in Tenner and on Alexa |
-| NOTIFICATION-007 | Implement Web Push Notification Channel | Not wanted: no push notifications |
+| NOTIFICATION-007 | Implement Web Push Notification Channel | Not wanted: no push notifications. Push was re-requested by the owner on 2026-10-07 (`docs/human/mobileReminder.md`) and is built as NOTIFICATION-009 – 011 |
 | PRODUCTIVITY-001 | Implement "I Have X Minutes" Suggestions | Not wanted |
 | INTEGRATION-002 | Implement Interactive Telegram Bot | Not wanted: needs the dropped Telegram channel (BACKLOG-002, `docs/hotfix/backlog002.md`) |

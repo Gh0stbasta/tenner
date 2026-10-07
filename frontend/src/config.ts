@@ -17,6 +17,8 @@ export interface AppConfig {
   readonly apiBaseUrl: string;
   /** Cognito settings; undefined if any value is missing (login cannot work then). */
   readonly auth: AuthConfig | undefined;
+  /** VAPID public key for browser push (NOTIFICATION-009); empty = push not offered. */
+  readonly webPushPublicKey: string;
 }
 
 const trimUrl = (value: string | undefined): string => (value ?? "").trim().replace(/\/+$/, "");
@@ -28,6 +30,7 @@ export function readConfig(env: Readonly<Record<string, string | undefined>>): A
   return {
     apiBaseUrl: trimUrl(env.VITE_API_BASE_URL),
     auth: issuerUrl && clientId && loginUrl ? { issuerUrl, clientId, loginUrl } : undefined,
+    webPushPublicKey: (env.VITE_WEB_PUSH_PUBLIC_KEY ?? "").trim(),
   };
 }
 

@@ -2,9 +2,9 @@ import type { UserId, Weekday } from "./enums.js";
 
 /**
  * Channels a member can choose for notifications (NOTIFICATION-002); LOG is internal and never selectable.
- * Alexa only: e-mail, Telegram and push were dropped (BACKLOG-001, CLEANUP-001).
+ * Alexa (ALEXA-008) and browser push (NOTIFICATION-009, re-added by the owner on 2026-10-07).
  */
-export const USER_CHANNELS = ["ALEXA"] as const;
+export const USER_CHANNELS = ["ALEXA", "WEB_PUSH"] as const;
 export type UserChannel = (typeof USER_CHANNELS)[number];
 
 /** Per-member notification preferences (NOTIFICATION-002), stored on the household item. */
