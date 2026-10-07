@@ -92,6 +92,12 @@ locals {
     "GET /meals/ingredients",                       # FOOD-021
     "POST /meals/ingredients",                      # FOOD-021
     "PUT /meals/ingredients/{ingredientId}",        # FOOD-021
+    "GET /meals/dishes",                            # FOOD-002
+    "POST /meals/dishes",                           # FOOD-002
+    "GET /meals/dishes/{dishId}",                   # FOOD-002
+    "PUT /meals/dishes/{dishId}",                   # FOOD-002
+    "DELETE /meals/dishes/{dishId}",                # FOOD-002 (archive)
+    "POST /meals/dishes/{dishId}/restore",          # FOOD-002
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.

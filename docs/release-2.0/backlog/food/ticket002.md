@@ -122,22 +122,22 @@ cd terraform && terraform test
 
 # Acceptance Criteria
 
-- [ ] All fields of the owner's list and the planning rules are stored or derived
-- [ ] Variants share a group
-- [ ] Archive keeps references in old plans; restore works
-- [ ] API validated and tenant-scoped
-- [ ] Tests passing
+- [x] All fields of the owner's list and the planning rules are stored or derived
+- [x] Variants share a group
+- [x] Archive keeps references in old plans; restore works
+- [x] API validated and tenant-scoped
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
@@ -145,9 +145,32 @@ cd terraform && terraform test
 
 - Quantities are stored per adult portion; the family portion factor (FOOD-004) scales them.
 - „Household suitability“ is not stored: it depends on the profile and is computed (FOOD-005).
+- **Arrays instead of single values:** `proteinSources` and `baseTags` are lists (a dish can have several, e.g. none or
+  two); the overrides `proteinSourcesOverride` and `baseTagsOverride` replace the derived lists (e.g. Frikadellen are
+  `MEATBALL`, not `MINCE`).
+- **Optional ingredients** (e.g. Apfelmus to Kartoffelpuffer) do not count for diet, allergies, protein or base; their
+  extra tags are reported as `optionalTags`, so the rules engine (FOOD-005) can warn.
+- **Burger flag:** `isBurger` marks dishes for the burger limit (R6) instead of deriving it from the category.
+- **Versioning:** the service writes with the stored version (409 `CONCURRENT_MODIFICATION`) like the other household
+  data; clients send no If-Match header.
+- **Fields of later tickets** (`imageKey`, `nutritionOverride`, `costOverride`, `favorite`) exist in the model now;
+  `imageKey` is read-only until FOOD-011.
+- Built after FOOD-021 (ingredients), see that ticket.
 
 ---
 
 # Out of Scope
 
 - Dish editor UI (FOOD-010), images (FOOD-011), nutrition and cost calculation (FOOD-012, FOOD-013).
+
+---
+
+# Implementation Status
+
+Done (2026-10-07).
+
+- Model and derivation: `backend/src/meals/models/dish.ts`; service: `backend/src/meals/services/dish.service.ts`;
+  schemas in `backend/src/meals/validators.ts`; handlers: `backend/src/meals/handlers/dishes.ts`.
+- Routes `GET/POST /meals/dishes`, `GET/PUT/DELETE /meals/dishes/{dishId}`, `POST /meals/dishes/{dishId}/restore`
+  (`terraform/locals.tf`, `backend/src/index.ts`); API in `backend/README.md`.
+- Tests: `backend/tests/meals-dishes.test.ts`, route tests in `backend/tests/index.test.ts`, Terraform route test.

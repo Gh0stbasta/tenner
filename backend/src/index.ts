@@ -6,8 +6,20 @@
 
 import { AnalyticsService } from "./analytics/index.js";
 import {
+  DishService,
   IngredientService,
   MealsStore,
+  archiveDishHandler,
+  createDishHandler,
+  getDishHandler,
+  listDishesHandler,
+  restoreDishHandler,
+  updateDishHandler,
+  type ArchiveDish,
+  type CreateDish,
+  type GetDish,
+  type ListDishes,
+  type UpdateDish,
   createIngredientHandler,
   listIngredientsHandler,
   updateIngredientHandler,
@@ -193,6 +205,12 @@ export interface Dependencies {
   readonly listIngredients: ListIngredients;
   readonly createIngredient: CreateIngredient;
   readonly updateIngredient: UpdateIngredient;
+  readonly listDishes: ListDishes;
+  readonly getDish: GetDish;
+  readonly createDish: CreateDish;
+  readonly updateDish: UpdateDish;
+  readonly archiveDish: ArchiveDish;
+  readonly restoreDish: ArchiveDish;
 }
 
 /** Per-request context passed to route handlers. */
@@ -287,6 +305,12 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /meals/ingredients": ({ deps, identity }) => listIngredientsHandler(identity.tenantId, deps.listIngredients),
   "POST /meals/ingredients": ({ event, deps, logger, identity }) => createIngredientHandler(event, identity, deps.createIngredient, logger),
   "PUT /meals/ingredients/{ingredientId}": ({ event, deps, logger, identity }) => updateIngredientHandler(event, identity, deps.updateIngredient, logger),
+  "GET /meals/dishes": ({ event, deps, identity }) => listDishesHandler(event, identity.tenantId, deps.listDishes),
+  "POST /meals/dishes": ({ event, deps, logger, identity }) => createDishHandler(event, identity, deps.createDish, logger),
+  "GET /meals/dishes/{dishId}": ({ event, deps, identity }) => getDishHandler(event, identity.tenantId, deps.getDish),
+  "PUT /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => updateDishHandler(event, identity, deps.updateDish, logger),
+  "DELETE /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => archiveDishHandler(event, identity, deps.archiveDish, logger),
+  "POST /meals/dishes/{dishId}/restore": ({ event, deps, logger, identity }) => restoreDishHandler(event, identity, deps.restoreDish, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -394,6 +418,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   // Meal planning (FOOD-001, ADR 0007): one store on tenner-meals for all meal services.
   const mealsStore = config.mealsTable ? new MealsStore(getDocumentClient(), config.mealsTable) : undefined;
   const ingredientService = mealsStore ? new IngredientService(mealsStore, systemClock) : undefined;
+  const dishService = mealsStore && ingredientService ? new DishService(mealsStore, (tenantId) => ingredientService.ingredientsOf(tenantId), systemClock, uuidGenerator) : undefined;
 
   return {
     config,
@@ -459,6 +484,12 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     listIngredients: ingredientService ? (tenantId) => ingredientService.listIngredients(tenantId) : notConfigured,
     createIngredient: ingredientService ? (identity, request) => ingredientService.createIngredient(identity, request) : notConfigured,
     updateIngredient: ingredientService ? (identity, ingredientId, request) => ingredientService.updateIngredient(identity, ingredientId, request) : notConfigured,
+    listDishes: dishService ? (tenantId, query) => dishService.listDishes(tenantId, query) : notConfigured,
+    getDish: dishService ? (tenantId, dishId) => dishService.getDish(tenantId, dishId) : notConfigured,
+    createDish: dishService ? (identity, request) => dishService.createDish(identity, request) : notConfigured,
+    updateDish: dishService ? (identity, dishId, request) => dishService.updateDish(identity, dishId, request) : notConfigured,
+    archiveDish: dishService ? (identity, dishId) => dishService.archiveDish(identity, dishId) : notConfigured,
+    restoreDish: dishService ? (identity, dishId) => dishService.restoreDish(identity, dishId) : notConfigured,
   };
 }
 

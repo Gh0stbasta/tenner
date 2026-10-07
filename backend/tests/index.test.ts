@@ -4,7 +4,7 @@ import { ConflictError, NotFoundError, PersistenceError, ValidationError } from 
 import { correlationIdOf, createDependencies, handler, route as routeEvent, type Dependencies } from "../src/index.js";
 import { toTennerResponse } from "../src/dto/index.js";
 import { DEFAULT_NOTIFICATION_PREFERENCES } from "../src/models/index.js";
-import { CATALOG_INGREDIENTS, type ResolvedIngredient } from "../src/meals/index.js";
+import { CATALOG_INGREDIENTS, type DishResponse, type ResolvedIngredient } from "../src/meals/index.js";
 import { ApplicationError } from "../src/exceptions/index.js";
 import { authenticatedEvent, jwtClaims, mockLogger, tennerFixture, testConfig, TEST_IDENTITY } from "./mocks/index.js";
 
@@ -41,6 +41,31 @@ const household = {
 
 const PREFERENCES_RESPONSE = { preferences: DEFAULT_NOTIFICATION_PREFERENCES, channels: [], effectiveTimezone: "Europe/Berlin" };
 const INGREDIENT = { ...CATALOG_INGREDIENTS[0], source: "CATALOG", overridden: false } as ResolvedIngredient;
+const DISH_ID = "6f9619ff-8b86-4d11-b42d-00c04fc964ff";
+const DISH = {
+  dishId: DISH_ID,
+  name: "Onigiri",
+  category: "VEGETARIAN",
+  slots: ["LUNCH"],
+  lightness: "LIGHT",
+  temperature: "COLD",
+  ingredients: [{ ingredientId: "sushi-rice", quantity: 80, unit: "g", optional: false }],
+  activeMinutes: 15,
+  totalMinutes: 30,
+  familyFriendly: true,
+  isBurger: false,
+  favorite: false,
+  archived: false,
+  createdAt: "2026-10-07T10:00:00Z",
+  updatedAt: "2026-10-07T10:00:00Z",
+  isVegetarian: true,
+  tags: [],
+  optionalTags: [],
+  proteinSources: [],
+  baseTags: ["RICE"],
+  containsPoultry: false,
+  unknownIngredients: [],
+} as DishResponse;
 const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [], alexaAccounts: 0 };
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
@@ -128,6 +153,12 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     listIngredients: vi.fn(async () => [INGREDIENT]),
     createIngredient: vi.fn(async () => INGREDIENT),
     updateIngredient: vi.fn(async () => INGREDIENT),
+    listDishes: vi.fn(async () => [DISH]),
+    getDish: vi.fn(async () => DISH),
+    createDish: vi.fn(async () => DISH),
+    updateDish: vi.fn(async () => DISH),
+    archiveDish: vi.fn(async () => DISH),
+    restoreDish: vi.fn(async () => DISH),
     ...overrides,
   };
 }
@@ -465,6 +496,36 @@ describe("ingredient routes (FOOD-021)", () => {
   it("answers 503 while the meals table is not configured", async () => {
     const response = await route(event("GET /meals/ingredients"), deps({ listIngredients: async () => { throw new ApplicationError("SERVICE_UNAVAILABLE", 503, "Service is not configured."); } }));
     expect(response.statusCode).toBe(503);
+  });
+});
+
+describe("dish routes (FOOD-002)", () => {
+  const withDish = (routeKey: string, body?: string, dishId: string = DISH_ID) => ({ ...event(routeKey, {}, body), pathParameters: { dishId } }) as APIGatewayProxyEventV2;
+
+  it("lists dishes with validated filters", async () => {
+    const d = deps();
+    expect((await route(event("GET /meals/dishes", {}, undefined, { slot: "LUNCH", archived: "true" }), d)).statusCode).toBe(200);
+    expect(d.listDishes).toHaveBeenCalledWith("default", { slot: "LUNCH", archived: true });
+    expect((await route(event("GET /meals/dishes", {}, undefined, { slot: "BREAKFAST" }), d)).statusCode).toBe(400);
+  });
+
+  it("creates, reads, updates, archives and restores dishes", async () => {
+    const d = deps();
+    const body = { name: "Onigiri", category: "VEGETARIAN", slots: ["LUNCH"], lightness: "LIGHT", temperature: "COLD", ingredients: [{ ingredientId: "sushi-rice", quantity: 80, unit: "g" }], activeMinutes: 15 };
+    expect((await route(event("POST /meals/dishes", {}, JSON.stringify(body)), d)).statusCode).toBe(201);
+    expect((await route(withDish("GET /meals/dishes/{dishId}"), d)).statusCode).toBe(200);
+    expect((await route(withDish("PUT /meals/dishes/{dishId}", JSON.stringify({ favorite: true })), d)).statusCode).toBe(200);
+    expect(d.updateDish).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID, { favorite: true });
+    expect((await route(withDish("DELETE /meals/dishes/{dishId}"), d)).statusCode).toBe(200);
+    expect((await route(withDish("POST /meals/dishes/{dishId}/restore"), d)).statusCode).toBe(200);
+    expect(d.restoreDish).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID);
+  });
+
+  it("rejects invalid dish IDs and bodies", async () => {
+    const d = deps();
+    expect((await route(withDish("GET /meals/dishes/{dishId}", undefined, "not-a-uuid"), d)).statusCode).toBe(400);
+    expect((await route(event("POST /meals/dishes", {}, JSON.stringify({ name: "X" })), d)).statusCode).toBe(400);
+    expect((await route(withDish("PUT /meals/dishes/{dishId}", JSON.stringify({})), d)).statusCode).toBe(400);
   });
 });
 

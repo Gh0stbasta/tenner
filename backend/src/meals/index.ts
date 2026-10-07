@@ -7,3 +7,6 @@ export * from "./catalog/ingredients.js";
 export * from "./services/ingredient.service.js";
 export * from "./handlers/ingredients.js";
 export * from "./validators.js";
+export * from "./models/dish.js";
+export * from "./services/dish.service.js";
+export * from "./handlers/dishes.js";
