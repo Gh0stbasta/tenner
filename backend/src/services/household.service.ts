@@ -49,7 +49,7 @@ export class HouseholdService {
   }
 
   /**
-   * Save any subset of the settings. Any household member may change them (roles: HOUSEHOLD-ADMIN-005).
+   * Save any subset of the settings. Any household member may change them (there are no roles).
    * Formats are validated by the handler; the default category must be a selectable household category.
    */
   async updateSettings(identity: Identity, request: UpdateHouseholdRequest): Promise<HouseholdResponse> {

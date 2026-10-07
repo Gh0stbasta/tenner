@@ -1,15 +1,12 @@
 # Tenner Roadmap
 
-This roadmap was produced by the backlog gap analysis in [META-001](meta-ticket.md).
-The full ticket index is in [`backlog/README.md`](backlog/README.md).
+This roadmap was produced by the backlog gap analysis in [META-001](release-1.0/meta-ticket.md).
+The full ticket index is in [`release-1.0/backlog/README.md`](release-1.0/backlog/README.md).
 
-> **Status (2026-10-05):** Phase 1 is implemented. Deployed since 2026-10-02: CI/CD, Terraform, backend API
-> (TICKET-001 – 020, 023, 024), API throttling (SECURITY-014), the German web app (FRONTEND-001 – 007, 009, UX-005)
-> and authentication (SECURITY-001 – 004; Google sign-in FUTURE-011 pulled forward; first-login self-assignment
-> HOTFIX-001). Completed on 2026-10-05: SECURITY-005, SECURITY-007, OPERATIONS-001, OPERATIONS-006, FRONTEND-008.
-> Manual follow-ups: the throttling burst test and the account-level S3 check (`docs/security.md`), confirming the
-> AWS cost alert e-mail. Each ticket file has an "Implementation Status" section. Next: Phase 2.
-
+> **Status (2026-10-07): closed with release 1.0.** Phase 1 (MVP) and the Phase 2 groups the owner wanted are
+> implemented and live. On 2026-10-07 the owner removed every remaining open ticket (BACKLOG-003) and moved the
+> project to maintenance and user recommendations. Nothing below is planned any more; the phases are kept as the
+> record of how release 1.0 was built. Release overview: [`release-1.0/README.md`](release-1.0/README.md).
 ---
 
 ## 1. Gap Analysis
@@ -77,58 +74,49 @@ OPERATIONS-006  Smoke tests
 **Exit criteria:** the MVP definition in `architecture.md` is met, and the deployed app
 can be used only by authenticated household members.
 
-### Phase 2 — V2 (Daily Usefulness)
+### Phase 2 — V2 (Daily Usefulness), as delivered
 
-Grouped by theme. The order inside each group matters; the groups can be done in parallel.
+Built in this order inside each group:
 
 ```text
 Correct scheduling:   SCHEDULING-008 → 001 → 003 → 002 → 004 → 005
-Household setup:      HOUSEHOLD-ADMIN-001 → 002 → 003 → 004; HOUSEHOLD-002 → 001 → 004
-Reminders:            SECURITY-006 → NOTIFICATION-001 → 002 → 003 → 004 → 009 → 010 → 011 → 008 (push re-added 2026-10-07)
-Mobile:               MOBILE-001 → 002 → 005 → 003 → 004 (offline completion moved up from Phase 3 by the owner)
+Household setup:      HOUSEHOLD-ADMIN-001 → 002 → 003 → 004 → 006; HOUSEHOLD-002 → 001 → 004
+Reminders:            SECURITY-006 → NOTIFICATION-001 → 002 → 003 → 004 → 009 → 010 → 011
+Mobile:               MOBILE-001 → 002 → 005 → 003 → 004
 Analytics:            ANALYTICS-001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 → 009
-Productivity:         PRODUCTIVITY-002 → 004 → 003 → 005
-Running it safely:    OBSERVABILITY-001 → 002 → 003 → 006 → 005; OPERATIONS-002 → 003 → 004 → 005 → 007
-Data:                 DATA-006 → 001 → 002 → 003 → 004 → 007
-Platform:             TICKET-021, TICKET-022, SECURITY-008 – 013
-Experience:           UX-001, UX-003, UX-004, UX-007, UX-002, UX-006, FRONTEND-010
-Integrations:         INTEGRATION-001 → 006 → 003
-AI (opt-in):          AI-001 → 002 → 003
-Alexa & Echo Show:    ALEXA-001 → 002 → 003 → 004 → 006 → 005; SECURITY-006 + NOTIFICATION-001 → ALEXA-007 → 008; ALEXA-009 alongside
+Running it safely:    OBSERVABILITY-001 → 002
+Data:                 DATA-008 (household task catalog)
+Alexa & Echo Show:    ALEXA-001 → 002 → 003 → 004 → 006 → 005 → 007 → 008 → 009 → 010
 ```
 
-Removed on 2026-10-06 by the owner (BACKLOG-001): phone/web push (MOBILE-006, NOTIFICATION-007), e-mail and
-Telegram reminders (NOTIFICATION-005, 006), "I have X minutes" suggestions (PRODUCTIVITY-001) and the Telegram bot
-(INTEGRATION-002, BACKLOG-002); see
-[`backlog/README.md`](backlog/README.md#removed-tickets).
+Removed on 2026-10-06 by the owner (BACKLOG-001, BACKLOG-002): e-mail and Telegram reminders, the Telegram bot and
+"I have X minutes" suggestions. Push was dropped and re-added on 2026-10-07 (NOTIFICATION-009 – 011).
+
+Removed on 2026-10-07 by the owner (BACKLOG-003): all remaining Phase 2 groups (weekly summary, productivity,
+operations and observability extensions, data export/import, environments and custom domain, security scanning,
+UX extensions, integrations, AI) and all of Phase 3. See
+[`release-1.0/backlog/README.md`](release-1.0/backlog/README.md#removed-tickets).
 
 ### Phase 3 — Long-Term
 
-```text
-SCHEDULING-006, 007
-HOUSEHOLD-003, HOUSEHOLD-ADMIN-005
-ANALYTICS-010 (only if measurements require it)
-OBSERVABILITY-004
-DATA-005
-INTEGRATION-004, 005, 007, 008, 009
-AI-004 – 009
-FUTURE-001 – 011 (mostly evaluations that end in a go/no-go decision)
-```
+Not pursued; every Phase 3 ticket was removed by BACKLOG-003.
 
 ---
 
 ## 3. Cross-Cutting Decisions Required
 
-Several tickets need AWS services that are **not** on the allowed-services list in
-`architecture.md`. Each needs an ADR in `docs/decisions/` before it is implemented:
+Several tickets needed AWS services that are **not** on the allowed-services list in
+`architecture.md`. Each needed an ADR in `docs/decisions/` before it was implemented. Rows whose tickets were
+removed (BACKLOG-003) are kept for reference; a maintenance ticket that needs one of these services still needs
+the ADR first:
 
 | Service | Needed by |
 |---|---|
 | SSM Parameter Store / Secrets Manager | SECURITY-006 (accepted: [ADR 0004](decisions/0004-secrets-management.md), Parameter Store) |
 | SNS (alarm actions) | OBSERVABILITY-002 (accepted: [ADR 0006](decisions/0006-alarm-notifications.md)) |
-| Route53 / ACM | TICKET-022 |
-| X-Ray | OBSERVABILITY-004 |
-| CloudTrail trail | SECURITY-012 |
-| Bedrock or an external LLM API | AI-001 |
+| Route53 / ACM | TICKET-022 (removed) |
+| X-Ray | OBSERVABILITY-004 (removed) |
+| CloudTrail trail | SECURITY-012 (removed) |
+| Bedrock or an external LLM API | AI-001 (removed) |
 | Alexa Skills Kit (custom skill, APL, Reminders, Proactive Events, Data Store), skill Lambda in eu-west-1 | ALEXA-001 (accepted: [ADR 0005](decisions/0005-alexa-platform.md)) |
 | AWS Budgets / Cost Anomaly Detection | OPERATIONS-001 (billing features, no runtime cost) |

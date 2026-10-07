@@ -7,7 +7,7 @@ Metric definitions of the `GET /analytics/*` endpoints. Code: `backend/src/analy
 
 - **Source:** completions from `tenner-history` (Query on `completedAt-index`, every page, no Scan, undone
   completions excluded) and the current Tenners from `tenner-tenners`. Everything is aggregated on the fly per
-  request; pre-aggregation is ANALYTICS-010.
+  request; there is no pre-aggregation (TD-033).
 - **Dates:** all days are calendar dates in the household timezone (SCHEDULING-008). A completion belongs to the day
   of its `completedAt` in that timezone. Weeks start on the household's `weekStartsOn` (HOUSEHOLD-ADMIN-003).
 - **Current state:** metrics marked *now* use the Tenners as they are today (assignee, category, due date), not as

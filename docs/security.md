@@ -117,7 +117,7 @@ These are outside Terraform or need the live system. Run them in AWS CloudShell 
 
 | Risk | Reference |
 |---|---|
-| CloudFront default certificate allows TLS 1.0/1.1 handshakes (custom domain needed for TLS 1.2+) | TD-025, TICKET-022 |
+| CloudFront default certificate allows TLS 1.0/1.1 handshakes (custom domain needed for TLS 1.2+) | TD-025 |
 | Unclaimed household members can be claimed by strangers until both members have signed in | TD-020 |
 | A deactivated member's existing ID token stays valid up to 60 minutes (group removal applies at the next refresh) | HOUSEHOLD-ADMIN-004 |
 | API Lambda can change Cognito group membership | TD-023 |

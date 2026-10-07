@@ -1,6 +1,6 @@
 {
   "name": "tenner-alexa",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Tenner Alexa custom skill (de-DE): skill package and skill Lambda (ALEXA-001).",
   "type": "module",
