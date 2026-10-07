@@ -6,35 +6,33 @@
 
 | | |
 |---|---|
-| **Project health** | 🟢 **Released**: Tenner **1.0.0** is complete; the last five deploys are green; all 1,599 automated tests pass (backend 924, frontend 407, alexa 147, Terraform 76, scripts 45) |
-| **Current phase** | **Maintenance and user recommendations.** The feature roadmap is closed (BACKLOG-003) |
-| **Current focus** | This pull request: release 1.0 — open tickets removed, all tickets archived in `docs/release-1.0/`, version 1.0.0, changelog and release notes |
-| **Biggest blocker** | None. Tag `v1.0.0` and the GitHub release need the merge first |
-| **Recommended next action** | Merge, tag `v1.0.0`, publish the GitHub release; then finish the push setup and the catalog import if still open |
+| **Project health** | 🟢 **1.0.0 live**: the last five deploys are green (incl. PR #31); all 1,599 automated tests pass (backend 924, frontend 407, alexa 147, Terraform 76, scripts 45) |
+| **Current phase** | **Release 2.0 planning — Family Meal Planning.** Release 1.0 is in maintenance |
+| **Current focus** | This pull request: your release 2.0 meta ticket in ticket form (EPIC-FOOD-001) and 25 FOOD tickets with order |
+| **Biggest blocker** | None for the start. Six owner decisions are open (20-minute limit, coconut and nut allergy, protein and base groups, weekday lunches, family data in the public Git history) |
+| **Recommended next action** | Merge, answer the six decisions in EPIC-FOOD-001, then start FOOD-001 (architecture, ADR 0007) |
 
 ## 📈 Progress
 
 ```text
-Release 1.0  ████████████████████ 100%  104 / 104 tickets done
-Removed      74 tickets (6 on 2026-10-06, 68 at release)
+Release 1.0  ████████████████████ 100%  104 / 104 tickets done (tag v1.0.0 still to set)
+Release 2.0  ░░░░░░░░░░░░░░░░░░░░   0%    0 /  25 FOOD tickets (epic planned)
 Maintenance   0 open (MAINT 0 · REC 0)
 ```
 
-✅ Completed: **104** · 🚧 In progress: **0** · 📋 Open: **0**
+✅ Completed: **105** (104 + EPIC-FOOD-001) · 🚧 In progress: **0** · 📋 Open: **25** (release 2.0)
 
 ## 🧩 Feature Status
 
-| ✅ Live in 1.0 | 🗑 Not built (removed) |
+| ✅ Live in 1.0 | 🔲 Release 2.0 — Essen (in order) |
 |---|---|
-| ✅ Google login, one household, private data | Weekly summary, importance, checklists, notes, bulk actions |
-| ✅ Tenners: create, edit, Quick Add, complete, undo, archive, restore, history | Data export/import, archive, retention |
-| ✅ Scheduling: calendar, weekdays, snooze, skip, pause, vacation | Second environment, custom domain, extra security scans, MFA |
-| ✅ Household: members (also without login), categories, shared, rotating, handover | Onboarding, accessibility audit, English UI, week view |
-| ✅ Task catalog (34 Tenners), analytics page | Calendar, Strava, Garmin, automations |
-| ✅ Phone app: installable, swipe, offline read and complete | AI features, multiple households, SaaS, e-mail/Telegram |
-| ✅ Push per Tenner with „Erledigt“/„Später“; Alexa „Tenner Board“ with Echo Show | |
+| ✅ Google login, one household, private data | 🔲 Foundation: architecture, dishes, ingredients, family profile, 57-dish catalog (FOOD-001 – 004, 021) |
+| ✅ Tenners, scheduling, household, task catalog, analytics | 🔲 Weekly plan with rules, replace, choose/swap/lock, regenerate (FOOD-005 – 009, 022) |
+| ✅ Phone app with offline use | 🔲 Shopping list, dish editor, nutrition, cost, photos (FOOD-014, 010 – 013) |
+| ✅ Push per Tenner with „Erledigt“/„Später“ | 🔲 Morning push, „Was gibt es heute?“, Echo Show widget, calendar feed (FOOD-016 – 018, 015) |
+| ✅ Alexa „Tenner Board“ with Echo Show | 🔲 History, feedback, food analytics (FOOD-023, 019); release (FOOD-025) |
 
-Release overview with figures and diagrams: [`docs/release-1.0/README.md`](docs/release-1.0/README.md) · [`CHANGELOG.md`](CHANGELOG.md)
+Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Release 2.0 plan: [`docs/release-2.0/README.md`](docs/release-2.0/README.md) · AI stays out of 2.0 (FOOD-020, FOOD-024 are evaluations).
 
 ## 💰 Cost Overview
 
@@ -44,6 +42,7 @@ Release overview with figures and diagrams: [`docs/release-1.0/README.md`](docs/
 |---|---|---|
 | 2 (today, one household) | **< $0.20** | free tiers; up to 11 alarms (~$0.10 beyond the free 10) |
 | 100 / 10,000 | n/a | would need multi-household support, which is not planned |
+| Release 2.0 | **+ < $0.10** | one more table, small image bucket; no AI |
 
 🛡 Budget: **$5 / month** with e-mail alerts. Throttling caps abuse at about **$2–3 per day**.
 
@@ -59,29 +58,30 @@ Release overview with figures and diagrams: [`docs/release-1.0/README.md`](docs/
 
 ## 🔐 Security
 
-🟢 **No critical findings.** Unchanged by this release (documentation and version only).
+🟢 **No critical findings in the code.** This PR changes documentation only.
 
-⚠ Worth your attention: open Google sign-up (TD-020) · linked Alexa account has your full rights (TD-035) · push buttons work for 24 h for whoever sees the notification · manual checks still open (S3 public-access block, throttling burst test, [`docs/security.md`](docs/security.md#manual-verifications)).
+⚠ Worth your attention: **the original meta ticket put family names, the children's birth years and an allergy into the public repository** (Git history of `main`); removing it needs a history rewrite — your decision · open Google sign-up (TD-020) · linked Alexa account has your full rights (TD-035) · push buttons work for 24 h for whoever sees the notification · manual checks still open (S3 public-access block, throttling burst test, [`docs/security.md`](docs/security.md#manual-verifications)).
 
 ## 🏛 Architecture Health
 
 | | |
 |---|---|
 | **ADRs** | 6 accepted, **0 open** ([`docs/decisions/`](docs/decisions/)) |
-| **Pending decisions (yours)** | 1. Keep open Google sign-up? (TD-020) · 2. Accept or change the codename „Grundstein“ and the slogan |
+| **Pending decisions (yours)** | 1. Keep open Google sign-up? (TD-020) · 2. Six release 2.0 decisions (EPIC-FOOD-001) · 3. ADR 0007 meal planning comes with FOOD-001 |
 | **Open risks** | Backup restore untested (TD-039) · production only (TD-040) · Alexa widget/notification shapes unverified until first use (TD-036) |
 
 ## 🎯 Recommended Next Actions
 
-1. **Merge this PR** and check that the deploy is green.
-2. **Tag and publish:** `v1.0.0` on `main` and a GitHub release (commands in `docs/release-1.0/hotfix/release001.md`), or ask me to do it.
-3. **If still open:** push setup (README → Browser push), catalog import, „Push aktivieren“ on each phone.
-4. **Consider one maintenance ticket:** a one-hour restore test (TD-039) is the cheapest way to remove the biggest operational risk.
+1. **Merge this PR.**
+2. **Decide on the family data in the public history:** keep it, or have it removed with a history rewrite (I explain the impact first).
+3. **Answer the six decisions** in [EPIC-FOOD-001](docs/release-2.0/metaticket.md#owner-decisions-needed); defaults are written down, so work can start anyway.
+4. **Start FOOD-001** (architecture and ADR 0007), then the foundation block.
+5. **Still open from 1.0:** tag `v1.0.0` and GitHub release (`docs/release-1.0/hotfix/release001.md`).
 
 ---
 
 ## ℹ About this dashboard
 
-- **Sources:** the ticket files in `docs/release-1.0/` (frozen) and `docs/backlog/` (maintenance; a ticket counts as done when it has an "Implementation Status" section), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (28 deploy runs, the last five green, incl. the merge of PR #30).
-- **Counting:** 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets (REPORTING-001/002, BACKLOG-001 – 003, CLEANUP-001, RELEASE-001); owner inputs in `docs/release-1.0/human/` and planning files with other names are not counted. Debt levels are an assessment for this dashboard.
+- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (maintenance; a ticket counts as done when it has an "Implementation Status" section), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (30 deploy runs, the last five green, incl. the merge of PR #31).
+- **Counting:** release 2.0: 25 FOOD tickets open, the epic EPIC-FOOD-001 done (backlog generated). Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets (REPORTING-001/002, BACKLOG-001 – 003, CLEANUP-001, RELEASE-001); owner inputs in `docs/release-1.0/human/` and planning files with other names are not counted. Debt levels are an assessment for this dashboard.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).
