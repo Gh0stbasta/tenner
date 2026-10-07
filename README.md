@@ -5,10 +5,16 @@ recurring responsibilities through small, ten-minute tasks ("Tenners").
 
 > If something can be improved in 10 minutes, do a Tenner.
 
+> **Release 1.0.0 (2026-10-07). The project is feature-complete and in maintenance:** only maintenance work and
+> user recommendations are taken on.
+
+- **Release 1.0 overview:** [`docs/release-1.0/README.md`](docs/release-1.0/README.md) · Changelog:
+  [`CHANGELOG.md`](CHANGELOG.md)
 - **Project status at a glance:** [`dashboard.md`](dashboard.md)
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
-- Roadmap: [`docs/roadmap.md`](docs/roadmap.md)
-- Backlog: [`docs/backlog/README.md`](docs/backlog/README.md)
+- Roadmap (closed): [`docs/roadmap.md`](docs/roadmap.md)
+- Maintenance backlog: [`docs/backlog/README.md`](docs/backlog/README.md) · release 1.0 tickets:
+  [`docs/release-1.0/`](docs/release-1.0/)
 - Technical debt: [`docs/technical-debt.md`](docs/technical-debt.md)
 
 ## Current State
@@ -354,6 +360,18 @@ AWS CloudShell (needs `dynamodb:Scan` and `dynamodb:UpdateItem` on `tenner-tenne
 python3 scripts/backfill_frequency_unit.py           # dry run: lists affected Tenners
 python3 scripts/backfill_frequency_unit.py --apply   # conditional, idempotent writes
 ```
+
+### Releases
+
+Every merge to `main` deploys to production. A release adds a version on top of that (RELEASE-001):
+
+1. Set the version in `backend/`, `frontend/` and `alexa/` (`npm version <x.y.z> --no-git-tag-version`) and add the
+   entry to [`CHANGELOG.md`](CHANGELOG.md), in the pull request.
+2. After the merge, tag the merge commit and push the tag:
+   `git fetch origin main && git tag -a v<x.y.z> -m "Tenner <x.y.z>" origin/main && git push origin v<x.y.z>`.
+3. Create the GitHub release for the tag with the changelog entry as text.
+
+Fixes are patch releases (`1.0.x`), accepted user recommendations minor releases (`1.x.0`).
 
 ### Rollback
 

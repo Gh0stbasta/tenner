@@ -1,12 +1,12 @@
 # Tenner Roadmap
 
-This roadmap was produced by the backlog gap analysis in [META-001](meta-ticket.md).
-The full ticket index is in [`backlog/README.md`](backlog/README.md).
+This roadmap was produced by the backlog gap analysis in [META-001](release-1.0/meta-ticket.md).
+The full ticket index is in [`release-1.0/backlog/README.md`](release-1.0/backlog/README.md).
 
 > **Status (2026-10-07): closed with release 1.0.** Phase 1 (MVP) and the Phase 2 groups the owner wanted are
 > implemented and live. On 2026-10-07 the owner removed every remaining open ticket (BACKLOG-003) and moved the
 > project to maintenance and user recommendations. Nothing below is planned any more; the phases are kept as the
-> record of how release 1.0 was built. The release overview is in the release 1.0 notes.
+> record of how release 1.0 was built. Release overview: [`release-1.0/README.md`](release-1.0/README.md).
 ---
 
 ## 1. Gap Analysis
@@ -95,7 +95,7 @@ Removed on 2026-10-06 by the owner (BACKLOG-001, BACKLOG-002): e-mail and Telegr
 Removed on 2026-10-07 by the owner (BACKLOG-003): all remaining Phase 2 groups (weekly summary, productivity,
 operations and observability extensions, data export/import, environments and custom domain, security scanning,
 UX extensions, integrations, AI) and all of Phase 3. See
-[`backlog/README.md`](backlog/README.md#removed-tickets).
+[`release-1.0/backlog/README.md`](release-1.0/backlog/README.md#removed-tickets).
 
 ### Phase 3 — Long-Term
 

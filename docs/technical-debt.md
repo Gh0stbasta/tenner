@@ -2,7 +2,7 @@
 
 > **Since release 1.0 (2026-10-07, BACKLOG-003):** no feature tickets are planned. Ticket IDs in the "Suggested
 > Improvement" and "Related Work" sections name the change that would fix the debt; removed tickets are listed in
-> [`backlog/README.md`](backlog/README.md#removed-tickets). Fixing a debt item now starts with a maintenance ticket.
+> [`release-1.0/backlog/README.md`](release-1.0/backlog/README.md#removed-tickets). Fixing a debt item now starts with a maintenance ticket.
 
 ## TD-001: Duplicate ticket file for TICKET-003 (resolved)
 
@@ -35,7 +35,11 @@ META-001, TICKET-003, TICKET-017
 
 ---
 
-## TD-002: Inconsistent backlog layout and naming conventions
+## TD-002: Inconsistent backlog layout and naming conventions (resolved)
+
+> Resolved by RELEASE-001 (2026-10-07): the old layout is frozen as the release 1.0 archive in
+> `docs/release-1.0/backlog/`; the maintenance backlog `docs/backlog/` has one convention (`maintenance/` and
+> `recommendations/`, `ticketNNN.md`), documented in its README and in `CLAUDE.md`.
 
 ### Description
 

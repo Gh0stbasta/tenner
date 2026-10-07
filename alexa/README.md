@@ -1,7 +1,7 @@
 # Tenner Alexa Skill
 
 German (de-DE) Alexa custom skill "Tenner" ([ADR 0005](../docs/decisions/0005-alexa-platform.md), Alexa backlog
-[`docs/backlog/alexa/`](../docs/backlog/alexa/)). This folder is its own npm package, next to `backend/` and
+[`docs/release-1.0/backlog/alexa/`](../docs/release-1.0/backlog/alexa/)). This folder is its own npm package, next to `backend/` and
 `frontend/`; Terraform for the skill Lambda lives in [`terraform/alexa.tf`](../terraform/alexa.tf).
 
 **Current state (ALEXA-008):** Alexa notifications and reminders, Echo Show home-screen widget (ALEXA-007), plus daily briefing („starte meinen Tag“, also from an Alexa routine), Echo Show
@@ -60,7 +60,7 @@ tenner-notifier (every 15 min) ── day start in the household timezone / pend
   (README → "Secrets": `/tenner/prod/alexa/lwa-client-id`, `/tenner/prod/alexa/lwa-client-secret`).
 
 **Spike (owner, manual, 1 day):** install the dev-stage skill's widget on a household Echo Show (de-DE), push once,
-and record in `docs/backlog/alexa/ticket007.md`: devices, sizes, update latency, behavior after reboot and with
+and record in `docs/release-1.0/backlog/alexa/ticket007.md`: devices, sizes, update latency, behavior after reboot and with
 Alexa+. The widget package format and the Data Store request shape are taken from the documentation as of
 2026-10 and are verified there (TD-036).
 
