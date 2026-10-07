@@ -1427,6 +1427,68 @@ EventBridge rule rate(15 minutes) ──► Lambda tenner-notifier (backend/src/
   `NOTIFICATIONS_ENABLED`). EventBridge rule instead of EventBridge Scheduler (no extra invocation role).
   Cost: ~2,900 invocations per month, within the free tier.
 
+## Meal Planning (ADR 0007, release 2.0)
+
+Weekly lunch and dinner plans from the household's dishes and rules (EPIC-FOOD-001). Deterministic, no AI.
+Built ticket by ticket (`docs/release-2.0/README.md`); this section describes what exists.
+
+```text
+Web app /essen ──► tenner-api (routes /meals/*) ──► backend/src/meals/ ──► DynamoDB tenner-meals
+Notifier (FOOD-006/016) ──────────────────────────► same services
+Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
+```
+
+- **Table `tenner-meals`** (FOOD-001): partition key `tenantId`, sort key `itemKey`; item kinds `DISH#<id>`,
+  `INGREDIENT#<id>`, `PROFILE`, `PLAN#<weekStart>`, `LIST#<weekStart>`. On-demand, encrypted, PITR, deletion
+  protection; TTL attribute `expiresAt` for old plans. Sort keys are built only in `backend/src/meals/keys.ts`.
+- **Store** (`backend/src/meals/repositories/meals-store.ts`): get, prefix query, put. Every item has a `version`;
+  a new item must not exist, an update must name the stored version (409 `CONCURRENT_MODIFICATION` otherwise).
+  No deletes (archiving is a flag).
+- **Access:** the API role reads and writes the table with GetItem, PutItem, UpdateItem and Query (`terraform/iam.tf`);
+  the API receives the name as `MEALS_TABLE`. Without it the meal routes answer 503.
+- **Ingredients** (FOOD-021): catalog in code, household ingredients and changes to catalog values as
+  `INGREDIENT#<id>`; merged on read.
+- **Dishes** (FOOD-002): `DISH#<uuid>`; vegetarian, tags, protein sources and base ingredients are derived from the
+  current ingredients on every read; archive instead of delete.
+- **Family food profile** (FOOD-004): one `PROFILE` item with eaters and household rules; defaults reproduce the
+  owner's rules. `eatersAt(profile, weekday, slot)` is the one place that says who eats a meal (weekday lunch: adults).
+- **Rules** (FOOD-005, `backend/src/meals/planner/rules.ts`): pure functions over a week of `PlannedMeal`s.
+  `dishViolations` (one dish at one meal), `weekViolations` (across the week), `checkWeek`, `checkSlot`, `score`.
+  Each violation has a rule ID, `HARD`/`SOFT`, the affected slots and a German message.
+
+  | Rule | Check |
+  |---|---|
+  | SLOT | dish offered for lunch/dinner |
+  | R1 – R3 | allergies, vegetarian (exceptions or variant), dislikes — only for the eaters of that meal |
+  | R4 | active minutes ≤ limit |
+  | R5 | poultry only in the allowed meals, at most n per week |
+  | R6 | burgers at most n per week |
+  | R7 | each limited protein form once per week |
+  | R8 | no base ingredient twice a day |
+  | R9 | weekday lunches light |
+  | R10 | soft: dinners warm and filling |
+  | R11 | salad lunches: soft above the limit, hard above twice the limit |
+  | R12 | no dish or group twice a week (hard); last week's dishes (soft) |
+  | R13 | family-friendly only |
+
+- **Planner** (FOOD-006, `backend/src/meals/planner/planner.ts`): deterministic for a stored seed (Mulberry32);
+  candidates per meal from the dish rules, depth-first search with backtracking (most constrained meal first, at most
+  4,000 steps per attempt), six attempts with derived seeds, best `score` of a complete plan wins; otherwise a greedy
+  fill leaves meals empty with a reason. Never accepts a hard violation.
+- **Plans** (`services/meal-plan.service.ts`): `PLAN#<weekStart>` with seed, `generatedAt`, 14 slots
+  (`dishId`, `locked`, `source`, `status`, `emptyReason`) and TTL `expiresAt` (≈ 13 months). Current and next week
+  are created on first read (conditional write) and by the notifier on every scheduled run (`MealPlans` statement in
+  `terraform/notifier.tf`, failures logged as `MealPlansFailed`, never blocking notifications). Nothing is planned
+  while the household has no active dishes or no eaters, because the plan would ignore allergies.
+- **Plan changes** (only for today and later, optimistic locking on the plan's `version`): replace (FOOD-007) picks
+  the best-scoring dish that keeps every hard rule (`source: AUTO`); choose and swap by hand (FOOD-022) set
+  `source: MANUAL`, `locked: true` and may break rules on purpose (returned as violations), except allergy (R1) and
+  vegetarian (R2) conflicts, which need `confirm: true` (409 `CONFIRMATION_REQUIRED`). Regenerating a week
+  (FOOD-008) replans with a new seed and passes locked, manual, cooked and past meals to the planner as fixed. Undo is
+  done by the client with the same endpoints (regenerate: `restore` with the previous dishes), no server-side history.
+- **Security:** same JWT authorizer and tenant isolation as all routes; allergies in the profile are never logged.
+- **Cost:** within the DynamoDB free tier.
+
 ## Smart Scheduling
 
 Examples:

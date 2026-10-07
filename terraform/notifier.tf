@@ -95,6 +95,13 @@ data "aws_iam_policy_document" "notifier" {
     resources = [aws_dynamodb_table.tenners.arn, "${aws_dynamodb_table.tenners.arn}/index/*"]
   }
 
+  # FOOD-006: the notifier prepares the current and next week's meal plan (reads dishes and profile, writes plans).
+  statement {
+    sid       = "MealPlans"
+    actions   = ["dynamodb:GetItem", "dynamodb:Query", "dynamodb:PutItem"]
+    resources = [aws_dynamodb_table.meals.arn]
+  }
+
   # ALEXA-007/008: LWA client of the skill (exact parameters only; aws/ssm needs no KMS statement) and removal of
   # Alexa accounts Amazon no longer accepts (household item update).
   dynamic "statement" {
@@ -169,6 +176,7 @@ resource "aws_lambda_function" "notifier" {
       HISTORY_TABLE        = aws_dynamodb_table.history.name
       HOUSEHOLDS_TABLE     = aws_dynamodb_table.households.name
       NOTIFICATIONS_TABLE  = aws_dynamodb_table.notifications[0].name
+      MEALS_TABLE          = aws_dynamodb_table.meals.name # FOOD-006
       APPLICATION_TIMEZONE = var.application_timezone
       HOUSEHOLD_TENANT_ID  = local.household_tenant_id
       APP_URL              = "https://${aws_cloudfront_distribution.frontend.domain_name}" # deep links (NOTIFICATION-003)

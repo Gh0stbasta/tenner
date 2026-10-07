@@ -43,6 +43,9 @@ describe("offline cache persistence (MOBILE-003)", () => {
     expect(shouldPersistQuery({ queryKey: ["dashboard"], state: state("error") })).toBe(false);
     expect(shouldPersistQuery({ queryKey: ["analytics", "summary", {}], state: state("success") })).toBe(false);
     expect(shouldPersistQuery({ queryKey: ["household", "alexa"], state: state("success") })).toBe(false);
+    // FOOD-009: meal plans offline, but not the food profile with allergies.
+    expect(shouldPersistQuery({ queryKey: ["mealPlans", "current"], state: state("success") })).toBe(true);
+    expect(shouldPersistQuery({ queryKey: ["meals", "profile"], state: state("success") })).toBe(false);
   });
 
   it("stores, restores and removes the client", async () => {

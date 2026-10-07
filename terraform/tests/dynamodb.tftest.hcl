@@ -53,6 +53,16 @@ run "tables_use_tenant_partitioning" {
     condition     = aws_dynamodb_table.households.name == "tenner-households" && aws_dynamodb_table.households.hash_key == "tenantId" && aws_dynamodb_table.households.range_key == null
     error_message = "tenner-households must be keyed by tenantId only (one item per household, SCHEDULING-008)."
   }
+
+  assert {
+    condition     = aws_dynamodb_table.meals.name == "tenner-meals" && aws_dynamodb_table.meals.hash_key == "tenantId" && aws_dynamodb_table.meals.range_key == "itemKey"
+    error_message = "tenner-meals must use tenantId/itemKey as primary key (FOOD-001, ADR 0007)."
+  }
+
+  assert {
+    condition     = aws_dynamodb_table.meals.ttl[0].attribute_name == "expiresAt" && aws_dynamodb_table.meals.ttl[0].enabled
+    error_message = "tenner-meals must expire old plans through the expiresAt TTL attribute."
+  }
 }
 
 run "tables_are_protected_and_on_demand" {
@@ -60,7 +70,7 @@ run "tables_are_protected_and_on_demand" {
 
   assert {
     condition = alltrue([
-      for t in [aws_dynamodb_table.tenners, aws_dynamodb_table.history, aws_dynamodb_table.households] :
+      for t in [aws_dynamodb_table.tenners, aws_dynamodb_table.history, aws_dynamodb_table.households, aws_dynamodb_table.meals] :
       t.billing_mode == "PAY_PER_REQUEST" && t.point_in_time_recovery[0].enabled && t.server_side_encryption[0].enabled && t.deletion_protection_enabled
     ])
     error_message = "Tables must be on-demand, encrypted, with PITR and deletion protection."

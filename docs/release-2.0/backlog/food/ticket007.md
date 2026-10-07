@@ -96,31 +96,50 @@ cd frontend && npm run lint && npm run build && npm test
 
 # Acceptance Criteria
 
-- [ ] A single meal can be replaced in one action
-- [ ] Replacement respects all rules of the week
-- [ ] Clear message when nothing fits
-- [ ] Undo possible
-- [ ] Tests passing
+- [x] A single meal can be replaced in one action
+- [x] Replacement respects all rules of the week
+- [x] Clear message when nothing fits
+- [x] Undo possible
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
 # Assumptions
 
 - Replacing does not re-plan other slots; if the week has no room, the user picks by hand (FOOD-022).
+- **Undo through the same endpoint:** `{ "dishId": … }` puts the previous dish back (checked against the hard rules),
+  so undo works before FOOD-022 exists; no server-side history.
+- **Choice:** best `score` of the week with the candidate (soft rules, favorites, last week), ties by name; the
+  rejected dishes of the session make repeated taps cycle.
+- **Error codes:** `NO_ALTERNATIVE` and `RULE_VIOLATION` (409), `MEAL_IN_PAST` (400) instead of the ticket's generic
+  400 for past slots.
+- **Slot IDs in URLs:** `#` is sent as `%23`; the handler decodes it if API Gateway does not.
 
 ---
 
 # Out of Scope
 
 - Voice replacement via Alexa (possible later via FOOD-017).
+
+---
+
+# Implementation Status
+
+Done (2026-10-07).
+
+- Backend: `MealPlanService.replaceMeal` (`backend/src/meals/services/meal-plan.service.ts`), handler
+  `replaceMealHandler` (`handlers/plans.ts`), route `POST /meals/plans/{weekStart}/slots/{slotId}/replace`.
+- Frontend: meal menu `MealActions.tsx`, „Anderes Gericht“ with undo in `MealPlanPage.tsx`, `useReplaceMeal`.
+- Tests: `backend/tests/meals-plans.test.ts` (replace, cycle, undo, no alternative, past, conflict), route test,
+  `frontend/src/features/meals/MealPlanPage.test.tsx`.

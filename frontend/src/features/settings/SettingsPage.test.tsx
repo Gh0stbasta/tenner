@@ -281,7 +281,8 @@ describe("SettingsPage", () => {
     );
     expect(screen.getByRole("combobox", { name: "Zuständig für neue Tenner" })).toHaveTextContent("Ich selbst");
     expect(loadPreferences()).toEqual(DEFAULT_PREFERENCES);
-  });
+    // Two dialogs on the full settings page (incl. the meal sections) take ~3.5 s alone, more in the full run.
+  }, 15_000);
 
   it("responsive layout: controls use the full width on small screens", async () => {
     renderWithProviders(<SettingsPage />);

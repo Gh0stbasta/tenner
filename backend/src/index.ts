@@ -6,6 +6,44 @@
 
 import { AnalyticsService } from "./analytics/index.js";
 import {
+  createMealServices,
+  getMealPlanHandler,
+  replaceMealHandler,
+  mealOptionsHandler,
+  chooseMealHandler,
+  swapMealsHandler,
+  regenerateWeekHandler,
+  type GetMealPlan,
+  type ReplaceMeal,
+  type MealOptions,
+  type ChooseMeal,
+  type SwapMeals,
+  type RegenerateWeek,
+  importMealCatalogHandler,
+  type ImportMealCatalog,
+  getFoodProfileHandler,
+  updateFoodProfileHandler,
+  type GetFoodProfile,
+  type UpdateFoodProfile,
+  archiveDishHandler,
+  createDishHandler,
+  getDishHandler,
+  listDishesHandler,
+  restoreDishHandler,
+  updateDishHandler,
+  type ArchiveDish,
+  type CreateDish,
+  type GetDish,
+  type ListDishes,
+  type UpdateDish,
+  createIngredientHandler,
+  listIngredientsHandler,
+  updateIngredientHandler,
+  type CreateIngredient,
+  type ListIngredients,
+  type UpdateIngredient,
+} from "./meals/index.js";
+import {
   alexaContextHandler,
   linkAlexaSpeakerHandler,
   registerAlexaUserHandler,
@@ -180,6 +218,24 @@ export interface Dependencies {
   readonly analyticsHabits: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsHabitsResponse>;
   readonly analyticsTime: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsTimeResponse>;
   readonly analyticsHabit: (tenantId: string, tennerId: string, request: AnalyticsPeriodRequest) => Promise<AnalyticsHabitResponse>;
+  readonly listIngredients: ListIngredients;
+  readonly createIngredient: CreateIngredient;
+  readonly updateIngredient: UpdateIngredient;
+  readonly listDishes: ListDishes;
+  readonly getDish: GetDish;
+  readonly createDish: CreateDish;
+  readonly updateDish: UpdateDish;
+  readonly archiveDish: ArchiveDish;
+  readonly restoreDish: ArchiveDish;
+  readonly getFoodProfile: GetFoodProfile;
+  readonly updateFoodProfile: UpdateFoodProfile;
+  readonly importMealCatalog: ImportMealCatalog;
+  readonly getMealPlan: GetMealPlan;
+  readonly replaceMeal: ReplaceMeal;
+  readonly mealOptions: MealOptions;
+  readonly chooseMeal: ChooseMeal;
+  readonly swapMeals: SwapMeals;
+  readonly regenerateWeek: RegenerateWeek;
 }
 
 /** Per-request context passed to route handlers. */
@@ -270,6 +326,25 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
     const tennerId = validate(tennerIdSchema, event.pathParameters?.tennerId);
     return analyticsHandler("habit", analyticsPeriodSchema, event, identity.tenantId, (tenantId, request) => deps.analyticsHabit(tenantId, tennerId, request), logger);
   },
+  // Meal planning (release 2.0).
+  "GET /meals/ingredients": ({ deps, identity }) => listIngredientsHandler(identity.tenantId, deps.listIngredients),
+  "POST /meals/ingredients": ({ event, deps, logger, identity }) => createIngredientHandler(event, identity, deps.createIngredient, logger),
+  "PUT /meals/ingredients/{ingredientId}": ({ event, deps, logger, identity }) => updateIngredientHandler(event, identity, deps.updateIngredient, logger),
+  "GET /meals/dishes": ({ event, deps, identity }) => listDishesHandler(event, identity.tenantId, deps.listDishes),
+  "POST /meals/dishes": ({ event, deps, logger, identity }) => createDishHandler(event, identity, deps.createDish, logger),
+  "GET /meals/dishes/{dishId}": ({ event, deps, identity }) => getDishHandler(event, identity.tenantId, deps.getDish),
+  "PUT /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => updateDishHandler(event, identity, deps.updateDish, logger),
+  "DELETE /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => archiveDishHandler(event, identity, deps.archiveDish, logger),
+  "POST /meals/dishes/{dishId}/restore": ({ event, deps, logger, identity }) => restoreDishHandler(event, identity, deps.restoreDish, logger),
+  "GET /meals/profile": ({ deps, identity }) => getFoodProfileHandler(identity.tenantId, deps.getFoodProfile),
+  "PUT /meals/profile": ({ event, deps, logger, identity }) => updateFoodProfileHandler(event, identity, deps.updateFoodProfile, logger),
+  "POST /meals/catalog": ({ event, deps, logger, identity }) => importMealCatalogHandler(event, identity, deps.importMealCatalog, logger),
+  "GET /meals/plans/{weekStart}": ({ event, deps, identity }) => getMealPlanHandler(event, identity.tenantId, deps.getMealPlan),
+  "POST /meals/plans/{weekStart}/slots/{slotId}/replace": ({ event, deps, logger, identity }) => replaceMealHandler(event, identity, deps.replaceMeal, logger),
+  "GET /meals/plans/{weekStart}/slots/{slotId}/options": ({ event, deps, identity }) => mealOptionsHandler(event, identity.tenantId, deps.mealOptions),
+  "PUT /meals/plans/{weekStart}/slots/{slotId}": ({ event, deps, logger, identity }) => chooseMealHandler(event, identity, deps.chooseMeal, logger),
+  "POST /meals/plans/{weekStart}/swap": ({ event, deps, logger, identity }) => swapMealsHandler(event, identity, deps.swapMeals, logger),
+  "POST /meals/plans/{weekStart}/regenerate": ({ event, deps, logger, identity }) => regenerateWeekHandler(event, identity, deps.regenerateWeek, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -284,6 +359,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     tables: config.tables ?? "not configured",
     onboarding: config.onboarding ?? "not configured",
     alexa: config.alexaClientId !== undefined ? "configured" : "not configured",
+    meals: config.mealsTable ?? "not configured",
   });
   const tables = config.tables;
   const notConfigured = async (): Promise<never> => {
@@ -373,6 +449,22 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
       : undefined;
   const memberDeactivationService =
     householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
+  // Meal planning (FOOD-001, ADR 0007): all meal services on tenner-meals.
+  const meals = config.mealsTable
+    ? createMealServices({
+        client: getDocumentClient(),
+        tableName: config.mealsTable,
+        membersOf,
+        settingsOf: (tenantId) => settingsOf(tenantId),
+        clock: systemClock,
+        ids: uuidGenerator,
+      })
+    : undefined;
+  const ingredientService = meals?.ingredients;
+  const dishService = meals?.dishes;
+  const profileService = meals?.profiles;
+  const mealCatalogImportService = meals?.catalog;
+  const mealPlanService = meals?.plans;
 
   return {
     config,
@@ -435,6 +527,24 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     analyticsTime: analyticsService ? (tenantId, request) => analyticsService.time(tenantId, request) : notConfigured,
     analyticsHabits: analyticsService ? (tenantId, request) => analyticsService.habits(tenantId, request) : notConfigured,
     analyticsHabit: analyticsService ? (tenantId, tennerId, request) => analyticsService.habit(tenantId, tennerId, request) : notConfigured,
+    listIngredients: ingredientService ? (tenantId) => ingredientService.listIngredients(tenantId) : notConfigured,
+    createIngredient: ingredientService ? (identity, request) => ingredientService.createIngredient(identity, request) : notConfigured,
+    updateIngredient: ingredientService ? (identity, ingredientId, request) => ingredientService.updateIngredient(identity, ingredientId, request) : notConfigured,
+    listDishes: dishService ? (tenantId, query) => dishService.listDishes(tenantId, query) : notConfigured,
+    getDish: dishService ? (tenantId, dishId) => dishService.getDish(tenantId, dishId) : notConfigured,
+    createDish: dishService ? (identity, request) => dishService.createDish(identity, request) : notConfigured,
+    updateDish: dishService ? (identity, dishId, request) => dishService.updateDish(identity, dishId, request) : notConfigured,
+    archiveDish: dishService ? (identity, dishId) => dishService.archiveDish(identity, dishId) : notConfigured,
+    restoreDish: dishService ? (identity, dishId) => dishService.restoreDish(identity, dishId) : notConfigured,
+    getMealPlan: mealPlanService ? (tenantId, week) => mealPlanService.getPlan(tenantId, week) : notConfigured,
+    replaceMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.replaceMeal(identity, week, slotId, request) : notConfigured,
+    mealOptions: mealPlanService ? (tenantId, week, slotId) => mealPlanService.mealOptions(tenantId, week, slotId) : notConfigured,
+    chooseMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.chooseMeal(identity, week, slotId, request) : notConfigured,
+    swapMeals: mealPlanService ? (identity, week, request) => mealPlanService.swapMeals(identity, week, request) : notConfigured,
+    regenerateWeek: mealPlanService ? (identity, week, request) => mealPlanService.regenerateWeek(identity, week, request) : notConfigured,
+    importMealCatalog: mealCatalogImportService ? (identity, dryRun) => mealCatalogImportService.importCatalog(identity, dryRun) : notConfigured,
+    getFoodProfile: profileService ? (tenantId) => profileService.getProfile(tenantId) : notConfigured,
+    updateFoodProfile: profileService ? (identity, request) => profileService.updateProfile(identity, request) : notConfigured,
   };
 }
 

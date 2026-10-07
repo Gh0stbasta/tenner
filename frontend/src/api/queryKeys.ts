@@ -13,4 +13,13 @@ export const queryKeys = {
   alexa: ["household", "alexa"] as const,
   members: ["members"] as const,
   categories: ["categories"] as const,
+  /** Meal planning (release 2.0). */
+  meals: ["meals"] as const,
+  mealIngredients: ["meals", "ingredients"] as const,
+  mealProfile: ["meals", "profile"] as const,
+  /** Plans have their own root so only they are kept offline (MOBILE-003), not the profile with allergies. */
+  mealPlans: ["mealPlans"] as const,
+  mealPlan: (week: string) => ["mealPlans", week] as const,
+  /** Picker options of one meal (FOOD-022); not cached offline. */
+  mealOptions: (week: string, slotId: string) => ["meals", "options", week, slotId] as const,
 };

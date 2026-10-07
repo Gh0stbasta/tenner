@@ -40,6 +40,11 @@ describe("AppRoutes", () => {
     expect(screen.getByRole("heading", { level: 1, name: title })).toBeInTheDocument();
   });
 
+  it("renders /essen (FOOD-009)", async () => {
+    renderRoutes("/essen");
+    expect(await screen.findByRole("heading", { level: 1, name: "Essen" })).toBeInTheDocument();
+  });
+
   it("shows a not-found page for unknown routes", () => {
     renderRoutes("/unbekannt");
     expect(screen.getByText("Seite nicht gefunden")).toBeInTheDocument();

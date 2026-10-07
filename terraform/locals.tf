@@ -39,56 +39,74 @@ locals {
   # API routes served by the tenner-api Lambda.
   api_routes = [
     "GET /health",
-    "POST /tenners",                                # TICKET-009
-    "GET /tenners",                                 # TICKET-010
-    "PUT /tenners/{tennerId}",                      # TICKET-011
-    "DELETE /tenners/{tennerId}",                   # TICKET-012 (soft delete)
-    "POST /tenners/{tennerId}/complete",            # TICKET-013
-    "POST /tenners/{tennerId}/undo-completion",     # TICKET-014
-    "POST /tenners/{tennerId}/restore",             # TICKET-015
-    "GET /dashboard",                               # TICKET-016
-    "GET /tenners/{tennerId}",                      # TICKET-019
-    "GET /history",                                 # TICKET-020
-    "GET /tenners/{tennerId}/history",              # TICKET-020
-    "GET /onboarding",                              # HOTFIX-001 (signed in, no household needed)
-    "POST /onboarding/assignment",                  # HOTFIX-001
-    "GET /household",                               # SCHEDULING-008
-    "PUT /household",                               # SCHEDULING-008
-    "GET /analytics/summary",                       # ANALYTICS-001
-    "GET /analytics/trends",                        # ANALYTICS-002
-    "GET /analytics/users",                         # ANALYTICS-003
-    "GET /analytics/categories",                    # ANALYTICS-004
-    "GET /analytics/neglected",                     # ANALYTICS-006
-    "GET /analytics/balance",                       # ANALYTICS-007
-    "GET /analytics/time",                          # ANALYTICS-005
-    "GET /analytics/habits",                        # ANALYTICS-008
-    "GET /analytics/habits/{tennerId}",             # ANALYTICS-008
-    "POST /tenners/{tennerId}/snooze",              # SCHEDULING-003
-    "POST /tenners/{tennerId}/skip",                # SCHEDULING-004
-    "POST /tenners/{tennerId}/pause",               # SCHEDULING-005
-    "POST /tenners/{tennerId}/resume",              # SCHEDULING-005
-    "PUT /household/vacation",                      # SCHEDULING-005
-    "DELETE /household/vacation",                   # SCHEDULING-005
-    "POST /household/catalog",                      # DATA-008
-    "GET /users",                                   # HOUSEHOLD-ADMIN-001
-    "POST /users",                                  # HOUSEHOLD-ADMIN-001
-    "PUT /users/{userId}",                          # HOUSEHOLD-ADMIN-001
-    "POST /users/{userId}/deactivate",              # HOUSEHOLD-ADMIN-004
-    "POST /users/{userId}/reactivate",              # HOUSEHOLD-ADMIN-004
-    "POST /users/{userId}/handover",                # HOUSEHOLD-004
-    "DELETE /users/{userId}/handover",              # HOUSEHOLD-004
-    "GET /categories",                              # HOUSEHOLD-ADMIN-002
-    "POST /categories",                             # HOUSEHOLD-ADMIN-002
-    "GET /users/{userId}/notification-preferences", # NOTIFICATION-002
-    "PUT /users/{userId}/notification-preferences", # NOTIFICATION-002
-    "PUT /users/{userId}/push-subscription",        # NOTIFICATION-009
-    "DELETE /users/{userId}/push-subscription",     # NOTIFICATION-009
-    "POST /push-actions",                           # NOTIFICATION-011 (public, signed token)
-    "GET /household/alexa",                         # ALEXA-002
-    "PUT /household/alexa-speakers/{personId}",     # ALEXA-002
-    "DELETE /household/alexa-speakers/{personId}",  # ALEXA-002
-    "PUT /household/alexa-users/{alexaUserId}",     # ALEXA-007
-    "PUT /categories/{categoryId}",                 # HOUSEHOLD-ADMIN-002
+    "POST /tenners",                                        # TICKET-009
+    "GET /tenners",                                         # TICKET-010
+    "PUT /tenners/{tennerId}",                              # TICKET-011
+    "DELETE /tenners/{tennerId}",                           # TICKET-012 (soft delete)
+    "POST /tenners/{tennerId}/complete",                    # TICKET-013
+    "POST /tenners/{tennerId}/undo-completion",             # TICKET-014
+    "POST /tenners/{tennerId}/restore",                     # TICKET-015
+    "GET /dashboard",                                       # TICKET-016
+    "GET /tenners/{tennerId}",                              # TICKET-019
+    "GET /history",                                         # TICKET-020
+    "GET /tenners/{tennerId}/history",                      # TICKET-020
+    "GET /onboarding",                                      # HOTFIX-001 (signed in, no household needed)
+    "POST /onboarding/assignment",                          # HOTFIX-001
+    "GET /household",                                       # SCHEDULING-008
+    "PUT /household",                                       # SCHEDULING-008
+    "GET /analytics/summary",                               # ANALYTICS-001
+    "GET /analytics/trends",                                # ANALYTICS-002
+    "GET /analytics/users",                                 # ANALYTICS-003
+    "GET /analytics/categories",                            # ANALYTICS-004
+    "GET /analytics/neglected",                             # ANALYTICS-006
+    "GET /analytics/balance",                               # ANALYTICS-007
+    "GET /analytics/time",                                  # ANALYTICS-005
+    "GET /analytics/habits",                                # ANALYTICS-008
+    "GET /analytics/habits/{tennerId}",                     # ANALYTICS-008
+    "POST /tenners/{tennerId}/snooze",                      # SCHEDULING-003
+    "POST /tenners/{tennerId}/skip",                        # SCHEDULING-004
+    "POST /tenners/{tennerId}/pause",                       # SCHEDULING-005
+    "POST /tenners/{tennerId}/resume",                      # SCHEDULING-005
+    "PUT /household/vacation",                              # SCHEDULING-005
+    "DELETE /household/vacation",                           # SCHEDULING-005
+    "POST /household/catalog",                              # DATA-008
+    "GET /users",                                           # HOUSEHOLD-ADMIN-001
+    "POST /users",                                          # HOUSEHOLD-ADMIN-001
+    "PUT /users/{userId}",                                  # HOUSEHOLD-ADMIN-001
+    "POST /users/{userId}/deactivate",                      # HOUSEHOLD-ADMIN-004
+    "POST /users/{userId}/reactivate",                      # HOUSEHOLD-ADMIN-004
+    "POST /users/{userId}/handover",                        # HOUSEHOLD-004
+    "DELETE /users/{userId}/handover",                      # HOUSEHOLD-004
+    "GET /categories",                                      # HOUSEHOLD-ADMIN-002
+    "POST /categories",                                     # HOUSEHOLD-ADMIN-002
+    "GET /users/{userId}/notification-preferences",         # NOTIFICATION-002
+    "PUT /users/{userId}/notification-preferences",         # NOTIFICATION-002
+    "PUT /users/{userId}/push-subscription",                # NOTIFICATION-009
+    "DELETE /users/{userId}/push-subscription",             # NOTIFICATION-009
+    "POST /push-actions",                                   # NOTIFICATION-011 (public, signed token)
+    "GET /household/alexa",                                 # ALEXA-002
+    "PUT /household/alexa-speakers/{personId}",             # ALEXA-002
+    "DELETE /household/alexa-speakers/{personId}",          # ALEXA-002
+    "PUT /household/alexa-users/{alexaUserId}",             # ALEXA-007
+    "PUT /categories/{categoryId}",                         # HOUSEHOLD-ADMIN-002
+    "GET /meals/ingredients",                               # FOOD-021
+    "POST /meals/ingredients",                              # FOOD-021
+    "PUT /meals/ingredients/{ingredientId}",                # FOOD-021
+    "GET /meals/dishes",                                    # FOOD-002
+    "POST /meals/dishes",                                   # FOOD-002
+    "GET /meals/dishes/{dishId}",                           # FOOD-002
+    "PUT /meals/dishes/{dishId}",                           # FOOD-002
+    "DELETE /meals/dishes/{dishId}",                        # FOOD-002 (archive)
+    "POST /meals/dishes/{dishId}/restore",                  # FOOD-002
+    "GET /meals/profile",                                   # FOOD-004
+    "PUT /meals/profile",                                   # FOOD-004
+    "POST /meals/catalog",                                  # FOOD-003
+    "GET /meals/plans/{weekStart}",                         # FOOD-006
+    "POST /meals/plans/{weekStart}/slots/{slotId}/replace", # FOOD-007
+    "GET /meals/plans/{weekStart}/slots/{slotId}/options",  # FOOD-022
+    "PUT /meals/plans/{weekStart}/slots/{slotId}",          # FOOD-022
+    "POST /meals/plans/{weekStart}/swap",                   # FOOD-022
+    "POST /meals/plans/{weekStart}/regenerate",             # FOOD-008
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.
@@ -183,6 +201,8 @@ locals {
   history_table_name = "${local.name_prefix}-history"
   # Household settings, one item per tenant (SCHEDULING-008; extended by HOUSEHOLD-ADMIN-003).
   households_table_name = "${local.name_prefix}-households"
+  # Meal planning (FOOD-001, ADR 0007): dishes, ingredients, profile, plans and shopping lists per tenant.
+  meals_table_name = "${local.name_prefix}-meals"
 
   # Frontend hosting (TICKET-017).
   frontend_bucket_name       = "${local.name_prefix}-frontend-${var.environment}"

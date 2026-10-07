@@ -5,6 +5,7 @@ import { errorMessage } from "../../api/errorMessages";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { NoDashboardData } from "../../components/EmptyState";
 import { PageLoading } from "../../components/LoadingState";
+import { TodayMealsCard } from "../meals/TodayMealsCard";
 import { PageHeader } from "../../components/PageHeader";
 import { formatLongDate, formatMinutes, formatTennerCount } from "../../utils/format";
 import { RecentActivityWidget } from "../completions/RecentActivityWidget";
@@ -65,6 +66,7 @@ export function DashboardPage() {
       <PageHeader title="Heute" subtitle={headerSubtitle(data)} />
       <QuickAddTenner />
       <SummaryCards summary={data.summary} />
+      <TodayMealsCard />
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: sideColumn ? 8 : 12 }}>
           {data.summary.totalActionableCount === 0 && <NoDashboardData />}

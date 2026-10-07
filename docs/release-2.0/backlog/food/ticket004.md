@@ -123,22 +123,22 @@ cd frontend && npm run lint && npm run typecheck && npm run build && npm test
 
 # Acceptance Criteria
 
-- [ ] Allergies, preferences, dislikes, children and portion sizes can be stored per eater
-- [ ] Who eats weekday lunch, weekend lunch and dinner is stored (default: weekday lunch adults only)
-- [ ] Household rules editable with the owner's values as defaults
-- [ ] Health data never appears in logs or notifications
-- [ ] Tests passing
+- [x] Allergies, preferences, dislikes, children and portion sizes can be stored per eater
+- [x] Who eats weekday lunch, weekend lunch and dinner is stored (default: weekday lunch adults only)
+- [x] Household rules editable with the owner's values as defaults
+- [x] Health data never appears in logs or notifications
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
@@ -148,6 +148,13 @@ cd frontend && npm run lint && npm run typecheck && npm run build && npm test
   unrecognizable (EPIC-FOOD-001, decision 6), so there is no personal seed.
 - Attendance per meal type (decision 5): Monday – Friday lunch only the two adults, weekend lunch and every dinner
   all eaters. Defaults: weekday lunch = all adults, everything else = all eaters.
+- **Model details:** vegetarian exceptions are protein forms (e.g. `MINCE`, `SAUSAGE`); dislikes are split into tags
+  and ingredient IDs; likes are ingredient IDs and dish groups (groups get a UI once dishes are edited, FOOD-010).
+  Attendance stores explicit eater lists or `null` for the default.
+- **No birth dates:** adult/child and a portion factor only (child default 0.5).
+- **Whole-profile save:** `PUT /meals/profile` replaces the profile; the UI saves from two dialogs (person, rules)
+  and on removal. Versioning as for dishes (409 `CONCURRENT_MODIFICATION`).
+- **Member link:** optional, each member once; checked against all household members.
 
 ---
 
@@ -155,3 +162,17 @@ cd frontend && npm run lint && npm run typecheck && npm run build && npm test
 
 - Attendance for single days („Ein Erwachsener isst Mittwoch auswärts“); only the weekday/weekend pattern is stored.
 - Calorie targets per person.
+
+---
+
+# Implementation Status
+
+Done (2026-10-07).
+
+- Backend: `backend/src/meals/models/profile.ts` (defaults, `eatersAt`), `services/profile.service.ts`,
+  `handlers/profile.ts`, schema in `validators.ts`; routes `GET/PUT /meals/profile`.
+- Frontend: Settings → „Essen: Familienprofil“ (`frontend/src/features/meals/FoodProfileSettings.tsx`,
+  `EaterDialog.tsx`, `FoodRulesDialog.tsx`, `api.ts`, `labels.ts`, `eaters.ts`).
+- Tests: `backend/tests/meals-profile.test.ts`, route test incl. „no allergies in logs“,
+  `frontend/src/features/meals/FoodProfileSettings.test.tsx`.
+- Owner action after deploy: enter the family in Settings → „Essen: Familienprofil“.

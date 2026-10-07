@@ -72,7 +72,7 @@ Features own their components, hooks and API functions, so `components/` stays s
   failures into `ApiError` (`status`, `code`, `details`). Network failures have status 0.
 - **Server state:** TanStack Query. Queries retry transient failures (network, 429, 5xx) up to 3 times with
   exponential backoff; 4xx are not retried. Mutations are never retried automatically.
-- **Routing:** `/` redirects to `/dashboard`. `/tenners`, `/analytics` and `/settings` exist; unknown paths
+- **Routing:** `/` redirects to `/dashboard`. `/tenners`, `/essen` (FOOD-009), `/analytics` and `/settings` exist; unknown paths
   show a not-found page. CloudFront serves `index.html` for unknown paths (SPA fallback).
 - **Layout:** app bar, permanent side navigation from `md` (900 px). Below `md` (MOBILE-005): bottom navigation
   (Dashboard, Tenner, Auswertung, Einstellungen) and a floating Quick Add button within thumb reach; safe-area insets
@@ -130,6 +130,27 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   assigned skip the page automatically; if all members are taken the page shows "Kein freier Platz".
 - **Logout:** clears the tokens and opens the Cognito logout endpoint, which returns to the app.
 
+## Meal Plan (FOOD-009)
+
+- **Page `/essen`** (`src/features/meals/MealPlanPage.tsx`): „Diese Woche“ / „Nächste Woche“ (`GET /meals/plans/current|next`),
+  one card per day with lunch and dinner (`MealCard`: dish, active minutes, vegetarian or the vegetarian variant,
+  „Nichts geplant“ with the planner's reason, rule hints as chips). Today's card comes first and is highlighted
+  (device date). Without dishes or eaters a hint links to the settings.
+- **Meal menu** (`MealActions`, online and not in the past): „Anderes Gericht“ (FOOD-007) replaces the meal; repeated
+  use cycles through alternatives (rejected dishes are sent as `excludeDishIds`); the snackbar offers „Rückgängig“.
+  „Selbst wählen“ (FOOD-022, `MealPickerDialog`) lists every dish with search, those that fit all rules first and
+  the conflicts as chips (allergy and vegetarian in red); such a choice asks „Wirklich?“ and is sent again with
+  `confirm`. „Tauschen“ (`SwapMealDialog`) swaps with another meal of the week from today on. „Festlegen“ /
+  „Festlegung lösen“ toggles the lock (lock icon on the card). Choose and swap offer „Rückgängig“ (puts the previous
+  dish back / swaps back; the meals stay manual and locked). Picker options use the query key `meals/options` and are
+  not cached offline.
+- **„Woche neu planen“** (FOOD-008, online, button in the header): a confirmation names how many meals are replanned
+  and which future meals stay (locked, chosen by hand, cooked, past — `isKept`, same rule as the backend); the
+  snackbar offers „Rückgängig“, which sends the previous dishes of the changed meals as `restore`.
+- **Navigation:** „Essen“ between Tenner and Auswertung (side and bottom navigation).
+- **Dashboard:** „Heute essen wir“ (`TodayMealsCard`) with today's meals, hidden while there is no plan.
+- **Offline:** plans use the query root `mealPlans` and are kept in the offline cache; the food profile is not.
+
 ## Settings (FRONTEND-008)
 
 - Model and storage: `src/features/settings/preferences.ts` (`UserPreferences`, versioned envelope in
@@ -139,6 +160,12 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 - Consumers: Quick Add and the create dialog use the defaults; the dashboard hides upcoming, per-person,
   per-category and recent-activity sections when switched off (due today and overdue always show).
 - The current user is **not** selectable: it comes from the Google login (SECURITY-003/004).
+- **Essen: Familienprofil** (FOOD-004, `src/features/meals/FoodProfileSettings.tsx`): household-wide, stored on the
+  server (`GET/PUT /meals/profile`). People with adult/child, portion, vegetarian with exceptions, allergies (⚠),
+  dislikes and likes (`EaterDialog`); planning rules and who eats when (`FoodRulesDialog`; default: weekday lunch
+  only adults). Every change saves the whole profile.
+- **Essen: Gerichtekatalog** (FOOD-003, `src/features/meals/MealCatalogSettings.tsx`): „Katalog prüfen“ (dry run) →
+  „Jetzt importieren“ (`POST /meals/catalog`); safe to repeat.
 
 ## Installable App (MOBILE-001)
 
@@ -175,7 +202,7 @@ Tenner is a Progressive Web App: it can be added to the home screen and starts w
 
 ## Offline Reading (MOBILE-003)
 
-- **What it does:** the TanStack Query cache of the dashboard, Tenner list and detail, history, members and categories
+- **What it does:** the TanStack Query cache of the dashboard, Tenner list and detail, history, members, categories and meal plans (FOOD-009)
   is persisted in `localStorage` (key `tenner.offlineCache`, `src/features/offline/`). Offline, the app opens with
   the last known data; queries pause and refresh on reconnect.
 - **Age shown:** while offline or while the API is unreachable, the banner adds „Angezeigt wird der Stand von …“
@@ -185,7 +212,7 @@ Tenner is a Progressive Web App: it can be added to the home screen and starts w
 - **Offline session:** offline, a stored login opens the app even if the access token has expired; the login
   redirect and token refresh wait for the connection. Back online, an expired session is renewed silently (refresh
   token) before the app falls back to the login page. Without a stored login the app still asks for the login.
-- **Not persisted:** analytics, settings, notification preferences, Alexa links, onboarding.
+- **Not persisted:** analytics, settings, notification preferences, Alexa links, onboarding, the food profile (allergies), dishes and ingredients.
 - **Privacy:** Tenner titles, notes, due dates, member names and recent completions of the household stay on the
   device for up to 7 days (or until logout). Anyone with access to the unlocked device and browser profile can read
   them, as with the login tokens (ADR 0001).

@@ -118,21 +118,21 @@ cd backend && npm run lint && npm run typecheck && npm test
 
 # Acceptance Criteria
 
-- [ ] All owner rules (R1 – R13) implemented and parameterised by the profile
-- [ ] Every violation names the rule and the slots and has a German message
-- [ ] Hard and soft rules distinguished
-- [ ] Tests passing with 90% coverage
+- [x] All owner rules (R1 – R13) implemented and parameterised by the profile
+- [x] Every violation names the rule and the slots and has a German message
+- [x] Hard and soft rules distinguished
+- [x] Tests passing with 90% coverage
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
@@ -140,6 +140,14 @@ cd backend && npm run lint && npm run typecheck && npm test
 
 - „Hühnchen nur 1×“ means at most once, not exactly once (a week without chicken is valid).
 - Protein and base groups follow EPIC-FOOD-001 decisions 3 and 4; beef and pork count by form.
+- **Structural rule `SLOT`:** a dish is only valid at the meals it is offered for (e.g. Kaiserschmarrn lunch only).
+- **Eaters of the meal:** R1 – R3 check only the eaters present (attendance, FOOD-004), so a child's allergy does not
+  block a weekday lunch for the adults.
+- **Optional ingredients** do not trigger R1 – R3 (they can be left out).
+- **R2:** a dish suits a vegetarian if it is vegetarian, has a vegetarian variant, or all its protein forms are in the
+  eater's exceptions.
+- **Score weights** (soft): R10 −3, R11 −4, R12 last week −2, empty meal −20, favorite +1, 👎 −3, like +0.5 per eater.
+  Tuned in FOOD-006 if plans feel wrong.
 
 ---
 
@@ -147,3 +155,14 @@ cd backend && npm run lint && npm run typecheck && npm test
 
 - Nutrition targets as rules (only displayed, FOOD-012).
 - Budget limits as rules (only displayed, FOOD-013).
+
+---
+
+# Implementation Status
+
+Done (2026-10-07).
+
+- Engine: `backend/src/meals/planner/rules.ts`; documented in `docs/architecture.md` → "Meal Planning".
+- Tests: `backend/tests/meals-rules.test.ts` (positive and negative case per rule on the seed catalog and the family
+  profile as roles); test fixtures `catalogDishResponses()` and `familyProfile()` in `backend/tests/mocks/meals.ts`.
+  Coverage of `rules.ts`: 100 % lines, 97 % branches.

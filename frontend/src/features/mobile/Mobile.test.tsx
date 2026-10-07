@@ -150,7 +150,7 @@ describe("mobile navigation", () => {
       within(bottom)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Dashboard", "Tenner", "Auswertung", "Einstellungen"]);
+    ).toEqual(["Dashboard", "Tenner", "Essen", "Auswertung", "Einstellungen"]);
     expect(within(bottom).getByRole("link", { name: "Einstellungen" })).toHaveClass("Mui-selected");
   });
 

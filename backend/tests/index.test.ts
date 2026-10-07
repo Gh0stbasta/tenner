@@ -4,6 +4,8 @@ import { ConflictError, NotFoundError, PersistenceError, ValidationError } from 
 import { correlationIdOf, createDependencies, handler, route as routeEvent, type Dependencies } from "../src/index.js";
 import { toTennerResponse } from "../src/dto/index.js";
 import { DEFAULT_NOTIFICATION_PREFERENCES } from "../src/models/index.js";
+import { CATALOG_INGREDIENTS, DEFAULT_HOUSEHOLD_FOOD_RULES, EMPTY_FOOD_PROFILE, type DishResponse, type ResolvedIngredient } from "../src/meals/index.js";
+import { ApplicationError } from "../src/exceptions/index.js";
 import { authenticatedEvent, jwtClaims, mockLogger, tennerFixture, testConfig, TEST_IDENTITY } from "./mocks/index.js";
 
 /** Most tests exercise authenticated requests: the event carries the default test user's verified claims. */
@@ -38,6 +40,33 @@ const household = {
 };
 
 const PREFERENCES_RESPONSE = { preferences: DEFAULT_NOTIFICATION_PREFERENCES, channels: [], effectiveTimezone: "Europe/Berlin" };
+const INGREDIENT = { ...CATALOG_INGREDIENTS[0], source: "CATALOG", overridden: false } as ResolvedIngredient;
+const DISH_ID = "6f9619ff-8b86-4d11-b42d-00c04fc964ff";
+const DISH = {
+  dishId: DISH_ID,
+  name: "Onigiri",
+  category: "VEGETARIAN",
+  slots: ["LUNCH"],
+  lightness: "LIGHT",
+  temperature: "COLD",
+  ingredients: [{ ingredientId: "sushi-rice", quantity: 80, unit: "g", optional: false }],
+  activeMinutes: 15,
+  totalMinutes: 30,
+  familyFriendly: true,
+  isBurger: false,
+  favorite: false,
+  archived: false,
+  createdAt: "2026-10-07T10:00:00Z",
+  updatedAt: "2026-10-07T10:00:00Z",
+  isVegetarian: true,
+  tags: [],
+  optionalTags: [],
+  proteinSources: [],
+  baseTags: ["RICE"],
+  containsPoultry: false,
+  unknownIngredients: [],
+} as DishResponse;
+const EMPTY_PLAN = { weekStart: "2026-10-12", weekEnd: "2026-10-18", ready: false, setup: { hasDishes: false, hasEaters: false }, generatedAt: null, slots: [], violations: [] };
 const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [], alexaAccounts: 0 };
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
@@ -122,6 +151,24 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     updateCategory: vi.fn(async () => ({ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: true })),
     getOnboarding: vi.fn(async () => ({ assignedTo: null, members: [] })),
     assignHouseholdMember: vi.fn(async () => ({ response: { userId: "JULIA" as const }, group: "household:default:JULIA" })),
+    listIngredients: vi.fn(async () => [INGREDIENT]),
+    createIngredient: vi.fn(async () => INGREDIENT),
+    updateIngredient: vi.fn(async () => INGREDIENT),
+    listDishes: vi.fn(async () => [DISH]),
+    getDish: vi.fn(async () => DISH),
+    createDish: vi.fn(async () => DISH),
+    updateDish: vi.fn(async () => DISH),
+    archiveDish: vi.fn(async () => DISH),
+    restoreDish: vi.fn(async () => DISH),
+    getFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
+    updateFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
+    getMealPlan: vi.fn(async () => EMPTY_PLAN),
+    replaceMeal: vi.fn(async () => EMPTY_PLAN),
+    mealOptions: vi.fn(async () => []),
+    chooseMeal: vi.fn(async () => EMPTY_PLAN),
+    swapMeals: vi.fn(async () => EMPTY_PLAN),
+    regenerateWeek: vi.fn(async () => ({ ...EMPTY_PLAN, regeneration: { changed: 0, kept: 0 } })),
+    importMealCatalog: vi.fn(async (_identity: unknown, dryRun: boolean) => ({ dryRun, dishesCreated: ["Onigiri"], dishesSkipped: [] })),
     ...overrides,
   };
 }
@@ -441,6 +488,143 @@ describe("category routes (HOUSEHOLD-ADMIN-002)", () => {
   });
 });
 
+describe("ingredient routes (FOOD-021)", () => {
+  it("lists, creates and updates ingredients", async () => {
+    const d = deps();
+    const list = await route(event("GET /meals/ingredients"), d);
+    expect(list.statusCode).toBe(200);
+    expect(JSON.parse(list.body as string).data.ingredients).toHaveLength(1);
+    expect((await route(event("POST /meals/ingredients", {}, JSON.stringify({ name: "Rote Bete", unit: "g" })), d)).statusCode).toBe(201);
+    expect((await route(event("POST /meals/ingredients", {}, JSON.stringify({ name: "Rote Bete", unit: "kg" })), d)).statusCode).toBe(400);
+    const put = { ...event("PUT /meals/ingredients/{ingredientId}", {}, JSON.stringify({ pricePerUnit: 3 })), pathParameters: { ingredientId: "salmon" } } as APIGatewayProxyEventV2;
+    expect((await route(put, d)).statusCode).toBe(200);
+    expect(d.updateIngredient).toHaveBeenCalledWith(TEST_IDENTITY, "salmon", { pricePerUnit: 3 });
+    const badId = { ...put, pathParameters: { ingredientId: "Lachs!" } } as APIGatewayProxyEventV2;
+    expect((await route(badId, d)).statusCode).toBe(400);
+  });
+
+  it("answers 503 while the meals table is not configured", async () => {
+    const response = await route(event("GET /meals/ingredients"), deps({ listIngredients: async () => { throw new ApplicationError("SERVICE_UNAVAILABLE", 503, "Service is not configured."); } }));
+    expect(response.statusCode).toBe(503);
+  });
+});
+
+describe("dish routes (FOOD-002)", () => {
+  const withDish = (routeKey: string, body?: string, dishId: string = DISH_ID) => ({ ...event(routeKey, {}, body), pathParameters: { dishId } }) as APIGatewayProxyEventV2;
+
+  it("lists dishes with validated filters", async () => {
+    const d = deps();
+    expect((await route(event("GET /meals/dishes", {}, undefined, { slot: "LUNCH", archived: "true" }), d)).statusCode).toBe(200);
+    expect(d.listDishes).toHaveBeenCalledWith("default", { slot: "LUNCH", archived: true });
+    expect((await route(event("GET /meals/dishes", {}, undefined, { slot: "BREAKFAST" }), d)).statusCode).toBe(400);
+  });
+
+  it("creates, reads, updates, archives and restores dishes", async () => {
+    const d = deps();
+    const body = { name: "Onigiri", category: "VEGETARIAN", slots: ["LUNCH"], lightness: "LIGHT", temperature: "COLD", ingredients: [{ ingredientId: "sushi-rice", quantity: 80, unit: "g" }], activeMinutes: 15 };
+    expect((await route(event("POST /meals/dishes", {}, JSON.stringify(body)), d)).statusCode).toBe(201);
+    expect((await route(withDish("GET /meals/dishes/{dishId}"), d)).statusCode).toBe(200);
+    expect((await route(withDish("PUT /meals/dishes/{dishId}", JSON.stringify({ favorite: true })), d)).statusCode).toBe(200);
+    expect(d.updateDish).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID, { favorite: true });
+    expect((await route(withDish("DELETE /meals/dishes/{dishId}"), d)).statusCode).toBe(200);
+    expect((await route(withDish("POST /meals/dishes/{dishId}/restore"), d)).statusCode).toBe(200);
+    expect(d.restoreDish).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID);
+  });
+
+  it("rejects invalid dish IDs and bodies", async () => {
+    const d = deps();
+    expect((await route(withDish("GET /meals/dishes/{dishId}", undefined, "not-a-uuid"), d)).statusCode).toBe(400);
+    expect((await route(event("POST /meals/dishes", {}, JSON.stringify({ name: "X" })), d)).statusCode).toBe(400);
+    expect((await route(withDish("PUT /meals/dishes/{dishId}", JSON.stringify({})), d)).statusCode).toBe(400);
+  });
+});
+
+describe("food profile routes (FOOD-004)", () => {
+  it("reads and replaces the profile without logging its values", async () => {
+    const logger = mockLogger();
+    const d = deps({ logger });
+    expect((await route(event("GET /meals/profile"), d)).statusCode).toBe(200);
+    const body = { eaters: [{ name: "Erwachsener 1", type: "ADULT", allergies: ["NUTS", "APPLE"] }], household: DEFAULT_HOUSEHOLD_FOOD_RULES };
+    expect((await route(event("PUT /meals/profile", {}, JSON.stringify(body)), d)).statusCode).toBe(200);
+    expect(JSON.stringify(vi.mocked(logger.info).mock.calls)).not.toContain("NUTS");
+    expect((await route(event("PUT /meals/profile", {}, JSON.stringify({ eaters: [] })), d)).statusCode).toBe(400);
+  });
+});
+
+describe("meal catalog route (FOOD-003)", () => {
+  it("previews with a dry run and imports otherwise", async () => {
+    const d = deps();
+    expect((await route(event("POST /meals/catalog", {}, JSON.stringify({ dryRun: true })), d)).statusCode).toBe(200);
+    expect(d.importMealCatalog).toHaveBeenLastCalledWith(TEST_IDENTITY, true);
+    expect((await route(event("POST /meals/catalog"), d)).statusCode).toBe(200);
+    expect(d.importMealCatalog).toHaveBeenLastCalledWith(TEST_IDENTITY, false);
+    expect((await route(event("POST /meals/catalog", {}, JSON.stringify({ dryRun: "yes" })), d)).statusCode).toBe(400);
+  });
+});
+
+describe("meal plan routes (FOOD-006)", () => {
+  const plan = (week: string | undefined) => ({ ...event("GET /meals/plans/{weekStart}"), pathParameters: week === undefined ? undefined : { weekStart: week } }) as APIGatewayProxyEventV2;
+
+  it("accepts current, next and a date", async () => {
+    const d = deps();
+    for (const week of ["current", "next", "2026-10-12"]) expect((await route(plan(week), d)).statusCode).toBe(200);
+    expect(d.getMealPlan).toHaveBeenLastCalledWith("default", "2026-10-12");
+    expect((await route(plan("last"), d)).statusCode).toBe(400);
+    expect((await route(plan("2026-13-01"), d)).statusCode).toBe(400);
+  });
+
+  it("replaces a meal or puts a dish back (FOOD-007)", async () => {
+    const d = deps();
+    const replace = (slotId: string, body?: string) => ({ ...event("POST /meals/plans/{weekStart}/slots/{slotId}/replace", {}, body), pathParameters: { weekStart: "current", slotId } }) as APIGatewayProxyEventV2;
+    expect((await route(replace("2026-10-14#DINNER"), d)).statusCode).toBe(200);
+    expect(d.replaceMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", "2026-10-14#DINNER", {});
+    expect((await route(replace("2026-10-14#DINNER", JSON.stringify({ excludeDishIds: ["a"] })), d)).statusCode).toBe(200);
+    expect(d.replaceMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", "2026-10-14#DINNER", { excludeDishIds: ["a"] });
+    expect((await route(replace("2026-10-14#DINNER", JSON.stringify({ dishId: "b" })), d)).statusCode).toBe(200);
+    expect(d.replaceMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", "2026-10-14#DINNER", { dishId: "b" });
+    expect((await route(replace("2026-10-14%23LUNCH"), d)).statusCode).toBe(200);
+    expect(d.replaceMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", "2026-10-14#LUNCH", {});
+    expect((await route(replace("2026-10-14#BREAKFAST"), d)).statusCode).toBe(400);
+    expect((await route(replace("%E0%A4%A"), d)).statusCode).toBe(400);
+    expect((await route(replace("2026-10-14#DINNER", JSON.stringify({ other: 1 })), d)).statusCode).toBe(400);
+  });
+
+  it("lists options, chooses, locks and swaps meals (FOOD-022)", async () => {
+    const d = deps();
+    const slotEvent = (key: string, slotId: string, body?: string) => ({ ...event(key, {}, body), pathParameters: { weekStart: "next", slotId } }) as APIGatewayProxyEventV2;
+    const options = await route(slotEvent("GET /meals/plans/{weekStart}/slots/{slotId}/options", "2026-10-14%23DINNER"), d);
+    expect(options.statusCode).toBe(200);
+    expect(JSON.parse(options.body ?? "{}")).toEqual({ success: true, data: { options: [] } });
+    expect(d.mealOptions).toHaveBeenLastCalledWith("default", "next", "2026-10-14#DINNER");
+
+    const choose = (body?: string) => route(slotEvent("PUT /meals/plans/{weekStart}/slots/{slotId}", "2026-10-14#DINNER", body), d);
+    expect((await choose(JSON.stringify({ dishId: "a", confirm: true }))).statusCode).toBe(200);
+    expect(d.chooseMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "next", "2026-10-14#DINNER", { dishId: "a", confirm: true });
+    expect((await choose(JSON.stringify({ locked: false }))).statusCode).toBe(200);
+    expect(d.chooseMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "next", "2026-10-14#DINNER", { locked: false });
+    expect((await choose(JSON.stringify({ confirm: true }))).statusCode).toBe(400);
+    expect((await choose()).statusCode).toBe(400);
+
+    const swap = (body: unknown) => route({ ...event("POST /meals/plans/{weekStart}/swap", {}, JSON.stringify(body)), pathParameters: { weekStart: "current" } } as APIGatewayProxyEventV2, d);
+    expect((await swap({ from: "2026-10-14#DINNER", to: "2026-10-16#DINNER" })).statusCode).toBe(200);
+    expect(d.swapMeals).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", { from: "2026-10-14#DINNER", to: "2026-10-16#DINNER" });
+    expect((await swap({ from: "2026-10-14#DINNER" })).statusCode).toBe(400);
+  });
+
+  it("regenerates a week or restores the previous dishes (FOOD-008)", async () => {
+    const d = deps();
+    const regenerate = (body?: unknown) =>
+      route({ ...event("POST /meals/plans/{weekStart}/regenerate", {}, body === undefined ? undefined : JSON.stringify(body)), pathParameters: { weekStart: "next" } } as APIGatewayProxyEventV2, d);
+    expect((await regenerate()).statusCode).toBe(200);
+    expect(d.regenerateWeek).toHaveBeenLastCalledWith(TEST_IDENTITY, "next", {});
+    const restore = [{ slotId: "2026-10-14#DINNER", dishId: "a" }, { slotId: "2026-10-15#LUNCH", dishId: null }];
+    expect((await regenerate({ restore })).statusCode).toBe(200);
+    expect(d.regenerateWeek).toHaveBeenLastCalledWith(TEST_IDENTITY, "next", { restore });
+    expect((await regenerate({ restore: [] })).statusCode).toBe(400);
+    expect((await regenerate({ restore: [{ slotId: "x", dishId: "a" }] })).statusCode).toBe(400);
+  });
+});
+
 describe("PUT /tenners/{tennerId}", () => {
   const put = (id: string | undefined, payload: unknown): APIGatewayProxyEventV2 =>
     ({
@@ -676,6 +860,7 @@ describe("createDependencies", () => {
       tables: { tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" },
       onboarding: { userPoolId: "eu-central-1_TEST", tenantId: "default" },
       alexa: "not configured",
+      meals: "tenner-meals",
     });
   });
 });
