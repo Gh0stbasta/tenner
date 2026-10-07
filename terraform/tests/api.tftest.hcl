@@ -70,6 +70,7 @@ run "lambda_matches_runtime_requirements" {
       TENNERS_TABLE              = "tenner-tenners"
       HISTORY_TABLE              = "tenner-history"
       HOUSEHOLDS_TABLE           = "tenner-households"
+      MEALS_TABLE                = "tenner-meals"
       APPLICATION_TIMEZONE       = "Europe/Berlin"
       COGNITO_USER_POOL_ID       = "eu-central-1_TEST"
       HOUSEHOLD_TENANT_ID        = "default"

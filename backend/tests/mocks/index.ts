@@ -57,6 +57,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     appUrl: undefined,
     householdEventsBus: undefined,
     alexaApi: undefined,
+    mealsTable: "tenner-meals",
     ...overrides,
   };
 }

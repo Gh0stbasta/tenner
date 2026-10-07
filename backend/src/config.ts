@@ -42,6 +42,8 @@ export interface AppConfig {
   readonly pushActionSecretParameter: string | undefined;
   /** API stage URL for the action buttons in push notifications (API_URL, notifier only, NOTIFICATION-011). */
   readonly apiUrl: string | undefined;
+  /** Meal planning table (MEALS_TABLE, FOOD-001); undefined while the table is not configured. */
+  readonly mealsTable: string | undefined;
 }
 
 export interface WebPushConfig {
@@ -107,6 +109,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     webPush: webPushConfig(env),
     pushActionSecretParameter: readTrimmed(env.PUSH_ACTION_HMAC_PARAMETER),
     apiUrl: readTrimmed(env.API_URL)?.replace(/\/+$/, ""),
+    mealsTable: readTrimmed(env.MEALS_TABLE),
   };
 }
 

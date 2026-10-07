@@ -115,7 +115,7 @@ frontend/src/features/meals/
 
 ```text
 Terraform: table, keys, PITR, deletion protection, tags, IAM scope, routes
-Backend: router dispatches the new routes to a 501 stub until implemented; auth required on all but the ICS route
+Backend: meals config, key helper and versioned store (get, prefix query, create, versioned update, error mapping)
 Architecture document and ADR reviewed against the allowed-services list
 ```
 
@@ -144,23 +144,23 @@ cd backend && npm run lint && npm run typecheck && npm test
 
 # Acceptance Criteria
 
-- [ ] ADR 0007 accepted by the owner, covering storage, API, planner, plan creation, images, calendar
-- [ ] No service outside the allowed list
-- [ ] `tenner-meals` table defined with PITR, deletion protection, tags and least-privilege IAM
-- [ ] Route list and module layout documented; later tickets refer to them
-- [ ] Architecture document updated
-- [ ] Tests passing
+- [x] ADR 0007 accepted by the owner, covering storage, API, planner, plan creation, images, calendar
+- [x] No service outside the allowed list
+- [x] `tenner-meals` table defined with PITR, deletion protection, tags and least-privilege IAM
+- [x] Route list and module layout documented; later tickets refer to them
+- [x] Architecture document updated
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
@@ -169,6 +169,13 @@ cd backend && npm run lint && npm run typecheck && npm test
 - One new DynamoDB table is cheaper to reason about than more attributes on the household item, whose 400 KB item
   limit would be reached by plans and shopping lists over time.
 - Cost stays within the free tier (a few hundred reads and writes per day).
+- **Routes come with their handlers:** instead of 501 stubs for all planned routes, each feature ticket adds its
+  routes to `api_routes` and the router. No reachable endpoint without an implementation.
+- **ADR accepted** by the owner's request to start the release 2.0 foundation (2026-10-07), which follows the
+  proposals of this ticket.
+- **Deploy role (outside the repository):** `GitHubActionsDeployRole` must be allowed to create and manage
+  `tenner-meals` (DynamoDB create, update, tag, PITR, TTL, deletion protection) before this change is deployed;
+  README → "CI Permissions".
 
 ---
 
@@ -176,3 +183,17 @@ cd backend && npm run lint && npm run typecheck && npm test
 
 - Implementing the features (FOOD-002 onward).
 - AI services (FOOD-020, FOOD-024).
+
+---
+
+# Implementation Status
+
+Done (2026-10-07).
+
+- ADR [0007](../../../decisions/0007-meal-planning.md); `docs/architecture.md` → "Meal Planning".
+- Terraform: `aws_dynamodb_table.meals` (`tenner-meals`, `tenantId`/`itemKey`, TTL `expiresAt`, PITR, encryption,
+  deletion protection, `prevent_destroy`), API role access (`iam.tf`), `MEALS_TABLE` for the API; tests in
+  `dynamodb.tftest.hcl`, `iam.tftest.hcl`, `api.tftest.hcl`.
+- Backend: `config.mealsTable`; `backend/src/meals/keys.ts`, `backend/src/meals/repositories/meals-store.ts`;
+  tests `backend/tests/meals-store.test.ts`.
+- Owner action before the deploy: extend `GitHubActionsDeployRole` for `tenner-meals` (README → "CI Permissions").

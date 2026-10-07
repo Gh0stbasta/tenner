@@ -1427,6 +1427,28 @@ EventBridge rule rate(15 minutes) ──► Lambda tenner-notifier (backend/src/
   `NOTIFICATIONS_ENABLED`). EventBridge rule instead of EventBridge Scheduler (no extra invocation role).
   Cost: ~2,900 invocations per month, within the free tier.
 
+## Meal Planning (ADR 0007, release 2.0)
+
+Weekly lunch and dinner plans from the household's dishes and rules (EPIC-FOOD-001). Deterministic, no AI.
+Built ticket by ticket (`docs/release-2.0/README.md`); this section describes what exists.
+
+```text
+Web app /essen ──► tenner-api (routes /meals/*) ──► backend/src/meals/ ──► DynamoDB tenner-meals
+Notifier (FOOD-006/016) ──────────────────────────► same services
+Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
+```
+
+- **Table `tenner-meals`** (FOOD-001): partition key `tenantId`, sort key `itemKey`; item kinds `DISH#<id>`,
+  `INGREDIENT#<id>`, `PROFILE`, `PLAN#<weekStart>`, `LIST#<weekStart>`. On-demand, encrypted, PITR, deletion
+  protection; TTL attribute `expiresAt` for old plans. Sort keys are built only in `backend/src/meals/keys.ts`.
+- **Store** (`backend/src/meals/repositories/meals-store.ts`): get, prefix query, put. Every item has a `version`;
+  a new item must not exist, an update must name the stored version (409 `CONCURRENT_MODIFICATION` otherwise).
+  No deletes (archiving is a flag).
+- **Access:** the API role reads and writes the table with GetItem, PutItem, UpdateItem and Query (`terraform/iam.tf`);
+  the API receives the name as `MEALS_TABLE`. Without it the meal routes answer 503.
+- **Security:** same JWT authorizer and tenant isolation as all routes; allergies in the profile are never logged.
+- **Cost:** within the DynamoDB free tier.
+
 ## Smart Scheduling
 
 Examples:

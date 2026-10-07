@@ -194,3 +194,47 @@ resource "aws_dynamodb_table" "households" {
     prevent_destroy = true
   }
 }
+
+# Meal planning (FOOD-001, ADR 0007): one table, item kinds by sort key prefix (DISH#, INGREDIENT#, PROFILE,
+# PLAN#, LIST#). expiresAt is the TTL of old plans (FOOD-023).
+resource "aws_dynamodb_table" "meals" {
+  name         = local.meals_table_name
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "tenantId"
+  range_key    = "itemKey"
+
+  attribute {
+    name = "tenantId"
+    type = "S"
+  }
+
+  attribute {
+    name = "itemKey"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "expiresAt"
+    enabled        = true
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  deletion_protection_enabled = true
+
+  tags = {
+    Name        = local.meals_table_name
+    Purpose     = "Meal planning storage."
+    Description = "Stores dishes, ingredients, the family food profile, weekly plans and shopping lists."
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}

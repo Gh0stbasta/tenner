@@ -77,7 +77,7 @@ For the managed resources so far:
 - S3 and DynamoDB (state resources)
 - Lambda
 - API Gateway (`apigateway:*` on `tenner-api-gateway`)
-- DynamoDB tables `tenner-tenners`, `tenner-history` and `tenner-households` (create, update, tag, PITR, deletion protection; SCHEDULING-008 added `tenner-households`)
+- DynamoDB tables `tenner-tenners`, `tenner-history`, `tenner-households` and `tenner-meals` (create, update, tag, PITR, TTL, deletion protection; SCHEDULING-008 added `tenner-households`, FOOD-001 `tenner-meals`)
 - S3 bucket `tenner-frontend-<env>` (bucket configuration, policy) and CloudFront (distribution, origin access control, response headers policy)
 - Frontend publishing (TICKET-018):
   - `s3:ListBucket` on `arn:aws:s3:::tenner-frontend-<env>`

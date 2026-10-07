@@ -56,6 +56,7 @@ data "aws_iam_policy_document" "api_dynamodb" {
       aws_dynamodb_table.history.arn,
       "${aws_dynamodb_table.history.arn}/index/*",
       aws_dynamodb_table.households.arn,
+      aws_dynamodb_table.meals.arn, # FOOD-001
     ]
   }
 

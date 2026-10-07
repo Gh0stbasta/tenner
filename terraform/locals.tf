@@ -183,6 +183,8 @@ locals {
   history_table_name = "${local.name_prefix}-history"
   # Household settings, one item per tenant (SCHEDULING-008; extended by HOUSEHOLD-ADMIN-003).
   households_table_name = "${local.name_prefix}-households"
+  # Meal planning (FOOD-001, ADR 0007): dishes, ingredients, profile, plans and shopping lists per tenant.
+  meals_table_name = "${local.name_prefix}-meals"
 
   # Frontend hosting (TICKET-017).
   frontend_bucket_name       = "${local.name_prefix}-frontend-${var.environment}"

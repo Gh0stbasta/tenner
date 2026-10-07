@@ -64,6 +64,14 @@ override_resource {
 }
 
 override_resource {
+  target          = aws_dynamodb_table.meals
+  override_during = plan
+  values = {
+    arn = "arn:aws:dynamodb:eu-central-1:000000000000:table/tenner-meals"
+  }
+}
+
+override_resource {
   target          = aws_dynamodb_table.history
   override_during = plan
   values = {
@@ -95,6 +103,7 @@ run "dynamodb_policy_is_scoped_to_tenner_tables" {
       "arn:aws:dynamodb:eu-central-1:000000000000:table/tenner-history",
       "arn:aws:dynamodb:eu-central-1:000000000000:table/tenner-history/index/*",
       "arn:aws:dynamodb:eu-central-1:000000000000:table/tenner-households",
+      "arn:aws:dynamodb:eu-central-1:000000000000:table/tenner-meals",
     ])
     error_message = "DynamoDB access must be limited to the Tenner tables and their indexes."
   }
