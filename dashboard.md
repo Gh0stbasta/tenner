@@ -8,9 +8,9 @@
 |---|---|
 | **Project health** | 🟢 **1.0.0 live**: the last five deploys are green (incl. PR #31); all 1,599 automated tests pass (backend 924, frontend 407, alexa 147, Terraform 76, scripts 45) |
 | **Current phase** | **Release 2.0 planning — Family Meal Planning.** Release 1.0 is in maintenance |
-| **Current focus** | This pull request: your release 2.0 meta ticket in ticket form (EPIC-FOOD-001) and 25 FOOD tickets with order |
-| **Biggest blocker** | None for the start. Six owner decisions are open (20-minute limit, coconut and nut allergy, protein and base groups, weekday lunches, family data in the public Git history) |
-| **Recommended next action** | Merge, answer the six decisions in EPIC-FOOD-001, then start FOOD-001 (architecture, ADR 0007) |
+| **Current focus** | This pull request: your release 2.0 meta ticket in ticket form (EPIC-FOOD-001), 25 FOOD tickets with order, and your six planning decisions |
+| **Biggest blocker** | None. Your six decisions are answered and applied to the tickets (2026-10-07) |
+| **Recommended next action** | Merge, then start FOOD-001 (architecture, ADR 0007) |
 
 ## 📈 Progress
 
@@ -60,23 +60,21 @@ Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Relea
 
 🟢 **No critical findings in the code.** This PR changes documentation only.
 
-⚠ Worth your attention: **the original meta ticket put family names, the children's birth years and an allergy into the public repository** (Git history of `main`); removing it needs a history rewrite — your decision · open Google sign-up (TD-020) · linked Alexa account has your full rights (TD-035) · push buttons work for 24 h for whoever sees the notification · manual checks still open (S3 public-access block, throttling burst test, [`docs/security.md`](docs/security.md#manual-verifications)).
+⚠ Worth your attention: family details from the original meta ticket stay in the public Git history (your decision: not sensitive; current files make them unrecognizable) · open Google sign-up (TD-020) · linked Alexa account has your full rights (TD-035) · push buttons work for 24 h for whoever sees the notification · manual checks still open (S3 public-access block, throttling burst test, [`docs/security.md`](docs/security.md#manual-verifications)).
 
 ## 🏛 Architecture Health
 
 | | |
 |---|---|
 | **ADRs** | 6 accepted, **0 open** ([`docs/decisions/`](docs/decisions/)) |
-| **Pending decisions (yours)** | 1. Keep open Google sign-up? (TD-020) · 2. Six release 2.0 decisions (EPIC-FOOD-001) · 3. ADR 0007 meal planning comes with FOOD-001 |
+| **Pending decisions (yours)** | 1. Keep open Google sign-up? (TD-020) · 2. ADR 0007 meal planning comes with FOOD-001 |
 | **Open risks** | Backup restore untested (TD-039) · production only (TD-040) · Alexa widget/notification shapes unverified until first use (TD-036) |
 
 ## 🎯 Recommended Next Actions
 
 1. **Merge this PR.**
-2. **Decide on the family data in the public history:** keep it, or have it removed with a history rewrite (I explain the impact first).
-3. **Answer the six decisions** in [EPIC-FOOD-001](docs/release-2.0/metaticket.md#owner-decisions-needed); defaults are written down, so work can start anyway.
-4. **Start FOOD-001** (architecture and ADR 0007), then the foundation block.
-5. **Still open from 1.0:** tag `v1.0.0` and GitHub release (`docs/release-1.0/hotfix/release001.md`).
+2. **Start FOOD-001** (architecture and ADR 0007), then the foundation block.
+3. **Still open from 1.0:** tag `v1.0.0` and GitHub release (`docs/release-1.0/hotfix/release001.md`).
 
 ---
 
