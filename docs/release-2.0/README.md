@@ -91,6 +91,6 @@ first heading, sections Type … Out of Scope, an "Implementation Status" sectio
 ## Owner Decisions
 
 All six questions were answered on 2026-10-07 and applied to the tickets: 20 minutes = active cooking time; coconut
-milk is tolerated; R7 counts animal protein sources (poultry, beef, pork, fish); Spätzle count as pasta, gnocchi and
+milk is tolerated; R7 counts animal protein sources (poultry, beef and pork as one source, fish); Spätzle count as pasta, gnocchi and
 Schupfnudeln are separate; weekday lunches only for the two adults; family details stay in the Git history and are
 unrecognizable in current files. Details: [EPIC-FOOD-001](metaticket.md#owner-decisions).

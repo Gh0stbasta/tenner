@@ -63,7 +63,7 @@ Classification rules:
   `LIGHT`; filling dishes are for dinner and weekend lunch (weekday lunch is for the two adults only, decision 5).
 - **Time:** `activeMinutes` is the hands-on time (EPIC-FOOD-001, decision 1); oven and simmering time go into
   `totalMinutes` only. Lasagne, Ofenrigatoni or Linseneintopf stay plannable when their active time is ≤ 20 minutes.
-- **Protein and base** follow decisions 3 and 4: protein tag only for poultry, beef, pork (incl. sausages) and fish;
+- **Protein and base** follow decisions 3 and 4: protein tag only for poultry, beef/pork (one source, incl. minced meat and sausages) and fish;
   Spätzle are pasta, gnocchi and Schupfnudeln have their own base groups.
 - **Coconut** is not an allergen for the family (decision 2): Curryreis mit Kokosmilch is a normal dish.
 

@@ -50,7 +50,7 @@ FOOD-001
 | `ingredientId` | stable slug, e.g. `pasta`, `salmon`, `apple` |
 | `name` | German display name |
 | `tags` | allergens (EU 14 major allergens plus custom tags such as `APPLE`, `COCONUT`), `MEAT`, `POULTRY`, `FISH`, `PORK` … |
-| `proteinTag` | optional, animal protein sources only (R7, decision 3): `POULTRY`, `BEEF` (incl. mixed minced meat), `PORK` (incl. sausages), `FISH` |
+| `proteinTag` | optional, animal protein sources only (R7, decision 3): `POULTRY`, `BEEF_PORK` (one source: beef, pork, minced meat, sausages), `FISH` |
 | `baseTag` | optional (R8, decision 4): `PASTA` (incl. Spätzle), `GNOCCHI`, `SCHUPFNUDELN`, `RICE`, `POTATO`, `BREAD`, `GRAIN` |
 | `shoppingSection` | `GEMUESE_OBST`, `KUEHLREGAL`, `FLEISCH_FISCH`, `TROCKENWAREN`, `TIEFKUEHL`, `BACKWAREN`, `GEWUERZE`, `SONSTIGES` |
 | `defaultUnit` | `g`, `ml`, `Stück`, `EL`, `TL` (conversion to g/ml for nutrition) |
@@ -73,7 +73,7 @@ FOOD-001
 ```text
 Catalog schema validation (every seed ingredient complete, unique IDs)
 Every seed dish references only catalog ingredients
-Allergen and protein tags present where expected (nuts, apple; poultry, beef, pork, fish)
+Allergen and protein tags present where expected (nuts, apple; poultry, beef/pork, fish)
 Unit conversion
 Custom ingredient create and edit
 ```

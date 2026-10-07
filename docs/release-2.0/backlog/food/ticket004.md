@@ -66,7 +66,7 @@ household: {
   maxSaladLunchesPerWeek: 2
   chicken: { maxPerWeek: 1, allowedSlots: [MON#DINNER, TUE#DINNER] }
   maxBurgerPerWeek: 1
-  limitedProteinTags: [POULTRY, BEEF, PORK, FISH]   (R7, decision 3)
+  limitedProteinTags: [POULTRY, BEEF_PORK, FISH]   (R7, decision 3)
   mealTimes: { lunch: "12:00", dinner: "18:00" }               (FOOD-015, FOOD-016)
 }
 ```
