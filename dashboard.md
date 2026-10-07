@@ -6,22 +6,22 @@
 
 | | |
 |---|---|
-| **Project health** | 🟢 **Healthy**: the last deploy (HOTFIX-006) is green, the Alexa health check is skipped only when Amazon's simulator fails; all automated tests pass (backend 863, alexa 147, frontend 385, Terraform 74, scripts 45) |
+| **Project health** | 🟢 **Healthy**: the last three deploys are green; all automated tests pass (backend 924, alexa 147, frontend 407, Terraform 76, scripts 45) |
 | **Current phase** | Phase 2 (V2, "daily usefulness"). Phase 1 (MVP) is live |
-| **Current focus** | This pull request: backlog and code cleanup (push, e-mail/Telegram reminders, Telegram bot and "I have X minutes" removed) and offline use of the app: read the last state and complete Tenners without a connection |
-| **Biggest blocker** | None in the code. Alexa still needs your remaining activation steps (Parameter Store values, SNS confirmations, Alexa app permissions) |
-| **Recommended next action** | Merge, then test offline on your phone: open Tenner in flight mode, complete a Tenner, switch the connection back on |
+| **Current focus** | This pull request: your two tickets from `docs/human` — household task catalog (34 Tenners, Haushaltshilfe without login) and push reminders on the phone with „Erledigt“/„Später“ buttons |
+| **Biggest blocker** | None in the code. Push needs your one-time setup (key pair, GitHub variable, two Parameter Store values); the catalog import is one click after the deploy |
+| **Recommended next action** | Merge, set up push (README → Browser push), then Einstellungen → Aufgabenkatalog → „Jetzt importieren“ and „Push aktivieren“ on your phones |
 
 ## 📈 Progress
 
 ```text
-Overall   ████████████░░░░░░░░  59%   97 / 165 tickets
+Overall   ████████████░░░░░░░░  60%  102 / 170 tickets
 Phase 1   ████████████████████ 100%   53 / 53   MVP + hotfixes (live since 2026-10-02)
-Phase 2   ██████████░░░░░░░░░░  52%   44 / 84   V2 (Alexa, analytics, household, admin, scheduling, offline complete)
+Phase 2   ███████████░░░░░░░░░  55%   49 / 89   V2 (Alexa, analytics, household, admin, scheduling, offline, push complete)
 Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0 / 28   Long-Term
 ```
 
-✅ Completed: **97** · 🚧 In progress: **0** · 📋 Open: **68** · Total: **165**
+✅ Completed: **102** · 🚧 In progress: **0** · 📋 Open: **68** · Total: **170**
 
 ## 🧩 Feature Status
 
@@ -34,9 +34,11 @@ Phase 3   ░░░░░░░░░░░░░░░░░░░░   0%    0
 | ✅ Household setup: members, categories, shared and rotating Tenners, handover | |
 | ✅ Analytics page and phone app (installable, swipe to complete) | |
 | ✅ Alexa „Tenner Board“, reminders via Alexa, monitoring and alarms | |
-| 🆕 **Offline:** last known Tenners without a connection (up to 7 days) and completing offline with automatic transfer | |
+| ✅ Offline: last known Tenners and completing without a connection | |
+| 🆕 **Push aufs Handy:** each Tenner due today at 08:00, overdue ones at 18:00 (both adjustable), buttons „✅ Erledigt“ and „⏰ Später“ (needs your setup) | |
+| 🆕 **Aufgabenkatalog:** your 34 recurring Tenners (daily, weekly, 12- and 26-week rotation) in one click; Haushaltshilfe as member without login | |
 
-🗑 Dropped by you (2026-10-06): phone push, e-mail and Telegram reminders, the Telegram bot, "I have X minutes" suggestions — removed from backlog and code.
+🗑 Dropped by you (2026-10-06): e-mail and Telegram reminders, the Telegram bot, "I have X minutes" suggestions. Push was re-added on 2026-10-07 at your request.
 
 ## 💰 Cost Overview
 
@@ -72,8 +74,9 @@ The notifier runs every 15 minutes (~2,900 runs/month, free); Alexa APIs and Par
 
 1. **Open Google sign-up:** a member you add in the app can be claimed by a stranger until the real person signs in (TD-020).
 2. **Alexa:** the skill stays private (development stage, never submitted — a test enforces it); a linked Alexa account acts with your full rights (TD-035). Secrets live only in Parameter Store, never in Terraform state.
-3. **Offline data:** household Tenner data stays in the phone's browser for up to 7 days or until logout (MOBILE-003).
-4. **Manual checks still open:** the AWS account-wide S3 public-access block and the throttling burst test ([`docs/security.md`](docs/security.md#manual-verifications)).
+3. **Push buttons:** whoever sees a notification can tap „Erledigt“/„Später“ for that one Tenner within 24 hours (signed link, your choice). The Haushaltshilfe is never a free login place.
+4. **Offline data:** household Tenner data stays in the phone's browser for up to 7 days or until logout (MOBILE-003).
+5. **Manual checks still open:** the AWS account-wide S3 public-access block and the throttling burst test ([`docs/security.md`](docs/security.md#manual-verifications)).
 
 ## 🏛 Architecture Health
 
@@ -86,14 +89,15 @@ The notifier runs every 15 minutes (~2,900 runs/month, free); Alexa APIs and Par
 ## 🎯 Recommended Next Actions
 
 1. **Merge this PR** and check that the deploy is green.
-2. **Test offline on the phone:** flight mode → open Tenner (last state shown) → complete a Tenner → connection on → „✅ … übertragen“.
-3. **Finish Alexa activation:** LWA parameters in Parameter Store, SNS e-mails, reminders/notifications in the Alexa app, then choose Alexa in Einstellungen → Benachrichtigungen.
-4. **Next block:** weekly summary (NOTIFICATION-008) or importance/checklists (PRODUCTIVITY-002 – 005).
+2. **Set up push** (README → Notifications → Browser push): `node scripts/generate-vapid-keys.mjs`, GitHub variable `WEB_PUSH_PUBLIC_KEY`, two Parameter Store values; next deploy.
+3. **Import the catalog:** Einstellungen → Aufgabenkatalog → „Katalog prüfen“ → „Jetzt importieren“.
+4. **On each phone:** install Tenner (iPhone: Teilen → Zum Home-Bildschirm), Einstellungen → Benachrichtigungen → „Push aktivieren“, choose „Push aufs Handy“ for Tagesüberblick and Überfällig-Hinweise.
+5. **Finish Alexa activation** if still open (LWA parameters, Alexa app permissions).
 
 ---
 
 ## ℹ About this dashboard
 
-- **Sources:** the ticket files in `docs/backlog/` and `docs/hotfix/` (a ticket counts as done when it has an "Implementation Status" section), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/architecture.md`](docs/architecture.md) and GitHub Actions (latest deploy after PR #28 green with the Alexa health check skipped; the four before it failed and were fixed by HOTFIX-003 – 006).
-- **Counting:** 166 ticket files minus one duplicate (TD-001) gives 165 tickets (6 tickets removed by BACKLOG-001/002); planning tickets with other file names (e.g. `alexaSkill/alexaFoundation.md`) are not counted. Tickets with open manual checks (e.g. device tests) count as done once implemented. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
+- **Sources:** the ticket files in `docs/backlog/` and `docs/hotfix/` (a ticket counts as done when it has an "Implementation Status" section), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/architecture.md`](docs/architecture.md) and GitHub Actions (the last three deploys green, incl. the merge of PR #29).
+- **Counting:** 171 ticket files minus one duplicate (TD-001) gives 170 tickets (6 tickets removed by BACKLOG-001/002); the owner files in `docs/human/` are inputs, their work is tracked as HOUSEHOLD-ADMIN-006, DATA-008, NOTIFICATION-009 – 011; planning tickets with other file names (e.g. `alexaSkill/alexaFoundation.md`) are not counted. Tickets with open manual checks (e.g. device tests) count as done once implemented. The debt levels (High, Medium, Low) are an assessment made for this dashboard; the debt file itself has no severity field.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).
