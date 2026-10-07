@@ -1039,12 +1039,13 @@ The deploy may fail at the package import, or widget pushes and Alexa notificati
 
 ### Suggested Improvement
 
-Owner: deploy, add the widget on the Echo Show 21, report what it shows and any `widget_installation_error` or
+The first import (PR #34) was rejected for missing widget images, fixed in MAINT-003. Owner: deploy, add the widget
+on the Echo Show 21, report what it shows and any `widget_installation_error` or
 `WidgetPushFailed` log line; correct the shapes from that.
 
 ### Related Work
 
-ALEXA-007, ALEXA-008, MAINT-002, `backend/src/alexa/`, `alexa/skill-package/dataStorePackages/`.
+ALEXA-007, ALEXA-008, MAINT-002, MAINT-003, `backend/src/alexa/`, `alexa/skill-package/dataStorePackages/`.
 
 ---
 

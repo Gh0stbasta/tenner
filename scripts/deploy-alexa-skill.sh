@@ -2,19 +2,19 @@
 # Deploy the Alexa skill package (manifest, de-DE interaction model, widget package) to the development stage
 # (ALEXA-001, MAINT-002).
 #
-# Usage: scripts/deploy-alexa-skill.sh <skill-package-dir> <skill-id> <skill-lambda-arn>
+# Usage: scripts/deploy-alexa-skill.sh <skill-package-dir> <skill-id> <skill-lambda-arn> <web-app-url>
 #
 # Credentials (GitHub Actions secrets, never committed): ASK_REFRESH_TOKEN (LWA refresh token for SMAPI, created
 # once with `ask util generate-lwa-tokens`) and ASK_VENDOR_ID. The ASK CLI reads them from the environment.
 # Run after `terraform apply`: Alexa checks that it may invoke the endpoint Lambda when the manifest is updated.
 set -euo pipefail
 
-if [[ $# -ne 3 ]]; then
-  echo "Usage: $0 <skill-package-dir> <skill-id> <skill-lambda-arn>" >&2
+if [[ $# -ne 4 ]]; then
+  echo "Usage: $0 <skill-package-dir> <skill-id> <skill-lambda-arn> <web-app-url>" >&2
   exit 2
 fi
 
-readonly PACKAGE_DIR="$1" SKILL_ID="$2" LAMBDA_ARN="$3"
+readonly PACKAGE_DIR="$1" SKILL_ID="$2" LAMBDA_ARN="$3" WEB_APP_URL="$4"
 readonly STAGE="development" LOCALE="de-DE"
 readonly ASK_CLI_VERSION="2.30.7"
 readonly MAX_WAIT_SECONDS=300
@@ -35,6 +35,10 @@ echo "Preparing the skill package for ${LAMBDA_ARN}..."
 # dataStorePackages/. `update-skill-manifest` alone never uploads widget packages.
 cp -R "${PACKAGE_DIR}" "${work_dir}/skill-package"
 python3 "$(dirname "$0")/render_alexa_manifest.py" "${PACKAGE_DIR}/skill.json" "${work_dir}/skill-package/skill.json" "${LAMBDA_ARN}"
+# Widget icon and preview are served by the web app, which is published before this step (MAINT-003).
+for widget_manifest in "${work_dir}"/skill-package/dataStorePackages/*/manifest.json; do
+  python3 "$(dirname "$0")/render_alexa_widget.py" "${widget_manifest}" "${widget_manifest}" "${WEB_APP_URL}"
+done
 cat >"${work_dir}/ask-resources.json" <<JSON
 {"askcliResourcesVersion": "2020-03-31", "profiles": {"${ASK_DEFAULT_PROFILE}": {"skillMetadata": {"src": "./skill-package"}}}}
 JSON

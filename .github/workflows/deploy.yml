@@ -201,7 +201,8 @@ jobs:
           ALEXA_SKILL_ID: ${{ vars.ALEXA_SKILL_ID }}
         run: |
           scripts/deploy-alexa-skill.sh alexa/skill-package "$ALEXA_SKILL_ID" \
-            "$(terraform -chdir="$TF_DIR" output -raw alexa_skill_lambda_arn)"
+            "$(terraform -chdir="$TF_DIR" output -raw alexa_skill_lambda_arn)" \
+            "$(terraform -chdir="$TF_DIR" output -raw frontend_url)"
 
       # ALEXA-009: simulated „öffne tenner board“ against the development stage; fails the deployment on a wrong answer.
       - name: Alexa health check

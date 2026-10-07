@@ -45,7 +45,10 @@ APL_PACKAGE`, `presentations/default.tpl`, `documents/document.json` bound to th
 `datasources/default.json`) shows „Heute: 3“, open minutes, overdue and the next two Tenners. Tapping it opens the
 skill on the dashboard. `skill.json` declares it (`ALEXA_DATASTORE_PACKAGEMANAGER` with package `tenner-status`,
 `ALEXA_DATA_STORE`, extension `alexaext:datastore:10`); the deploy imports the whole skill package (`ask deploy
---target skill-metadata`), because `update-skill-manifest` does not upload widget packages (MAINT-002).
+--target skill-metadata`), because `update-skill-manifest` does not upload widget packages (MAINT-002). Amazon
+requires an icon and a preview image per widget: they are served by the web app (`/icons/icon-512.png`,
+`/alexa/widget-preview.png`); the manifest has `${WEB_APP_URL}`, which `scripts/render_alexa_widget.py` replaces with
+the Terraform output `frontend_url` at deploy time (MAINT-003).
 
 **Add it on the Echo Show (owner):** swipe left on the home screen → „+“ (or Einstellungen → Widgets) → „Tenner“.
 When the widget is installed, Amazon sends `Alexa.DataStore.PackageManager.UsagesInstalled`; the skill registers the

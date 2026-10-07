@@ -33,7 +33,11 @@ describe("widget package", () => {
   it("is an APL package in Amazon's layout, declared in the skill manifest (MAINT-002)", () => {
     expect(manifest.packageType).toBe("APL_PACKAGE");
     expect(manifest.manifest).toMatchObject({ id: "tenner-status", installStateChanges: "INFORM" });
-    expect(manifest.publishingInformation.locales["de-DE"]?.[0]).toMatchObject({ targetViewport: "WIDGET_M", metadata: { name: "Tenner" } });
+    expect(manifest.publishingInformation.locales["de-DE"]?.[0]).toMatchObject({
+      targetViewport: "WIDGET_M",
+      // Required by Amazon (MAINT-003); the deploy replaces the placeholder with the web app URL.
+      metadata: { name: "Tenner", iconUri: "${WEB_APP_URL}/icons/icon-512.png", previews: ["${WEB_APP_URL}/alexa/widget-preview.png"] },
+    });
     const presentation = read(manifest.manifest.presentationDefinitions[0]?.url ?? "") as { type: string; documentUrl: string; datasourceUrl: string };
     expect(presentation.type).toBe("APL_PRESENTATION");
     expect(read(presentation.documentUrl)).toMatchObject({ type: "APL" });
