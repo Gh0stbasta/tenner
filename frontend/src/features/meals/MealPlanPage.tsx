@@ -15,16 +15,20 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link as RouterLink } from "react-router";
 import { errorMessage } from "../../api/errorMessages";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { PageLoading } from "../../components/LoadingState";
+import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
+import { useOnline } from "../../hooks/useConnectivity";
 import { formatLongDate, formatShortDate } from "../../utils/format";
-import { useMealPlan, type MealPlan, type PlanSlot, type WeekChoice } from "./api";
+import { useMealPlan, useReplaceMeal, type MealPlan, type PlanSlot, type WeekChoice } from "./api";
 import { localToday } from "./format";
+import { MealActions } from "./MealActions";
 import { MealCard } from "./MealCard";
+import { MEAL_SLOT_LABELS } from "./labels";
 
 const hintsFor = (plan: MealPlan, slot: PlanSlot) =>
   plan.violations.filter((violation) => violation.slotIds.includes(slot.slotId));
@@ -54,11 +58,13 @@ function DayCard({
   slots,
   plan,
   today,
+  actionsFor,
 }: {
   date: string;
   slots: readonly PlanSlot[];
   plan: MealPlan;
   today: boolean;
+  actionsFor: (slot: PlanSlot) => ReactNode;
 }) {
   return (
     <Card
@@ -73,7 +79,7 @@ function DayCard({
         {slots.map((slot, index) => (
           <Box key={slot.slotId}>
             {index > 0 && <Divider />}
-            <MealCard slot={slot} hints={hintsFor(plan, slot)} />
+            <MealCard slot={slot} hints={hintsFor(plan, slot)} actions={actionsFor(slot)} />
           </Box>
         ))}
       </CardContent>
@@ -85,6 +91,53 @@ export function MealPlanPage() {
   const [week, setWeek] = useState<WeekChoice>("current");
   const plan = useMealPlan(week);
   const today = localToday();
+  const online = useOnline();
+  const notify = useNotify();
+  const replace = useReplaceMeal(week);
+  /** Dishes rejected per meal in this visit, so „Anderes Gericht“ cycles through alternatives (FOOD-007). */
+  const [rejected, setRejected] = useState<Readonly<Record<string, readonly string[]>>>({});
+
+  const replaceMeal = (slot: PlanSlot) => {
+    const previous = slot.dish;
+    const label = `${formatShortDate(slot.date)} ${MEAL_SLOT_LABELS[slot.slot]}`;
+    const excludeDishIds = [...(rejected[slot.slotId] ?? []), ...(previous ? [previous.dishId] : [])];
+    replace.mutate(
+      { slotId: slot.slotId, excludeDishIds },
+      {
+        onSuccess: (changed) => {
+          setRejected((current) => ({ ...current, [slot.slotId]: excludeDishIds }));
+          const now = changed.slots.find((candidate) => candidate.slotId === slot.slotId)?.dish;
+          notify({
+            message: `${label}: ${now?.name ?? "nichts"}${previous ? ` statt ${previous.name}` : ""}.`,
+            ...(previous
+              ? {
+                  action: {
+                    label: "Rückgängig",
+                    onClick: () =>
+                      replace.mutate(
+                        { slotId: slot.slotId, dishId: previous.dishId },
+                        {
+                          onError: (error) =>
+                            notify({ message: `Rückgängig fehlgeschlagen. ${errorMessage(error)}`, severity: "error" }),
+                        },
+                      ),
+                  },
+                }
+              : {}),
+          });
+        },
+        onError: (error) => notify({ message: errorMessage(error), severity: "error" }),
+      },
+    );
+  };
+
+  const actionsFor = (slot: PlanSlot): ReactNode => (
+    <MealActions
+      label={`${formatShortDate(slot.date)} ${MEAL_SLOT_LABELS[slot.slot]}`}
+      disabled={!online || slot.date < today || replace.isPending}
+      actions={[{ label: "Anderes Gericht", onClick: () => replaceMeal(slot) }]}
+    />
+  );
 
   const header = (
     <PageHeader
@@ -136,6 +189,7 @@ export function MealPlanPage() {
                 slots={data.slots.filter((slot) => slot.date === date)}
                 plan={data}
                 today={date === today}
+                actionsFor={actionsFor}
               />
             </Grid>
           ))}

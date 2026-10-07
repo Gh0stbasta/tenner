@@ -5,6 +5,7 @@
  */
 
 import { randomInt } from "node:crypto";
+import type { Identity } from "../../auth/index.js";
 import { ApplicationError, ConflictError, NotFoundError } from "../../exceptions/index.js";
 import type { WeekStart } from "../../models/enums.js";
 import { addDays, toUtcTimestamp, type Clock } from "../../utils/clock.js";
@@ -14,8 +15,8 @@ import type { DishResponse } from "../models/dish.js";
 import { toDishSummary, type MealPlanResponse, type PlanSlotResponse, type StoredPlan, type StoredPlanSlot } from "../models/plan.js";
 import type { FoodProfile } from "../models/profile.js";
 import { plan } from "../planner/planner.js";
-import { checkWeek, type PlannedMeal } from "../planner/rules.js";
-import { DAYS_PER_WEEK, emptyWeek, weekStartOf } from "../planner/week.js";
+import { checkSlot, checkWeek, hasHardViolation, score, type PlannedMeal, type RuleId } from "../planner/rules.js";
+import { DAYS_PER_WEEK, emptyWeek, parseSlotId, weekStartOf } from "../planner/week.js";
 import type { MealItem, MealsStore } from "../repositories/meals-store.js";
 
 /** Plans are kept about a year (FOOD-023 history), then removed by the table's TTL. */
@@ -42,7 +43,7 @@ export interface PlanWeek {
   readonly today: string;
 }
 
-interface PlanData {
+export interface PlanData {
   readonly dishes: readonly DishResponse[];
   readonly byId: ReadonlyMap<string, DishResponse>;
   readonly profile: FoodProfile;
@@ -142,6 +143,80 @@ export class MealPlanService {
     }
   }
 
+  /**
+   * Replace one meal (FOOD-007) with the best-scoring dish that keeps every hard rule of the week, excluding the
+   * current dish, its group and `excludeDishIds`; or put `dishId` back (undo). Past meals stay as they are.
+   */
+  async replaceMeal(identity: Identity, week: WeekReference, slotId: string, request: ReplaceMealRequest): Promise<MealPlanResponse> {
+    const resolved = await this.resolveWeek(identity.tenantId, week);
+    const { plan: stored, version } = await this.requirePlan(identity.tenantId, resolved.weekStart);
+    const target = this.requireSlot(stored, slotId, resolved);
+    const data = await this.load(identity.tenantId);
+    const meals = this.mealsOf(resolved.weekStart, stored, data);
+    const current = target.dishId ? data.byId.get(target.dishId) : undefined;
+    let chosen: DishResponse;
+    if (request.dishId !== undefined) {
+      const dish = data.byId.get(request.dishId);
+      if (!dish || dish.archived) throw new NotFoundError("Dish not found.");
+      const hard = checkSlot(meals, slotId, dish, data.profile).filter((violation) => violation.severity === "HARD");
+      if (hard.length > 0) throw new ApplicationError("RULE_VIOLATION", 409, hard.map((violation) => violation.message).join(" "));
+      chosen = dish;
+    } else {
+      const excluded = new Set([...(request.excludeDishIds ?? []), ...(current ? [current.dishId] : [])]);
+      const candidates = data.dishes.filter((dish) => !dish.archived && !excluded.has(dish.dishId) && !(current?.group && dish.group === current.group));
+      const context = { recentDishIds: await this.recentDishIds(identity.tenantId, resolved.weekStart) };
+      const scored = candidates
+        .filter((dish) => !hasHardViolation(checkSlot(meals, slotId, dish, data.profile, context)))
+        .map((dish) => ({ dish, value: score(meals.map((meal) => (meal.slotId === slotId ? { ...meal, dish } : meal)), data.profile, context) }))
+        .sort((a, b) => b.value - a.value || a.dish.name.localeCompare(b.dish.name, "de"));
+      const best = scored[0];
+      if (!best) throw new ApplicationError("NO_ALTERNATIVE", 409, this.noAlternativeMessage(meals, slotId, candidates, data));
+      chosen = best.dish;
+    }
+    const slots = stored.slots.map((slot): StoredPlanSlot => (slot.slotId === slotId ? { slotId, dishId: chosen.dishId, locked: false, source: "AUTO", status: "PLANNED" } : slot));
+    return this.save(identity.tenantId, { ...stored, slots }, version, data);
+  }
+
+  /** Stored plan or 404 (changes need an existing plan). */
+  async requirePlan(tenantId: string, weekStart: string): Promise<{ plan: StoredPlan; version: number }> {
+    const stored = await this.storedPlan(tenantId, weekStart);
+    if (!stored) throw new NotFoundError("No meal plan for this week.");
+    return stored;
+  }
+
+  /** The slot of the plan; past meals cannot be changed. */
+  requireSlot(stored: StoredPlan, slotId: string, week: PlanWeek): StoredPlanSlot {
+    const parsed = parseSlotId(slotId);
+    const slot = stored.slots.find((candidate) => candidate.slotId === slotId);
+    if (!parsed || !slot) throw new NotFoundError("Meal not found in this plan.");
+    if (parsed.date < week.today) throw new ApplicationError("MEAL_IN_PAST", 400, "Past meals cannot be changed.");
+    return slot;
+  }
+
+  mealsOf(weekStart: string, stored: StoredPlan, data: PlanData): PlannedMeal[] {
+    const byId = new Map(stored.slots.map((slot) => [slot.slotId, slot.dishId]));
+    return emptyWeek(weekStart).map((meal) => {
+      const dishId = byId.get(meal.slotId);
+      return { ...meal, dish: dishId ? (data.byId.get(dishId) ?? null) : null };
+    });
+  }
+
+  /** Write a changed plan with optimistic locking and return the response. */
+  async save(tenantId: string, changed: StoredPlan, version: number, data: PlanData): Promise<MealPlanResponse> {
+    await this.deps.store.put(tenantId, itemKey("PLAN", changed.weekStart), { ...changed, expiresAt: this.expiresAt(changed.weekStart) }, version);
+    return this.toResponse(changed.weekStart, changed, data);
+  }
+
+  private noAlternativeMessage(meals: readonly PlannedMeal[], slotId: string, candidates: readonly DishResponse[], data: PlanData): string {
+    const counts = new Map<RuleId, number>();
+    for (const dish of candidates) {
+      const first = checkSlot(meals, slotId, dish, data.profile).find((violation) => violation.severity === "HARD");
+      if (first) counts.set(first.rule, (counts.get(first.rule) ?? 0) + 1);
+    }
+    const rules = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([rule]) => RULE_NAMES[rule]);
+    return rules.length > 0 ? `Kein anderes Gericht passt (Regeln: ${rules.join(", ")}).` : "Kein anderes Gericht passt.";
+  }
+
   /** Plan response with dish summaries and the current rule violations. */
   toResponse(weekStart: string, stored: StoredPlan | null, data: PlanData): MealPlanResponse {
     const stateOf = new Map(stored?.slots.map((slot) => [slot.slotId, slot]) ?? []);
@@ -164,6 +239,31 @@ export class MealPlanService {
       violations: stored ? checkWeek(meals, data.profile) : [],
     };
   }
+}
+
+/** German names of the rules for „no alternative“ messages. */
+const RULE_NAMES: Readonly<Record<RuleId, string>> = {
+  SLOT: "Mahlzeit",
+  R1: "Allergien",
+  R2: "vegetarisch",
+  R3: "Abneigungen",
+  R4: "Kochzeit",
+  R5: "Hühnchen",
+  R6: "Burger",
+  R7: "Proteinquelle",
+  R8: "Grundzutat am Tag",
+  R9: "mittags leicht",
+  R10: "abends warm",
+  R11: "Salat",
+  R12: "Abwechslung",
+  R13: "familientauglich",
+};
+
+export interface ReplaceMealRequest {
+  /** Dishes already rejected in this session (FOOD-007 cycles through alternatives). */
+  readonly excludeDishIds?: readonly string[];
+  /** Put exactly this dish back (undo); must not break a hard rule. */
+  readonly dishId?: string;
 }
 
 const isReady = (data: PlanData): boolean => data.dishes.some((dish) => !dish.archived) && data.profile.eaters.length > 0;

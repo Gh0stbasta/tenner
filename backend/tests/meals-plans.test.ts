@@ -107,3 +107,76 @@ describe("MealPlanService", () => {
     expect(await services.plans.ensurePlans("default")).toBe(0);
   });
 });
+
+describe("replaceMeal (FOOD-007)", () => {
+  async function planned() {
+    const context = setup();
+    await ready(context.services);
+    const plan = await context.services.plans.getPlan("default", "current");
+    return { ...context, plan };
+  }
+
+  it("replaces one meal with another dish that keeps the hard rules, leaving the rest", async () => {
+    const { services, plan } = await planned();
+    const target = plan.slots.find((slot) => slot.slotId === "2026-10-14#DINNER");
+    const replaced = await services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-14#DINNER", {});
+    const after = replaced.slots.find((slot) => slot.slotId === "2026-10-14#DINNER");
+    expect(after?.dishId).not.toBe(target?.dishId);
+    expect(after).toMatchObject({ source: "AUTO", locked: false, status: "PLANNED" });
+    expect(replaced.violations.filter((violation) => violation.severity === "HARD")).toEqual([]);
+    expect(replaced.slots.filter((slot) => slot.slotId !== "2026-10-14#DINNER").map((slot) => slot.dishId)).toEqual(plan.slots.filter((slot) => slot.slotId !== "2026-10-14#DINNER").map((slot) => slot.dishId));
+  });
+
+  it("cycles through alternatives with excluded dishes and never returns the current dish or its group", async () => {
+    const { services, plan } = await planned();
+    const current = plan.slots.find((slot) => slot.slotId === "2026-10-15#DINNER")?.dishId as string;
+    const first = await services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-15#DINNER", {});
+    const firstId = first.slots.find((slot) => slot.slotId === "2026-10-15#DINNER")?.dishId as string;
+    const second = await services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-15#DINNER", { excludeDishIds: [current] });
+    const secondId = second.slots.find((slot) => slot.slotId === "2026-10-15#DINNER")?.dishId;
+    expect(new Set([current, firstId, secondId]).size).toBe(3);
+  });
+
+  it("puts a dish back (undo) and refuses a dish that breaks a hard rule", async () => {
+    const { services, plan } = await planned();
+    const original = plan.slots.find((slot) => slot.slotId === "2026-10-14#DINNER")?.dishId as string;
+    await services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-14#DINNER", {});
+    const undone = await services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-14#DINNER", { dishId: original });
+    expect(undone.slots.find((slot) => slot.slotId === "2026-10-14#DINNER")?.dishId).toBe(original);
+    const lasagne = (await services.dishes.listDishes("default")).find((dish) => dish.name === "Lasagne");
+    await expect(services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-15#LUNCH", { dishId: lasagne?.dishId as string })).rejects.toMatchObject({ code: "RULE_VIOLATION" });
+    await expect(services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-15#LUNCH", { dishId: "unknown" })).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("answers NO_ALTERNATIVE when nothing else fits", async () => {
+    const { services, plan } = await planned();
+    const others = (await services.dishes.listDishes("default")).map((dish) => dish.dishId);
+    await expect(services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-14#LUNCH", { excludeDishIds: others })).rejects.toMatchObject({
+      code: "NO_ALTERNATIVE",
+      statusCode: 409,
+    });
+    expect(plan.ready).toBe(true);
+  });
+
+  it("refuses past meals, unknown meals and weeks without a plan", async () => {
+    const { services } = await planned();
+    await expect(services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-13#DINNER", {})).rejects.toMatchObject({ code: "MEAL_IN_PAST" });
+    await expect(services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-20#DINNER", {})).rejects.toMatchObject({ statusCode: 404 });
+    await expect(services.plans.replaceMeal(TEST_IDENTITY, "next", "2026-10-20#DINNER", {})).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("reports parallel changes as 409", async () => {
+    const { services, meals } = await planned();
+    const original = meals.sender.send.bind(meals.sender);
+    let bumped = false;
+    meals.sender.send = async (command) => {
+      if (!bumped && command.constructor.name === "PutCommand") {
+        bumped = true;
+        const stored = meals.items.get("default|PLAN#2026-10-12");
+        if (stored) meals.items.set("default|PLAN#2026-10-12", { ...stored, version: Number(stored.version) + 1 });
+      }
+      return original(command);
+    };
+    await expect(services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-14#DINNER", {})).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION" });
+  });
+});

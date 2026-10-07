@@ -197,3 +197,28 @@ export function useMealPlan(week: WeekChoice) {
     staleTime: 60_000,
   });
 }
+
+/** A plan change returns the whole plan: it replaces the cached week. */
+function usePlanChange<TVariables>(week: WeekChoice, change: (variables: TVariables) => Promise<MealPlan>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: change,
+    onSuccess: (plan) => queryClient.setQueryData(queryKeys.mealPlan(week), plan),
+  });
+}
+
+const slotPath = (week: WeekChoice, slotId: string) => `/meals/plans/${week}/slots/${encodeURIComponent(slotId)}`;
+
+export interface ReplaceMealVariables {
+  readonly slotId: string;
+  readonly excludeDishIds?: readonly string[];
+  /** Put this dish back (undo). */
+  readonly dishId?: string;
+}
+
+/** „Anderes Gericht“ and its undo (FOOD-007). */
+export function useReplaceMeal(week: WeekChoice) {
+  return usePlanChange(week, ({ slotId, ...body }: ReplaceMealVariables) =>
+    apiClient.post(`${slotPath(week, slotId)}/replace`, { schema: mealPlanSchema, body }),
+  );
+}

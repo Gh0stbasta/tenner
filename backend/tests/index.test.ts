@@ -163,6 +163,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     getFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
     updateFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
     getMealPlan: vi.fn(async () => EMPTY_PLAN),
+    replaceMeal: vi.fn(async () => EMPTY_PLAN),
     importMealCatalog: vi.fn(async (_identity: unknown, dryRun: boolean) => ({ dryRun, dishesCreated: ["Onigiri"], dishesSkipped: [] })),
     ...overrides,
   };
@@ -566,6 +567,22 @@ describe("meal plan routes (FOOD-006)", () => {
     expect(d.getMealPlan).toHaveBeenLastCalledWith("default", "2026-10-12");
     expect((await route(plan("last"), d)).statusCode).toBe(400);
     expect((await route(plan("2026-13-01"), d)).statusCode).toBe(400);
+  });
+
+  it("replaces a meal or puts a dish back (FOOD-007)", async () => {
+    const d = deps();
+    const replace = (slotId: string, body?: string) => ({ ...event("POST /meals/plans/{weekStart}/slots/{slotId}/replace", {}, body), pathParameters: { weekStart: "current", slotId } }) as APIGatewayProxyEventV2;
+    expect((await route(replace("2026-10-14#DINNER"), d)).statusCode).toBe(200);
+    expect(d.replaceMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", "2026-10-14#DINNER", {});
+    expect((await route(replace("2026-10-14#DINNER", JSON.stringify({ excludeDishIds: ["a"] })), d)).statusCode).toBe(200);
+    expect(d.replaceMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", "2026-10-14#DINNER", { excludeDishIds: ["a"] });
+    expect((await route(replace("2026-10-14#DINNER", JSON.stringify({ dishId: "b" })), d)).statusCode).toBe(200);
+    expect(d.replaceMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", "2026-10-14#DINNER", { dishId: "b" });
+    expect((await route(replace("2026-10-14%23LUNCH"), d)).statusCode).toBe(200);
+    expect(d.replaceMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", "2026-10-14#LUNCH", {});
+    expect((await route(replace("2026-10-14#BREAKFAST"), d)).statusCode).toBe(400);
+    expect((await route(replace("%E0%A4%A"), d)).statusCode).toBe(400);
+    expect((await route(replace("2026-10-14#DINNER", JSON.stringify({ other: 1 })), d)).statusCode).toBe(400);
   });
 });
 

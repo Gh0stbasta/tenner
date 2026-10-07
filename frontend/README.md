@@ -136,6 +136,8 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   one card per day with lunch and dinner (`MealCard`: dish, active minutes, vegetarian or the vegetarian variant,
   „Nichts geplant“ with the planner's reason, rule hints as chips). Today's card comes first and is highlighted
   (device date). Without dishes or eaters a hint links to the settings.
+- **Meal menu** (`MealActions`, online and not in the past): „Anderes Gericht“ (FOOD-007) replaces the meal; repeated
+  use cycles through alternatives (rejected dishes are sent as `excludeDishIds`); the snackbar offers „Rückgängig“.
 - **Navigation:** „Essen“ between Tenner and Auswertung (side and bottom navigation).
 - **Dashboard:** „Heute essen wir“ (`TodayMealsCard`) with today's meals, hidden while there is no plan.
 - **Offline:** plans use the query root `mealPlans` and are kept in the offline cache; the food profile is not.

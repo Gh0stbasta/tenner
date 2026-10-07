@@ -8,7 +8,9 @@ import { AnalyticsService } from "./analytics/index.js";
 import {
   createMealServices,
   getMealPlanHandler,
+  replaceMealHandler,
   type GetMealPlan,
+  type ReplaceMeal,
   importMealCatalogHandler,
   type ImportMealCatalog,
   getFoodProfileHandler,
@@ -221,6 +223,7 @@ export interface Dependencies {
   readonly updateFoodProfile: UpdateFoodProfile;
   readonly importMealCatalog: ImportMealCatalog;
   readonly getMealPlan: GetMealPlan;
+  readonly replaceMeal: ReplaceMeal;
 }
 
 /** Per-request context passed to route handlers. */
@@ -325,6 +328,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "PUT /meals/profile": ({ event, deps, logger, identity }) => updateFoodProfileHandler(event, identity, deps.updateFoodProfile, logger),
   "POST /meals/catalog": ({ event, deps, logger, identity }) => importMealCatalogHandler(event, identity, deps.importMealCatalog, logger),
   "GET /meals/plans/{weekStart}": ({ event, deps, identity }) => getMealPlanHandler(event, identity.tenantId, deps.getMealPlan),
+  "POST /meals/plans/{weekStart}/slots/{slotId}/replace": ({ event, deps, logger, identity }) => replaceMealHandler(event, identity, deps.replaceMeal, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -517,6 +521,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     archiveDish: dishService ? (identity, dishId) => dishService.archiveDish(identity, dishId) : notConfigured,
     restoreDish: dishService ? (identity, dishId) => dishService.restoreDish(identity, dishId) : notConfigured,
     getMealPlan: mealPlanService ? (tenantId, week) => mealPlanService.getPlan(tenantId, week) : notConfigured,
+    replaceMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.replaceMeal(identity, week, slotId, request) : notConfigured,
     importMealCatalog: mealCatalogImportService ? (identity, dryRun) => mealCatalogImportService.importCatalog(identity, dryRun) : notConfigured,
     getFoodProfile: profileService ? (tenantId) => profileService.getProfile(tenantId) : notConfigured,
     updateFoodProfile: profileService ? (identity, request) => profileService.updateProfile(identity, request) : notConfigured,

@@ -65,6 +65,69 @@ describe("MealPlanPage (FOOD-009)", () => {
     expect(fetchMock.calls().some((call) => call.key === "GET /meals/plans/next")).toBe(true);
   });
 
+  it("replaces a meal, cycles through alternatives and undoes (FOOD-007)", async () => {
+    const plan = mealPlanFixture();
+    const withDish = (name: string, dishId: string) => ({
+      ...plan,
+      slots: plan.slots.map((slot) =>
+        slot.slotId === "2026-10-14#DINNER"
+          ? { ...slot, dishId, dish: { ...(slot.dish as object), dishId, name } }
+          : slot,
+      ),
+    });
+    let calls = 0;
+    const fetchMock = mockFetch({
+      "GET /meals/plans/current": ok(plan),
+      "POST /meals/plans/current/slots/2026-10-14%23DINNER/replace": ({ init }) => {
+        const body = JSON.parse(String(init?.body)) as { dishId?: string };
+        if (body.dishId) return ok(plan);
+        calls += 1;
+        return ok(calls === 1 ? withDish("Ramen", "dish-ramen") : withDish("Chili", "dish-chili"));
+      },
+    });
+    renderWithProviders(<MealPlanPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "Aktionen: Mi., 14. Okt. Abend" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Anderes Gericht" }));
+    expect(
+      await screen.findByText("Mi., 14. Okt. Abend: Ramen statt Käsespätzle mit Röstzwiebeln."),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Mittwoch, 14. Oktober" })).getByRole("group", {
+        name: "Abend: Ramen",
+      }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Aktionen: Mi., 14. Okt. Abend" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Anderes Gericht" }));
+    expect(await screen.findByText("Mi., 14. Okt. Abend: Chili statt Ramen.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Rückgängig" }));
+    expect(
+      await within(screen.getByRole("region", { name: "Mittwoch, 14. Oktober" })).findByRole("group", {
+        name: "Abend: Käsespätzle mit Röstzwiebeln",
+      }),
+    ).toBeInTheDocument();
+    const bodies = fetchMock
+      .calls()
+      .filter((call) => call.key.startsWith("POST /meals/plans/current/slots"))
+      .map((call) => call.body);
+    expect(bodies).toEqual([
+      { excludeDishIds: ["dish-5"] },
+      { excludeDishIds: ["dish-5", "dish-ramen"] },
+      { dishId: "dish-ramen" },
+    ]);
+  });
+
+  it("disables actions for past meals and shows replace errors", async () => {
+    mockFetch({
+      "GET /meals/plans/current": ok(mealPlanFixture()),
+      "POST /meals/plans/current/slots/2026-10-14%23LUNCH/replace": fail(409, "NO_ALTERNATIVE"),
+    });
+    renderWithProviders(<MealPlanPage />);
+    expect(await screen.findByRole("button", { name: "Aktionen: Mo., 12. Okt. Mittag" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Aktionen: Mi., 14. Okt. Mittag" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Anderes Gericht" }));
+    expect(await screen.findByText("Kein anderes Gericht passt in diese Woche.")).toBeInTheDocument();
+  });
+
   it("shows errors with a retry", async () => {
     mockFetch({ "GET /meals/plans/current": fail(500, "INTERNAL_ERROR") });
     renderWithProviders(<MealPlanPage />);
