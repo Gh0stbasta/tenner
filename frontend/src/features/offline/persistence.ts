@@ -12,7 +12,7 @@ export const OFFLINE_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Query key roots that are persisted: only what the offline pages show (privacy: no analytics, settings, Alexa, no food
- * profile). Meal plans since FOOD-009.
+ * profile). Meal plans since FOOD-009, shopping lists since FOOD-014.
  */
 export const PERSISTED_QUERY_ROOTS: readonly string[] = [
   "dashboard",
@@ -21,6 +21,7 @@ export const PERSISTED_QUERY_ROOTS: readonly string[] = [
   "members",
   "categories",
   "mealPlans",
+  "shoppingLists",
 ];
 
 /** Storage subset used by the persister (window.localStorage in the app). */

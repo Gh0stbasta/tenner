@@ -54,7 +54,10 @@ days: start a new beta test in the developer console (Distribution → Beta Test
 
 1. Skill logs with `outcome = ERROR`: `api_error` (`kind`, `status`) points to the Tenner API — follow the
    `requestId` into `/tenner/api` (`correlationId`).
-2. p95 duration > 5 s: slow API calls (`apiMs`); each call times out after 2 s, Alexa's limit is 8 s.
+2. p95 duration > 5 s: slow API calls (`apiMs`). Since MAINT-001 all calls of one request share a 6.5 s budget
+   (one attempt at most 4 s; a GET without a response is retried once, so `apiCalls` can be one higher than the
+   handler's calls). Alexa's limit is 8 s. A single `apiStatus 0` right after `platform.initStart` is a cold start;
+   it is only a problem when it repeats.
 3. `skill_error` with `requestType`: an unknown request type or a bug in a handler → fix and redeploy.
 
 ## Deploy warning "Alexa health check skipped"

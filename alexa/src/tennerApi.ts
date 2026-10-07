@@ -2,7 +2,10 @@
  * Typed client for the Tenner HTTP API (ALEXA-002). Every call carries the linked user's Cognito access token and
  * the Alexa request ID as correlation ID; responses use the API's { success, data } envelope.
  * Failures become TennerApiError with a kind the handlers turn into speech. Tokens are never logged.
+ * Time (MAINT-001): every attempt is limited by the request's deadline; a GET without a response is retried once.
  */
+
+import { MIN_RETRY_MS } from "./config.js";
 
 export type ApiFailureKind = "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "INVALID" | "UNAVAILABLE";
 
@@ -42,8 +45,13 @@ export interface ApiClientOptions {
   readonly baseUrl: string;
   readonly token: string;
   readonly correlationId: string;
-  /** Per-call timeout; the whole skill response must stay inside Alexa's 8 seconds. */
+  /** Longest single attempt (MAINT-001). */
   readonly timeoutMs: number;
+  /** Epoch ms by which all calls of this request must be done; each attempt gets at most the time left. */
+  readonly deadline?: number;
+  /** A GET without a response is retried once if at least this much time is left (default MIN_RETRY_MS). */
+  readonly minRetryMs?: number;
+  readonly now?: () => number;
   readonly fetch: typeof fetch;
   /** Observes every call (status 0 = network error/timeout) for the request log (ALEXA-009). */
   readonly onCall?: (status: number, durationMs: number) => void;
@@ -59,12 +67,17 @@ export interface TennerApi {
 }
 
 export function createTennerApi(options: ApiClientOptions): TennerApi {
-  async function request<T>(method: HttpMethod, path: string, body?: unknown, headers: Readonly<Record<string, string>> = {}): Promise<T> {
-    if (options.baseUrl === "") throw new TennerApiError("UNAVAILABLE", undefined, "NOT_CONFIGURED");
-    let response: Response;
-    const started = Date.now();
+  const now = options.now ?? Date.now;
+  const minRetryMs = options.minRetryMs ?? MIN_RETRY_MS;
+  const timeLeft = () => (options.deadline === undefined ? options.timeoutMs : options.deadline - now());
+
+  /** One HTTP attempt; undefined when no response came (timeout, DNS or connection failure). */
+  async function attempt(method: HttpMethod, path: string, body: unknown, headers: Readonly<Record<string, string>>): Promise<Response | undefined> {
+    const timeout = Math.min(options.timeoutMs, timeLeft());
+    const started = now();
     try {
-      response = await options.fetch(`${options.baseUrl}${path}`, {
+      if (timeout <= 0) throw new Error("No time left");
+      const response = await options.fetch(`${options.baseUrl}${path}`, {
         method,
         headers: {
           authorization: `Bearer ${options.token}`,
@@ -73,14 +86,22 @@ export function createTennerApi(options: ApiClientOptions): TennerApi {
           ...headers,
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-        signal: AbortSignal.timeout(options.timeoutMs),
+        signal: AbortSignal.timeout(timeout),
       });
+      options.onCall?.(response.status, now() - started);
+      return response;
     } catch {
-      // Timeout, DNS or connection failure.
-      options.onCall?.(0, Date.now() - started);
-      throw new TennerApiError("UNAVAILABLE", undefined, "NETWORK");
+      options.onCall?.(0, now() - started);
+      return undefined;
     }
-    options.onCall?.(response.status, Date.now() - started);
+  }
+
+  async function request<T>(method: HttpMethod, path: string, body?: unknown, headers: Readonly<Record<string, string>> = {}): Promise<T> {
+    if (options.baseUrl === "") throw new TennerApiError("UNAVAILABLE", undefined, "NOT_CONFIGURED");
+    let response = await attempt(method, path, body, headers);
+    // A read without a response (cold start, dropped connection) is safe to repeat once; writes are not repeated.
+    if (response === undefined && method === "GET" && timeLeft() >= minRetryMs) response = await attempt(method, path, body, headers);
+    if (response === undefined) throw new TennerApiError("UNAVAILABLE", undefined, "NETWORK");
     const payload = (await response.json().catch(() => undefined)) as { data?: T; error?: { code?: string } } | undefined;
     if (!response.ok) throw new TennerApiError(kindOf(response.status), response.status, payload?.error?.code);
     if (payload === undefined || !("data" in payload)) throw new TennerApiError("UNAVAILABLE", response.status, "INVALID_RESPONSE");

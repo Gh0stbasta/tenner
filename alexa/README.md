@@ -15,10 +15,10 @@ Alexa app. Help, stop, cancel, fallback and session end are handled.
 
 ```text
 alexa/
-├── widgets/tenner-status/                 home-screen widget APL package (ALEXA-007)
 ├── apl/                                    APL documents: dashboard.json, list.json (ALEXA-006)
 ├── skill-package/
 │   ├── skill.json                          manifest (de-DE, development stage); endpoint filled at deploy time
+│   ├── dataStorePackages/tenner-status/    home-screen widget APL package (ALEXA-007, Amazon's layout since MAINT-002)
 │   └── interactionModels/custom/de-DE.json invocation name "tenner board", intents, samples
 ├── src/
 │   ├── index.ts                            Lambda handler
@@ -40,9 +40,18 @@ alexa/
 
 ## Echo Show Widget (ALEXA-007)
 
-A home-screen widget (`widgets/tenner-status/`: manifest, APL document bound to the Data Store object
-`tenner/status`, sample data) shows „Heute: 3“, open minutes, overdue and — in the medium size — the next two
-Tenners. Tapping it opens the skill on the dashboard.
+A home-screen widget (`skill-package/dataStorePackages/tenner-status/`: `manifest.json` with `packageType
+APL_PACKAGE`, `presentations/default.tpl`, `documents/document.json` bound to the Data Store object `tenner/status`,
+`datasources/default.json`) shows „Heute: 3“, open minutes, overdue and the next two Tenners. Tapping it opens the
+skill on the dashboard. `skill.json` declares it (`ALEXA_DATASTORE_PACKAGEMANAGER` with package `tenner-status`,
+`ALEXA_DATA_STORE`, extension `alexaext:datastore:10`); the deploy imports the whole skill package (`ask deploy
+--target skill-metadata`), because `update-skill-manifest` does not upload widget packages (MAINT-002).
+
+**Add it on the Echo Show (owner):** swipe left on the home screen → „+“ (or Einstellungen → Widgets) → „Tenner“.
+When the widget is installed, Amazon sends `Alexa.DataStore.PackageManager.UsagesInstalled`; the skill registers the
+Alexa account (`PUT /household/alexa-users/{id}`), which publishes a HouseholdChanged event, so the notifier fills
+the widget within about a minute. Until then — or without account linking — it shows „Öffnen zum Laden“. Removal,
+updates and installation errors are logged (`widget_lifecycle`, `widget_installation_error`).
 
 How the data gets there (no request to the skill when the widget renders):
 
@@ -59,10 +68,9 @@ tenner-notifier (every 15 min) ── day start in the household timezone / pend
 - Needs: the skill (`ALEXA_SKILL_ID`), the notifier (`NOTIFICATIONS_ENABLED`) and the LWA client in Parameter Store
   (README → "Secrets": `/tenner/prod/alexa/lwa-client-id`, `/tenner/prod/alexa/lwa-client-secret`).
 
-**Spike (owner, manual, 1 day):** install the dev-stage skill's widget on a household Echo Show (de-DE), push once,
-and record in `docs/release-1.0/backlog/alexa/ticket007.md`: devices, sizes, update latency, behavior after reboot and with
-Alexa+. The widget package format and the Data Store request shape are taken from the documentation as of
-2026-10 and are verified there (TD-036).
+**Still to verify on a device (TD-036):** whether Amazon accepts the package on import, how the widget looks on
+the Echo Show 21, the update latency and the Data Store request shape. The package follows Amazon's widget sample
+(`alexa-samples/skill-sample-plant-care-widget`); only the medium size (`WIDGET_M`) is published.
 
 **Fallback (no-go or devices without widgets):** the daily briefing as a morning routine on the Echo Show
 (ALEXA-005, shows the dashboard while speaking) and Alexa notifications for overdue Tenners (ALEXA-008) keep the
@@ -186,7 +194,7 @@ and test it with an envelope from `tests/envelopes.ts`.
 | Invocation | only the Alexa Skills Kit with the Tenner skill ID (Lambda permission `event_source_token`), plus the SDK's skill-ID check (`ALEXA_SKILL_ID`) |
 | Environment | `TENNER_API_BASE_URL` (Tenner API stage), `ALEXA_SKILL_ID`, `LOG_LEVEL`, `ENVIRONMENT` |
 | Logs | `/tenner/alexa-skill` in eu-west-1, 30 days |
-| Data | none stored in eu-west-1; household data only via the Tenner API with the linked member's token (2 s timeout per call) |
+| Data | none stored in eu-west-1; household data only via the Tenner API with the linked member's token (time budget of 6.5 s per request, one attempt at most 4 s, a read without a response is retried once — MAINT-001) |
 
 ## Activation (one-time, owner, outside this repository)
 
@@ -257,7 +265,7 @@ The skill acts as a household member through the same Cognito user pool and Goog
 
 Error messages: not linked → „Bitte verknüpfe Tenner in der Alexa-App“ plus a link card; 401 (link expired or
 revoked) → relink prompt; 403 (account without household member) → „Dieses Konto gehört zu keinem
-Tenner-Haushalt“; API errors or timeouts (2 s per call) → „Tenner ist gerade nicht erreichbar“.
+Tenner-Haushalt“; API errors or timeouts (6.5 s budget per request, reads retried once; MAINT-001) → „Tenner ist gerade nicht erreichbar“.
 
 Rotating the client secret needs a new Cognito client (a Terraform change that replaces
 `aws_cognito_user_pool_client.alexa`), new values in the console and relinking (TD-035).

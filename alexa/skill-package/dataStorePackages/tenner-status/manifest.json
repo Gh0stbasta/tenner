@@ -1,0 +1,31 @@
+{
+  "manifest": {
+    "id": "tenner-status",
+    "version": "1.0.0",
+    "installStateChanges": "INFORM",
+    "updateStateChanges": "INFORM",
+    "presentationDefinitions": [
+      {
+        "url": "presentations/default.tpl"
+      }
+    ],
+    "appliesTo": "${viewport.mode == 'HUB'}"
+  },
+  "packageVersion": "1.0",
+  "packageType": "APL_PACKAGE",
+  "publishingInformation": {
+    "schemaVersion": "1.0",
+    "locales": {
+      "de-DE": [
+        {
+          "targetViewport": "WIDGET_M",
+          "metadata": {
+            "name": "Tenner",
+            "description": "Heute fällige Tenner, offene Minuten und Überfälliges auf einen Blick.",
+            "keywords": ["tenner", "haushalt", "aufgaben"]
+          }
+        }
+      ]
+    }
+  }
+}

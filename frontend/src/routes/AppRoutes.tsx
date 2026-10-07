@@ -11,6 +11,7 @@ import { TennersPage } from "../features/tenners/TennersPage";
 import { AppLayout } from "../layouts/AppLayout";
 import { AnalyticsPage } from "../features/analytics/AnalyticsPage";
 import { MealPlanPage } from "../features/meals/MealPlanPage";
+import { ShoppingListPage } from "../features/meals/ShoppingListPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 
 export interface AppRoutesProps {
@@ -34,6 +35,7 @@ export function AppRoutes({ onLogout }: AppRoutesProps) {
         <Route path="tenners" element={<TennersPage />} />
         <Route path="tenners/:tennerId" element={<TennerDetailPage />} />
         <Route path="essen" element={<MealPlanPage />} />
+        <Route path="essen/einkaufsliste" element={<ShoppingListPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />

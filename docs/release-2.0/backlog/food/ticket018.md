@@ -28,7 +28,7 @@ changes — the kitchen display answers the daily question without anyone asking
 # Background
 
 Owner breakdown FOOD-018; the owner expects this to be one of the most used features. The Tenner status widget
-(ALEXA-007, `alexa/widgets/tenner-status`) shows how a widget is packaged and fed through the Alexa Data Store. Its
+(ALEXA-007, `alexa/skill-package/dataStorePackages/tenner-status`, Amazon's layout since MAINT-002) shows how a widget is packaged and fed through the Alexa Data Store. Its
 API shapes are not yet verified on a device (TD-036).
 
 ---
@@ -45,7 +45,7 @@ FOOD-011 (images, optional)
 
 # Scope
 
-## Widget `alexa/widgets/meal-today`
+## Widget `alexa/skill-package/dataStorePackages/meal-today`
 
 - Sizes as supported by the existing widget; content: title „Heute“, lunch and dinner with small images or category
   icons; after dinner time it switches to „Morgen“.

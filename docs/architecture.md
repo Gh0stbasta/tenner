@@ -1375,7 +1375,7 @@ Browser ── CloudFront (index.html, assets/*) ── S3 tenner-frontend-<env>
 
 | Concern | Decision |
 |---|---|
-| Stack | React 19, TypeScript (strict), Vite 8, MUI 9, React Router 8, TanStack Query 5, React Hook Form, Zod |
+| Stack | React 19, TypeScript (strict), Vite 8, MUI 9, React Router 8, TanStack Query 5, React Hook Form, Zod, dnd-kit (drag and drop, FOOD-014) |
 | Language | German UI (decision 2026-10-02); no internationalization (UX-004 was not built) |
 | Configuration | `VITE_API_BASE_URL`, injected at build time by `deploy.yml` from the Terraform output `api_endpoint`; read only in `src/config.ts` |
 | API access | `src/api/client.ts` only (ESLint forbids `fetch` elsewhere): envelope unwrapping, Zod validation of payloads, `ApiError` with status and backend error code |
@@ -1486,6 +1486,13 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   vegetarian (R2) conflicts, which need `confirm: true` (409 `CONFIRMATION_REQUIRED`). Regenerating a week
   (FOOD-008) replans with a new seed and passes locked, manual, cooked and past meals to the planner as fixed. Undo is
   done by the client with the same endpoints (regenerate: `restore` with the previous dishes), no server-side history.
+- **Shopping list** (FOOD-014, `shopping/shopping-list.ts`, `services/shopping-list.service.ts`): `LIST#<weekStart>`
+  made from the plan on first read; quantities per adult portion × portion factors of the eaters at each meal, summed
+  per ingredient, rounded up. Items keep the household's order (drag and drop) and ticks; changes are idempotent
+  operations (`check`, `add`, `remove`, `move`) sent as a batch, so an offline queue on the phone can replay them and
+  two phones merge by retrying on the newest version. `stale` compares the stored fingerprint with a fresh
+  calculation. Syncing with the Alexa shopping list is not possible (Amazon switched the List Management API off on
+  2024-07-01); voice access goes through the Tenner skill (FOOD-026).
 - **Security:** same JWT authorizer and tenant isolation as all routes; allergies in the profile are never logged.
 - **Cost:** within the DynamoDB free tier.
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_API_TIMEOUT_MS, loadConfig, type SkillConfig } from "../src/config.js";
+import { DEFAULT_API_TIMEOUT_MS, loadConfig, MIN_RETRY_MS, RESPONSE_BUDGET_MS, type SkillConfig } from "../src/config.js";
 import { createSkill } from "../src/skill.js";
 import { SPEECH } from "../src/speech.js";
 import { SKILL_ID, intentRequest, launchRequest, sessionEndedRequest, unknownRequest } from "./envelopes.js";
@@ -92,7 +92,9 @@ describe("loadConfig", () => {
     expect(loadConfig({ ALEXA_SKILL_ID: "  " })).toMatchObject({ tennerApiBaseUrl: "", skillId: undefined });
   });
 
-  it("keeps three sequential API calls inside the 7 second Lambda timeout", () => {
-    expect(DEFAULT_API_TIMEOUT_MS * 3).toBeLessThan(7000);
+  it("keeps all API calls of a request inside the 7 second Lambda timeout, with room for a cold start and a retry (MAINT-001)", () => {
+    expect(RESPONSE_BUDGET_MS).toBeLessThan(7000);
+    expect(DEFAULT_API_TIMEOUT_MS).toBeGreaterThanOrEqual(3000);
+    expect(DEFAULT_API_TIMEOUT_MS + MIN_RETRY_MS).toBeLessThanOrEqual(RESPONSE_BUDGET_MS);
   });
 });

@@ -9,6 +9,7 @@ import { AuthConfigMissing } from "./auth/AuthConfigMissing";
 import { buildLogoutUrl } from "./auth/session";
 import { createApiAuth, createUserManager } from "./auth/userManager";
 import { config } from "./config";
+import { clearShoppingQueue } from "./features/meals/shoppingQueue";
 import { releaseQueueForLogout } from "./features/offline/completionQueue";
 import { clearOfflineCache } from "./features/offline/persistence";
 import { initInstallPrompt } from "./features/install/installPrompt";
@@ -35,6 +36,7 @@ function createApp() {
     if (!releaseQueueForLogout(window.localStorage, (message) => window.confirm(message))) return;
     // MOBILE-003: no Tenner data stays on the device after logout.
     clearOfflineCache(queryClient, window.localStorage);
+    clearShoppingQueue(window.localStorage);
     void userManager.removeUser().finally(() => window.location.assign(buildLogoutUrl(auth, window.location.origin)));
   };
 
