@@ -37,10 +37,12 @@ import { getTennerHandler, type GetTenner } from "./handlers/get-tenner.js";
 import { health, type DatabaseProbe } from "./handlers/health.js";
 import {
   endVacationHandler,
+  importCatalogHandler,
   getHouseholdHandler,
   setVacationHandler,
   updateHouseholdHandler,
   type EndVacation,
+  type ImportCatalog,
   type GetHousehold,
   type SetVacation,
   type UpdateHousehold,
@@ -80,6 +82,7 @@ import {
 import {
   AlexaSpeakerService,
   NotificationPreferencesService,
+  CatalogImportService,
   CompleteTennerService,
   CreateTennerService,
   DashboardService,
@@ -130,6 +133,7 @@ export interface Dependencies {
   readonly resumeTenner: ResumeTenner;
   readonly setVacation: SetVacation;
   readonly endVacation: EndVacation;
+  readonly importCatalog: ImportCatalog;
   readonly listMembers: ListMembers;
   readonly createMember: CreateMember;
   readonly updateMember: UpdateMember;
@@ -216,6 +220,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "POST /tenners/{tennerId}/resume": ({ event, deps, logger, identity }) => resumeTennerHandler(event, identity, deps.resumeTenner, logger),
   "PUT /household/vacation": ({ event, deps, logger, identity }) => setVacationHandler(event, identity, deps.setVacation, logger),
   "DELETE /household/vacation": ({ deps, logger, identity }) => endVacationHandler(identity, deps.endVacation, logger),
+  "POST /household/catalog": ({ event, deps, logger, identity }) => importCatalogHandler(event, identity, deps.importCatalog, logger),
   "GET /users": ({ deps, identity }) => listMembersHandler(identity.tenantId, deps.listMembers),
   "POST /users": ({ event, deps, logger, identity }) => createMemberHandler(event, identity, deps.createMember, logger),
   "PUT /users/{userId}": ({ event, deps, logger, identity }) => updateMemberHandler(event, identity, deps.updateMember, logger),
@@ -313,6 +318,18 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   // ALEXA-008: Alexa is a connected channel for every member once an Alexa account of the household uses the skill.
   const connectedChannels = async (tenantId: string): Promise<UserChannel[]> => ((await alexaSpeakerService?.alexaUsersOf(tenantId))?.length ? ["ALEXA"] : []);
   const notificationPreferencesService = householdRepository ? new NotificationPreferencesService(householdRepository, systemClock, timezoneOf, connectedChannels) : undefined;
+  // DATA-008: the household task catalog, imported through the regular member and Tenner services.
+  const catalogImportService =
+    memberService && createTennerService && tennerRepository
+      ? new CatalogImportService({
+          membersOf,
+          createMember: (identity, request) => memberService.createMember(identity, request),
+          tenners: tennerRepository,
+          createTenner: (identity, request, firstDue) => createTennerService.createTenner(identity, request, firstDue),
+          timezoneOf,
+          clock: systemClock,
+        })
+      : undefined;
   const memberDeactivationService =
     householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
 
@@ -342,6 +359,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     resumeTenner: pauseTennerService ? (identity, id) => pauseTennerService.resume(identity, id) : notConfigured,
     setVacation: vacationService ? (identity, request) => vacationService.setVacation(identity, request) : notConfigured,
     endVacation: vacationService ? (identity) => vacationService.endVacation(identity) : notConfigured,
+    importCatalog: catalogImportService ? (identity, dryRun) => catalogImportService.importCatalog(identity, dryRun) : notConfigured,
     listMembers: memberService ? (tenantId) => memberService.listMembers(tenantId) : notConfigured,
     createMember: memberService ? (identity, request) => memberService.createMember(identity, request) : notConfigured,
     updateMember: memberService ? (identity, userId, request) => memberService.updateMember(identity, userId, request) : notConfigured,

@@ -28,6 +28,7 @@ import {
   type UpdateCategoryRequest,
   type UpdateMemberRequest,
   type VacationRequest,
+  type CatalogImportRequest,
   type UndoCompletionRequest,
   type UpdateTennerRequest,
 } from "../dto/index.js";
@@ -404,3 +405,6 @@ export const analyticsNeglectedSchema = z.strictObject({
     .pipe(z.number().int().min(1).max(MAX_NEGLECTED_LIMIT))
     .optional(),
 }) satisfies z.ZodType<AnalyticsNeglectedRequest, Record<string, string | undefined>>;
+
+/** POST /household/catalog (DATA-008): an empty body imports; `{ "dryRun": true }` only reports. */
+export const catalogImportSchema = z.strictObject({ dryRun: z.boolean().optional() }) satisfies z.ZodType<CatalogImportRequest>;

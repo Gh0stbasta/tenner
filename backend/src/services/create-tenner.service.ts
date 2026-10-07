@@ -25,7 +25,7 @@ export class CreateTennerService {
    * due today in the household timezone (so it appears in the due list immediately), createdAt = updatedAt = now,
    * createdBy = updatedBy = the authenticated user, tenant from the identity.
    */
-  async createTenner(identity: Identity, request: CreateTennerRequest): Promise<TennerResponse> {
+  async createTenner(identity: Identity, request: CreateTennerRequest, firstDue?: string): Promise<TennerResponse> {
     const members = await this.membersOf(identity.tenantId);
     requireAssignee(members, request.assignedTo);
     for (const userId of request.rotation ?? []) requireMember(members, userId, "rotation");
@@ -47,7 +47,8 @@ export class CreateTennerService {
       rotation: request.rotation,
       originalAssignee: null,
       lastCompleted: null,
-      nextDue: dateInTimeZone(now, await this.timezoneOf(identity.tenantId)),
+      // DATA-008: the catalog import sets the first due date (weekday and rotation slot); the API never does.
+      nextDue: firstDue ?? dateInTimeZone(now, await this.timezoneOf(identity.tenantId)),
       snoozedUntil: null,
       pausedAt: null,
       pausedUntil: null,

@@ -1,11 +1,11 @@
 /** GET/PUT /household (settings, SCHEDULING-008, HOUSEHOLD-ADMIN-003) and PUT/DELETE /household/vacation (SCHEDULING-005). */
 
 import type { Identity } from "../auth/index.js";
-import type { HouseholdResponse, UpdateHouseholdRequest, VacationRequest, VacationUpdateResponse } from "../dto/index.js";
+import type { CatalogImportResponse, HouseholdResponse, UpdateHouseholdRequest, VacationRequest, VacationUpdateResponse } from "../dto/index.js";
 import type { ApiEvent, ApiResult } from "../types/api.js";
 import { successResponse } from "../utils/http.js";
 import type { Logger } from "../utils/logger.js";
-import { parseJsonBody, updateHouseholdSchema, vacationSchema, validate } from "../validators/index.js";
+import { catalogImportSchema, parseJsonBody, updateHouseholdSchema, vacationSchema, validate } from "../validators/index.js";
 
 export type GetHousehold = (tenantId: string) => Promise<HouseholdResponse>;
 export type UpdateHousehold = (identity: Identity, request: UpdateHouseholdRequest) => Promise<HouseholdResponse>;
@@ -47,4 +47,23 @@ export async function endVacationHandler(identity: Identity, endVacation: EndVac
   const household = await endVacation(identity);
   logger.info("Household vacation ended", { event: "HouseholdVacationEnded", endedBy: identity.userId });
   return successResponse(200, household);
+}
+
+export type ImportCatalog = (identity: Identity, dryRun: boolean) => Promise<CatalogImportResponse>;
+
+/** POST /household/catalog (DATA-008): import the household task catalog; an empty body is allowed. */
+export async function importCatalogHandler(event: ApiEvent, identity: Identity, importCatalog: ImportCatalog, logger: Logger): Promise<ApiResult> {
+  const body = event.body ? parseJsonBody(event.body, event.isBase64Encoded) : {};
+  const request = validate(catalogImportSchema, body);
+  const result = await importCatalog(identity, request.dryRun ?? false);
+  if (!result.dryRun) {
+    logger.info("Household catalog imported", {
+      event: "HouseholdCatalogImported",
+      importedBy: identity.userId,
+      membersCreated: result.membersCreated.length,
+      tennersCreated: result.tennersCreated.length,
+      tennersSkipped: result.tennersSkipped.length,
+    });
+  }
+  return successResponse(200, result);
 }

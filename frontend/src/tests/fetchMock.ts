@@ -51,9 +51,7 @@ export const DEFAULT_NOTIFICATION_RESPONSE = {
     weeklySummary: { enabled: false, dayOfWeek: "SUN", time: "18:00", channels: [] },
     quietHours: { start: "21:30", end: "07:00" },
   },
-  channels: [
-    { type: "ALEXA", connected: false },
-  ],
+  channels: [{ type: "ALEXA", connected: false }],
   effectiveTimezone: "Europe/Berlin",
 };
 

@@ -244,6 +244,7 @@ docs/backlog/
 | [DATA-005](data-management/ticket005.md) | Implement Member Data Erasure | Low | Long-Term |
 | [DATA-006](data-management/ticket006.md) | Establish Schema Versioning and Data Migrations | Medium | V2 |
 | [DATA-007](data-management/ticket007.md) | Implement Completion Correction | Low | V2 |
+| [DATA-008](data-management/ticket008.md) | Import the Household Task Catalog | High | V2 |
 
 ### Mobile Experience (`mobile/`, prefix `MOBILE-`)
 
