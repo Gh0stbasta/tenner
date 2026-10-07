@@ -110,7 +110,7 @@ Consider turning the list into "serverless, pay-per-use managed services, subjec
 
 ### Related Work
 
-SECURITY-006, NOTIFICATION-005, OBSERVABILITY-002, TICKET-022, OBSERVABILITY-004, SECURITY-012, AI-001
+SECURITY-006, OBSERVABILITY-002, TICKET-022, OBSERVABILITY-004, SECURITY-012, AI-001
 
 ---
 
@@ -1032,3 +1032,63 @@ record the results in the ticket.
 ### Related Work
 
 ALEXA-007, ALEXA-008, `backend/src/alexa/`, `alexa/widgets/`.
+
+---
+
+## TD-037: Dropped notification channels still listed in the channel enums (resolved)
+
+> Resolved by CLEANUP-001 (2026-10-06): the enums contain `LOG` and `ALEXA` (user channels: `ALEXA`) only.
+
+### Description
+
+`backend/src/notifications/model.ts` (`CHANNEL_TYPES`), `backend/src/models/notification-preferences.ts` and
+`frontend/src/features/notifications/api.ts` (`USER_CHANNELS`, `CHANNEL_LABELS`) still contain `EMAIL`, `TELEGRAM`
+and `WEB_PUSH`. `GET /users/{userId}/notification-preferences` reports them as `connected: false`.
+
+### Reason
+
+BACKLOG-001 removed the channel tickets (NOTIFICATION-005 – 007, MOBILE-006) from the backlog only; the owner asked
+for a backlog change, not a code change.
+
+### Impact
+
+No user impact: the settings page offers only connected channels and the API rejects unconnected ones. The values
+are dead code and suggest features that will not come.
+
+### Suggested Improvement
+
+Reduce the enums to `LOG` and `ALEXA` (user channels: `ALEXA`), update the tests and the API documentation, in one
+small ticket.
+
+### Related Work
+
+BACKLOG-001, NOTIFICATION-001, NOTIFICATION-002, ALEXA-008.
+
+---
+
+## TD-038: An offline completion is dropped when the Tenner was completed later online
+
+### Description
+
+When a member completes a Tenner offline and someone else completes it online before the queue syncs, the backend
+rejects the older `completedAt` ("Must not be earlier than the last completion"). The offline completion is dropped
+with a notice and does not appear in the history or analytics.
+
+### Reason
+
+MOBILE-004 asked to keep such completions in the history, but the backend only appends completions in time order
+(nextDue, rotation and undo depend on the latest completion). Changing that was out of scope for a frontend ticket.
+
+### Impact
+
+Rare (two people, one offline, same Tenner, same cycle). The member's work is missing from the history and the
+household balance; the Tenner itself is correct.
+
+### Suggested Improvement
+
+A backend option to record a "late" completion as history only (no nextDue or rotation change), used by the offline
+sync on this specific validation error.
+
+### Related Work
+
+MOBILE-004, TICKET-013 (`backend/src/services/complete-tenner.service.ts`), `frontend/src/features/offline/`.

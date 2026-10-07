@@ -66,6 +66,38 @@ describe("AuthGate", () => {
     expect(screen.getByText("Geschützt für JULIA")).toBeInTheDocument();
   });
 
+  it("offline with a stored but expired session: opens the app without a login redirect (MOBILE-003)", () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    setAuth({
+      isAuthenticated: false,
+      error: new Error("silent renew failed"),
+      user: { expired: true, profile: { "cognito:groups": ["household:default:JULIA"] } },
+    });
+    renderGate();
+    expect(screen.getByText("Geschützt für JULIA")).toBeInTheDocument();
+    expect(authState.signinRedirect).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
+  it("online with an expired stored session: renews silently before redirecting (MOBILE-003)", async () => {
+    setAuth({
+      user: { expired: true, profile: { "cognito:groups": ["household:default:JULIA"] } },
+      signinSilent: vi.fn(async () => {
+        throw new Error("refresh token expired");
+      }),
+    });
+    renderGate();
+    expect(authState.signinSilent).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(authState.signinRedirect).toHaveBeenCalledOnce());
+  });
+
+  it("offline without a stored session: still asks for the login", () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    renderGate();
+    expect(authState.signinRedirect).toHaveBeenCalledOnce();
+    vi.restoreAllMocks();
+  });
+
   it("first login: shows the household assignment instead of the app", async () => {
     mockFetch({
       "GET /onboarding": ok({

@@ -1390,7 +1390,8 @@ Out of scope for MVP.
 
 ## Notifications
 
-Foundation implemented (NOTIFICATION-001); channels Telegram, WhatsApp, Email and Push are future tickets.
+Foundation implemented (NOTIFICATION-001); channels are the log and Alexa (ALEXA-008). E-mail, Telegram and push
+channels were dropped on 2026-10-06 (BACKLOG-001); WhatsApp is only an evaluation (FUTURE-009).
 
 ```text
 EventBridge rule rate(15 minutes) ──► Lambda tenner-notifier (backend/src/notifier.ts, own role)

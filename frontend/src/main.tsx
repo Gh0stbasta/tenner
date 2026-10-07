@@ -9,6 +9,8 @@ import { AuthConfigMissing } from "./auth/AuthConfigMissing";
 import { buildLogoutUrl } from "./auth/session";
 import { createApiAuth, createUserManager } from "./auth/userManager";
 import { config } from "./config";
+import { releaseQueueForLogout } from "./features/offline/completionQueue";
+import { clearOfflineCache } from "./features/offline/persistence";
 import { initInstallPrompt } from "./features/install/installPrompt";
 import { UpdatePrompt } from "./features/install/UpdatePrompt";
 import { AppRoutes } from "./routes/AppRoutes";
@@ -19,6 +21,8 @@ initInstallPrompt();
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element #root not found.");
 
+const queryClient = createQueryClient();
+
 function createApp() {
   const auth = config.auth;
   if (!auth) return <AuthConfigMissing />;
@@ -27,6 +31,10 @@ function createApp() {
   const userManager = createUserManager(auth);
   configureApiAuth(createApiAuth(userManager));
   const logout = () => {
+    // MOBILE-004: unsynced offline completions are only discarded after a confirmation.
+    if (!releaseQueueForLogout(window.localStorage, (message) => window.confirm(message))) return;
+    // MOBILE-003: no Tenner data stays on the device after logout.
+    clearOfflineCache(queryClient, window.localStorage);
     void userManager.removeUser().finally(() => window.location.assign(buildLogoutUrl(auth, window.location.origin)));
   };
 
@@ -41,7 +49,7 @@ function createApp() {
 
 createRoot(root).render(
   <StrictMode>
-    <AppProviders queryClient={createQueryClient()}>
+    <AppProviders queryClient={queryClient}>
       {createApp()}
       <UpdatePrompt />
     </AppProviders>

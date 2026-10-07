@@ -135,9 +135,6 @@ docs/backlog/
 | [NOTIFICATION-002](notifications/ticket002.md) | Implement Reminder Preferences | High | V2 |
 | [NOTIFICATION-003](notifications/ticket003.md) | Implement Daily Digest | High | V2 |
 | [NOTIFICATION-004](notifications/ticket004.md) | Implement Overdue Alerts | Medium | V2 |
-| [NOTIFICATION-005](notifications/ticket005.md) | Implement Email Notification Channel | Medium | V2 |
-| [NOTIFICATION-006](notifications/ticket006.md) | Implement Telegram Notification Channel | High | V2 |
-| [NOTIFICATION-007](notifications/ticket007.md) | Implement Web Push Notification Channel | Medium | V2 |
 | [NOTIFICATION-008](notifications/ticket008.md) | Implement Weekly Summary | Low | V2 |
 
 ### Scheduling (`scheduling/`, prefix `SCHEDULING-`)
@@ -157,7 +154,6 @@ docs/backlog/
 
 | ID | Title | Priority | Phase |
 |---|---|---|---|
-| [PRODUCTIVITY-001](productivity/ticket001.md) | Implement "I Have X Minutes" Suggestions | High | V2 |
 | [PRODUCTIVITY-002](productivity/ticket002.md) | Introduce Tenner Importance | Medium | V2 |
 | [PRODUCTIVITY-003](productivity/ticket003.md) | Implement Tenner Checklists | Low | V2 |
 | [PRODUCTIVITY-004](productivity/ticket004.md) | Implement Completion Notes | Low | V2 |
@@ -257,7 +253,6 @@ docs/backlog/
 | [MOBILE-003](mobile/ticket003.md) | Implement Offline Read Support | Low | V2 |
 | [MOBILE-004](mobile/ticket004.md) | Implement Offline Completion Queue | Low | Long-Term |
 | [MOBILE-005](mobile/ticket005.md) | Optimize Mobile Navigation and Touch Interaction | Medium | V2 |
-| [MOBILE-006](mobile/ticket006.md) | Implement Push Notification Subscription | Medium | V2 |
 
 ### Alexa & Echo Show (`alexa/`, prefix `ALEXA-`)
 
@@ -282,7 +277,6 @@ custom skill in development stage; skill Lambda in eu-west-1 calling the Tenner 
 | ID | Title | Priority | Phase |
 |---|---|---|---|
 | [INTEGRATION-001](integrations/ticket001.md) | Establish Integration Foundation | Medium | V2 |
-| [INTEGRATION-002](integrations/ticket002.md) | Implement Interactive Telegram Bot | Medium | V2 |
 | [INTEGRATION-003](integrations/ticket003.md) | Implement Strava Activity Auto-Completion | Medium | V2 |
 | [INTEGRATION-004](integrations/ticket004.md) | Evaluate and Implement Garmin Connect Integration | Low | Long-Term |
 | [INTEGRATION-005](integrations/ticket005.md) | Support Zwift Rides via Strava | Low | Long-Term |
@@ -329,3 +323,19 @@ Urgent changes outside the regular backlog live in `docs/hotfix/` (owner decisio
 |---|---|---|---|
 | [HOTFIX-001](../hotfix/ticket001.md) | First Login & Household Assignment Flow | High | MVP |
 | [HOTFIX-002](../hotfix/ticket002.md) | Make Dependabot Pull Requests Pass Validation | High | MVP |
+
+---
+
+## Removed Tickets
+
+Dropped by the owner on 2026-10-06 (BACKLOG-001, `docs/hotfix/backlog001.md`); the files are deleted and remain in
+the Git history. Their numbers are not reused.
+
+| ID | Title | Reason |
+|---|---|---|
+| MOBILE-006 | Implement Push Notification Subscription | Not wanted: no phone push notifications |
+| NOTIFICATION-005 | Implement Email Notification Channel | Not wanted: reminders stay in Tenner and on Alexa |
+| NOTIFICATION-006 | Implement Telegram Notification Channel | Not wanted: reminders stay in Tenner and on Alexa |
+| NOTIFICATION-007 | Implement Web Push Notification Channel | Not wanted: no push notifications |
+| PRODUCTIVITY-001 | Implement "I Have X Minutes" Suggestions | Not wanted |
+| INTEGRATION-002 | Implement Interactive Telegram Bot | Not wanted: needs the dropped Telegram channel (BACKLOG-002, `docs/hotfix/backlog002.md`) |

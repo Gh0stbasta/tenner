@@ -12,7 +12,10 @@ import { ErrorAlert } from "../components/ErrorAlert";
 import { PageLoading } from "../components/LoadingState";
 import { CompletionProvider } from "../features/completions/CompletionProvider";
 import { CurrentUserProvider } from "../features/completions/CurrentUserProvider";
+import { OfflineCacheProvider } from "../features/offline/OfflineCacheProvider";
 import { AssignmentPage } from "../features/onboarding/AssignmentPage";
+import { useOnline } from "../hooks/useConnectivity";
+import type { UserId } from "../types/domain";
 import { LOGIN_PARAMS, returnPath, userIdFromProfile } from "./session";
 
 export interface AuthGateProps {
@@ -26,6 +29,10 @@ export function AuthGate({ children, onLogout }: AuthGateProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const redirecting = useRef(false);
+  const online = useOnline();
+  // MOBILE-003: offline, a stored session (even with an expired token) opens the app with the cached data; the
+  // login redirect and silent-renew errors wait until the connection is back.
+  const offlineUser = !online && auth.user ? userIdFromProfile(auth.user.profile) : undefined;
   const login = useCallback(
     () =>
       void auth.signinRedirect({
@@ -35,13 +42,23 @@ export function AuthGate({ children, onLogout }: AuthGateProps) {
     [auth, location],
   );
 
-  const needsLogin = !auth.isLoading && !auth.isAuthenticated && !auth.error && !auth.activeNavigator;
+  const needsLogin = !offlineUser && !auth.isLoading && !auth.isAuthenticated && !auth.error && !auth.activeNavigator;
+  const hasStoredUser = auth.user !== null && auth.user !== undefined;
   useEffect(() => {
     if (needsLogin && !redirecting.current) {
       redirecting.current = true;
-      login();
+      // MOBILE-003: back online with an expired token, the refresh token usually renews the session silently.
+      if (hasStoredUser) void auth.signinSilent().catch(login);
+      else login();
     }
-  }, [needsLogin, login]);
+  }, [needsLogin, login, hasStoredUser, auth]);
+
+  if (offlineUser)
+    return (
+      <Session user={offlineUser} onLogout={onLogout}>
+        {children}
+      </Session>
+    );
 
   if (auth.error) {
     return (
@@ -64,8 +81,27 @@ export function AuthGate({ children, onLogout }: AuthGateProps) {
   }
 
   return (
-    <CurrentUserProvider user={user} logout={onLogout}>
-      <CompletionProvider>{children}</CompletionProvider>
-    </CurrentUserProvider>
+    <Session user={user} onLogout={onLogout}>
+      {children}
+    </Session>
+  );
+}
+
+/** Providers of a logged-in household member: offline cache, current user, completions. */
+function Session({
+  user,
+  onLogout,
+  children,
+}: {
+  readonly user: UserId;
+  readonly onLogout: () => void;
+  readonly children: ReactNode;
+}) {
+  return (
+    <OfflineCacheProvider user={user}>
+      <CurrentUserProvider user={user} logout={onLogout}>
+        <CompletionProvider>{children}</CompletionProvider>
+      </CurrentUserProvider>
+    </OfflineCacheProvider>
   );
 }

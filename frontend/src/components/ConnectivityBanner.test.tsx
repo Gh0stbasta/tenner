@@ -38,6 +38,28 @@ describe("ConnectivityBanner", () => {
     await waitFor(() => expect(screen.queryByText(OFFLINE)).not.toBeInTheDocument());
   });
 
+  it("offline: shows how old the data on screen is (MOBILE-003)", async () => {
+    mockFetch({ "GET /probe": () => ok({ ok: true }) });
+    function Shown() {
+      const query = useQuery({
+        queryKey: ["probe"],
+        queryFn: () => apiClient.get("/probe", { schema: z.object({ ok: z.boolean() }) }),
+      });
+      return <p>{query.data ? "geladen" : "lädt"}</p>;
+    }
+    renderWithProviders(
+      <>
+        <ConnectivityBanner />
+        <Shown />
+      </>,
+    );
+    await screen.findByText("geladen");
+    setOnline(false);
+    expect(screen.getByText(OFFLINE)).toBeInTheDocument();
+    expect(screen.getByText("Angezeigt wird der Stand von gerade eben.")).toBeInTheDocument();
+    setOnline(true);
+  });
+
   it("shows that the API is unreachable after a transient read failure until a read succeeds", async () => {
     let calls = 0;
     mockFetch({ "GET /probe": () => (++calls === 1 ? fail(503, "SERVICE_UNAVAILABLE") : ok({ ok: true })) });

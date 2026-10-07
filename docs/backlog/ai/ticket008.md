@@ -1,5 +1,7 @@
 # AI-008: Implement Tenner Assistant (Q&A)
 
+> **Note (2026-10-06, BACKLOG-001):** PRODUCTIVITY-001 (suggestions) was removed; the assistant uses the dashboard and analytics capabilities only.
+
 ## Type
 
 Full-Stack Feature

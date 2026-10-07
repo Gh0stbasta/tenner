@@ -2,6 +2,7 @@
 
 export type TelemetryEvent =
   | "TennerCompleted"
+  | "TennerCompletedOffline"
   | "TennerArchived"
   | "TennerRestored"
   | "FilterChanged"

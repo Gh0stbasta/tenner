@@ -105,9 +105,9 @@ describe("runNotifier", () => {
   });
 
   it("isolates failing jobs, members and channels (Channel Failure Isolation)", async () => {
-    const broken: NotificationChannel = { type: "EMAIL", send: vi.fn(async () => Promise.reject(new TypeError("boom"))) };
+    const broken: NotificationChannel = { type: "ALEXA", send: vi.fn(async () => Promise.reject(new TypeError("boom"))) };
     const failingForStefan = digestJob({
-      channelsDue: async () => ["LOG", "EMAIL"],
+      channelsDue: async () => ["LOG", "ALEXA"],
       render: async (recipient) => {
         if (recipient.userId === "STEFAN") throw new Error("render failed");
         return message(recipient.userId);

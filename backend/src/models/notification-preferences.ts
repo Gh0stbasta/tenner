@@ -1,7 +1,10 @@
 import type { UserId, Weekday } from "./enums.js";
 
-/** Channels a member can choose for notifications (NOTIFICATION-002); LOG is internal and never selectable. */
-export const USER_CHANNELS = ["EMAIL", "TELEGRAM", "WEB_PUSH", "ALEXA"] as const;
+/**
+ * Channels a member can choose for notifications (NOTIFICATION-002); LOG is internal and never selectable.
+ * Alexa only: e-mail, Telegram and push were dropped (BACKLOG-001, CLEANUP-001).
+ */
+export const USER_CHANNELS = ["ALEXA"] as const;
 export type UserChannel = (typeof USER_CHANNELS)[number];
 
 /** Per-member notification preferences (NOTIFICATION-002), stored on the household item. */

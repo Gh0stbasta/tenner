@@ -1,5 +1,7 @@
 # FUTURE-007: Evaluate Native Mobile App
 
+> **Note (2026-10-06, BACKLOG-001):** MOBILE-006 (push notifications) was removed; the dependency is MOBILE-001 to MOBILE-005.
+
 ## Type
 
 Product Strategy (Postponed)

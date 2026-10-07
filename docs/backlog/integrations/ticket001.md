@@ -1,5 +1,7 @@
 # INTEGRATION-001: Establish Integration Foundation
 
+> **Note (2026-10-06, BACKLOG-002):** Telegram was dropped (NOTIFICATION-006, INTEGRATION-002 removed); `TELEGRAM` is no longer a planned provider.
+
 ## Type
 
 Backend Architecture

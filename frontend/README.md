@@ -173,6 +173,53 @@ Tenner is a Progressive Web App: it can be added to the home screen and starts w
   the browser; `workbox-build` runs at build time.
 - The dev server (`npm run dev`) does not register the worker.
 
+## Offline Reading (MOBILE-003)
+
+- **What it does:** the TanStack Query cache of the dashboard, Tenner list and detail, history, members and categories
+  is persisted in `localStorage` (key `tenner.offlineCache`, `src/features/offline/`). Offline, the app opens with
+  the last known data; queries pause and refresh on reconnect.
+- **Age shown:** while offline or while the API is unreachable, the banner adds „Angezeigt wird der Stand von …“
+  (oldest update time of the data on screen).
+- **Lifetime:** max. 7 days (older caches are discarded at startup; `gcTime` is 7 days so unobserved pages stay
+  available). A new build or another member on the device discards the cache. Logout deletes it.
+- **Offline session:** offline, a stored login opens the app even if the access token has expired; the login
+  redirect and token refresh wait for the connection. Back online, an expired session is renewed silently (refresh
+  token) before the app falls back to the login page. Without a stored login the app still asks for the login.
+- **Not persisted:** analytics, settings, notification preferences, Alexa links, onboarding.
+- **Privacy:** Tenner titles, notes, due dates, member names and recent completions of the household stay on the
+  device for up to 7 days (or until logout). Anyone with access to the unlocked device and browser profile can read
+  them, as with the login tokens (ADR 0001).
+- **Why `localStorage`, not IndexedDB:** the cache is a few hundred kB at most for one household; synchronous
+  `localStorage` needs no extra library and works the same in tests. Writes that fail (quota, private mode) are
+  ignored; the app works without the cache.
+- **Dependency:** `@tanstack/react-query-persist-client` (same release as `@tanstack/react-query`, official
+  TanStack package) for restore-before-fetch, dehydration filters, max age and cache busting.
+
+## Offline Completion (MOBILE-004)
+
+- **What it does:** without a connection, „Erledigt“ (button or swipe) stores the completion on the device
+  (`localStorage` key `tenner.offlineQueue`, `src/features/offline/completionQueue.ts`) with the device time and an
+  Idempotency-Key generated at that moment. The Tenner disappears from the dashboard at once; „⏳ … wartet auf die
+  Übertragung“ lists what is waiting. The snackbar's „Rückgängig“ takes it out of the queue again.
+- **Also queued:** a request that gets no response at all (connection dropped while online).
+- **Sync:** at app start, on the browser's `online` event and every 60 s while entries wait, the queue is replayed in
+  order through the normal Complete endpoint with `completedAt` and the stored Idempotency-Key, so a replay never
+  completes a Tenner twice. One run at a time; the app must be open (no Background Sync).
+- **Rules:**
+  - network error, 5xx, 429, 401 → stop, keep the entry and the ones after it, try again later
+  - `409 CONCURRENT_MODIFICATION` → one immediate retry; if it happens again, keep for later
+  - `404` / `409 TENNER_INACTIVE` → drop: „Der Tenner wurde inzwischen gelöscht oder archiviert.“
+  - `400` on `completedAt` (someone completed it later online) → drop: „Der Tenner wurde inzwischen schon
+    erledigt.“ The backend accepts no completion earlier than the last one, so the offline one is not kept in the
+    history.
+  - device time up to 5 minutes in the future → clamped to now; further → drop with a hint to check the clock
+  - any other refusal → drop with the usual error message
+  The result appears in one snackbar („✅ 2 Offline-Erledigungen übertragen.“ plus refused ones).
+- **One entry per Tenner:** a second offline completion of the same Tenner is refused („schon zum Übertragen
+  vorgemerkt“).
+- **Logout:** with waiting entries the app asks before discarding them; afterwards the queue is deleted.
+- **Not offline:** create, edit, archive, snooze, skip, pause, undo of synced completions.
+
 ## Touch Interaction (MOBILE-005)
 
 - **Swipe on dashboard cards** (due today and overdue): right → complete (with the usual undo snackbar), left → the
