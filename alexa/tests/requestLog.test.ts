@@ -55,7 +55,8 @@ describe("outcomes (Metric Emission Per Outcome)", () => {
     expect(done.requests()[0]).toMatchObject({ outcome: "COMPLETED" });
     const network = capture({ "GET /household/alexa": "network-error" });
     await network.skill.invoke(launchRequest());
-    expect(network.requests()[0]).toMatchObject({ outcome: "ERROR", apiStatus: 0, apiCalls: 1 });
+    // The read is retried once (MAINT-001), so two calls without a response.
+    expect(network.requests()[0]).toMatchObject({ outcome: "ERROR", apiStatus: 0, apiCalls: 2 });
   });
 
   it("names the device class on screen devices", async () => {

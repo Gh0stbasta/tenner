@@ -186,7 +186,7 @@ and test it with an envelope from `tests/envelopes.ts`.
 | Invocation | only the Alexa Skills Kit with the Tenner skill ID (Lambda permission `event_source_token`), plus the SDK's skill-ID check (`ALEXA_SKILL_ID`) |
 | Environment | `TENNER_API_BASE_URL` (Tenner API stage), `ALEXA_SKILL_ID`, `LOG_LEVEL`, `ENVIRONMENT` |
 | Logs | `/tenner/alexa-skill` in eu-west-1, 30 days |
-| Data | none stored in eu-west-1; household data only via the Tenner API with the linked member's token (2 s timeout per call) |
+| Data | none stored in eu-west-1; household data only via the Tenner API with the linked member's token (time budget of 6.5 s per request, one attempt at most 4 s, a read without a response is retried once — MAINT-001) |
 
 ## Activation (one-time, owner, outside this repository)
 
@@ -257,7 +257,7 @@ The skill acts as a household member through the same Cognito user pool and Goog
 
 Error messages: not linked → „Bitte verknüpfe Tenner in der Alexa-App“ plus a link card; 401 (link expired or
 revoked) → relink prompt; 403 (account without household member) → „Dieses Konto gehört zu keinem
-Tenner-Haushalt“; API errors or timeouts (2 s per call) → „Tenner ist gerade nicht erreichbar“.
+Tenner-Haushalt“; API errors or timeouts (6.5 s budget per request, reads retried once; MAINT-001) → „Tenner ist gerade nicht erreichbar“.
 
 Rotating the client secret needs a new Cognito client (a Terraform change that replaces
 `aws_cognito_user_pool_client.alexa`), new values in the console and relinking (TD-035).
