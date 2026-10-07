@@ -66,6 +66,7 @@ const DISH = {
   containsPoultry: false,
   unknownIngredients: [],
 } as DishResponse;
+const EMPTY_SHOPPING_LIST = { weekStart: "2026-10-12", range: "REST" as const, generatedAt: "2026-10-12T08:00:00Z", stale: false, items: [] };
 const EMPTY_PLAN = { weekStart: "2026-10-12", weekEnd: "2026-10-18", ready: false, setup: { hasDishes: false, hasEaters: false }, generatedAt: null, slots: [], violations: [] };
 const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [], alexaAccounts: 0 };
 
@@ -168,6 +169,9 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     chooseMeal: vi.fn(async () => EMPTY_PLAN),
     swapMeals: vi.fn(async () => EMPTY_PLAN),
     regenerateWeek: vi.fn(async () => ({ ...EMPTY_PLAN, regeneration: { changed: 0, kept: 0 } })),
+    getShoppingList: vi.fn(async () => EMPTY_SHOPPING_LIST),
+    refreshShoppingList: vi.fn(async () => EMPTY_SHOPPING_LIST),
+    changeShoppingList: vi.fn(async () => EMPTY_SHOPPING_LIST),
     importMealCatalog: vi.fn(async (_identity: unknown, dryRun: boolean) => ({ dryRun, dishesCreated: ["Onigiri"], dishesSkipped: [] })),
     ...overrides,
   };
@@ -622,6 +626,34 @@ describe("meal plan routes (FOOD-006)", () => {
     expect(d.regenerateWeek).toHaveBeenLastCalledWith(TEST_IDENTITY, "next", { restore });
     expect((await regenerate({ restore: [] })).statusCode).toBe(400);
     expect((await regenerate({ restore: [{ slotId: "x", dishId: "a" }] })).statusCode).toBe(400);
+  });
+
+  it("reads, refreshes and changes the shopping list (FOOD-014)", async () => {
+    const d = deps();
+    const list = (key: string, body?: unknown) =>
+      route({ ...event(key, {}, body === undefined ? undefined : JSON.stringify(body)), pathParameters: { weekStart: "current" } } as APIGatewayProxyEventV2, d);
+    expect((await list("GET /meals/plans/{weekStart}/shopping-list")).statusCode).toBe(200);
+    expect(d.getShoppingList).toHaveBeenLastCalledWith("default", "current");
+    expect((await list("POST /meals/plans/{weekStart}/shopping-list/refresh")).statusCode).toBe(200);
+    expect(d.refreshShoppingList).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", undefined);
+    expect((await list("POST /meals/plans/{weekStart}/shopping-list/refresh", { range: "WEEK" })).statusCode).toBe(200);
+    expect(d.refreshShoppingList).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", "WEEK");
+    const operations = [
+      { type: "check", key: "milk", checked: true },
+      { type: "add", key: "manual-abc-1", name: " Klopapier " },
+      { type: "move", key: "milk", afterKey: null },
+      { type: "remove", key: "manual-abc-1" },
+    ];
+    expect((await list("POST /meals/plans/{weekStart}/shopping-list/changes", { operations })).statusCode).toBe(200);
+    expect(d.changeShoppingList).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", [
+      { type: "check", key: "milk", checked: true },
+      { type: "add", key: "manual-abc-1", name: "Klopapier" },
+      { type: "move", key: "milk", afterKey: null },
+      { type: "remove", key: "manual-abc-1" },
+    ]);
+    expect((await list("POST /meals/plans/{weekStart}/shopping-list/changes", { operations: [] })).statusCode).toBe(400);
+    expect((await list("POST /meals/plans/{weekStart}/shopping-list/changes", { operations: [{ type: "add", key: "milk", name: "x" }] })).statusCode).toBe(400);
+    expect((await list("POST /meals/plans/{weekStart}/shopping-list/refresh", { range: "MONTH" })).statusCode).toBe(400);
   });
 });
 

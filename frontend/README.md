@@ -44,6 +44,7 @@ Only `src/config.ts` reads `import.meta.env` (ESLint rule).
 | Build                | Vite 8, TypeScript (strict)                              |
 | Tests                | Vitest, React Testing Library, jsdom                     |
 | Service worker       | `vite-plugin-pwa` (Workbox), build time only (MOBILE-002) |
+| Drag and drop        | `@dnd-kit/core`, `@dnd-kit/sortable` (mouse, touch, keyboard; FOOD-014) |
 
 ## Project Structure
 
@@ -150,6 +151,22 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 - **Navigation:** „Essen“ between Tenner and Auswertung (side and bottom navigation).
 - **Dashboard:** „Heute essen wir“ (`TodayMealsCard`) with today's meals, hidden while there is no plan.
 - **Offline:** plans use the query root `mealPlans` and are kept in the offline cache; the food profile is not.
+
+## Shopping List (FOOD-014)
+
+- **Page `/essen/einkaufsliste`** (`src/features/meals/ShoppingListPage.tsx`, button „Einkaufsliste“ on the plan page;
+  the bottom navigation has no sixth entry): the week's items in the household's own order with quantity
+  („1,5 kg“) and meals („für Mo Abend, Do Mittag“); „Ab heute“ / „Ganze Woche“; „Eigener Eintrag“; „Teilen“ (Web Share
+  API, otherwise copied as text).
+- **Own order:** drag handle per item (`@dnd-kit`: mouse, touch with a short press, keyboard with Space and arrow
+  keys); a drop is sent as `{ type: "move", key, afterKey }`.
+- **Ticking off:** a ticked item is struck through and moves to „Erledigt“ at the end; unticking puts it back.
+  Pantry items (salt, oil …) are in a collapsed „Vorrat prüfen“.
+- **„Liste aktualisieren“** appears when the plan changed since the list was made (`stale`).
+- **Offline:** the list uses the query root `shoppingLists` (offline cache). Every change is queued in localStorage
+  (`tenner.shoppingQueue`, `shoppingQueue.ts`) and sent when online (`useShoppingChanges`); the page shows the server
+  list with the queued changes applied. The changes are idempotent, so a replay does no harm. The queue is deleted
+  on logout without a question.
 
 ## Settings (FRONTEND-008)
 

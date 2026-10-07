@@ -20,6 +20,8 @@ export const queryKeys = {
   /** Plans have their own root so only they are kept offline (MOBILE-003), not the profile with allergies. */
   mealPlans: ["mealPlans"] as const,
   mealPlan: (week: string) => ["mealPlans", week] as const,
+  /** Shopping list of a week (FOOD-014); kept in the offline cache. */
+  shoppingList: (week: string) => ["shoppingLists", week] as const,
   /** Picker options of one meal (FOOD-022); not cached offline. */
   mealOptions: (week: string, slotId: string) => ["meals", "options", week, slotId] as const,
 };

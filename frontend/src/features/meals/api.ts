@@ -285,3 +285,70 @@ export function useRegenerateWeek(week: WeekChoice) {
     onSuccess: (result) => queryClient.setQueryData(queryKeys.mealPlan(week), mealPlanSchema.parse(result)),
   });
 }
+
+const shoppingItemSchema = z.object({
+  key: z.string(),
+  ingredientId: z.string().nullable(),
+  name: z.string(),
+  quantity: z.number().nullable(),
+  unit: z.enum(["g", "ml", "Stück"]).nullable(),
+  section: z.enum([
+    "GEMUESE_OBST",
+    "BACKWAREN",
+    "KUEHLREGAL",
+    "FLEISCH_FISCH",
+    "TIEFKUEHL",
+    "TROCKENWAREN",
+    "GEWUERZE",
+    "SONSTIGES",
+  ]),
+  pantry: z.boolean(),
+  checked: z.boolean(),
+  manual: z.boolean(),
+  usedFor: z.array(z.string()),
+});
+export type ShoppingItem = z.infer<typeof shoppingItemSchema>;
+
+export const shoppingListSchema = z.object({
+  weekStart: z.string(),
+  range: z.enum(["REST", "WEEK"]),
+  generatedAt: z.string(),
+  stale: z.boolean(),
+  items: z.array(shoppingItemSchema),
+});
+export type ShoppingList = z.infer<typeof shoppingListSchema>;
+export type ShoppingRange = ShoppingList["range"];
+
+export type ShoppingOperation =
+  | { readonly type: "check"; readonly key: string; readonly checked: boolean }
+  | { readonly type: "add"; readonly key: string; readonly name: string }
+  | { readonly type: "remove"; readonly key: string }
+  | { readonly type: "move"; readonly key: string; readonly afterKey: string | null };
+
+const shoppingPath = (week: string) => `/meals/plans/${week}/shopping-list`;
+
+/** The week's list (FOOD-014); kept in the offline cache, so it is readable in the shop without a connection. */
+export function useShoppingList(week: WeekChoice) {
+  return useQuery({
+    queryKey: queryKeys.shoppingList(week),
+    queryFn: () => apiClient.get(shoppingPath(week), { schema: shoppingListSchema }),
+    staleTime: 30_000,
+  });
+}
+
+/** „Liste aktualisieren“ and the range switch. */
+export function useRefreshShoppingList(week: WeekChoice) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (range?: ShoppingRange) =>
+      apiClient.post(`${shoppingPath(week)}/refresh`, {
+        schema: shoppingListSchema,
+        body: range ? { range } : {},
+      }),
+    onSuccess: (list) => queryClient.setQueryData(queryKeys.shoppingList(week), list),
+  });
+}
+
+/** Sends queued changes for one list (by its week start, so a queue survives the change of week). */
+export const sendShoppingOperations = (weekStart: string, operations: readonly ShoppingOperation[]) =>
+  apiClient.post(`${shoppingPath(weekStart)}/changes`, { schema: shoppingListSchema, body: { operations } });

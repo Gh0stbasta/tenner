@@ -23,3 +23,6 @@ export * from "./models/plan.js";
 export * from "./services/meal-plan.service.js";
 export * from "./handlers/plans.js";
 export * from "./runtime.js";
+export * from "./shopping/shopping-list.js";
+export * from "./services/shopping-list.service.js";
+export * from "./handlers/shopping-list.js";

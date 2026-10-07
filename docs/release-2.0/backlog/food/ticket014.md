@@ -117,30 +117,47 @@ cd frontend && npm run lint && npm run build && npm test
 
 # Acceptance Criteria
 
-- [ ] Weekly plan becomes a grouped shopping list with summed quantities
-- [ ] Items can be ticked off on two phones at the same time
-- [ ] Works offline in the shop
-- [ ] Manual items and sharing possible
-- [ ] Items can be reordered by drag and drop (mouse and touch); ticked items are struck through at the end
-- [ ] Tests passing
+- [x] Weekly plan becomes a grouped shopping list with summed quantities
+- [x] Items can be ticked off on two phones at the same time
+- [x] Works offline in the shop
+- [x] Manual items and sharing possible
+- [x] Items can be reordered by drag and drop (mouse and touch); ticked items are struck through at the end
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
 # Assumptions
 
 - No pantry stock tracking: „Vorrat“ items are shown collapsed, not subtracted.
-- Quantities are estimates; rounding favours buying a little more.
+- Quantities are estimates; rounding favours buying a little more (g/ml: steps of 10 below 100, 50 below 1,000, then
+  100; pieces: whole pieces).
+- **Changes via `POST …/shopping-list/changes`** instead of PATCH: the API's CORS allows GET, POST, PUT, DELETE only;
+  no CORS change needed. The changes are idempotent operations (`check`, `add`, `remove`, `move`); no If-Match header —
+  the server retries a parallel change on the newest version (3 attempts), which is the „merge by item key“.
+- **Own order instead of section headings:** the list is one sortable list; a new list starts in section order
+  (pantry last) and new items after a refresh go after the last item of their section.
+- **Range:** default „Ab heute“ (meals from today on); „Ganze Woche“ switches it with a refresh. Optional ingredients
+  are always left out (no „chosen“ state yet); cooked and skipped meals too.
+- **Navigation:** the bottom navigation already has five entries; the list lives at `/essen/einkaufsliste` with a
+  button on the plan page („Essen“ stays highlighted).
+- **Offline queue:** in localStorage (`tenner.shoppingQueue`), sent when online; dropped on logout without a question
+  (a lost tick is harmless, unlike a lost completion in MOBILE-004).
+- **Remove:** the page offers it for own items; planned items are ticked off (a removed planned item would come back
+  with the next refresh).
+- **New dependency `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities`** (MIT, pinned): HTML5 drag and drop
+  does not work on touch screens, and accessible keyboard sorting by hand is a lot of code; dnd-kit is small, has no
+  further dependencies and supports mouse, touch and keyboard.
 
 ---
 
@@ -149,3 +166,21 @@ cd frontend && npm run lint && npm run build && npm test
 - Online grocery ordering, price comparison, supermarket-specific aisle order.
 - Syncing with the Alexa shopping list: Amazon switched off the List Management API on 2024-07-01; voice access to
   this list through the Tenner skill is FOOD-026.
+
+---
+
+# Implementation Status
+
+Done (2026-10-07).
+
+- Backend: `backend/src/meals/shopping/shopping-list.ts` (generation, rounding, refresh merge, operations),
+  `services/shopping-list.service.ts` (LIST#<weekStart>, creation on first read, retries), `handlers/shopping-list.ts`;
+  routes `GET /meals/plans/{weekStart}/shopping-list`, `POST …/shopping-list/refresh`, `POST …/shopping-list/changes`
+  (Terraform `api_routes`).
+- Frontend: `ShoppingListPage.tsx` (drag and drop with dnd-kit, ticked items struck through at the end, pantry
+  collapsed, own items, share), `shopping.ts`, `shoppingQueue.ts`, `useShoppingChanges.ts`, hooks in `api.ts`, route
+  `/essen/einkaufsliste`, button on the plan page, query root `shoppingLists` in the offline cache.
+- Tests: `backend/tests/meals-shopping.test.ts` (aggregation, portion factors, rounding, pantry, refresh merge,
+  operations, parallel change), route test, Terraform api test; `frontend/src/features/meals/shopping.test.ts`,
+  `ShoppingListPage.test.tsx` (order, tick and untick, own items, offline queue, keyboard drag and drop, refresh,
+  share, no plan).

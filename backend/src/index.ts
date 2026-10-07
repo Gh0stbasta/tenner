@@ -13,6 +13,12 @@ import {
   chooseMealHandler,
   swapMealsHandler,
   regenerateWeekHandler,
+  getShoppingListHandler,
+  refreshShoppingListHandler,
+  changeShoppingListHandler,
+  type GetShoppingList,
+  type RefreshShoppingList,
+  type ChangeShoppingList,
   type GetMealPlan,
   type ReplaceMeal,
   type MealOptions,
@@ -236,6 +242,9 @@ export interface Dependencies {
   readonly chooseMeal: ChooseMeal;
   readonly swapMeals: SwapMeals;
   readonly regenerateWeek: RegenerateWeek;
+  readonly getShoppingList: GetShoppingList;
+  readonly refreshShoppingList: RefreshShoppingList;
+  readonly changeShoppingList: ChangeShoppingList;
 }
 
 /** Per-request context passed to route handlers. */
@@ -345,6 +354,9 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "PUT /meals/plans/{weekStart}/slots/{slotId}": ({ event, deps, logger, identity }) => chooseMealHandler(event, identity, deps.chooseMeal, logger),
   "POST /meals/plans/{weekStart}/swap": ({ event, deps, logger, identity }) => swapMealsHandler(event, identity, deps.swapMeals, logger),
   "POST /meals/plans/{weekStart}/regenerate": ({ event, deps, logger, identity }) => regenerateWeekHandler(event, identity, deps.regenerateWeek, logger),
+  "GET /meals/plans/{weekStart}/shopping-list": ({ event, deps, identity }) => getShoppingListHandler(event, identity.tenantId, deps.getShoppingList),
+  "POST /meals/plans/{weekStart}/shopping-list/refresh": ({ event, deps, logger, identity }) => refreshShoppingListHandler(event, identity, deps.refreshShoppingList, logger),
+  "POST /meals/plans/{weekStart}/shopping-list/changes": ({ event, deps, logger, identity }) => changeShoppingListHandler(event, identity, deps.changeShoppingList, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -465,6 +477,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const profileService = meals?.profiles;
   const mealCatalogImportService = meals?.catalog;
   const mealPlanService = meals?.plans;
+  const shoppingListService = meals?.shopping;
 
   return {
     config,
@@ -542,6 +555,9 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     chooseMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.chooseMeal(identity, week, slotId, request) : notConfigured,
     swapMeals: mealPlanService ? (identity, week, request) => mealPlanService.swapMeals(identity, week, request) : notConfigured,
     regenerateWeek: mealPlanService ? (identity, week, request) => mealPlanService.regenerateWeek(identity, week, request) : notConfigured,
+    getShoppingList: shoppingListService ? (tenantId, week) => shoppingListService.getList(tenantId, week) : notConfigured,
+    refreshShoppingList: shoppingListService ? (identity, week, range) => shoppingListService.refreshList(identity, week, range) : notConfigured,
+    changeShoppingList: shoppingListService ? (identity, week, operations) => shoppingListService.changeList(identity, week, operations) : notConfigured,
     importMealCatalog: mealCatalogImportService ? (identity, dryRun) => mealCatalogImportService.importCatalog(identity, dryRun) : notConfigured,
     getFoodProfile: profileService ? (tenantId) => profileService.getProfile(tenantId) : notConfigured,
     updateFoodProfile: profileService ? (identity, request) => profileService.updateProfile(identity, request) : notConfigured,

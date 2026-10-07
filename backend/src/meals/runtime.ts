@@ -10,6 +10,7 @@ import { IngredientService } from "./services/ingredient.service.js";
 import { MealCatalogImportService } from "./services/meal-catalog-import.service.js";
 import { MealPlanService } from "./services/meal-plan.service.js";
 import { ProfileService } from "./services/profile.service.js";
+import { ShoppingListService } from "./services/shopping-list.service.js";
 
 export interface MealServices {
   readonly ingredients: IngredientService;
@@ -17,6 +18,7 @@ export interface MealServices {
   readonly profiles: ProfileService;
   readonly catalog: MealCatalogImportService;
   readonly plans: MealPlanService;
+  readonly shopping: ShoppingListService;
 }
 
 export interface MealServicesDependencies {
@@ -42,5 +44,6 @@ export function createMealServices(deps: MealServicesDependencies): MealServices
     settingsOf: deps.settingsOf,
     clock: deps.clock,
   });
-  return { ingredients, dishes, profiles, catalog, plans };
+  const shopping = new ShoppingListService({ store, plans, ingredientsOf, clock: deps.clock });
+  return { ingredients, dishes, profiles, catalog, plans, shopping };
 }
