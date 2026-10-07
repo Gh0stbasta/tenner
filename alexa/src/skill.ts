@@ -13,7 +13,7 @@ import { SessionEndedRequestHandler } from "./handlers/sessionEnded.js";
 import { SpeakerIntentHandler } from "./handlers/speaker.js";
 import { StopIntentHandler } from "./handlers/stop.js";
 import { TouchCompleteHandler } from "./handlers/touch.js";
-import { OpenDashboardHandler } from "./handlers/widget.js";
+import { OpenDashboardHandler, WidgetInstalledHandler, WidgetLifecycleHandler } from "./handlers/widget.js";
 import { logResponse, startTimer } from "./requestLog.js";
 import { linkInterceptor } from "./session.js";
 
@@ -32,6 +32,8 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
       EnableRemindersIntentHandler,
       TouchCompleteHandler,
       OpenDashboardHandler,
+      WidgetInstalledHandler,
+      WidgetLifecycleHandler,
       // Answers to open completion questions come before the general handlers of the same intents.
       CompletedByAnswerHandler,
       ConfirmYesHandler,

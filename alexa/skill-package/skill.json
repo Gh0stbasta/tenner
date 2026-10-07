@@ -32,6 +32,25 @@
         },
         "interfaces": [
           {
+            "type": "ALEXA_DATASTORE_PACKAGEMANAGER",
+            "packages": [
+              {
+                "id": "tenner-status"
+              }
+            ]
+          },
+          {
+            "type": "ALEXA_DATA_STORE"
+          },
+          {
+            "type": "ALEXA_EXTENSION",
+            "requestedExtensions": [
+              {
+                "uri": "alexaext:datastore:10"
+              }
+            ]
+          },
+          {
             "type": "ALEXA_PRESENTATION_APL",
             "supportedViewports": [
               {

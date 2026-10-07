@@ -1017,33 +1017,34 @@ Move the web app to access tokens (they also carry `cognito:groups`), then put `
 
 ALEXA-002, `terraform/auth.tf`, `backend/src/auth/identity.ts`, `docs/security.md` → "Residual Risks".
 
-## TD-036: Alexa widget package and Data Store/Proactive API shapes unverified
+## TD-036: Alexa widget on the device and Data Store/Proactive API shapes unverified
 
 ### Description
 
-The widget APL package (`alexa/widgets/tenner-status/`), its Data Store binding, the Data Store request
-(`/v1/datastore/commands`, `PUT_OBJECT`, target `USER`), the Proactive Events and Skill Messaging requests
-(ALEXA-008) follow Amazon's documentation as researched in 2026-10 but were never run against Amazon. The widget is
-not yet declared in the skill manifest, because the declaration format is to be confirmed in the spike.
+Since MAINT-002 the widget package uses Amazon's layout (`alexa/skill-package/dataStorePackages/tenner-status/`,
+following Amazon's widget sample), is declared in `skill.json` and is imported with the skill package. Still never
+run against Amazon: the package import itself, the widget on a real Echo Show, the Data Store request
+(`/v1/datastore/commands`, `PUT_OBJECT`, target `USER`), and the Proactive Events and Skill Messaging requests
+(ALEXA-008).
 
 ### Reason
 
-The developer site was not reachable from the development environment, and no Amazon developer account or device
-was available (ALEXA-007 spike is an owner task).
+The Amazon developer site is not reachable from the development environment, and no device is available there;
+testing on the device is an owner task.
 
 ### Impact
 
-Widget pushes or Alexa notifications may be rejected (logged as `WidgetPushFailed` / delivery `FAILED`) until the
-shapes are corrected; the rest of Tenner is unaffected.
+The deploy may fail at the package import, or widget pushes and Alexa notifications may be rejected (logged as
+`WidgetPushFailed` / delivery `FAILED`) until the shapes are corrected; the rest of Tenner is unaffected.
 
 ### Suggested Improvement
 
-Run the ALEXA-007 spike, correct the request shapes and package format, add the widget to `skill.json`, and
-record the results in the ticket.
+Owner: deploy, add the widget on the Echo Show 21, report what it shows and any `widget_installation_error` or
+`WidgetPushFailed` log line; correct the shapes from that.
 
 ### Related Work
 
-ALEXA-007, ALEXA-008, `backend/src/alexa/`, `alexa/widgets/`.
+ALEXA-007, ALEXA-008, MAINT-002, `backend/src/alexa/`, `alexa/skill-package/dataStorePackages/`.
 
 ---
 

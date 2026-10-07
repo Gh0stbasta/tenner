@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Deploy the Alexa skill package (manifest + de-DE interaction model) to the development stage (ALEXA-001).
+# Deploy the Alexa skill package (manifest, de-DE interaction model, widget package) to the development stage
+# (ALEXA-001, MAINT-002).
 #
 # Usage: scripts/deploy-alexa-skill.sh <skill-package-dir> <skill-id> <skill-lambda-arn>
 #
@@ -29,15 +30,23 @@ ask() {
   npx --yes "ask-cli@${ASK_CLI_VERSION}" "$@"
 }
 
-echo "Rendering manifest for ${LAMBDA_ARN}..."
-python3 "$(dirname "$0")/render_alexa_manifest.py" "${PACKAGE_DIR}/skill.json" "${work_dir}/skill.json" "${LAMBDA_ARN}"
+echo "Preparing the skill package for ${LAMBDA_ARN}..."
+# The whole package is imported (MAINT-002): manifest, interaction model and the Echo Show widget package in
+# dataStorePackages/. `update-skill-manifest` alone never uploads widget packages.
+cp -R "${PACKAGE_DIR}" "${work_dir}/skill-package"
+python3 "$(dirname "$0")/render_alexa_manifest.py" "${PACKAGE_DIR}/skill.json" "${work_dir}/skill-package/skill.json" "${LAMBDA_ARN}"
+cat >"${work_dir}/ask-resources.json" <<JSON
+{"askcliResourcesVersion": "2020-03-31", "profiles": {"${ASK_DEFAULT_PROFILE}": {"skillMetadata": {"src": "./skill-package"}}}}
+JSON
+mkdir -p "${work_dir}/.ask"
+cat >"${work_dir}/.ask/ask-states.json" <<JSON
+{"askcliStatesVersion": "2020-03-31", "profiles": {"${ASK_DEFAULT_PROFILE}": {"skillId": "${SKILL_ID}"}}}
+JSON
 
-echo "Updating skill manifest (${STAGE})..."
-ask smapi update-skill-manifest -s "${SKILL_ID}" -g "${STAGE}" --manifest "file:${work_dir}/skill.json"
-
-echo "Updating interaction model (${LOCALE})..."
-ask smapi set-interaction-model -s "${SKILL_ID}" -g "${STAGE}" -l "${LOCALE}" \
-  --interaction-model "file:${PACKAGE_DIR}/interactionModels/custom/${LOCALE}.json"
+echo "Importing the skill package to the ${STAGE} stage..."
+# `ask deploy` imports skill packages only into the development stage; skill-metadata leaves code and
+# infrastructure alone (Terraform owns the Lambda).
+(cd "${work_dir}" && ask deploy --target skill-metadata --ignore-hash)
 
 echo "Waiting for the interaction model build..."
 waited=0
