@@ -1,7 +1,8 @@
 # Tenner Backlog — Maintenance
 
-Tenner is feature-complete with **release 1.0** (2026-10-07). From now on this backlog holds only maintenance work
-and recommendations from the people who use Tenner. There is no feature roadmap.
+Tenner 1.0 (2026-10-07) is in maintenance: this backlog holds maintenance work and recommendations from the people
+who use Tenner. New features are planned as releases with their own folder: **release 2.0 (meal planning)** is in
+[`../release-2.0/`](../release-2.0/README.md).
 
 - Release 1.0 overview: [`../release-1.0/README.md`](../release-1.0/README.md)
 - Everything built for release 1.0 (tickets, hotfixes, owner inputs): [`../release-1.0/`](../release-1.0/)
