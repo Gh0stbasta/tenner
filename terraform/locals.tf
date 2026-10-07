@@ -103,6 +103,9 @@ locals {
     "POST /meals/catalog",                                  # FOOD-003
     "GET /meals/plans/{weekStart}",                         # FOOD-006
     "POST /meals/plans/{weekStart}/slots/{slotId}/replace", # FOOD-007
+    "GET /meals/plans/{weekStart}/slots/{slotId}/options",  # FOOD-022
+    "PUT /meals/plans/{weekStart}/slots/{slotId}",          # FOOD-022
+    "POST /meals/plans/{weekStart}/swap",                   # FOOD-022
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.

@@ -19,6 +19,7 @@ const MESSAGES: Readonly<Record<string, string>> = {
   NO_ALTERNATIVE: "Kein anderes Gericht passt in diese Woche.",
   MEAL_IN_PAST: "Vergangene Mahlzeiten lassen sich nicht mehr ändern.",
   RULE_VIOLATION: "Das Gericht passt nicht zu euren Regeln.",
+  CONFIRMATION_REQUIRED: "Das Gericht passt nicht zu einer Allergie oder Ernährungsweise.",
   IDEMPOTENCY_KEY_REUSED: "Diese Aktion wurde bereits mit anderen Daten ausgeführt. Bitte lade neu.",
   [CLIENT_ERROR_CODES.notConfigured]: "Die App ist nicht richtig eingerichtet: die API-Adresse fehlt.",
   [CLIENT_ERROR_CODES.invalidResponse]: "Unerwartete Antwort vom Server. Bitte lade die Seite neu.",

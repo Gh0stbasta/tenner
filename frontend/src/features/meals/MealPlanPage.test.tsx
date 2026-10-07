@@ -128,6 +128,115 @@ describe("MealPlanPage (FOOD-009)", () => {
     expect(await screen.findByText("Kein anderes Gericht passt in diese Woche.")).toBeInTheDocument();
   });
 
+  const withSlot = (plan: ReturnType<typeof mealPlanFixture>, slotId: string, change: Record<string, unknown>) => ({
+    ...plan,
+    slots: plan.slots.map((slot) => (slot.slotId === slotId ? { ...slot, ...change } : slot)),
+  });
+  const dish = (dishId: string, name: string) => ({
+    dishId,
+    name,
+    category: "SWEET",
+    lightness: "FILLING",
+    temperature: "WARM",
+    activeMinutes: 15,
+    totalMinutes: 20,
+    isVegetarian: true,
+    favorite: false,
+    archived: false,
+  });
+
+  it("chooses a dish by hand: fitting dishes first, harmful ones only after a confirmation (FOOD-022)", async () => {
+    const plan = mealPlanFixture();
+    const options = [
+      { dish: dish("dish-ramen", "Ramen"), violations: [] },
+      {
+        dish: dish("dish-apple", "Apfelpfannkuchen"),
+        violations: [
+          { rule: "R1", severity: "HARD", slotIds: ["2026-10-14#DINNER"], message: "Kind 1 verträgt Apfel nicht." },
+        ],
+      },
+    ];
+    let confirmed = false;
+    const fetchMock = mockFetch({
+      "GET /meals/plans/current": ok(plan),
+      "GET /meals/plans/current/slots/2026-10-14%23DINNER/options": ok({ options }),
+      "PUT /meals/plans/current/slots/2026-10-14%23DINNER": ({ init }) => {
+        const body = JSON.parse(String(init?.body)) as { dishId?: string; confirm?: boolean };
+        if (body.dishId === "dish-apple" && !body.confirm)
+          return fail(409, "CONFIRMATION_REQUIRED", "Kind 1 verträgt Apfel nicht.");
+        confirmed = body.confirm === true;
+        return ok(
+          withSlot(plan, "2026-10-14#DINNER", {
+            dishId: body.dishId,
+            locked: true,
+            source: "MANUAL",
+            dish: dish(String(body.dishId), "Apfelpfannkuchen"),
+          }),
+        );
+      },
+    });
+    renderWithProviders(<MealPlanPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "Aktionen: Mi., 14. Okt. Abend" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Selbst wählen" }));
+    const picker = within(await screen.findByRole("dialog", { name: "Gericht wählen: Mi., 14. Okt. Abend" }));
+    const items = await picker.findAllByRole("button", { name: /Ramen|Apfelpfannkuchen/ });
+    expect(items.map((item) => item.textContent)).toEqual([
+      "RamenPasst zu allen Regeln",
+      "ApfelpfannkuchenKind 1 verträgt Apfel nicht.",
+    ]);
+    await userEvent.type(picker.getByLabelText("Suchen"), "apfel");
+    expect(picker.queryByText("Ramen")).not.toBeInTheDocument();
+    await userEvent.click(picker.getByRole("button", { name: /Apfelpfannkuchen/ }));
+    const confirm = within(await screen.findByRole("dialog", { name: "Wirklich?" }));
+    expect(confirm.getByText("Kind 1 verträgt Apfel nicht.")).toBeInTheDocument();
+    await userEvent.click(confirm.getByRole("button", { name: "Trotzdem wählen" }));
+    expect(await screen.findByText("Mi., 14. Okt. Abend: Apfelpfannkuchen festgelegt.")).toBeInTheDocument();
+    expect(confirmed).toBe(true);
+    expect(await screen.findByRole("group", { name: "Abend: Apfelpfannkuchen" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Rückgängig" }));
+    await vi.waitFor(() =>
+      expect(
+        fetchMock
+          .calls()
+          .filter((call) => call.key.startsWith("PUT"))
+          .at(-1)?.body,
+      ).toEqual({
+        dishId: "dish-5",
+        locked: false,
+        confirm: true,
+      }),
+    );
+  });
+
+  it("swaps two meals and locks a meal (FOOD-022)", async () => {
+    const plan = mealPlanFixture();
+    const fetchMock = mockFetch({
+      "GET /meals/plans/current": ok(plan),
+      "POST /meals/plans/current/swap": ok(plan),
+      "PUT /meals/plans/current/slots/2026-10-15%23DINNER": ok(withSlot(plan, "2026-10-15#DINNER", { locked: true })),
+    });
+    renderWithProviders(<MealPlanPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "Aktionen: Mi., 14. Okt. Abend" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Tauschen" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Käsespätzle mit Röstzwiebeln tauschen mit …" }));
+    expect(dialog.queryByRole("button", { name: /Di., 13. Okt./ })).not.toBeInTheDocument();
+    expect(dialog.queryByRole("button", { name: /Mi., 14. Okt. Abend/ })).not.toBeInTheDocument();
+    await userEvent.click(dialog.getByRole("button", { name: /Fr., 16. Okt. Abend/ }));
+    expect(await screen.findByText("Mi., 14. Okt. Abend und Fr., 16. Okt. Abend getauscht.")).toBeInTheDocument();
+    expect(fetchMock.calls().find((call) => call.key === "POST /meals/plans/current/swap")?.body).toEqual({
+      from: "2026-10-14#DINNER",
+      to: "2026-10-16#DINNER",
+    });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Aktionen: Do., 15. Okt. Abend" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Festlegen" }));
+    expect(await screen.findByText("Do., 15. Okt. Abend: festgelegt, bleibt beim Neuplanen.")).toBeInTheDocument();
+    expect(fetchMock.calls().find((call) => call.key.startsWith("PUT"))?.body).toEqual({ locked: true });
+    expect(screen.getAllByLabelText("Festgelegt")).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Aktionen: Do., 15. Okt. Abend" }));
+    expect(screen.getByRole("menuitem", { name: "Festlegung lösen" })).toBeInTheDocument();
+  });
+
   it("shows errors with a retry", async () => {
     mockFetch({ "GET /meals/plans/current": fail(500, "INTERNAL_ERROR") });
     renderWithProviders(<MealPlanPage />);

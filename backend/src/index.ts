@@ -9,8 +9,14 @@ import {
   createMealServices,
   getMealPlanHandler,
   replaceMealHandler,
+  mealOptionsHandler,
+  chooseMealHandler,
+  swapMealsHandler,
   type GetMealPlan,
   type ReplaceMeal,
+  type MealOptions,
+  type ChooseMeal,
+  type SwapMeals,
   importMealCatalogHandler,
   type ImportMealCatalog,
   getFoodProfileHandler,
@@ -224,6 +230,9 @@ export interface Dependencies {
   readonly importMealCatalog: ImportMealCatalog;
   readonly getMealPlan: GetMealPlan;
   readonly replaceMeal: ReplaceMeal;
+  readonly mealOptions: MealOptions;
+  readonly chooseMeal: ChooseMeal;
+  readonly swapMeals: SwapMeals;
 }
 
 /** Per-request context passed to route handlers. */
@@ -329,6 +338,9 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "POST /meals/catalog": ({ event, deps, logger, identity }) => importMealCatalogHandler(event, identity, deps.importMealCatalog, logger),
   "GET /meals/plans/{weekStart}": ({ event, deps, identity }) => getMealPlanHandler(event, identity.tenantId, deps.getMealPlan),
   "POST /meals/plans/{weekStart}/slots/{slotId}/replace": ({ event, deps, logger, identity }) => replaceMealHandler(event, identity, deps.replaceMeal, logger),
+  "GET /meals/plans/{weekStart}/slots/{slotId}/options": ({ event, deps, identity }) => mealOptionsHandler(event, identity.tenantId, deps.mealOptions),
+  "PUT /meals/plans/{weekStart}/slots/{slotId}": ({ event, deps, logger, identity }) => chooseMealHandler(event, identity, deps.chooseMeal, logger),
+  "POST /meals/plans/{weekStart}/swap": ({ event, deps, logger, identity }) => swapMealsHandler(event, identity, deps.swapMeals, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -522,6 +534,9 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     restoreDish: dishService ? (identity, dishId) => dishService.restoreDish(identity, dishId) : notConfigured,
     getMealPlan: mealPlanService ? (tenantId, week) => mealPlanService.getPlan(tenantId, week) : notConfigured,
     replaceMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.replaceMeal(identity, week, slotId, request) : notConfigured,
+    mealOptions: mealPlanService ? (tenantId, week, slotId) => mealPlanService.mealOptions(tenantId, week, slotId) : notConfigured,
+    chooseMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.chooseMeal(identity, week, slotId, request) : notConfigured,
+    swapMeals: mealPlanService ? (identity, week, request) => mealPlanService.swapMeals(identity, week, request) : notConfigured,
     importMealCatalog: mealCatalogImportService ? (identity, dryRun) => mealCatalogImportService.importCatalog(identity, dryRun) : notConfigured,
     getFoodProfile: profileService ? (tenantId) => profileService.getProfile(tenantId) : notConfigured,
     updateFoodProfile: profileService ? (identity, request) => profileService.updateProfile(identity, request) : notConfigured,

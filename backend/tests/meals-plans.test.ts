@@ -1,7 +1,7 @@
-/** FOOD-006: weekly plans — creation on read, readiness, week range, notifier pre-creation. */
+/** FOOD-006, 007, 022: weekly plans — creation on read, readiness, week range, notifier pre-creation, changes by hand. */
 
 import { describe, expect, it } from "vitest";
-import { createMealServices, DEFAULT_HOUSEHOLD_FOOD_RULES, foodProfileSchema } from "../src/meals/index.js";
+import { createDishSchema, createMealServices, DEFAULT_HOUSEHOLD_FOOD_RULES, foodProfileSchema } from "../src/meals/index.js";
 import type { WeekStart } from "../src/models/enums.js";
 import { SEED_MEMBERS } from "../src/models/index.js";
 import { validate } from "../src/validators/index.js";
@@ -178,5 +178,114 @@ describe("replaceMeal (FOOD-007)", () => {
       return original(command);
     };
     await expect(services.plans.replaceMeal(TEST_IDENTITY, "current", "2026-10-14#DINNER", {})).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION" });
+  });
+});
+
+describe("choose, lock and swap meals (FOOD-022)", () => {
+  async function planned() {
+    const context = setup();
+    await ready(context.services);
+    const plan = await context.services.plans.getPlan("default", "current");
+    const dishes = await context.services.dishes.listDishes("default");
+    const named = (name: string) => dishes.find((dish) => dish.name === name)?.dishId as string;
+    return { ...context, plan, named };
+  }
+
+  const slotOf = (plan: { slots: readonly { slotId: string; dishId: string | null }[] }, slotId: string) => plan.slots.find((slot) => slot.slotId === slotId);
+
+  async function appleDish(services: ReturnType<typeof setup>["services"]) {
+    const dish = await services.dishes.createDish(
+      TEST_IDENTITY,
+      validate(createDishSchema, {
+        name: "Apfelpfannkuchen",
+        category: "SWEET",
+        slots: ["DINNER"],
+        lightness: "FILLING",
+        temperature: "WARM",
+        activeMinutes: 15,
+        ingredients: [{ ingredientId: "apple", quantity: 100, unit: "g" }],
+      }),
+    );
+    return dish.dishId;
+  }
+
+  it("chooses any dish by hand: manual and locked, rule conflicts returned as warnings", async () => {
+    const { services, named } = await planned();
+    const chosen = await services.plans.chooseMeal(TEST_IDENTITY, "current", "2026-10-15#LUNCH", { dishId: named("Lasagne") });
+    expect(slotOf(chosen, "2026-10-15#LUNCH")).toMatchObject({ dishId: named("Lasagne"), source: "MANUAL", locked: true, status: "PLANNED" });
+    expect(chosen.violations.some((violation) => violation.severity === "HARD" && violation.slotIds.includes("2026-10-15#LUNCH"))).toBe(true);
+  });
+
+  it("needs a confirmation for allergy conflicts and saves them with a warning", async () => {
+    const { services } = await planned();
+    const apple = await appleDish(services);
+    await expect(services.plans.chooseMeal(TEST_IDENTITY, "current", "2026-10-16#DINNER", { dishId: apple })).rejects.toMatchObject({
+      code: "CONFIRMATION_REQUIRED",
+      statusCode: 409,
+      details: [expect.objectContaining({ field: "R1" })],
+    });
+    const confirmed = await services.plans.chooseMeal(TEST_IDENTITY, "current", "2026-10-16#DINNER", { dishId: apple, confirm: true });
+    expect(slotOf(confirmed, "2026-10-16#DINNER")?.dishId).toBe(apple);
+    expect(confirmed.violations.some((violation) => violation.rule === "R1")).toBe(true);
+  });
+
+  it("locks and unlocks a meal without changing its dish", async () => {
+    const { services, plan } = await planned();
+    const dishId = slotOf(plan, "2026-10-17#DINNER")?.dishId;
+    const locked = await services.plans.chooseMeal(TEST_IDENTITY, "current", "2026-10-17#DINNER", { locked: true });
+    expect(slotOf(locked, "2026-10-17#DINNER")).toMatchObject({ dishId, locked: true, source: "AUTO" });
+    const unlocked = await services.plans.chooseMeal(TEST_IDENTITY, "current", "2026-10-17#DINNER", { locked: false });
+    expect(slotOf(unlocked, "2026-10-17#DINNER")).toMatchObject({ dishId, locked: false });
+  });
+
+  it("refuses archived or unknown dishes and past meals", async () => {
+    const { services, named } = await planned();
+    await services.dishes.archiveDish(TEST_IDENTITY, named("Lasagne"));
+    await expect(services.plans.chooseMeal(TEST_IDENTITY, "current", "2026-10-15#DINNER", { dishId: named("Lasagne") })).rejects.toMatchObject({ statusCode: 404 });
+    await expect(services.plans.chooseMeal(TEST_IDENTITY, "current", "2026-10-15#DINNER", { dishId: "unknown" })).rejects.toMatchObject({ statusCode: 404 });
+    await expect(services.plans.chooseMeal(TEST_IDENTITY, "current", "2026-10-13#DINNER", { locked: true })).rejects.toMatchObject({ code: "MEAL_IN_PAST" });
+  });
+
+  it("swaps two meals, both manual and locked", async () => {
+    const { services, plan } = await planned();
+    const tuesday = slotOf(plan, "2026-10-14#DINNER")?.dishId;
+    const thursday = slotOf(plan, "2026-10-16#DINNER")?.dishId;
+    const swapped = await services.plans.swapMeals(TEST_IDENTITY, "current", { from: "2026-10-14#DINNER", to: "2026-10-16#DINNER", confirm: true });
+    expect(slotOf(swapped, "2026-10-14#DINNER")).toMatchObject({ dishId: thursday, source: "MANUAL", locked: true });
+    expect(slotOf(swapped, "2026-10-16#DINNER")).toMatchObject({ dishId: tuesday, source: "MANUAL", locked: true });
+    await expect(services.plans.swapMeals(TEST_IDENTITY, "current", { from: "2026-10-14#DINNER", to: "2026-10-14#DINNER" })).rejects.toMatchObject({ statusCode: 400 });
+    await expect(services.plans.swapMeals(TEST_IDENTITY, "current", { from: "2026-10-13#DINNER", to: "2026-10-14#DINNER" })).rejects.toMatchObject({ code: "MEAL_IN_PAST" });
+  });
+
+  it("needs a confirmation when a swap moves an allergy conflict to a meal with the affected eater", async () => {
+    const { services } = await planned();
+    const apple = await appleDish(services);
+    await services.profiles.updateProfile(
+      TEST_IDENTITY,
+      validate(foodProfileSchema, {
+        eaters: [
+          { eaterId: "a1", name: "Erwachsener 1", type: "ADULT" },
+          { eaterId: "k1", name: "Kind 1", type: "CHILD", allergies: ["APPLE"] },
+        ],
+        household: DEFAULT_HOUSEHOLD_FOOD_RULES,
+      }),
+    );
+    // Weekday lunch is adults only, so the apple dish is harmless on Thursday lunch but not on Saturday dinner.
+    await services.plans.chooseMeal(TEST_IDENTITY, "current", "2026-10-15#LUNCH", { dishId: apple, confirm: true });
+    await expect(services.plans.swapMeals(TEST_IDENTITY, "current", { from: "2026-10-15#LUNCH", to: "2026-10-17#DINNER" })).rejects.toMatchObject({ code: "CONFIRMATION_REQUIRED" });
+    const swapped = await services.plans.swapMeals(TEST_IDENTITY, "current", { from: "2026-10-15#LUNCH", to: "2026-10-17#DINNER", confirm: true });
+    expect(slotOf(swapped, "2026-10-17#DINNER")?.dishId).toBe(apple);
+  });
+
+  it("offers every active dish, those that fit all rules first", async () => {
+    const { services } = await planned();
+    const apple = await appleDish(services);
+    const options = await services.plans.mealOptions("default", "current", "2026-10-16#DINNER");
+    expect(options).toHaveLength((await services.dishes.listDishes("default")).length);
+    const hard = options.map((option) => option.violations.filter((violation) => violation.severity === "HARD").length);
+    expect(hard).toEqual([...hard].sort((a, b) => a - b));
+    expect(options[0]?.violations).toEqual([]);
+    expect(options.find((option) => option.dish.dishId === apple)?.violations.some((violation) => violation.rule === "R1")).toBe(true);
+    await expect(services.plans.mealOptions("default", "current", "2026-10-13#DINNER")).rejects.toMatchObject({ code: "MEAL_IN_PAST" });
   });
 });

@@ -222,3 +222,46 @@ export function useReplaceMeal(week: WeekChoice) {
     apiClient.post(`${slotPath(week, slotId)}/replace`, { schema: mealPlanSchema, body }),
   );
 }
+
+const mealOptionSchema = z.object({ dish: dishSummarySchema, violations: z.array(violationSchema) });
+export type MealOption = z.infer<typeof mealOptionSchema>;
+const mealOptionsSchema = z.object({ options: z.array(mealOptionSchema) });
+
+/** Dishes for one meal, those that fit all rules first (FOOD-022); loaded when the picker opens. */
+export function useMealOptions(week: WeekChoice, slotId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.mealOptions(week, slotId ?? ""),
+    queryFn: async () =>
+      (await apiClient.get(`${slotPath(week, slotId ?? "")}/options`, { schema: mealOptionsSchema })).options,
+    enabled: slotId !== null,
+    staleTime: 0,
+  });
+}
+
+export interface ChooseMealVariables {
+  readonly slotId: string;
+  readonly dishId?: string;
+  readonly locked?: boolean;
+  /** Needed for allergy and vegetarian conflicts (409 CONFIRMATION_REQUIRED otherwise). */
+  readonly confirm?: boolean;
+}
+
+/** „Selbst wählen“ and „Festlegen“ (FOOD-022). */
+export function useChooseMeal(week: WeekChoice) {
+  return usePlanChange(week, ({ slotId, ...body }: ChooseMealVariables) =>
+    apiClient.put(slotPath(week, slotId), { schema: mealPlanSchema, body }),
+  );
+}
+
+export interface SwapMealsVariables {
+  readonly from: string;
+  readonly to: string;
+  readonly confirm?: boolean;
+}
+
+/** „Tauschen“ (FOOD-022). */
+export function useSwapMeals(week: WeekChoice) {
+  return usePlanChange(week, (body: SwapMealsVariables) =>
+    apiClient.post(`/meals/plans/${week}/swap`, { schema: mealPlanSchema, body }),
+  );
+}

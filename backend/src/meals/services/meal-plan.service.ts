@@ -12,10 +12,10 @@ import { addDays, toUtcTimestamp, type Clock } from "../../utils/clock.js";
 import { dateInTimeZone } from "../../utils/timezone.js";
 import { itemKey } from "../keys.js";
 import type { DishResponse } from "../models/dish.js";
-import { toDishSummary, type MealPlanResponse, type PlanSlotResponse, type StoredPlan, type StoredPlanSlot } from "../models/plan.js";
+import { toDishSummary, type DishSummary, type MealPlanResponse, type PlanSlotResponse, type StoredPlan, type StoredPlanSlot } from "../models/plan.js";
 import type { FoodProfile } from "../models/profile.js";
 import { plan } from "../planner/planner.js";
-import { checkSlot, checkWeek, hasHardViolation, score, type PlannedMeal, type RuleId } from "../planner/rules.js";
+import { checkSlot, checkWeek, hasHardViolation, score, type PlannedMeal, type RuleId, type Violation } from "../planner/rules.js";
 import { DAYS_PER_WEEK, emptyWeek, parseSlotId, weekStartOf } from "../planner/week.js";
 import type { MealItem, MealsStore } from "../repositories/meals-store.js";
 
@@ -177,6 +177,71 @@ export class MealPlanService {
     return this.save(identity.tenantId, { ...stored, slots }, version, data);
   }
 
+  /** Every active dish for one meal, those that fit all rules first (picker of FOOD-022). */
+  async mealOptions(tenantId: string, week: WeekReference, slotId: string): Promise<MealOption[]> {
+    const resolved = await this.resolveWeek(tenantId, week);
+    const { plan: stored } = await this.requirePlan(tenantId, resolved.weekStart);
+    this.requireSlot(stored, slotId, resolved);
+    const data = await this.load(tenantId);
+    const meals = this.mealsOf(resolved.weekStart, stored, data);
+    const hardCount = (violations: readonly Violation[]) => violations.filter((violation) => violation.severity === "HARD").length;
+    return data.dishes
+      .filter((dish) => !dish.archived)
+      .map((dish) => ({ dish: toDishSummary(dish), violations: checkSlot(meals, slotId, dish, data.profile) }))
+      .sort((a, b) => hardCount(a.violations) - hardCount(b.violations) || a.violations.length - b.violations.length || a.dish.name.localeCompare(b.dish.name, "de"));
+  }
+
+  /**
+   * Choose a dish for a meal by hand (manual and locked) and/or lock or unlock it (FOOD-022). Rule violations are
+   * allowed and returned as warnings, except allergy and vegetarian conflicts, which need `confirm`.
+   */
+  async chooseMeal(identity: Identity, week: WeekReference, slotId: string, request: ChooseMealRequest): Promise<MealPlanResponse> {
+    const resolved = await this.resolveWeek(identity.tenantId, week);
+    const { plan: stored, version } = await this.requirePlan(identity.tenantId, resolved.weekStart);
+    const target = this.requireSlot(stored, slotId, resolved);
+    const data = await this.load(identity.tenantId);
+    let next: StoredPlanSlot = target;
+    if (request.dishId !== undefined) {
+      const dish = data.byId.get(request.dishId);
+      if (!dish || dish.archived) throw new NotFoundError("Dish not found.");
+      if (!request.confirm) this.assertNoHarm(checkSlot(this.mealsOf(resolved.weekStart, stored, data), slotId, dish, data.profile));
+      next = { slotId, dishId: dish.dishId, locked: true, source: "MANUAL", status: "PLANNED" };
+    }
+    if (request.locked !== undefined) next = { ...next, locked: request.locked };
+    const slots = stored.slots.map((slot) => (slot.slotId === slotId ? next : slot));
+    return this.save(identity.tenantId, { ...stored, slots }, version, data);
+  }
+
+  /** Swap the dishes of two meals of the week; both become manual and locked (FOOD-022). */
+  async swapMeals(identity: Identity, week: WeekReference, request: SwapMealsRequest): Promise<MealPlanResponse> {
+    if (request.from === request.to) throw new ApplicationError("VALIDATION_ERROR", 400, "Choose two different meals.", [{ field: "to", message: "Must differ from from." }]);
+    const resolved = await this.resolveWeek(identity.tenantId, week);
+    const { plan: stored, version } = await this.requirePlan(identity.tenantId, resolved.weekStart);
+    const from = this.requireSlot(stored, request.from, resolved);
+    const to = this.requireSlot(stored, request.to, resolved);
+    const data = await this.load(identity.tenantId);
+    const swapped = stored.slots.map((slot): StoredPlanSlot => {
+      if (slot.slotId === from.slotId) return { slotId: slot.slotId, dishId: to.dishId, locked: true, source: "MANUAL", status: "PLANNED" };
+      if (slot.slotId === to.slotId) return { slotId: slot.slotId, dishId: from.dishId, locked: true, source: "MANUAL", status: "PLANNED" };
+      return slot;
+    });
+    if (!request.confirm) {
+      const meals = this.mealsOf(resolved.weekStart, { ...stored, slots: swapped }, data);
+      this.assertNoHarm(checkWeek(meals, data.profile).filter((violation) => violation.slotIds.includes(from.slotId) || violation.slotIds.includes(to.slotId)));
+    }
+    return this.save(identity.tenantId, { ...stored, slots: swapped }, version, data);
+  }
+
+  private assertNoHarm(violations: readonly Violation[]): void {
+    const harmful = violations.filter((violation) => CONFIRM_RULES.has(violation.rule));
+    if (harmful.length > 0) throw new ApplicationError(
+        "CONFIRMATION_REQUIRED",
+        409,
+        harmful.map((violation) => violation.message).join(" "),
+        harmful.map((violation) => ({ field: violation.rule, message: violation.message })),
+      );
+  }
+
   /** Stored plan or 404 (changes need an existing plan). */
   async requirePlan(tenantId: string, weekStart: string): Promise<{ plan: StoredPlan; version: number }> {
     const stored = await this.storedPlan(tenantId, weekStart);
@@ -265,6 +330,28 @@ export interface ReplaceMealRequest {
   /** Put exactly this dish back (undo); must not break a hard rule. */
   readonly dishId?: string;
 }
+
+export interface ChooseMealRequest {
+  readonly dishId?: string;
+  readonly locked?: boolean;
+  /** Required when the choice conflicts with an allergy or a vegetarian (R1, R2). */
+  readonly confirm?: boolean;
+}
+
+export interface SwapMealsRequest {
+  readonly from: string;
+  readonly to: string;
+  readonly confirm?: boolean;
+}
+
+export interface MealOption {
+  readonly dish: DishSummary;
+  /** What the dish would break at this meal; empty = fits every rule. */
+  readonly violations: readonly Violation[];
+}
+
+/** Rules that can harm someone: a manual choice that breaks them needs a confirmation (FOOD-022). */
+const CONFIRM_RULES: ReadonlySet<RuleId> = new Set(["R1", "R2"]);
 
 const isReady = (data: PlanData): boolean => data.dishes.some((dish) => !dish.archived) && data.profile.eaters.length > 0;
 

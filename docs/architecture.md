@@ -1480,6 +1480,11 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   are created on first read (conditional write) and by the notifier on every scheduled run (`MealPlans` statement in
   `terraform/notifier.tf`, failures logged as `MealPlansFailed`, never blocking notifications). Nothing is planned
   while the household has no active dishes or no eaters, because the plan would ignore allergies.
+- **Plan changes** (only for today and later, optimistic locking on the plan's `version`): replace (FOOD-007) picks
+  the best-scoring dish that keeps every hard rule (`source: AUTO`); choose and swap by hand (FOOD-022) set
+  `source: MANUAL`, `locked: true` and may break rules on purpose (returned as violations), except allergy (R1) and
+  vegetarian (R2) conflicts, which need `confirm: true` (409 `CONFIRMATION_REQUIRED`). Locked meals are what
+  regenerating a week keeps (FOOD-008). Undo is done by the client with the same endpoints, no server-side history.
 - **Security:** same JWT authorizer and tenant isolation as all routes; allergies in the profile are never logged.
 - **Cost:** within the DynamoDB free tier.
 

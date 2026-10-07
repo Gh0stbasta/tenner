@@ -164,6 +164,9 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     updateFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
     getMealPlan: vi.fn(async () => EMPTY_PLAN),
     replaceMeal: vi.fn(async () => EMPTY_PLAN),
+    mealOptions: vi.fn(async () => []),
+    chooseMeal: vi.fn(async () => EMPTY_PLAN),
+    swapMeals: vi.fn(async () => EMPTY_PLAN),
     importMealCatalog: vi.fn(async (_identity: unknown, dryRun: boolean) => ({ dryRun, dishesCreated: ["Onigiri"], dishesSkipped: [] })),
     ...overrides,
   };
@@ -583,6 +586,28 @@ describe("meal plan routes (FOOD-006)", () => {
     expect((await route(replace("2026-10-14#BREAKFAST"), d)).statusCode).toBe(400);
     expect((await route(replace("%E0%A4%A"), d)).statusCode).toBe(400);
     expect((await route(replace("2026-10-14#DINNER", JSON.stringify({ other: 1 })), d)).statusCode).toBe(400);
+  });
+
+  it("lists options, chooses, locks and swaps meals (FOOD-022)", async () => {
+    const d = deps();
+    const slotEvent = (key: string, slotId: string, body?: string) => ({ ...event(key, {}, body), pathParameters: { weekStart: "next", slotId } }) as APIGatewayProxyEventV2;
+    const options = await route(slotEvent("GET /meals/plans/{weekStart}/slots/{slotId}/options", "2026-10-14%23DINNER"), d);
+    expect(options.statusCode).toBe(200);
+    expect(JSON.parse(options.body ?? "{}")).toEqual({ success: true, data: { options: [] } });
+    expect(d.mealOptions).toHaveBeenLastCalledWith("default", "next", "2026-10-14#DINNER");
+
+    const choose = (body?: string) => route(slotEvent("PUT /meals/plans/{weekStart}/slots/{slotId}", "2026-10-14#DINNER", body), d);
+    expect((await choose(JSON.stringify({ dishId: "a", confirm: true }))).statusCode).toBe(200);
+    expect(d.chooseMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "next", "2026-10-14#DINNER", { dishId: "a", confirm: true });
+    expect((await choose(JSON.stringify({ locked: false }))).statusCode).toBe(200);
+    expect(d.chooseMeal).toHaveBeenLastCalledWith(TEST_IDENTITY, "next", "2026-10-14#DINNER", { locked: false });
+    expect((await choose(JSON.stringify({ confirm: true }))).statusCode).toBe(400);
+    expect((await choose()).statusCode).toBe(400);
+
+    const swap = (body: unknown) => route({ ...event("POST /meals/plans/{weekStart}/swap", {}, JSON.stringify(body)), pathParameters: { weekStart: "current" } } as APIGatewayProxyEventV2, d);
+    expect((await swap({ from: "2026-10-14#DINNER", to: "2026-10-16#DINNER" })).statusCode).toBe(200);
+    expect(d.swapMeals).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", { from: "2026-10-14#DINNER", to: "2026-10-16#DINNER" });
+    expect((await swap({ from: "2026-10-14#DINNER" })).statusCode).toBe(400);
   });
 });
 

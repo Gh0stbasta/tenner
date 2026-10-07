@@ -138,6 +138,12 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   (device date). Without dishes or eaters a hint links to the settings.
 - **Meal menu** (`MealActions`, online and not in the past): „Anderes Gericht“ (FOOD-007) replaces the meal; repeated
   use cycles through alternatives (rejected dishes are sent as `excludeDishIds`); the snackbar offers „Rückgängig“.
+  „Selbst wählen“ (FOOD-022, `MealPickerDialog`) lists every dish with search, those that fit all rules first and
+  the conflicts as chips (allergy and vegetarian in red); such a choice asks „Wirklich?“ and is sent again with
+  `confirm`. „Tauschen“ (`SwapMealDialog`) swaps with another meal of the week from today on. „Festlegen“ /
+  „Festlegung lösen“ toggles the lock (lock icon on the card). Choose and swap offer „Rückgängig“ (puts the previous
+  dish back / swaps back; the meals stay manual and locked). Picker options use the query key `meals/options` and are
+  not cached offline.
 - **Navigation:** „Essen“ between Tenner and Auswertung (side and bottom navigation).
 - **Dashboard:** „Heute essen wir“ (`TodayMealsCard`) with today's meals, hidden while there is no plan.
 - **Offline:** plans use the query root `mealPlans` and are kept in the offline cache; the food profile is not.

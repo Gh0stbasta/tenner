@@ -1,6 +1,6 @@
 /**
  * Meal plan page /essen (FOOD-009): today first, then the week (this or next week). Visible offline from the cache
- * (MOBILE-003); actions of the plan follow with FOOD-007, FOOD-008 and FOOD-022.
+ * (MOBILE-003). Meal menu: replace (FOOD-007), choose, swap, lock (FOOD-022).
  */
 
 import {
@@ -18,17 +18,39 @@ import {
 import { useState, type ReactNode } from "react";
 import { Link as RouterLink } from "react-router";
 import { errorMessage } from "../../api/errorMessages";
+import { isApiError } from "../../api/errors";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { PageLoading } from "../../components/LoadingState";
 import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
 import { useOnline } from "../../hooks/useConnectivity";
 import { formatLongDate, formatShortDate } from "../../utils/format";
-import { useMealPlan, useReplaceMeal, type MealPlan, type PlanSlot, type WeekChoice } from "./api";
+import {
+  useChooseMeal,
+  useMealPlan,
+  useReplaceMeal,
+  useSwapMeals,
+  type MealOption,
+  type MealPlan,
+  type PlanSlot,
+  type WeekChoice,
+} from "./api";
 import { localToday } from "./format";
 import { MealActions } from "./MealActions";
 import { MealCard } from "./MealCard";
+import { MealPickerDialog } from "./MealPickerDialog";
+import { SwapMealDialog } from "./SwapMealDialog";
 import { MEAL_SLOT_LABELS } from "./labels";
+
+const slotLabel = (slot: PlanSlot) => `${formatShortDate(slot.date)} ${MEAL_SLOT_LABELS[slot.slot]}`;
+
+/** A choice or swap that harms someone (allergy, vegetarian) is retried with `confirm` after the user agrees. */
+interface PendingConfirmation {
+  readonly message: string;
+  readonly confirmLabel: string;
+  readonly run: () => void;
+}
 
 const hintsFor = (plan: MealPlan, slot: PlanSlot) =>
   plan.violations.filter((violation) => violation.slotIds.includes(slot.slotId));
@@ -94,12 +116,91 @@ export function MealPlanPage() {
   const online = useOnline();
   const notify = useNotify();
   const replace = useReplaceMeal(week);
+  const choose = useChooseMeal(week);
+  const swap = useSwapMeals(week);
   /** Dishes rejected per meal in this visit, so „Anderes Gericht“ cycles through alternatives (FOOD-007). */
   const [rejected, setRejected] = useState<Readonly<Record<string, readonly string[]>>>({});
+  const [picking, setPicking] = useState<PlanSlot | null>(null);
+  const [swapping, setSwapping] = useState<PlanSlot | null>(null);
+  const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null);
+  const busy = replace.isPending || choose.isPending || swap.isPending;
+
+  /** Errors of choose and swap: a harmful conflict asks for a confirmation, anything else is shown. */
+  const onChangeError = (error: unknown, confirmLabel: string, retry: () => void) => {
+    if (isApiError(error) && error.code === "CONFIRMATION_REQUIRED") {
+      setConfirmation({ message: error.message, confirmLabel, run: retry });
+    } else {
+      notify({ message: errorMessage(error), severity: "error" });
+    }
+  };
+  const undoFailed = (error: unknown) =>
+    notify({ message: `Rückgängig fehlgeschlagen. ${errorMessage(error)}`, severity: "error" });
+
+  const chooseDish = (slot: PlanSlot, option: MealOption, confirm = false) => {
+    const previous = slot.dish;
+    choose.mutate(
+      { slotId: slot.slotId, dishId: option.dish.dishId, ...(confirm ? { confirm } : {}) },
+      {
+        onSuccess: () => {
+          setPicking(null);
+          notify({
+            message: `${slotLabel(slot)}: ${option.dish.name} festgelegt.`,
+            ...(previous
+              ? {
+                  action: {
+                    label: "Rückgängig",
+                    onClick: () =>
+                      choose.mutate(
+                        { slotId: slot.slotId, dishId: previous.dishId, locked: slot.locked, confirm: true },
+                        { onError: undoFailed },
+                      ),
+                  },
+                }
+              : {}),
+          });
+        },
+        onError: (error) => onChangeError(error, "Trotzdem wählen", () => chooseDish(slot, option, true)),
+      },
+    );
+  };
+
+  const swapMeals = (slot: PlanSlot, target: PlanSlot, confirm = false) => {
+    swap.mutate(
+      { from: slot.slotId, to: target.slotId, ...(confirm ? { confirm } : {}) },
+      {
+        onSuccess: () => {
+          setSwapping(null);
+          notify({
+            message: `${slotLabel(slot)} und ${slotLabel(target)} getauscht.`,
+            action: {
+              label: "Rückgängig",
+              onClick: () =>
+                swap.mutate({ from: slot.slotId, to: target.slotId, confirm: true }, { onError: undoFailed }),
+            },
+          });
+        },
+        onError: (error) => onChangeError(error, "Trotzdem tauschen", () => swapMeals(slot, target, true)),
+      },
+    );
+  };
+
+  const toggleLock = (slot: PlanSlot) =>
+    choose.mutate(
+      { slotId: slot.slotId, locked: !slot.locked },
+      {
+        onSuccess: () =>
+          notify({
+            message: slot.locked
+              ? `${slotLabel(slot)}: darf wieder neu geplant werden.`
+              : `${slotLabel(slot)}: festgelegt, bleibt beim Neuplanen.`,
+          }),
+        onError: (error) => notify({ message: errorMessage(error), severity: "error" }),
+      },
+    );
 
   const replaceMeal = (slot: PlanSlot) => {
     const previous = slot.dish;
-    const label = `${formatShortDate(slot.date)} ${MEAL_SLOT_LABELS[slot.slot]}`;
+    const label = slotLabel(slot);
     const excludeDishIds = [...(rejected[slot.slotId] ?? []), ...(previous ? [previous.dishId] : [])];
     replace.mutate(
       { slotId: slot.slotId, excludeDishIds },
@@ -114,13 +215,7 @@ export function MealPlanPage() {
                   action: {
                     label: "Rückgängig",
                     onClick: () =>
-                      replace.mutate(
-                        { slotId: slot.slotId, dishId: previous.dishId },
-                        {
-                          onError: (error) =>
-                            notify({ message: `Rückgängig fehlgeschlagen. ${errorMessage(error)}`, severity: "error" }),
-                        },
-                      ),
+                      replace.mutate({ slotId: slot.slotId, dishId: previous.dishId }, { onError: undoFailed }),
                   },
                 }
               : {}),
@@ -133,9 +228,14 @@ export function MealPlanPage() {
 
   const actionsFor = (slot: PlanSlot): ReactNode => (
     <MealActions
-      label={`${formatShortDate(slot.date)} ${MEAL_SLOT_LABELS[slot.slot]}`}
-      disabled={!online || slot.date < today || replace.isPending}
-      actions={[{ label: "Anderes Gericht", onClick: () => replaceMeal(slot) }]}
+      label={slotLabel(slot)}
+      disabled={!online || slot.date < today || busy}
+      actions={[
+        { label: "Anderes Gericht", onClick: () => replaceMeal(slot) },
+        { label: "Selbst wählen", onClick: () => setPicking(slot) },
+        { label: "Tauschen", onClick: () => setSwapping(slot) },
+        { label: slot.locked ? "Festlegung lösen" : "Festlegen", onClick: () => toggleLock(slot) },
+      ]}
     />
   );
 
@@ -195,6 +295,33 @@ export function MealPlanPage() {
           ))}
         </Grid>
       )}
+      <MealPickerDialog
+        week={week}
+        slotId={picking?.slotId ?? null}
+        label={picking ? slotLabel(picking) : ""}
+        onPick={(option) => picking && chooseDish(picking, option)}
+        onClose={() => setPicking(null)}
+      />
+      <SwapMealDialog
+        plan={data}
+        slot={swapping}
+        today={today}
+        onPick={(target) => swapping && swapMeals(swapping, target)}
+        onClose={() => setSwapping(null)}
+      />
+      <ConfirmDialog
+        open={confirmation !== null}
+        title="Wirklich?"
+        message={confirmation?.message ?? ""}
+        confirmLabel={confirmation?.confirmLabel ?? "Trotzdem"}
+        destructive
+        busy={busy}
+        onConfirm={() => {
+          confirmation?.run();
+          setConfirmation(null);
+        }}
+        onCancel={() => setConfirmation(null)}
+      />
     </>
   );
 }

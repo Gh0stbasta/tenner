@@ -1,7 +1,7 @@
 /** Display helpers of the meal plan (FOOD-009). */
 
 import { formatMinutes } from "../../utils/format";
-import type { PlanSlot } from "./api";
+import type { PlanSlot, Violation } from "./api";
 
 /** Today in the device's local time (the household's timezone in practice). */
 export function localToday(now: Date = new Date()): string {
@@ -16,3 +16,6 @@ export function dishDetails(slot: PlanSlot): string {
   else if (dish.vegetarianVariant) parts.push(`vegetarisch: ${dish.vegetarianVariant}`);
   return parts.join(" · ");
 }
+
+/** Allergy (R1) and vegetarian (R2) conflicts can harm someone: shown in red, chosen only after a confirmation. */
+export const isHarmful = (violation: Violation): boolean => violation.rule === "R1" || violation.rule === "R2";
