@@ -16,3 +16,4 @@ export * from "./handlers/profile.js";
 export * from "./catalog/dishes.js";
 export * from "./services/meal-catalog-import.service.js";
 export * from "./handlers/catalog.js";
+export * from "./planner/rules.js";

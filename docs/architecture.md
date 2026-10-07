@@ -1452,6 +1452,25 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   current ingredients on every read; archive instead of delete.
 - **Family food profile** (FOOD-004): one `PROFILE` item with eaters and household rules; defaults reproduce the
   owner's rules. `eatersAt(profile, weekday, slot)` is the one place that says who eats a meal (weekday lunch: adults).
+- **Rules** (FOOD-005, `backend/src/meals/planner/rules.ts`): pure functions over a week of `PlannedMeal`s.
+  `dishViolations` (one dish at one meal), `weekViolations` (across the week), `checkWeek`, `checkSlot`, `score`.
+  Each violation has a rule ID, `HARD`/`SOFT`, the affected slots and a German message.
+
+  | Rule | Check |
+  |---|---|
+  | SLOT | dish offered for lunch/dinner |
+  | R1 – R3 | allergies, vegetarian (exceptions or variant), dislikes — only for the eaters of that meal |
+  | R4 | active minutes ≤ limit |
+  | R5 | poultry only in the allowed meals, at most n per week |
+  | R6 | burgers at most n per week |
+  | R7 | each limited protein form once per week |
+  | R8 | no base ingredient twice a day |
+  | R9 | weekday lunches light |
+  | R10 | soft: dinners warm and filling |
+  | R11 | salad lunches: soft above the limit, hard above twice the limit |
+  | R12 | no dish or group twice a week (hard); last week's dishes (soft) |
+  | R13 | family-friendly only |
+
 - **Security:** same JWT authorizer and tenant isolation as all routes; allergies in the profile are never logged.
 - **Cost:** within the DynamoDB free tier.
 
