@@ -19,3 +19,7 @@ export function dishDetails(slot: PlanSlot): string {
 
 /** Allergy (R1) and vegetarian (R2) conflicts can harm someone: shown in red, chosen only after a confirmation. */
 export const isHarmful = (violation: Violation): boolean => violation.rule === "R1" || violation.rule === "R2";
+
+/** Meals that „Woche neu planen“ keeps (FOOD-008; same rule as the backend's `isKept`). */
+export const isKept = (slot: PlanSlot, today: string): boolean =>
+  slot.locked || slot.source === "MANUAL" || slot.status === "COOKED" || slot.date < today;

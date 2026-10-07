@@ -144,6 +144,9 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   „Festlegung lösen“ toggles the lock (lock icon on the card). Choose and swap offer „Rückgängig“ (puts the previous
   dish back / swaps back; the meals stay manual and locked). Picker options use the query key `meals/options` and are
   not cached offline.
+- **„Woche neu planen“** (FOOD-008, online, button in the header): a confirmation names how many meals are replanned
+  and which future meals stay (locked, chosen by hand, cooked, past — `isKept`, same rule as the backend); the
+  snackbar offers „Rückgängig“, which sends the previous dishes of the changed meals as `restore`.
 - **Navigation:** „Essen“ between Tenner and Auswertung (side and bottom navigation).
 - **Dashboard:** „Heute essen wir“ (`TodayMealsCard`) with today's meals, hidden while there is no plan.
 - **Offline:** plans use the query root `mealPlans` and are kept in the offline cache; the food profile is not.

@@ -177,6 +177,55 @@ export class MealPlanService {
     return this.save(identity.tenantId, { ...stored, slots }, version, data);
   }
 
+  /**
+   * Plan the week again (FOOD-008) with a new seed, keeping locked, manual, cooked and past meals; or put the previous
+   * dishes of the replanned meals back (`restore`, undo).
+   */
+  async regenerateWeek(identity: Identity, week: WeekReference, request: RegenerateWeekRequest = {}): Promise<RegeneratedPlanResponse> {
+    const resolved = await this.resolveWeek(identity.tenantId, week);
+    const { plan: stored, version } = await this.requirePlan(identity.tenantId, resolved.weekStart);
+    const data = await this.load(identity.tenantId);
+    const kept = new Set(stored.slots.filter((slot) => isKept(slot, resolved.today)).map((slot) => slot.slotId));
+    const seed = request.restore ? stored.seed : this.newSeed();
+    const slots = request.restore ? this.restoredSlots(stored, kept, request.restore, data) : await this.replannedSlots(resolved, stored, kept, data, seed);
+    const before = new Map(stored.slots.map((slot) => [slot.slotId, slot.dishId]));
+    const changed = slots.filter((slot) => before.get(slot.slotId) !== slot.dishId).length;
+    const response = await this.save(identity.tenantId, { ...stored, seed, generatedAt: toUtcTimestamp(this.deps.clock()), slots }, version, data);
+    return { ...response, regeneration: { changed, kept: kept.size } };
+  }
+
+  private async replannedSlots(week: PlanWeek, stored: StoredPlan, kept: ReadonlySet<string>, data: PlanData, seed: number): Promise<StoredPlanSlot[]> {
+    const fixed = new Map(stored.slots.filter((slot) => kept.has(slot.slotId)).map((slot) => [slot.slotId, slot.dishId ? (data.byId.get(slot.dishId) ?? null) : null]));
+    const result = plan({
+      weekStart: week.weekStart,
+      dishes: data.dishes.filter((dish) => !dish.archived),
+      profile: data.profile,
+      context: { recentDishIds: await this.recentDishIds(week.tenantId, week.weekStart) },
+      fixed,
+      seed,
+    });
+    const planned = new Map(result.slots.map((slot) => [slot.slotId, slot]));
+    return stored.slots.map((slot): StoredPlanSlot => {
+      const next = planned.get(slot.slotId);
+      if (kept.has(slot.slotId) || !next) return slot;
+      return { ...next, locked: false, source: "AUTO", status: "PLANNED" };
+    });
+  }
+
+  private restoredSlots(stored: StoredPlan, kept: ReadonlySet<string>, restore: readonly RestoredSlot[], data: PlanData): StoredPlanSlot[] {
+    const byId = new Map(restore.map((slot) => [slot.slotId, slot.dishId]));
+    for (const [slotId, dishId] of byId) {
+      if (!stored.slots.some((slot) => slot.slotId === slotId) || kept.has(slotId)) {
+        throw new ApplicationError("VALIDATION_ERROR", 400, "Only replanned meals can be restored.", [{ field: "restore", message: `${slotId} cannot be restored.` }]);
+      }
+      if (dishId !== null && !data.byId.has(dishId)) throw new NotFoundError("Dish not found.");
+    }
+    return stored.slots.map((slot): StoredPlanSlot => {
+      const dishId = byId.get(slot.slotId);
+      return dishId === undefined ? slot : { slotId: slot.slotId, dishId, locked: false, source: "AUTO", status: "PLANNED" };
+    });
+  }
+
   /** Every active dish for one meal, those that fit all rules first (picker of FOOD-022). */
   async mealOptions(tenantId: string, week: WeekReference, slotId: string): Promise<MealOption[]> {
     const resolved = await this.resolveWeek(tenantId, week);
@@ -330,6 +379,25 @@ export interface ReplaceMealRequest {
   /** Put exactly this dish back (undo); must not break a hard rule. */
   readonly dishId?: string;
 }
+
+export interface RestoredSlot {
+  readonly slotId: string;
+  readonly dishId: string | null;
+}
+
+export interface RegenerateWeekRequest {
+  /** Undo: the previous dishes of the replanned meals (kept meals cannot be restored). */
+  readonly restore?: readonly RestoredSlot[];
+}
+
+export interface RegeneratedPlanResponse extends MealPlanResponse {
+  /** Meals whose dish changed, and meals kept as they were (locked, manual, cooked, past). */
+  readonly regeneration: { readonly changed: number; readonly kept: number };
+}
+
+/** Meals that regenerating keeps (FOOD-008): locked or chosen by hand, already cooked, or in the past. */
+export const isKept = (slot: StoredPlanSlot, today: string): boolean =>
+  slot.locked || slot.source === "MANUAL" || slot.status === "COOKED" || slot.slotId.slice(0, 10) < today;
 
 export interface ChooseMealRequest {
   readonly dishId?: string;

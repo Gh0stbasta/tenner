@@ -1,7 +1,7 @@
-/** FOOD-006, 007, 022: weekly plans — creation on read, readiness, week range, notifier pre-creation, changes by hand. */
+/** FOOD-006, 007, 008, 022: weekly plans — creation on read, readiness, week range, notifier pre-creation, changes by hand. */
 
 import { describe, expect, it } from "vitest";
-import { createDishSchema, createMealServices, DEFAULT_HOUSEHOLD_FOOD_RULES, foodProfileSchema } from "../src/meals/index.js";
+import { createDishSchema, createMealServices, DEFAULT_HOUSEHOLD_FOOD_RULES, foodProfileSchema, isKept, type StoredPlanSlot } from "../src/meals/index.js";
 import type { WeekStart } from "../src/models/enums.js";
 import { SEED_MEMBERS } from "../src/models/index.js";
 import { validate } from "../src/validators/index.js";
@@ -287,5 +287,68 @@ describe("choose, lock and swap meals (FOOD-022)", () => {
     expect(options[0]?.violations).toEqual([]);
     expect(options.find((option) => option.dish.dishId === apple)?.violations.some((violation) => violation.rule === "R1")).toBe(true);
     await expect(services.plans.mealOptions("default", "current", "2026-10-13#DINNER")).rejects.toMatchObject({ code: "MEAL_IN_PAST" });
+  });
+});
+
+describe("regenerateWeek (FOOD-008)", () => {
+  async function planned() {
+    const context = setup();
+    await ready(context.services);
+    await context.services.plans.getPlan("default", "current");
+    const [fitting] = await context.services.plans.mealOptions("default", "current", "2026-10-15#LUNCH");
+    await context.services.plans.chooseMeal(TEST_IDENTITY, "current", "2026-10-15#LUNCH", { dishId: fitting?.dish.dishId as string });
+    const plan = await context.services.plans.chooseMeal(TEST_IDENTITY, "current", "2026-10-16#DINNER", { locked: true });
+    return { ...context, plan };
+  }
+  const KEPT = ["2026-10-12#LUNCH", "2026-10-12#DINNER", "2026-10-13#LUNCH", "2026-10-13#DINNER", "2026-10-15#LUNCH", "2026-10-16#DINNER"];
+  const dishesOf = (plan: { slots: readonly { slotId: string; dishId: string | null }[] }, slotIds: readonly string[]) =>
+    slotIds.map((slotId) => plan.slots.find((slot) => slot.slotId === slotId)?.dishId);
+  const storedSeed = (meals: ReturnType<typeof setup>["meals"]) => meals.items.get("default|PLAN#2026-10-12")?.seed;
+
+  it("replans the other meals with a new seed, keeping locked, manual and past meals; rules hold across both", async () => {
+    const { services, meals, plan } = await planned();
+    const seed = storedSeed(meals);
+    const replanned = await services.plans.regenerateWeek(TEST_IDENTITY, "current");
+    expect(dishesOf(replanned, KEPT)).toEqual(dishesOf(plan, KEPT));
+    expect(replanned.regeneration.kept).toBe(KEPT.length);
+    const free = replanned.slots.filter((slot) => !KEPT.includes(slot.slotId));
+    expect(free.every((slot) => slot.source === "AUTO" && !slot.locked && slot.dishId !== null)).toBe(true);
+    expect(replanned.regeneration.changed).toBe(free.filter((slot) => dishesOf(plan, [slot.slotId])[0] !== slot.dishId).length);
+    expect(replanned.violations.filter((violation) => violation.severity === "HARD")).toEqual([]);
+    expect(storedSeed(meals)).not.toBe(seed);
+  });
+
+  it("keeps cooked meals, too", () => {
+    const slot: StoredPlanSlot = { slotId: "2026-10-16#DINNER", dishId: "a", locked: false, source: "AUTO", status: "PLANNED" };
+    expect(isKept(slot, "2026-10-14")).toBe(false);
+    expect(isKept({ ...slot, status: "COOKED" }, "2026-10-14")).toBe(true);
+    expect(isKept(slot, "2026-10-17")).toBe(true);
+  });
+
+  it("restores the previous dishes of the replanned meals (undo)", async () => {
+    const { services, plan } = await planned();
+    const replanned = await services.plans.regenerateWeek(TEST_IDENTITY, "current");
+    const restore = replanned.slots.filter((slot) => !KEPT.includes(slot.slotId)).map((slot) => ({ slotId: slot.slotId, dishId: dishesOf(plan, [slot.slotId])[0] ?? null }));
+    const undone = await services.plans.regenerateWeek(TEST_IDENTITY, "current", { restore });
+    expect(undone.slots.map((slot) => slot.dishId)).toEqual(plan.slots.map((slot) => slot.dishId));
+    expect(undone.regeneration.kept).toBe(KEPT.length);
+    await expect(services.plans.regenerateWeek(TEST_IDENTITY, "current", { restore: [{ slotId: "2026-10-16#DINNER", dishId: null }] })).rejects.toMatchObject({ statusCode: 400 });
+    await expect(services.plans.regenerateWeek(TEST_IDENTITY, "current", { restore: [{ slotId: "2026-10-17#DINNER", dishId: "unknown" }] })).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("needs an existing plan and reports parallel changes as 409", async () => {
+    const { services, meals } = await planned();
+    await expect(services.plans.regenerateWeek(TEST_IDENTITY, "next")).rejects.toMatchObject({ statusCode: 404 });
+    const original = meals.sender.send.bind(meals.sender);
+    let bumped = false;
+    meals.sender.send = async (command) => {
+      if (!bumped && command.constructor.name === "PutCommand") {
+        bumped = true;
+        const stored = meals.items.get("default|PLAN#2026-10-12");
+        if (stored) meals.items.set("default|PLAN#2026-10-12", { ...stored, version: Number(stored.version) + 1 });
+      }
+      return original(command);
+    };
+    await expect(services.plans.regenerateWeek(TEST_IDENTITY, "current")).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION" });
   });
 });

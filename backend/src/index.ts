@@ -12,11 +12,13 @@ import {
   mealOptionsHandler,
   chooseMealHandler,
   swapMealsHandler,
+  regenerateWeekHandler,
   type GetMealPlan,
   type ReplaceMeal,
   type MealOptions,
   type ChooseMeal,
   type SwapMeals,
+  type RegenerateWeek,
   importMealCatalogHandler,
   type ImportMealCatalog,
   getFoodProfileHandler,
@@ -233,6 +235,7 @@ export interface Dependencies {
   readonly mealOptions: MealOptions;
   readonly chooseMeal: ChooseMeal;
   readonly swapMeals: SwapMeals;
+  readonly regenerateWeek: RegenerateWeek;
 }
 
 /** Per-request context passed to route handlers. */
@@ -341,6 +344,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /meals/plans/{weekStart}/slots/{slotId}/options": ({ event, deps, identity }) => mealOptionsHandler(event, identity.tenantId, deps.mealOptions),
   "PUT /meals/plans/{weekStart}/slots/{slotId}": ({ event, deps, logger, identity }) => chooseMealHandler(event, identity, deps.chooseMeal, logger),
   "POST /meals/plans/{weekStart}/swap": ({ event, deps, logger, identity }) => swapMealsHandler(event, identity, deps.swapMeals, logger),
+  "POST /meals/plans/{weekStart}/regenerate": ({ event, deps, logger, identity }) => regenerateWeekHandler(event, identity, deps.regenerateWeek, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -537,6 +541,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     mealOptions: mealPlanService ? (tenantId, week, slotId) => mealPlanService.mealOptions(tenantId, week, slotId) : notConfigured,
     chooseMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.chooseMeal(identity, week, slotId, request) : notConfigured,
     swapMeals: mealPlanService ? (identity, week, request) => mealPlanService.swapMeals(identity, week, request) : notConfigured,
+    regenerateWeek: mealPlanService ? (identity, week, request) => mealPlanService.regenerateWeek(identity, week, request) : notConfigured,
     importMealCatalog: mealCatalogImportService ? (identity, dryRun) => mealCatalogImportService.importCatalog(identity, dryRun) : notConfigured,
     getFoodProfile: profileService ? (tenantId) => profileService.getProfile(tenantId) : notConfigured,
     updateFoodProfile: profileService ? (identity, request) => profileService.updateProfile(identity, request) : notConfigured,

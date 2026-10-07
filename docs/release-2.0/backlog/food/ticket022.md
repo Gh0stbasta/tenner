@@ -103,7 +103,7 @@ cd frontend && npm run lint && npm run build && npm test
 
 - [x] Any dish can be chosen for any meal
 - [x] Two meals can be swapped
-- [ ] Locked meals survive regeneration — locks are stored here; verified with FOOD-008 (regeneration)
+- [x] Locked meals survive regeneration (verified with FOOD-008)
 - [x] Rule conflicts are shown; allergy conflicts need confirmation
 - [x] Tests passing
 

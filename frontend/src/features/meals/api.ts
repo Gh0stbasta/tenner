@@ -265,3 +265,23 @@ export function useSwapMeals(week: WeekChoice) {
     apiClient.post(`/meals/plans/${week}/swap`, { schema: mealPlanSchema, body }),
   );
 }
+
+const regeneratedPlanSchema = mealPlanSchema.extend({
+  regeneration: z.object({ changed: z.number(), kept: z.number() }),
+});
+export type RegeneratedPlan = z.infer<typeof regeneratedPlanSchema>;
+
+export interface RegenerateWeekVariables {
+  /** Undo: the previous dishes of the replanned meals. */
+  readonly restore?: readonly { readonly slotId: string; readonly dishId: string | null }[];
+}
+
+/** „Woche neu planen“ and its undo (FOOD-008). */
+export function useRegenerateWeek(week: WeekChoice) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: RegenerateWeekVariables) =>
+      apiClient.post(`/meals/plans/${week}/regenerate`, { schema: regeneratedPlanSchema, body }),
+    onSuccess: (result) => queryClient.setQueryData(queryKeys.mealPlan(week), mealPlanSchema.parse(result)),
+  });
+}

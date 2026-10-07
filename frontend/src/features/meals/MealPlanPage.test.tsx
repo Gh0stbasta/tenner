@@ -237,6 +237,38 @@ describe("MealPlanPage (FOOD-009)", () => {
     expect(screen.getByRole("menuitem", { name: "Festlegung lösen" })).toBeInTheDocument();
   });
 
+  it("regenerates the week after a confirmation and undoes it (FOOD-008)", async () => {
+    const plan = withSlot(mealPlanFixture(), "2026-10-16#DINNER", { locked: true });
+    const replanned = withSlot(plan, "2026-10-17#LUNCH", { dishId: "dish-new", dish: dish("dish-new", "Ramen") });
+    let calls = 0;
+    const fetchMock = mockFetch({
+      "GET /meals/plans/current": ok(plan),
+      "POST /meals/plans/current/regenerate": () => {
+        calls += 1;
+        return ok({ ...(calls === 1 ? replanned : plan), regeneration: { changed: 1, kept: 5 } });
+      },
+    });
+    renderWithProviders(<MealPlanPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "Woche neu planen" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Woche neu planen?" }));
+    expect(
+      dialog.getByText(
+        "9 Mahlzeiten werden neu geplant. Bleiben: Fr., 16. Okt. Abend (Fischstäbchen mit Erbsenpüree). Vergangene, festgelegte und selbst gewählte Mahlzeiten bleiben, wie sie sind.",
+      ),
+    ).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole("button", { name: "Neu planen" }));
+    expect(await screen.findByText("Woche neu geplant: 1 Mahlzeit geändert.")).toBeInTheDocument();
+    expect(await screen.findByRole("group", { name: "Mittag: Ramen" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Rückgängig" }));
+    expect(await screen.findByRole("group", { name: "Mittag: Kaiserschmarrn" })).toBeInTheDocument();
+    expect(
+      fetchMock
+        .calls()
+        .filter((call) => call.key.endsWith("/regenerate"))
+        .map((call) => call.body),
+    ).toEqual([{}, { restore: [{ slotId: "2026-10-17#LUNCH", dishId: "dish-10" }] }]);
+  });
+
   it("shows errors with a retry", async () => {
     mockFetch({ "GET /meals/plans/current": fail(500, "INTERNAL_ERROR") });
     renderWithProviders(<MealPlanPage />);

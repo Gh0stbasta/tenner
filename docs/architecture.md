@@ -1483,8 +1483,9 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
 - **Plan changes** (only for today and later, optimistic locking on the plan's `version`): replace (FOOD-007) picks
   the best-scoring dish that keeps every hard rule (`source: AUTO`); choose and swap by hand (FOOD-022) set
   `source: MANUAL`, `locked: true` and may break rules on purpose (returned as violations), except allergy (R1) and
-  vegetarian (R2) conflicts, which need `confirm: true` (409 `CONFIRMATION_REQUIRED`). Locked meals are what
-  regenerating a week keeps (FOOD-008). Undo is done by the client with the same endpoints, no server-side history.
+  vegetarian (R2) conflicts, which need `confirm: true` (409 `CONFIRMATION_REQUIRED`). Regenerating a week
+  (FOOD-008) replans with a new seed and passes locked, manual, cooked and past meals to the planner as fixed. Undo is
+  done by the client with the same endpoints (regenerate: `restore` with the previous dishes), no server-side history.
 - **Security:** same JWT authorizer and tenant isolation as all routes; allergies in the profile are never logged.
 - **Cost:** within the DynamoDB free tier.
 

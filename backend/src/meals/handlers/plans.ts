@@ -1,4 +1,4 @@
-/** Meal plan routes (FOOD-006, 007, 022): week `current`, `next` or a week start date (YYYY-MM-DD). */
+/** Meal plan routes (FOOD-006, 007, 008, 022): week `current`, `next` or a week start date (YYYY-MM-DD). */
 
 import { z } from "zod";
 import type { Identity } from "../../auth/index.js";
@@ -7,7 +7,7 @@ import { successResponse } from "../../utils/http.js";
 import type { Logger } from "../../utils/logger.js";
 import { parseJsonBody, validate } from "../../validators/index.js";
 import type { MealPlanResponse } from "../models/plan.js";
-import type { ChooseMealRequest, MealOption, ReplaceMealRequest, SwapMealsRequest } from "../services/meal-plan.service.js";
+import type { ChooseMealRequest, MealOption, RegeneratedPlanResponse, RegenerateWeekRequest, ReplaceMealRequest, SwapMealsRequest } from "../services/meal-plan.service.js";
 
 export type GetMealPlan = (tenantId: string, week: string) => Promise<MealPlanResponse>;
 export type ReplaceMeal = (identity: Identity, week: string, slotId: string, request: ReplaceMealRequest) => Promise<MealPlanResponse>;
@@ -15,6 +15,8 @@ export type ReplaceMeal = (identity: Identity, week: string, slotId: string, req
 export type MealOptions = (tenantId: string, week: string, slotId: string) => Promise<MealOption[]>;
 export type ChooseMeal = (identity: Identity, week: string, slotId: string, request: ChooseMealRequest) => Promise<MealPlanResponse>;
 export type SwapMeals = (identity: Identity, week: string, request: SwapMealsRequest) => Promise<MealPlanResponse>;
+
+export type RegenerateWeek = (identity: Identity, week: string, request: RegenerateWeekRequest) => Promise<RegeneratedPlanResponse>;
 
 export const weekReferenceSchema = z.union([z.literal("current"), z.literal("next"), z.iso.date()]);
 
@@ -85,5 +87,18 @@ export async function swapMealsHandler(event: ApiEvent, identity: Identity, swap
   const { from, to, confirm } = validate(swapMealsSchema, bodyOf(event));
   const plan = await swapMeals(identity, week, { from, to, ...(confirm ? { confirm } : {}) });
   logger.info("Meals swapped", { event: "MealsSwapped", weekStart: plan.weekStart, from, to, confirmed: confirm === true, updatedBy: identity.userId });
+  return successResponse(200, plan);
+}
+
+const regenerateWeekSchema = z
+  .object({ restore: z.array(z.object({ slotId: slotIdSchema, dishId: dishRefSchema.nullable() }).strict()).min(1).max(14).optional() })
+  .strict();
+
+/** POST /meals/plans/{weekStart}/regenerate (FOOD-008): plan the week again, or `restore` the previous dishes (undo). */
+export async function regenerateWeekHandler(event: ApiEvent, identity: Identity, regenerateWeek: RegenerateWeek, logger: Logger): Promise<ApiResult> {
+  const week = weekOf(event);
+  const { restore } = validate(regenerateWeekSchema, bodyOf(event));
+  const plan = await regenerateWeek(identity, week, restore ? { restore } : {});
+  logger.info("Meal plan regenerated", { event: "MealPlanRegenerated", weekStart: plan.weekStart, undo: restore !== undefined, ...plan.regeneration, updatedBy: identity.userId });
   return successResponse(200, plan);
 }

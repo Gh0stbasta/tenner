@@ -167,6 +167,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     mealOptions: vi.fn(async () => []),
     chooseMeal: vi.fn(async () => EMPTY_PLAN),
     swapMeals: vi.fn(async () => EMPTY_PLAN),
+    regenerateWeek: vi.fn(async () => ({ ...EMPTY_PLAN, regeneration: { changed: 0, kept: 0 } })),
     importMealCatalog: vi.fn(async (_identity: unknown, dryRun: boolean) => ({ dryRun, dishesCreated: ["Onigiri"], dishesSkipped: [] })),
     ...overrides,
   };
@@ -608,6 +609,19 @@ describe("meal plan routes (FOOD-006)", () => {
     expect((await swap({ from: "2026-10-14#DINNER", to: "2026-10-16#DINNER" })).statusCode).toBe(200);
     expect(d.swapMeals).toHaveBeenLastCalledWith(TEST_IDENTITY, "current", { from: "2026-10-14#DINNER", to: "2026-10-16#DINNER" });
     expect((await swap({ from: "2026-10-14#DINNER" })).statusCode).toBe(400);
+  });
+
+  it("regenerates a week or restores the previous dishes (FOOD-008)", async () => {
+    const d = deps();
+    const regenerate = (body?: unknown) =>
+      route({ ...event("POST /meals/plans/{weekStart}/regenerate", {}, body === undefined ? undefined : JSON.stringify(body)), pathParameters: { weekStart: "next" } } as APIGatewayProxyEventV2, d);
+    expect((await regenerate()).statusCode).toBe(200);
+    expect(d.regenerateWeek).toHaveBeenLastCalledWith(TEST_IDENTITY, "next", {});
+    const restore = [{ slotId: "2026-10-14#DINNER", dishId: "a" }, { slotId: "2026-10-15#LUNCH", dishId: null }];
+    expect((await regenerate({ restore })).statusCode).toBe(200);
+    expect(d.regenerateWeek).toHaveBeenLastCalledWith(TEST_IDENTITY, "next", { restore });
+    expect((await regenerate({ restore: [] })).statusCode).toBe(400);
+    expect((await regenerate({ restore: [{ slotId: "x", dishId: "a" }] })).statusCode).toBe(400);
   });
 });
 

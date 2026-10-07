@@ -95,22 +95,22 @@ cd frontend && npm run lint && npm run build && npm test
 
 # Acceptance Criteria
 
-- [ ] Whole week regenerated in one action
-- [ ] Locked, manual, past and cooked meals kept
-- [ ] Rules hold across kept and new meals
-- [ ] Undo possible
-- [ ] Tests passing
+- [x] Whole week regenerated in one action
+- [x] Locked, manual, past and cooked meals kept
+- [x] Rules hold across kept and new meals
+- [x] Undo possible
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
@@ -118,9 +118,29 @@ cd frontend && npm run lint && npm run build && npm test
 
 - Undo keeps the previous plan version in the client for the snackbar's duration (no server-side history of plan
   versions).
+- **Undo through the same endpoint:** `{ "restore": [{ slotId, dishId }] }` puts back the previous dishes of the
+  meals that changed; kept meals cannot be restored (400). The seed stays the new one.
+- **No If-Match header:** optimistic locking on the stored plan version, like FOOD-007 and FOOD-022.
+- **Summary:** `regeneration.changed` counts meals whose dish changed, `kept` the kept meals (past ones included).
+- **Cooked meals:** no status can be set yet (FOOD-023); `isKept` already keeps `COOKED` and is unit-tested.
+- **Confirmation text:** computed on the client with the same keep rule as the backend.
 
 ---
 
 # Out of Scope
 
 - Regenerating past weeks.
+
+---
+
+# Implementation Status
+
+Done (2026-10-07).
+
+- Backend: `MealPlanService.regenerateWeek` and `isKept` (`backend/src/meals/services/meal-plan.service.ts`), handler
+  `regenerateWeekHandler` (`handlers/plans.ts`), route `POST /meals/plans/{weekStart}/regenerate` (Terraform
+  `api_routes`).
+- Frontend: „Woche neu planen“ with confirmation and undo in `MealPlanPage.tsx`, `useRegenerateWeek`, `isKept` in
+  `format.ts`.
+- Tests: `backend/tests/meals-plans.test.ts` (kept meals unchanged, rules hold, new seed, cooked, undo, 404, 409),
+  route test, Terraform api test, `frontend/src/features/meals/MealPlanPage.test.tsx`.

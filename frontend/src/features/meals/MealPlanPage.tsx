@@ -1,6 +1,6 @@
 /**
  * Meal plan page /essen (FOOD-009): today first, then the week (this or next week). Visible offline from the cache
- * (MOBILE-003). Meal menu: replace (FOOD-007), choose, swap, lock (FOOD-022).
+ * (MOBILE-003). Meal menu: replace (FOOD-007), choose, swap, lock (FOOD-022); „Woche neu planen“ (FOOD-008).
  */
 
 import {
@@ -11,6 +11,7 @@ import {
   CardContent,
   Divider,
   Grid,
+  Stack,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -29,6 +30,7 @@ import { formatLongDate, formatShortDate } from "../../utils/format";
 import {
   useChooseMeal,
   useMealPlan,
+  useRegenerateWeek,
   useReplaceMeal,
   useSwapMeals,
   type MealOption,
@@ -36,7 +38,7 @@ import {
   type PlanSlot,
   type WeekChoice,
 } from "./api";
-import { localToday } from "./format";
+import { isKept, localToday } from "./format";
 import { MealActions } from "./MealActions";
 import { MealCard } from "./MealCard";
 import { MealPickerDialog } from "./MealPickerDialog";
@@ -50,6 +52,22 @@ interface PendingConfirmation {
   readonly message: string;
   readonly confirmLabel: string;
   readonly run: () => void;
+}
+
+/** Confirmation text of „Woche neu planen“: how many meals change and which future meals stay. */
+function regenerateMessage(plan: MealPlan, today: string): string {
+  const kept = plan.slots.filter((slot) => isKept(slot, today));
+  const replanned = plan.slots.length - kept.length;
+  const staying = kept
+    .filter((slot) => slot.date >= today)
+    .map((slot) => `${slotLabel(slot)}${slot.dish ? ` (${slot.dish.name})` : ""}`);
+  return [
+    `${replanned} ${replanned === 1 ? "Mahlzeit wird" : "Mahlzeiten werden"} neu geplant.`,
+    staying.length > 0 ? `Bleiben: ${staying.join(", ")}.` : "",
+    "Vergangene, festgelegte und selbst gewählte Mahlzeiten bleiben, wie sie sind.",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 const hintsFor = (plan: MealPlan, slot: PlanSlot) =>
@@ -123,7 +141,9 @@ export function MealPlanPage() {
   const [picking, setPicking] = useState<PlanSlot | null>(null);
   const [swapping, setSwapping] = useState<PlanSlot | null>(null);
   const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null);
-  const busy = replace.isPending || choose.isPending || swap.isPending;
+  const regenerate = useRegenerateWeek(week);
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const busy = replace.isPending || choose.isPending || swap.isPending || regenerate.isPending;
 
   /** Errors of choose and swap: a harmful conflict asks for a confirmation, anything else is shown. */
   const onChangeError = (error: unknown, confirmLabel: string, retry: () => void) => {
@@ -198,6 +218,35 @@ export function MealPlanPage() {
       },
     );
 
+  const regenerateWeek = (previous: MealPlan) => {
+    setConfirmRegenerate(false);
+    regenerate.mutate(
+      {},
+      {
+        onSuccess: (changed) => {
+          const before = new Map(previous.slots.map((slot) => [slot.slotId, slot.dishId]));
+          const restore = changed.slots
+            .filter((slot) => before.get(slot.slotId) !== slot.dishId)
+            .map((slot) => ({ slotId: slot.slotId, dishId: before.get(slot.slotId) ?? null }));
+          notify({
+            message: `Woche neu geplant: ${changed.regeneration.changed} ${
+              changed.regeneration.changed === 1 ? "Mahlzeit" : "Mahlzeiten"
+            } geändert.`,
+            ...(restore.length > 0
+              ? {
+                  action: {
+                    label: "Rückgängig",
+                    onClick: () => regenerate.mutate({ restore }, { onError: undoFailed }),
+                  },
+                }
+              : {}),
+          });
+        },
+        onError: (error) => notify({ message: errorMessage(error), severity: "error" }),
+      },
+    );
+  };
+
   const replaceMeal = (slot: PlanSlot) => {
     const previous = slot.dish;
     const label = slotLabel(slot);
@@ -246,16 +295,28 @@ export function MealPlanPage() {
         plan.data ? `${formatShortDate(plan.data.weekStart)} – ${formatShortDate(plan.data.weekEnd)}` : undefined
       }
       actions={
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={week}
-          onChange={(_, value: WeekChoice | null) => value && setWeek(value)}
-          aria-label="Woche"
-        >
-          <ToggleButton value="current">Diese Woche</ToggleButton>
-          <ToggleButton value="next">Nächste Woche</ToggleButton>
-        </ToggleButtonGroup>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>
+          {plan.data?.ready && (
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setConfirmRegenerate(true)}
+              disabled={!online || busy || plan.data.slots.every((slot) => isKept(slot, today))}
+            >
+              Woche neu planen
+            </Button>
+          )}
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={week}
+            onChange={(_, value: WeekChoice | null) => value && setWeek(value)}
+            aria-label="Woche"
+          >
+            <ToggleButton value="current">Diese Woche</ToggleButton>
+            <ToggleButton value="next">Nächste Woche</ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
       }
     />
   );
@@ -308,6 +369,15 @@ export function MealPlanPage() {
         today={today}
         onPick={(target) => swapping && swapMeals(swapping, target)}
         onClose={() => setSwapping(null)}
+      />
+      <ConfirmDialog
+        open={confirmRegenerate}
+        title="Woche neu planen?"
+        message={regenerateMessage(data, today)}
+        confirmLabel="Neu planen"
+        busy={busy}
+        onConfirm={() => regenerateWeek(data)}
+        onCancel={() => setConfirmRegenerate(false)}
       />
       <ConfirmDialog
         open={confirmation !== null}
