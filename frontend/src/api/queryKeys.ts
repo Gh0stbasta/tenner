@@ -17,4 +17,7 @@ export const queryKeys = {
   meals: ["meals"] as const,
   mealIngredients: ["meals", "ingredients"] as const,
   mealProfile: ["meals", "profile"] as const,
+  /** Plans have their own root so only they are kept offline (MOBILE-003), not the profile with allergies. */
+  mealPlans: ["mealPlans"] as const,
+  mealPlan: (week: string) => ["mealPlans", week] as const,
 };

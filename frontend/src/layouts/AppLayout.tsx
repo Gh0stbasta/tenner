@@ -7,6 +7,7 @@
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";
 import ListAltOutlinedIcon from "@mui/icons-material/ListAltOutlined";
+import RestaurantOutlinedIcon from "@mui/icons-material/RestaurantOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import {
@@ -37,6 +38,7 @@ const BOTTOM_NAV_HEIGHT = 56;
 const ICONS: Readonly<Record<string, ReactNode>> = {
   "/dashboard": <DashboardOutlinedIcon />,
   "/tenners": <ListAltOutlinedIcon />,
+  "/essen": <RestaurantOutlinedIcon />,
   "/analytics": <InsightsOutlinedIcon />,
   "/settings": <SettingsOutlinedIcon />,
 };

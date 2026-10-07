@@ -103,3 +103,66 @@ export function completeResponse(tennerId = "t-1") {
     },
   };
 }
+
+/** A ready meal plan for the week of 2026-10-12 (FOOD-009); `dishes` by slot ID override the defaults. */
+export function mealPlanFixture(overrides: { dishes?: Record<string, string | null>; violations?: unknown[] } = {}) {
+  const dates = ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18"];
+  const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
+  const names = [
+    "Onigiri",
+    "Chicken Dinos mit Pommes",
+    "Salat mit Halloumi",
+    "Spaghetti Bolognese",
+    "Linseneintopf",
+    "Käsespätzle mit Röstzwiebeln",
+    "Eierreis mit Gemüse",
+    "Burger",
+    "Ofengemüse mit Kräuterquark",
+    "Fischstäbchen mit Erbsenpüree",
+    "Kaiserschmarrn",
+    "Hot Dogs",
+    "Gnocchi in Tomatensoße",
+    "Flammkuchen",
+  ];
+  const slots = dates.flatMap((date, day) =>
+    (["LUNCH", "DINNER"] as const).map((slot, meal) => {
+      const slotId = `${date}#${slot}`;
+      const name = overrides.dishes && slotId in overrides.dishes ? overrides.dishes[slotId] : names[day * 2 + meal];
+      return {
+        slotId,
+        date,
+        weekday: weekdays[day],
+        slot,
+        dishId: name ? `dish-${day * 2 + meal}` : null,
+        locked: false,
+        source: "AUTO",
+        status: "PLANNED",
+        ...(name ? {} : { emptyReason: "Kein Gericht passt (meist: mittags leicht)." }),
+        dish: name
+          ? {
+              dishId: `dish-${day * 2 + meal}`,
+              name,
+              category: "VEGETARIAN",
+              lightness: slot === "LUNCH" ? "LIGHT" : "FILLING",
+              temperature: "WARM",
+              activeMinutes: 15,
+              totalMinutes: 20,
+              isVegetarian: name !== "Burger",
+              ...(name === "Burger" ? { vegetarianVariant: "mit Gemüse-Patty" } : {}),
+              favorite: false,
+              archived: false,
+            }
+          : null,
+      };
+    }),
+  );
+  return {
+    weekStart: "2026-10-12",
+    weekEnd: "2026-10-18",
+    ready: true,
+    setup: { hasDishes: true, hasEaters: true },
+    generatedAt: "2026-10-12T05:00:00Z",
+    slots,
+    violations: overrides.violations ?? [],
+  };
+}

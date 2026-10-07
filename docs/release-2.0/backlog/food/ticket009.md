@@ -102,31 +102,48 @@ cd frontend && npm run lint && npm run typecheck && npm run build && npm test
 
 # Acceptance Criteria
 
-- [ ] Weekly plan visible with today first
-- [ ] Works on phone and desktop, light and dark
-- [ ] Available offline (read)
-- [ ] Entry points for all plan actions
-- [ ] Tests passing
+- [x] Weekly plan visible with today first
+- [x] Works on phone and desktop, light and dark
+- [x] Available offline (read)
+- [ ] Entry points for all plan actions (added with FOOD-007, FOOD-022, FOOD-008; FOOD-023 later)
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
 # Assumptions
 
 - Actions whose tickets are not done yet are hidden, not shown disabled.
+- **Today = device date:** the page marks today by the phone's date (the household's timezone in practice); the plan
+  itself is in household time.
+- **Layout:** one card per day (lunch and dinner), one column on phones, two from `sm`, three from `lg`; today first.
+- **Offline:** plans get their own query root `mealPlans`, so the offline cache keeps them but not the food profile
+  with allergies (privacy, MOBILE-003). Plan actions need a connection; they come with the next tickets.
+- **Images and cost tier** appear when FOOD-011 and FOOD-013 exist.
 
 ---
 
 # Out of Scope
 
 - Printing the plan; a fridge view (the Echo Show covers it, FOOD-018).
+
+---
+
+# Implementation Status
+
+Done (2026-10-07); the plan actions are added by FOOD-007, FOOD-022 and FOOD-008.
+
+- Page `frontend/src/features/meals/MealPlanPage.tsx`, `MealCard.tsx`, `TodayMealsCard.tsx`, `format.ts`; plan API
+  in `features/meals/api.ts`; route `/essen`, navigation entry „Essen“, dashboard card.
+- Offline: `mealPlans` in `PERSISTED_QUERY_ROOTS`.
+- Tests: `MealPlanPage.test.tsx`, route, navigation and persistence tests.

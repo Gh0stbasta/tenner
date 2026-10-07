@@ -91,7 +91,11 @@ export function useSaveFoodProfile() {
     mutationFn: (profile: FoodProfileUpdate) =>
       apiClient.put("/meals/profile", { schema: profileSchema, body: profile }),
     onSuccess: (saved) => queryClient.setQueryData(queryKeys.mealProfile, saved),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.mealProfile }),
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.mealProfile }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.mealPlans }),
+      ]),
   });
 }
 
@@ -125,6 +129,71 @@ export function useImportMealCatalog() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => importMealCatalog(false),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.meals }),
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.meals }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.mealPlans }),
+      ]),
+  });
+}
+
+// Weekly plans (FOOD-006, FOOD-009)
+
+const dishSummarySchema = z.object({
+  dishId: z.string(),
+  name: z.string(),
+  category: z.string(),
+  lightness: z.enum(["LIGHT", "FILLING"]),
+  temperature: z.enum(["WARM", "COLD"]),
+  activeMinutes: z.number(),
+  totalMinutes: z.number(),
+  isVegetarian: z.boolean(),
+  vegetarianVariant: z.string().optional(),
+  imageKey: z.string().optional(),
+  favorite: z.boolean(),
+  archived: z.boolean(),
+});
+export type DishSummary = z.infer<typeof dishSummarySchema>;
+
+const planSlotSchema = z.object({
+  slotId: z.string(),
+  date: z.string(),
+  weekday: z.enum(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]),
+  slot: z.enum(["LUNCH", "DINNER"]),
+  dishId: z.string().nullable(),
+  locked: z.boolean(),
+  source: z.enum(["AUTO", "MANUAL"]),
+  status: z.enum(["PLANNED", "COOKED", "SKIPPED", "OTHER"]),
+  emptyReason: z.string().optional(),
+  dish: dishSummarySchema.nullable(),
+});
+export type PlanSlot = z.infer<typeof planSlotSchema>;
+
+const violationSchema = z.object({
+  rule: z.string(),
+  severity: z.enum(["HARD", "SOFT"]),
+  slotIds: z.array(z.string()),
+  message: z.string(),
+});
+export type Violation = z.infer<typeof violationSchema>;
+
+export const mealPlanSchema = z.object({
+  weekStart: z.string(),
+  weekEnd: z.string(),
+  ready: z.boolean(),
+  setup: z.object({ hasDishes: z.boolean(), hasEaters: z.boolean() }),
+  generatedAt: z.string().nullable(),
+  slots: z.array(planSlotSchema),
+  violations: z.array(violationSchema),
+});
+export type MealPlan = z.infer<typeof mealPlanSchema>;
+
+export type WeekChoice = "current" | "next";
+
+export function useMealPlan(week: WeekChoice) {
+  return useQuery({
+    queryKey: queryKeys.mealPlan(week),
+    queryFn: () => apiClient.get(`/meals/plans/${week}`, { schema: mealPlanSchema }),
+    staleTime: 60_000,
   });
 }

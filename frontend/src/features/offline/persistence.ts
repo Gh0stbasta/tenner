@@ -10,8 +10,18 @@ import type { PersistedClient, Persister } from "@tanstack/react-query-persist-c
 export const OFFLINE_CACHE_KEY = "tenner.offlineCache";
 export const OFFLINE_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Query key roots that are persisted: only what the offline pages show (privacy: no analytics, settings, Alexa). */
-export const PERSISTED_QUERY_ROOTS: readonly string[] = ["dashboard", "tenners", "history", "members", "categories"];
+/**
+ * Query key roots that are persisted: only what the offline pages show (privacy: no analytics, settings, Alexa, no food
+ * profile). Meal plans since FOOD-009.
+ */
+export const PERSISTED_QUERY_ROOTS: readonly string[] = [
+  "dashboard",
+  "tenners",
+  "history",
+  "members",
+  "categories",
+  "mealPlans",
+];
 
 /** Storage subset used by the persister (window.localStorage in the app). */
 export type CacheStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;

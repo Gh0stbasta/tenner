@@ -74,6 +74,17 @@ export const DEFAULT_FOOD_RULES = {
 };
 export const DEFAULT_FOOD_PROFILE = { eaters: [], household: DEFAULT_FOOD_RULES, updatedAt: null };
 
+/** A week before the household set up dishes and eaters (FOOD-006). */
+export const NOT_READY_PLAN = {
+  weekStart: "2026-10-12",
+  weekEnd: "2026-10-18",
+  ready: false,
+  setup: { hasDishes: false, hasEaters: false },
+  generatedAt: null,
+  slots: [],
+  violations: [],
+};
+
 export function mockFetch(routes: Record<string, MockHandler>): FetchMock {
   const handlers: Record<string, MockHandler> = {
     "GET /users": ok(DEFAULT_MEMBERS),
@@ -83,6 +94,8 @@ export function mockFetch(routes: Record<string, MockHandler>): FetchMock {
     "GET /household/alexa": ok({ account: { userId: "STEFAN" }, members: DEFAULT_MEMBERS, speakers: [] }),
     "GET /meals/profile": ok(DEFAULT_FOOD_PROFILE),
     "GET /meals/ingredients": ok({ ingredients: [] }),
+    "GET /meals/plans/current": ok(NOT_READY_PLAN),
+    "GET /meals/plans/next": ok({ ...NOT_READY_PLAN, weekStart: "2026-10-19", weekEnd: "2026-10-25" }),
     ...routes,
   };
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
