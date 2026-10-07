@@ -6,13 +6,11 @@
 
 import { AnalyticsService } from "./analytics/index.js";
 import {
-  DishService,
-  IngredientService,
-  MealCatalogImportService,
-  MealsStore,
+  createMealServices,
+  getMealPlanHandler,
+  type GetMealPlan,
   importMealCatalogHandler,
   type ImportMealCatalog,
-  ProfileService,
   getFoodProfileHandler,
   updateFoodProfileHandler,
   type GetFoodProfile,
@@ -222,6 +220,7 @@ export interface Dependencies {
   readonly getFoodProfile: GetFoodProfile;
   readonly updateFoodProfile: UpdateFoodProfile;
   readonly importMealCatalog: ImportMealCatalog;
+  readonly getMealPlan: GetMealPlan;
 }
 
 /** Per-request context passed to route handlers. */
@@ -325,6 +324,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /meals/profile": ({ deps, identity }) => getFoodProfileHandler(identity.tenantId, deps.getFoodProfile),
   "PUT /meals/profile": ({ event, deps, logger, identity }) => updateFoodProfileHandler(event, identity, deps.updateFoodProfile, logger),
   "POST /meals/catalog": ({ event, deps, logger, identity }) => importMealCatalogHandler(event, identity, deps.importMealCatalog, logger),
+  "GET /meals/plans/{weekStart}": ({ event, deps, identity }) => getMealPlanHandler(event, identity.tenantId, deps.getMealPlan),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -429,17 +429,22 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
       : undefined;
   const memberDeactivationService =
     householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
-  // Meal planning (FOOD-001, ADR 0007): one store on tenner-meals for all meal services.
-  const mealsStore = config.mealsTable ? new MealsStore(getDocumentClient(), config.mealsTable) : undefined;
-  const ingredientService = mealsStore ? new IngredientService(mealsStore, systemClock) : undefined;
-  const profileService =
-    mealsStore && ingredientService
-      ? new ProfileService({ store: mealsStore, ingredientsOf: (tenantId) => ingredientService.ingredientsOf(tenantId), membersOf, clock: systemClock, ids: uuidGenerator })
-      : undefined;
-  const dishService = mealsStore && ingredientService ? new DishService(mealsStore, (tenantId) => ingredientService.ingredientsOf(tenantId), systemClock, uuidGenerator) : undefined;
-  const mealCatalogImportService = dishService
-    ? new MealCatalogImportService({ dishesOf: (tenantId) => dishService.dishesOf(tenantId), createDish: (identity, request) => dishService.createDish(identity, request) })
+  // Meal planning (FOOD-001, ADR 0007): all meal services on tenner-meals.
+  const meals = config.mealsTable
+    ? createMealServices({
+        client: getDocumentClient(),
+        tableName: config.mealsTable,
+        membersOf,
+        settingsOf: (tenantId) => settingsOf(tenantId),
+        clock: systemClock,
+        ids: uuidGenerator,
+      })
     : undefined;
+  const ingredientService = meals?.ingredients;
+  const dishService = meals?.dishes;
+  const profileService = meals?.profiles;
+  const mealCatalogImportService = meals?.catalog;
+  const mealPlanService = meals?.plans;
 
   return {
     config,
@@ -511,6 +516,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     updateDish: dishService ? (identity, dishId, request) => dishService.updateDish(identity, dishId, request) : notConfigured,
     archiveDish: dishService ? (identity, dishId) => dishService.archiveDish(identity, dishId) : notConfigured,
     restoreDish: dishService ? (identity, dishId) => dishService.restoreDish(identity, dishId) : notConfigured,
+    getMealPlan: mealPlanService ? (tenantId, week) => mealPlanService.getPlan(tenantId, week) : notConfigured,
     importMealCatalog: mealCatalogImportService ? (identity, dryRun) => mealCatalogImportService.importCatalog(identity, dryRun) : notConfigured,
     getFoodProfile: profileService ? (tenantId) => profileService.getProfile(tenantId) : notConfigured,
     updateFoodProfile: profileService ? (identity, request) => profileService.updateProfile(identity, request) : notConfigured,

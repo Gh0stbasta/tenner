@@ -98,6 +98,16 @@ run "notifier_reads_tenners_for_the_digest" {
     condition     = contains(keys(aws_lambda_function.notifier[0].environment[0].variables), "APP_URL")
     error_message = "The notifier needs the web app URL for deep links."
   }
+
+  assert {
+    condition     = aws_lambda_function.notifier[0].environment[0].variables["MEALS_TABLE"] == "tenner-meals" && contains([for statement in data.aws_iam_policy_document.notifier[0].statement : statement.sid], "MealPlans")
+    error_message = "The notifier prepares meal plans (FOOD-006): it needs the meals table and access to it."
+  }
+
+  assert {
+    condition     = toset(flatten([for statement in data.aws_iam_policy_document.notifier[0].statement : tolist(statement.actions) if statement.sid == "MealPlans"])) == toset(["dynamodb:GetItem", "dynamodb:Query", "dynamodb:PutItem"])
+    error_message = "Meal plan access must stay limited to reading and writing items (no delete, no scan)."
+  }
 }
 
 run "delivery_log_expires_after_ttl" {

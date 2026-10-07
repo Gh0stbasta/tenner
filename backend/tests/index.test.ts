@@ -66,6 +66,7 @@ const DISH = {
   containsPoultry: false,
   unknownIngredients: [],
 } as DishResponse;
+const EMPTY_PLAN = { weekStart: "2026-10-12", weekEnd: "2026-10-18", ready: false, setup: { hasDishes: false, hasEaters: false }, generatedAt: null, slots: [], violations: [] };
 const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [], alexaAccounts: 0 };
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
@@ -161,6 +162,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     restoreDish: vi.fn(async () => DISH),
     getFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
     updateFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
+    getMealPlan: vi.fn(async () => EMPTY_PLAN),
     importMealCatalog: vi.fn(async (_identity: unknown, dryRun: boolean) => ({ dryRun, dishesCreated: ["Onigiri"], dishesSkipped: [] })),
     ...overrides,
   };
@@ -552,6 +554,18 @@ describe("meal catalog route (FOOD-003)", () => {
     expect((await route(event("POST /meals/catalog"), d)).statusCode).toBe(200);
     expect(d.importMealCatalog).toHaveBeenLastCalledWith(TEST_IDENTITY, false);
     expect((await route(event("POST /meals/catalog", {}, JSON.stringify({ dryRun: "yes" })), d)).statusCode).toBe(400);
+  });
+});
+
+describe("meal plan routes (FOOD-006)", () => {
+  const plan = (week: string | undefined) => ({ ...event("GET /meals/plans/{weekStart}"), pathParameters: week === undefined ? undefined : { weekStart: week } }) as APIGatewayProxyEventV2;
+
+  it("accepts current, next and a date", async () => {
+    const d = deps();
+    for (const week of ["current", "next", "2026-10-12"]) expect((await route(plan(week), d)).statusCode).toBe(200);
+    expect(d.getMealPlan).toHaveBeenLastCalledWith("default", "2026-10-12");
+    expect((await route(plan("last"), d)).statusCode).toBe(400);
+    expect((await route(plan("2026-13-01"), d)).statusCode).toBe(400);
   });
 });
 

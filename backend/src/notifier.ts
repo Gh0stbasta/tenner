@@ -13,6 +13,7 @@ import {
   WidgetPushService,
 } from "./alexa/index.js";
 import { getDocumentClient } from "./clients/dynamodb.js";
+import { createMealServices, type MealPlanService } from "./meals/index.js";
 import { getSsmClient } from "./clients/ssm.js";
 import { loadConfig, type AppConfig } from "./config.js";
 import type { DashboardRequest } from "./dto/index.js";
@@ -32,7 +33,7 @@ import { signActionToken, WebPushChannel } from "./push/index.js";
 import { DynamoDbDeliveryLog, DynamoDbHouseholdRepository, DynamoDbTennerRepository } from "./repositories/index.js";
 import { createSecretLoader } from "./secrets/index.js";
 import { AlexaSpeakerService, DashboardService, HouseholdService, MemberService, NotificationPreferencesService, PushSnoozeService, PushSubscriptionService } from "./services/index.js";
-import { systemClock } from "./utils/clock.js";
+import { systemClock, uuidGenerator } from "./utils/clock.js";
 import { createLogger, type Logger } from "./utils/logger.js";
 
 export class NotifierNotConfiguredError extends Error {
@@ -52,6 +53,8 @@ export interface NotifierRuntime {
   readonly notifier: NotifierDependencies;
   /** Echo Show widget pushes (ALEXA-007); undefined without Alexa API configuration. */
   readonly widget: WidgetPushService | undefined;
+  /** Meal plans prepared ahead (FOOD-006); undefined without the meals table. */
+  readonly mealPlans?: MealPlanService | undefined;
 }
 
 export function createNotifierRuntime(config: AppConfig = loadConfig(), extensions?: NotifierExtensions, fetchImpl: typeof fetch = globalThis.fetch): NotifierRuntime {
@@ -157,7 +160,18 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
         }),
       ]
     : notifier.jobs;
-  return { notifier: { ...notifier, jobs: allJobs, channels: extensions?.channels ?? channels }, widget };
+  // FOOD-006: the current and the next week always have a meal plan (notifications and Alexa read it).
+  const mealPlans = config.mealsTable
+    ? createMealServices({
+        client,
+        tableName: config.mealsTable,
+        membersOf,
+        settingsOf: (tenantId) => householdService.settingsOf(tenantId),
+        clock: systemClock,
+        ids: uuidGenerator,
+      }).plans
+    : undefined;
+  return { notifier: { ...notifier, jobs: allJobs, channels: extensions?.channels ?? channels }, widget, mealPlans };
 }
 
 /** EventBridge input: a scheduled event or a HouseholdChanged event from the API. */
@@ -169,6 +183,8 @@ export interface NotifierEvent {
 export interface NotifierResult {
   readonly run?: RunSummary;
   readonly widget: "PUSHED_OR_SKIPPED" | "FAILED" | "DISABLED";
+  /** FOOD-006: plans created in this run, or why none were checked. */
+  readonly mealPlans?: number | "FAILED" | "DISABLED";
 }
 
 /** Route one invocation; widget failures are logged and never fail the scheduled notification run. */
@@ -178,8 +194,22 @@ export async function handleNotifierEvent(runtime: NotifierRuntime, event: Notif
     const tenantId = typeof event.detail?.tenantId === "string" ? event.detail.tenantId : notifier.tenantId;
     return { widget: await safely(notifier.logger, widget, (service) => service.onChange(tenantId)) };
   }
+  const mealPlans = await prepareMealPlans(notifier.logger, runtime.mealPlans, notifier.tenantId);
   const run = await runNotifier(notifier);
-  return { run, widget: await safely(notifier.logger, widget, (service) => service.onSchedule(notifier.tenantId)) };
+  return { run, widget: await safely(notifier.logger, widget, (service) => service.onSchedule(notifier.tenantId)), mealPlans };
+}
+
+/** FOOD-006: create missing plans before the jobs run; failures are logged and never stop the notifications. */
+async function prepareMealPlans(logger: Logger, mealPlans: MealPlanService | undefined, tenantId: string): Promise<NonNullable<NotifierResult["mealPlans"]>> {
+  if (!mealPlans) return "DISABLED";
+  try {
+    const created = await mealPlans.ensurePlans(tenantId);
+    if (created > 0) logger.info("Meal plans prepared", { event: "MealPlansPrepared", created });
+    return created;
+  } catch (error) {
+    logger.error("Meal plan preparation failed", { event: "MealPlansFailed", error: error instanceof Error ? error.name : "UnknownError" });
+    return "FAILED";
+  }
 }
 
 async function safely(logger: Logger, widget: WidgetPushService | undefined, action: (service: WidgetPushService) => Promise<void>): Promise<NotifierResult["widget"]> {

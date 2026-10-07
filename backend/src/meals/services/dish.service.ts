@@ -44,6 +44,12 @@ export class DishService {
       .map((dish) => ({ ...dish, ...deriveDish(dish, ingredients) }));
   }
 
+  /** All dishes (also archived) with derived values, for plans that reference archived dishes. */
+  async allDishes(tenantId: string): Promise<DishResponse[]> {
+    const [dishes, ingredients] = await Promise.all([this.dishesOf(tenantId), this.ingredientsOf(tenantId)]);
+    return dishes.map((dish) => ({ ...dish, ...deriveDish(dish, ingredients) }));
+  }
+
   /** All stored dishes (also archived), without derived values. */
   async dishesOf(tenantId: string): Promise<Dish[]> {
     return (await this.store.query(tenantId, itemKeyPrefix("DISH"))).map(toDish);

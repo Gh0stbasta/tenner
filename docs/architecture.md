@@ -1471,6 +1471,15 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   | R12 | no dish or group twice a week (hard); last week's dishes (soft) |
   | R13 | family-friendly only |
 
+- **Planner** (FOOD-006, `backend/src/meals/planner/planner.ts`): deterministic for a stored seed (Mulberry32);
+  candidates per meal from the dish rules, depth-first search with backtracking (most constrained meal first, at most
+  4,000 steps per attempt), six attempts with derived seeds, best `score` of a complete plan wins; otherwise a greedy
+  fill leaves meals empty with a reason. Never accepts a hard violation.
+- **Plans** (`services/meal-plan.service.ts`): `PLAN#<weekStart>` with seed, `generatedAt`, 14 slots
+  (`dishId`, `locked`, `source`, `status`, `emptyReason`) and TTL `expiresAt` (≈ 13 months). Current and next week
+  are created on first read (conditional write) and by the notifier on every scheduled run (`MealPlans` statement in
+  `terraform/notifier.tf`, failures logged as `MealPlansFailed`, never blocking notifications). Nothing is planned
+  while the household has no active dishes or no eaters, because the plan would ignore allergies.
 - **Security:** same JWT authorizer and tenant isolation as all routes; allergies in the profile are never logged.
 - **Cost:** within the DynamoDB free tier.
 

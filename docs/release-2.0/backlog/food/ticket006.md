@@ -109,22 +109,22 @@ cd backend && npm run lint && npm run typecheck && npm test
 
 # Acceptance Criteria
 
-- [ ] 7 days × lunch and dinner planned automatically
-- [ ] All hard rules hold; soft rules optimised
-- [ ] Reproducible with the stored seed
-- [ ] The plan exists before anyone opens the app (notifier)
-- [ ] Tests passing
+- [x] 7 days × lunch and dinner planned automatically
+- [x] All hard rules hold; soft rules optimised
+- [x] Reproducible with the stored seed
+- [x] The plan exists before anyone opens the app (notifier)
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
@@ -132,9 +132,33 @@ cd backend && npm run lint && npm run typecheck && npm test
 
 - Week boundaries follow the household's week start and timezone.
 - Notifier pre-creation requires `notifications_enabled`; without it, the plan is created on first read.
+- **Week reference:** the route accepts `current`, `next` or a week start date, so clients need not compute week
+  boundaries.
+- **No plan without setup:** while there are no active dishes or no eaters, nothing is planned or stored
+  (`ready: false`, `setup` tells what is missing); otherwise a plan made before the family is entered would ignore the
+  allergies and stay for the whole week.
+- **Notifier:** prepares the current and next week on every scheduled run (two reads when both exist), not only on
+  the last day; simpler and catches up after setup.
+- **Search limits:** 6 attempts × 4,000 steps; with the seed catalog every tested seed finds a complete week in a few
+  milliseconds.
+- **TTL:** plans expire about 13 months after their week (FOOD-023 needs 12 months of history).
 
 ---
 
 # Out of Scope
 
 - Plans for more than one week ahead; breakfast.
+
+---
+
+# Implementation Status
+
+Done (2026-10-07).
+
+- Planner: `backend/src/meals/planner/planner.ts`, weeks: `planner/week.ts`; plans: `models/plan.ts`,
+  `services/meal-plan.service.ts`, `handlers/plans.ts`; shared wiring `backend/src/meals/runtime.ts`.
+- Route `GET /meals/plans/{weekStart}`; notifier `prepareMealPlans` in `backend/src/notifier.ts`; Terraform: notifier
+  statement `MealPlans`, `MEALS_TABLE` for the notifier.
+- Tests: `backend/tests/meals-planner.test.ts` (100 seeds without hard violations, reproducibility, fixed meals,
+  empty reasons, last week, < 1 s for 100 dishes), `meals-plans.test.ts`, notifier test in `widget.test.ts`, route
+  test, Terraform notifier test.
