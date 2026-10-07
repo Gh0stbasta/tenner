@@ -68,7 +68,7 @@ Each violation: `{ rule: "R5", severity: HARD | SOFT, slotIds, message }` with a
 | R4 Time | `activeMinutes ≤ maxActiveMinutes` |
 | R5 Chicken | chicken dishes only in `chicken.allowedSlots`, at most `maxPerWeek` |
 | R6 Burger | at most `maxBurgerPerWeek` dishes of category `BURGER_WRAP` with burger flag |
-| R7 Protein | each tag in `limitedProteinTags` (default `POULTRY`, `BEEF_PORK`, `FISH`) at most once per week; egg, dairy and legumes not limited |
+| R7 Protein | each tag in `limitedProteinTags` (default `POULTRY`, `FISH`, `MINCE`, `BURGER_PATTY`, `SAUSAGE`, `MEATBALL`) at most once per week; egg, dairy and legumes not limited |
 | R8 Base | the same `baseTag` at most once per day (`PASTA` incl. Spätzle; `GNOCCHI` and `SCHUPFNUDELN` separate) |
 | R9 Light lunch | weekday lunches (adults only) only `LIGHT` dishes; weekend lunches unrestricted |
 | R10 Warm dinner | soft: penalty for cold or light dinners |
@@ -88,7 +88,7 @@ One positive and one negative test per rule (R1 – R13)
 Chicken: Monday dinner ok, Wednesday dinner rejected, second chicken rejected
 Vegetarian exception: Spaghetti Bolognese ok, Köttbullar ok only with variant
 Attendance: weekday lunch checks only the adults; weekend lunch and dinner check all eaters
-Protein: two fish dishes in one week rejected; Spaghetti Bolognese + Bratkartoffeln mit Würstl rejected (beef/pork); two egg dishes allowed
+Protein: two fish dishes in one week rejected; Spaghetti Bolognese + Lasagne rejected (minced meat); Spaghetti Bolognese + Bratkartoffeln mit Würstl + Burger allowed (three forms); two egg dishes allowed
 Base: pasta lunch + pasta dinner rejected; pasta lunch + rice dinner ok
 Messages in German, rule IDs stable
 Property test: checkWeek of a random valid plan reports no hard violation
@@ -139,7 +139,7 @@ cd backend && npm run lint && npm run typecheck && npm test
 # Assumptions
 
 - „Hühnchen nur 1×“ means at most once, not exactly once (a week without chicken is valid).
-- Protein and base groups follow EPIC-FOOD-001 decisions 3 and 4; beef and pork are one source.
+- Protein and base groups follow EPIC-FOOD-001 decisions 3 and 4; beef and pork count by form.
 
 ---
 

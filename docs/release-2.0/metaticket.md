@@ -111,7 +111,7 @@ whole family.
 | R4 | Active cooking time at most 20 minutes per meal (oven or simmering time does not count) | Hard |
 | R5 | Chicken at most once per week, and only on Monday **or** Tuesday dinner | Hard |
 | R6 | Burger dishes at most once per week | Hard |
-| R7 | Each animal protein source — poultry, beef and pork together (incl. minced meat and sausages), fish — at most once per week | Hard |
+| R7 | Each animal protein source at most once per week: poultry, fish, and beef/pork **by form** — minced meat, burger patties, sausages, meatballs | Hard |
 | R8 | The same base ingredient at most once per day; groups: pasta (incl. Spätzle), gnocchi, Schupfnudeln, rice, potatoes, bread | Hard |
 | R9 | Weekday lunches (adults only) are light and low in calories | Hard |
 | R10 | Dinners are preferably warm and filling | Soft |
@@ -225,7 +225,7 @@ Answered by the owner on 2026-10-07; the tickets follow them.
 |---|---|---|
 | 1 | „Max 20 minutes“: active or total time? | **Active cooking time.** Oven and simmering time do not count; total time is shown (R4) |
 | 2 | Coconut milk and the nut allergy | **Coconut milk is tolerated.** Coconut is not an allergen for the family; Curryreis mit Kokosmilch stays in the catalog |
-| 3 | Which protein sources count for R7? | **Animal protein sources such as poultry, beef or fish.** Tags: `POULTRY`, `BEEF_PORK`, `FISH`; each at most once per week. Beef and pork are **one** source (owner, 2026-10-07) |
+| 3 | Which protein sources count for R7? | **Animal protein sources such as poultry, beef or fish.** Tags: `POULTRY`, `FISH`, and for beef/pork by form: `MINCE`, `BURGER_PATTY`, `SAUSAGE`, `MEATBALL`; each at most once per week (owner, 2026-10-07: for beef and pork the form decides, not the animal) |
 | 4 | Base-ingredient groups for R8 | **Spätzle count as pasta; gnocchi and Schupfnudeln are separate groups** |
 | 5 | Who eats lunch? | **Monday to Friday only the two adults; at the weekend the children too.** Dinner always with the whole family |
 | 6 | Family details in the public repository | **Not sensitive.** The Git history stays as it is; current files make the details unrecognizable |
@@ -233,7 +233,9 @@ Answered by the owner on 2026-10-07; the tickets follow them.
 Consequences:
 
 - Decision 3: egg, cheese (also halloumi and feta), other dairy and legumes are not limited by R7. Beef and pork
-  (incl. minced meat and sausages) are one source `BEEF_PORK`, so a week has at most one beef or pork dish.
+  count by form: minced meat (Bolognese, Chili, Lasagne), burger patties, sausages (Würstl, Hot Dogs) and meatballs
+  (Frikadellen, Köttbullar, Hackbraten) are four sources. Assumption: shaped minced meat (meatballs, Hackbraten) is
+  its own form, separate from loose minced meat and from burger patties.
 - Decision 5: weekday lunches are planned for two portions and only have to suit the adults (R2 for the eaters
   present); shopping list and cost use the eaters of each meal (FOOD-004, FOOD-013, FOOD-014).
 
