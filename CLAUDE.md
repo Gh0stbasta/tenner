@@ -89,7 +89,9 @@ backlog/20260918-01-add-csv-validation.md
 
 In this repository (since release 1.0) tickets go to `docs/backlog/maintenance/ticketNNN.md` (`MAINT-NNN`) or
 `docs/backlog/recommendations/ticketNNN.md` (`REC-NNN`), as described in `docs/backlog/README.md`. The tickets of
-release 1.0 are archived in `docs/release-1.0/` and are not changed.
+release 1.0 are archived in `docs/release-1.0/` and are not changed. Feature tickets of a planned release go to
+`docs/release-<version>/backlog/<domain>/ticketNNN.md` (release 2.0: `docs/release-2.0/backlog/food/`, index in
+`docs/release-2.0/README.md`).
 
 Each ticket must contain:
 
@@ -400,8 +402,8 @@ Before opening a pull request:
 1. Refresh `dashboard.md` so it shows the state after the pull request is merged.
 2. Update the snapshot date, even if nothing else changed.
 3. Recompute the numbers from the sources instead of adjusting them by hand:
-   - Ticket files in `docs/backlog/` (done = "Implementation Status" section); release 1.0 tickets in
-     `docs/release-1.0/` are fixed
+   - Ticket files in `docs/backlog/` and `docs/release-2.0/` (done = "Implementation Status" section); release 1.0
+     tickets in `docs/release-1.0/` are fixed
    - `CHANGELOG.md`
    - `docs/technical-debt.md`
    - `docs/security.md`

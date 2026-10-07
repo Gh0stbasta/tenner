@@ -1,5 +1,9 @@
 # Tenner Roadmap
 
+> **Release 2.0 — Family Meal Planning (planned, 2026-10-07):** epic [EPIC-FOOD-001](release-2.0/metaticket.md),
+> backlog FOOD-001 – 025 and order in [`release-2.0/README.md`](release-2.0/README.md). The rest of this file is the
+> record of release 1.0.
+
 This roadmap was produced by the backlog gap analysis in [META-001](release-1.0/meta-ticket.md).
 The full ticket index is in [`release-1.0/backlog/README.md`](release-1.0/backlog/README.md).
 

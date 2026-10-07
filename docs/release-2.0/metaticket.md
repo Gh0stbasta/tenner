@@ -1,544 +1,287 @@
-Das ist aus meiner Sicht kein einzelnes Feature mehr.
+# EPIC-FOOD-001: Family Meal Planning Platform (Release 2.0)
 
-Das ist:
+## Type
 
-Release 2.0
-=
-Family Meal Planning
-
-
-Und ich würde Claude nicht direkt Tickets bauen lassen, sondern erst ein Epic, das die komplette Lösung zerlegt.
-
-# EPIC-FOOD-001: Family Meal Planning Platform
-
-## Goal
-
-Create a complete meal-planning platform inside Tenner.
-
-The platform should generate a weekly family meal plan from predefined dishes and household rules.
-
-No AI is required for the initial implementation.
-
-The first version should use deterministic planning rules and application logic.
+Epic / Backlog Generation
 
 ---
 
-# Background
+## Priority
 
-Tenner is currently focused on recurring household responsibilities.
+High
 
-The next logical family-management capability is meal planning.
+---
 
-The family currently already follows a semi-structured meal plan and has a predefined catalog of preferred dishes.
+## Phase
 
-The objective is to:
+Release 2.0
 
-- remove planning overhead
-- reduce decision fatigue
+---
+
+## Goal
+
+Tenner plans the family's meals. Every week a lunch and dinner plan for seven days is ready without anyone planning
+it, follows the household's rules (allergies, diet, variety, preparation time), and turns into a shopping list.
+People see it in the app, on the phone, in a calendar, by voice and on the Echo Show.
+
+The first version is **deterministic**: predefined dishes, explicit rules, application logic. No AI.
+
+---
+
+# Context
+
+Owner input of 2026-10-07 (this file before it was put into this form; the original text is in the Git history).
+
+Release 1.0 made Tenner complete for recurring household responsibilities and closed the feature backlog
+(BACKLOG-003, RELEASE-001). The owner opens release 2.0 with a new capability: meal planning. The family already
+follows a semi-structured meal plan with a fixed catalog of preferred dishes. Every day the question
+„Was gibt's heute?“ has to be answered; Tenner should answer it.
+
+Objectives:
+
+- remove planning overhead and decision fatigue
 - ensure variety
-- consider dietary restrictions
-- support family routines
+- respect allergies, diet and dislikes
+- support family routines (light lunches on weekdays, warm dinners, little cooking effort)
+
+Owner's expectation: meal plan, shopping list and the Echo Show widget will be used more often than any other
+Tenner feature.
 
 ---
 
 # Vision
 
-Users open Tenner and see:
+Users open Tenner → „Essen“ and see the current week, already planned:
 
 ```text
-This Week
+Diese Woche
 
-Monday
-Lunch
-Dinner
-
-Tuesday
-Lunch
-Dinner
-
-...
-
-Sunday
-Lunch
-Dinner
+Montag      Mittag  Salat mit Halloumi
+            Abend   Burgerwraps
+Dienstag    Mittag  Onigiri
+            Abend   Chicken Dinos mit Pommes
+…
+Sonntag     Mittag  Kaiserschmarrn
+            Abend   Flammkuchen
 ```
-
-The plan should already be generated.
 
 Users can:
 
-- regenerate the entire week
-- regenerate a single meal
-- manually swap meals
-- create new meals
-- archive meals
-- view estimated nutrition
-- view estimated cost
+- regenerate the whole week (locked meals stay)
+- replace one meal („Tausche Mittwoch Abend“)
+- choose or swap meals by hand
+- create, edit and archive dishes
+- see estimated nutrition and cost
+- get a shopping list for the week
+- hear „Alexa, was gibt es heute?“ and see today's meals on the Echo Show
 
 ---
 
-# Create Domain
+# Owner Input: Household Rules
 
-Create:
+The family details given by the owner (names, ages, allergies) are **not** repeated in this file or in any ticket,
+because the repository is public (see Assumptions). They are entered once in the app's family profile (FOOD-004).
+The rules below are the planning-relevant content.
+
+## Eaters
+
+| Eater | Diet and restrictions (entered in the profile) |
+|---|---|
+| Adult 1 | Allergic to nuts and apples |
+| Adult 2 | Vegetarian; occasionally eats minced meat (Hackfleisch) or sausages (Würstchen) |
+| Child 1 – 3 | Toddler and preschool age; smaller portions |
+
+## Preferences
+
+- Liked: pasta, Spätzle, rice, potatoes; vegetables (broccoli, beans, spinach, peas); salad with protein; pizza,
+  burgers, hot dogs, chicken nuggets, wraps; fish **only** fish fingers or salmon; cheese such as Camembert, feta,
+  mozzarella, parmesan.
+- Not wanted: tofu, quinoa, sauces with blue cheese (Schimmelkäse).
+
+## Planning Rules
+
+| # | Rule | Type |
+|---|---|---|
+| R1 | No dish may contain an ingredient an eater is allergic to | Hard |
+| R2 | Every meal must be suitable for every eater (vegetarian, or meat only in the vegetarian's allowed exceptions, or a vegetarian variant of the dish exists) | Hard |
+| R3 | No disliked ingredient (tofu, quinoa, blue-cheese sauce) | Hard |
+| R4 | Preparation time at most 20 minutes per meal | Hard |
+| R5 | Chicken at most once per week, and only on Monday **or** Tuesday dinner | Hard |
+| R6 | Burger dishes at most once per week | Hard |
+| R7 | Each tracked protein source (e.g. salmon, chicken, egg, sausage, soy) at most once per week | Hard |
+| R8 | The same base ingredient (e.g. pasta, rice, potatoes) at most once per day | Hard |
+| R9 | Weekday lunches are light and low in calories | Hard |
+| R10 | Dinners are preferably warm and filling | Soft |
+| R11 | Salads at lunch only occasionally (not every day) | Soft |
+| R12 | Variety: no dish twice in a week; prefer dishes not eaten last week | Hard (week) / Soft (last week) |
+| R13 | Dishes must be simple and family-friendly | Catalog property |
+
+Breakfast rules (cold on weekdays, scrambled eggs allowed at the weekend) are recorded; breakfast is not planned in
+release 2.0. Kitchen: four-burner hob, oven, microwave — every catalog dish fits it.
+
+---
+
+# Owner Input: Dish Catalog
+
+57 dishes after merging the owner's two lists (the dish list and the favorites; duplicates removed). Dishes with
+alternatives in their name become variants of one dish group (FOOD-002). Classification (meal slot, protein, base,
+time, ingredients) is done in FOOD-003.
+
+| Group | Dishes |
+|---|---|
+| Pasta | Nudeln mit Soße · Spaghetti Bolognese · One Pot Pasta · Käsemakkaroni · Ofenrigatoni · Tortellini · Tortellini mit Frischkäsefüllung & Brokkoli · Ravioli · Lasagne · Nudelauflauf |
+| Potatoes | Kartoffelsuppe mit Würstl · Kartoffeln mit Butter · Kartoffelpuffer · Kartoffelmuffins · Bratkartoffeln mit Ei · Bratkartoffeln mit Würstl · Frikadellen mit Kartoffelbrei · Fischstäbchen-Auflauf mit Kartoffeln und Spinat · Rösti mit Kräuterquark · Eier in Senfsoße mit Kartoffeln |
+| Gnocchi | Gnocchi in Tomatensoße · Gnocchi in Spinatsoße · Gnocchi mit Spinat & Feta |
+| Rice | Eierreis mit Gemüse · Mikrowellenrisotto · Chili · Reispfanne mit Paprika & Zucchini · Curryreis mit Kokosmilch (mild) |
+| Burgers & wraps | Burger · Burgerwraps · Piratenburger · Gemüsefrikadellen · Hot Dogs |
+| Meat & fish | Spätzle mit Hackbraten · Spätzle mit Soße · Köttbullar · Chicken Dinos mit Pommes · Fischstäbchen mit Erbsenpüree · Gebratener Lachs mit Gemüse |
+| Vegetarian & classics | Spätzle · Käsespätzle mit Röstzwiebeln · Schupfnudeln · Grießbrei · Kaiserschmarrn · Ofengemüse mit Kräuterquark · Gebratener Halloumi mit Ofengemüse · Gemüsecurry · Linseneintopf · Ramen · Onigiri · Toast Hawaii · Flammkuchen · Pfannenpizza (Wrap-Boden) · Mozzarella-Tomaten-Baguettes · Kontaktgrill-Sandwiches · Gemüse-Toasts aus dem Ofen |
+| Salads | Salat mit Protein (variants by protein, FOOD-003) |
+
+---
+
+# Requirements
+
+- Put this epic into the ticket format of the repository.
+- Create the domain folder `docs/release-2.0/backlog/food/` and all implementation tickets needed for the vision,
+  at least FOOD-001 to FOOD-020 (the owner's breakdown), each in the same format and level of detail as the
+  release 1.0 tickets.
+- Add the tickets the owner's breakdown misses but the vision needs.
+- Give a recommended implementation order and the decisions the owner still has to make.
+- Keep the AI planning engine as a later, optional evaluation.
+
+---
+
+# Ticket Breakdown
+
+| ID | Title | Priority | Phase |
+|---|---|---|---|
+| [FOOD-001](backlog/food/ticket001.md) | Meal Planning Architecture | Critical | 2.0 Core |
+| [FOOD-002](backlog/food/ticket002.md) | Dish Data Model and Dish API | Critical | 2.0 Core |
+| [FOOD-003](backlog/food/ticket003.md) | Seed the Family Dish Catalog | High | 2.0 Core |
+| [FOOD-004](backlog/food/ticket004.md) | Family Food Profile | Critical | 2.0 Core |
+| [FOOD-005](backlog/food/ticket005.md) | Meal Planning Rules Engine | Critical | 2.0 Core |
+| [FOOD-006](backlog/food/ticket006.md) | Automatic Weekly Planner | Critical | 2.0 Core |
+| [FOOD-007](backlog/food/ticket007.md) | Replace a Single Meal | High | 2.0 Core |
+| [FOOD-008](backlog/food/ticket008.md) | Regenerate the Week | High | 2.0 Core |
+| [FOOD-009](backlog/food/ticket009.md) | Meal Plan Page | Critical | 2.0 Core |
+| [FOOD-010](backlog/food/ticket010.md) | Dish Editor | High | 2.0 Extended |
+| [FOOD-011](backlog/food/ticket011.md) | Dish Photos | Medium | 2.0 Extended |
+| [FOOD-012](backlog/food/ticket012.md) | Nutrition Estimate | Medium | 2.0 Extended |
+| [FOOD-013](backlog/food/ticket013.md) | Cost Estimate | Medium | 2.0 Extended |
+| [FOOD-014](backlog/food/ticket014.md) | Shopping List | High | 2.0 Core |
+| [FOOD-015](backlog/food/ticket015.md) | Meal Calendar Feed (ICS) | Low | 2.0 Extended |
+| [FOOD-016](backlog/food/ticket016.md) | Meal Notifications | High | 2.0 Extended |
+| [FOOD-017](backlog/food/ticket017.md) | Alexa: „Was gibt es heute?“ | High | 2.0 Extended |
+| [FOOD-018](backlog/food/ticket018.md) | Echo Show Meal Widget | High | 2.0 Extended |
+| [FOOD-019](backlog/food/ticket019.md) | Food Analytics | Low | 2.0 Extended |
+| [FOOD-020](backlog/food/ticket020.md) | Evaluate an AI Planning Engine | Low | Long-Term |
+| [FOOD-021](backlog/food/ticket021.md) | Ingredient Reference Catalog | Critical | 2.0 Core |
+| [FOOD-022](backlog/food/ticket022.md) | Choose, Swap and Lock Meals by Hand | High | 2.0 Core |
+| [FOOD-023](backlog/food/ticket023.md) | Meal History and Feedback | Medium | 2.0 Extended |
+| [FOOD-024](backlog/food/ticket024.md) | Evaluate Stock and AI-Generated Dish Images | Low | Long-Term |
+| [FOOD-025](backlog/food/ticket025.md) | Release Tenner 2.0 | High | 2.0 Release |
+
+Added to the owner's breakdown:
+
+- **FOOD-021 Ingredient Reference Catalog:** allergies, shopping list, nutrition and cost all need a shared list of
+  ingredients with allergen tags, protein source, base ingredient, shopping section, nutrition and price.
+- **FOOD-022 Choose, Swap and Lock:** the vision's „manually swap meals“ and keeping hand-picked meals when the week
+  is regenerated.
+- **FOOD-023 Meal History and Feedback:** „favorite dishes“ (FOOD-019) and „prefer dishes not eaten last week“ (R12)
+  need a record of what was really eaten.
+- **FOOD-024:** stock and AI-generated images (FOOD-011 in the owner's list) need an external service and an ADR;
+  photo upload stays in FOOD-011.
+- **FOOD-025:** version 2.0.0, changelog and release notes, like RELEASE-001.
+
+---
+
+# Recommended Order
 
 ```text
-backlog/food/
+Foundation:        FOOD-001 → 002 → 021 → 004 → 003
+Planning (first usable version):
+                   FOOD-005 → 006 → 009 → 007 → 022 → 008
+Kitchen:           FOOD-014 → 010 → 012 → 013 → 011
+Everywhere:        FOOD-016 → 017 → 018 → 015
+Insight:           FOOD-023 → 019
+Release:           FOOD-025
+Later (evaluate):  FOOD-020, FOOD-024
 ```
 
----
-
-# Generate Implementation Tickets
-
-Create all required implementation tickets.
-
-Minimum breakdown:
-
-FOOD-001 → FOOD-020+
-
-
-Und die Tickets würde ich ungefähr so zerlegen:
-
-FOOD-001
-Meal Planning Architecture
-
-FOOD-002
-Dish Data Model
-
-
-Enthält:
-
-Name
-
-Category
-
-Ingredients
-
-Protein Source
-
-Preparation Time
-
-Image
-
-Nutrition
-
-Cost
-
-Household Suitability
-
-FOOD-003
-Seed Meal Catalog
-
-
-Importiert alle aktuellen Gerichte von Stefan.
-
-Das sind aktuell ungefähr:
-
-40+ Gerichte
-
-FOOD-004
-Family Profile
-
-
-Speichert:
-
-Allergien
-
-Vorlieben
-
-Abneigungen
-
-Kinder
-
-Portionsgrößen
-
-FOOD-005
-Meal Planning Rules Engine
-
-
-Umsetzung deiner Regeln:
-
-Keine doppelte Proteinquelle
-
-Kein Nudeln mittags + abends
-
-Hühnchen max 1x/Woche
-
-Max 20 Minuten Aufwand
-
-Familientauglich
-
-FOOD-006
-Automatic Weekly Planner
-
-
-Generiert:
-
-7 Tage
-
-Mittag
-
-Abend
-
-FOOD-007
-Replace Single Meal
-
-
-Funktion:
-
-"Tausche Mittwoch Abend"
-
-FOOD-008
-Regenerate Entire Week
-
-FOOD-009
-Meal Dashboard
-
-
-Visualisierung:
-
-Montag
-
-Mittag
-Salat mit Protein
-
-Abend
-Burgerwraps
-
-FOOD-010
-Dish Editor
-
-
-Neues Gericht anlegen.
-
-FOOD-011
-Dish Images
-
-
-Upload:
-
-Foto
-
-Stockbild
-
-KI-generiertes Bild
-
-FOOD-012
-Nutrition Calculator
-
-
-Grobe Angabe:
-
-Kalorien
-
-Protein
-
-Kohlenhydrate
-
-Fett
-
-
-Nicht wissenschaftlich exakt.
-
-FOOD-013
-Cost Estimation
-
-
-Beispiel:
-
-Familie
-
-4-6 EUR
-8-10 EUR
-12-15 EUR
-
-FOOD-014
-Shopping List Generator
-
-
-Extrem wertvoll.
-
-Wochenplan
-↓
-Einkaufsliste
-
-FOOD-015
-Calendar Integration
-
-FOOD-016
-Meal Notifications
-
-
-Morning:
-
-Heute:
-
-Mittag
-Onigiri
-
-Abend
-Linseneintopf
-
-FOOD-017
-Alexa Integration
-
-
-Beispiel:
-
-Alexa, was gibt es heute?
-
-FOOD-018
-Echo Show Widget
-
-
-Beispiel:
-
-🍽️ Heute
-
-Mittag:
-Onigiri
-
-Abend:
-Lasagne
-
-FOOD-019
-Food Analytics
-
-
-Zeigt:
-
-Proteinquellen
-
-Vegetarische Quote
-
-Lieblingsgerichte
-
-Kosten
-
-FOOD-020
-Version 2 Planning Engine
-
-
-Später optional:
-
-KI
-
-
-für:
-
-Variationen
-
-Saisonale Gerichte
-
-Resteverwertung
-
-
-Mein Bauchgefühl:
-
-Shopping List + Essensplan + Echo Show Widget wird langfristig deutlich häufiger genutzt werden als die Hausaufgabenfunktion.
-
-Weil ihr jeden einzelnen Tag entscheiden müsst:
-
-Was gibt's heute?
-
-
-und genau diese Entscheidung kann Tenner komplett übernehmen. Das ist vermutlich das stärkste Feature nach Release 1.0. 🚀
-
+After the planning block the family can use the plan every day; the shopping list follows directly because the
+owner rates it most valuable.
 
 ---
 
-hier noch kontext für die familie:
-# 🍽️ Essensplan-Grundlage
+# Owner Decisions Needed
 
-## 👨‍👩‍👧‍👦 Familienstruktur
+None of these block the start (FOOD-001 – 004); each ticket records a default assumption.
 
-- **Julia**: geboren 1987, Mutter
-- **Stefan**: geboren 1986, Ehemann
-- **Drei Kinder**:
-  - Kind 1: geboren 2020
-  - Kind 2: geboren 2022
-  - Kind 3: geboren 2024
-
----
-
-## 🚫 Allergien & Unverträglichkeiten
-
-- **Julia** ist allergisch gegen:
-  - **Nüsse**
-  - **Äpfel**
-
-### Stefan (Ehemann):
-- **Vegetarier**, aber:
-  - isst gelegentlich **Hackfleisch** oder **Würstchen**
----
-
-## 🧂 Ernährung & Vorlieben
-
-### Allgemein:
-- Familie isst gerne:
-  - **Nudeln, Spätzle, Reis, Kartoffeln**
-  - **Gemüse, Brokkoli, Bohnen, Spinat, Erbsen**
-  - **Salat mit Protein**
-  - **Pizza, Burger, Hot Dogs, Chicken Nuggets, Wraps**
-  - **Fisch**: nur **Fischstäbchen oder Lachs**
-  - **Käse**: z. B. **Camembert, Feta, Mozzarella, Parmesan**
+1. **„Max 20 minutes“:** active cooking time or total time? Lasagne, Ofenrigatoni or Linseneintopf need longer in
+   the oven or pot. Default: the limit applies to active time; total time is shown.
+2. **Coconut milk and the nut allergy** (Curryreis mit Kokosmilch): coconut is sometimes labelled as a tree nut.
+   Default: coconut is tagged and excluded for the allergic eater until the owner confirms it is safe.
+3. **Which protein sources count for R7?** Default: meat and fish types, egg, sausage, soy, halloumi; cheese as an
+   ingredient, dairy and legumes do not count.
+4. **Base-ingredient groups for R8:** do Spätzle, Gnocchi and Schupfnudeln count as pasta? Default: own groups
+   (Spätzle/Schupfnudeln = „Teigwaren“, Gnocchi = potatoes).
+5. **Weekday lunches:** planned for all seven days and all eaters? Default: yes, as in the vision.
+6. **Public repository:** the original epic text with the family details is in the public Git history. Removing it
+   needs a history rewrite of `main` (owner decision).
 
 ---
 
-## 🍽️ Lieblingsgerichte der Familie
+# Acceptance Criteria
 
-- **Nudelgerichte:**
-  - Nudeln mit Soße
-  - Spaghetti Bolognese
-  - One Pot Pasta
-  - Käsemakkaroni
-  - Ofenrigatoni
-  - Tortellini
-  - Ravioli
-  - Lasagne
-  - Nudelauflauf
-
-
-- **Kartoffelgerichte:**
-  - Kartoffelsuppe mit Würstl
-  - Kartoffeln mit Butter
-  - Kartoffelpuffer
-  - Kartoffelmuffins
-  - Bratkartoffeln mit Ei oder Würstl
-  - Frikadellen mit Kartoffelbrei
-  - Fischstäbchen-Auflauf mit Kartoffeln und Spinat
-  - Rösti mit Kräuterquark
-  - Gnocchi mit Spinat & Feta
-
-- **Reisgerichte:**
-  - Eierreis mit Gemüse
-  - Mikrowellenrisotto
-  - Chilli
-  - Reispfanne mit Paprika & Zucchini
-  - Curryreis mit Kokosmilch (mild)
-
-- **Burger & Wraps:**
-  - Burger
-  - Burgerwraps
-  - Piratenburger
-  - Gemüsefrikadellen
-  - Hot Dogs
-
-- **Fleisch-/Fischgerichte:**
-  - Spätzle mit Hackbraten oder Soße
-  - Köttbullar
-  - Chicken Dinos mit Pommes
-  - Fischstäbchen mit Erbsenpüree
-  - Gebratener Lachs mit Gemüse
-
-- **Vegetarisch & Klassiker:**
-  - Spätzle
-  - Schupfnudeln
-  - Grießbrei
-  - Ofengemüse mit Kräuterquark
-  - Gemüsecurry
-  - Linseneintopf
-  - Toast Hawaii
-  - Flammkuchen
-  - Ramen
-  - Onigiri
-  - Gnocchi in Tomatensoße
-  - Gnocchi in Spinatsoße
-  - Mozzarella-Tomaten-Baguettes aus dem Ofen
-  - Pfannenpizza (mit Wrap als Boden)
-  - Kaiserschmarrn mit Rosinen (optional weglassen)
-  - Sandwiches aus dem Kontaktgrill (z. B. Tomate-Mozzarella)
-  - Gemüse-Toasts aus dem Ofen (z. B. mit Zucchini & Käse)
-  - Käsespätzle mit Röstzwiebeln (Ei & Käse)
-  - Tortellini mit Frischkäsefüllung & Brokkoli
-  - Gebratener Halloumi mit Ofengemüse
-  - Eier in Senfsoße mit Kartoffeln
+- [x] The epic follows the repository's ticket format (goal, context, requirements, criteria, assumptions, scope)
+- [x] Domain folder `docs/release-2.0/backlog/food/` with FOOD-001 – FOOD-025 in the release 1.0 ticket format
+  (type, priority, phase, goal, background, dependencies, scope, testing, deliverables, validation, acceptance
+  criteria, definition of done, assumptions, out of scope)
+- [x] Every capability of the vision and every owner ticket idea is covered by a ticket
+- [x] Every planning rule R1 – R13 is assigned to a ticket (FOOD-005)
+- [x] Recommended order and open owner decisions documented
+- [x] No personal family details (names, birth years, health data) in the generated files
+- [x] Release 2.0 index (`docs/release-2.0/README.md`), maintenance backlog, roadmap, `CLAUDE.md` and dashboard
+  point to the release 2.0 backlog
 
 ---
 
-## 🚫 Abneigungen & Einschränkungen
+# Definition of Done
 
-- **Kein Tofu**
-- **Kein Quinoa**
-- **Keine Käsesoße mit Schimmelkäse**
-- **Wenig Salate zu Mittag** (Salat grundsätzlich okay, aber nicht täglich mittags)
-- **Keine doppelte Verwendung der gleichen Grundzutat an einem Tag**  
-  z. B. nicht mittags und abends Nudeln
-- **Keine Wiederholung von Proteinquellen innerhalb einer Woche**  
-  z. B. Lachs, Hähnchen, Ei, Würstchen, Soja – je nur 1×/Woche
-- **Hühnchen nur 1× pro Woche – entweder Montag oder Dienstag abends**
-- **Mittagessen unter der Woche soll leicht & kalorienarm sein**
-- **Frühstück ohne Kochaufwand** (nur Rührei am Wochenende erlaubt)
+- [x] Implementation completed (tickets generated)
+- [x] Tests completed (documentation only; link check, ticket structure check)
+- [x] Documentation updated
+- [x] Technical debt documented (none new; open decisions listed above)
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
-## 🍴 Küchenausstattung
+# Assumptions
 
-- Herd mit 4 Kochfeldern
-- Backofen
-- Mikrowelle
-
----
-
-## ⏱️ Zubereitungsregeln
-
-- **Maximale Zubereitungszeit pro Mahlzeit:** 20 Minuten
-- Gerichte sollen **einfach & familientauglich** sein
-- **Frühstück unter der Woche**: kalt (Brot, Joghurt, Müsli etc.)
-- **Mittagessen**: leicht & kalorienarm
-- **Abendessen**: gerne warm und sättigend
+- **Release 2.0 reopens feature work.** Release 1.0 put the project into maintenance; the owner's request starts a
+  new release. Release 2.0 tickets live in `docs/release-2.0/backlog/<domain>/`, next to this epic, the way release
+  1.0's are archived in `docs/release-1.0/`. Maintenance (`MAINT`) and recommendations (`REC`) stay in
+  `docs/backlog/`.
+- **Owner numbering kept:** FOOD-001 – FOOD-020 keep the owner's numbers and titles; added tickets start at FOOD-021.
+- **No personal data in the repository:** the repository is public. The family's names, birth years and allergies
+  are health and family data; they are entered in the app (stored in DynamoDB like all household data) and never
+  committed. Seeds contain dishes and generic rules only.
+- **Deterministic first:** no AI service is used in release 2.0 (owner goal). AI-generated images and an AI planner
+  are evaluations (FOOD-020, FOOD-024).
+- **One household,** as in release 1.0.
 
 ---
 
-## ✅ Planungsregeln auf einen Blick
+# Out of Scope
 
-- 🐔 **Hühnchen nur 1×/Woche**, Montag **ODER** Dienstag **abends**
-- 🔁 **Keine doppelte Proteinquelle pro Woche**
-- 🍝 **Keine doppelte Hauptzutat (z. B. Reis, Nudeln) an einem Tag**
-- 🍽️ **Burger & Hühnchen je max. 1×/Woche**
-- 🕒 **Zubereitungszeit pro Gericht max. 20 Minuten**
+- Breakfast planning, recipes with step-by-step instructions, online grocery ordering, supermarket price data.
+- AI features (FOOD-020, FOOD-024 evaluate them).
+- Multiple households.
 
 ---
 
-hier noch die essensliste:
-- Nudeln mit Soße
-- Burgerwraps
-- Burger
-- Gnocci mit Soße
-- Kartoffelsuppe mit Würstl
-- Chilli
-- Lasagne
-- Onigiri
-- Salat mit Protein
-- Eierreis mit Gemüse
-- Gemüsecurry
-- Linseneintopf
-- Mikrowellenrisotto
-- Spätzle mit Hackbraten od Soße
-- Ofengemüse mit Kräuterquark
-- Piratenburger
-- Fischstäbchen mit Erbsenpürree
-- Frikadellen mit Kartoffelbrei
-- köttbulla 
-- Spätzle 
-- Chicken Dinos mit Pommes
-- Schupfnudeln
-- Grießbrei
-- Käsemakkaroni
-- Gemüsefrikadellen
-- Kartoffelpuffer
-- Ravioli
-- Spaghetti Bolo
-- One Pot Pasta
-- Fischstäbchen-Auflauf mit Kartoffeln und Spinat
-- Kartoffeln mit Butter
-- Tortellini
-- Ofenrigatoni
-- Ramen
-- Flammkuchen
-- Gebratener Lachs mit Gemüse
-- Toast Hawaii
-- Bratkartoffeln mit Ei oder Würstl
-- Kartoffelmuffins
+# Implementation Status
 
-
-
+Done (2026-10-07): 25 tickets generated in `docs/release-2.0/backlog/food/`. Next: FOOD-001.

@@ -5,14 +5,14 @@ recurring responsibilities through small, ten-minute tasks ("Tenners").
 
 > If something can be improved in 10 minutes, do a Tenner.
 
-> **Release 1.0.0 (2026-10-07). The project is feature-complete and in maintenance:** only maintenance work and
-> user recommendations are taken on.
+> **Release 1.0.0 (2026-10-07) is live and in maintenance. Release 2.0 (family meal planning) is planned:**
+> [`docs/release-2.0/README.md`](docs/release-2.0/README.md).
 
 - **Release 1.0 overview:** [`docs/release-1.0/README.md`](docs/release-1.0/README.md) · Changelog:
   [`CHANGELOG.md`](CHANGELOG.md)
 - **Project status at a glance:** [`dashboard.md`](dashboard.md)
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
-- Roadmap (closed): [`docs/roadmap.md`](docs/roadmap.md)
+- Roadmap: [`docs/roadmap.md`](docs/roadmap.md) · release 2.0 backlog: [`docs/release-2.0/`](docs/release-2.0/README.md)
 - Maintenance backlog: [`docs/backlog/README.md`](docs/backlog/README.md) · release 1.0 tickets:
   [`docs/release-1.0/`](docs/release-1.0/)
 - Technical debt: [`docs/technical-debt.md`](docs/technical-debt.md)
