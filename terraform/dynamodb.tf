@@ -231,7 +231,7 @@ resource "aws_dynamodb_table" "meals" {
   tags = {
     Name        = local.meals_table_name
     Purpose     = "Meal planning storage."
-    Description = "Stores dishes, ingredients, the family food profile, weekly plans and shopping lists."
+    Description = "Stores dishes and ingredients plus the family food profile and the weekly meal plans."
   }
 
   lifecycle {
