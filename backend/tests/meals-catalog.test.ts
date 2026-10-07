@@ -106,6 +106,10 @@ describe("dish catalog", () => {
     expect(await base("Schupfnudeln")).toEqual(["SCHUPFNUDELN"]);
   });
 
+  it("keeps every catalog dish within 20 active minutes (owner, 2026-10-07)", () => {
+    expect(CATALOG_DISHES.filter((dish) => dish.activeMinutes > 20).map((dish) => dish.name)).toEqual([]);
+  });
+
   it("offers enough light lunches for a week and marks burgers", () => {
     const lightLunches = CATALOG_DISHES.filter((dish) => dish.slots.includes("LUNCH") && dish.lightness === "LIGHT" && dish.activeMinutes <= 20);
     expect(lightLunches.length).toBeGreaterThanOrEqual(10);

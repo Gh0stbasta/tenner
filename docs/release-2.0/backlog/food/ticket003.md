@@ -120,7 +120,7 @@ cd frontend && npm run lint && npm run build && npm test
 - [x] All 57 dishes from the owner's lists available after one import („Salat mit Protein“ as its variants)
 - [x] Each dish classified for every planning rule
 - [x] Import idempotent with dry run
-- [ ] Owner reviewed the classification (review sheet `docs/release-2.0/food-catalog-review.md`) — owner action
+- [ ] Owner reviewed the classification (review sheet `docs/release-2.0/food-catalog-review.md`) — owner action; active times confirmed on 2026-10-07
 - [x] Tests passing
 
 ---
@@ -145,8 +145,9 @@ cd frontend && npm run lint && npm run build && npm test
   Frikadellen and Hackbraten are `MEATBALL` (shaped minced meat) and carry a vegetarian variant; Flammkuchen and
   Schupfnudeln are vegetarian with optional ham; „Spätzle“ is Spätzle with butter and peas; Grießbrei, Kaiserschmarrn
   and Onigiri are lunch only; Apfelmus is an optional side (Kartoffelpuffer, Kaiserschmarrn).
-- **Above 20 active minutes** (excluded by R4 with the default limit): Lasagne, Frikadellen mit Kartoffelbrei,
-  Gemüsefrikadellen, Spätzle mit Hackbraten — marked ⚠ in the review sheet.
+- **Active time (owner, 2026-10-07):** every dish on the owner's lists is optimized to at most 20 active minutes; the
+  first estimate of 25 minutes for Lasagne, Frikadellen mit Kartoffelbrei, Gemüsefrikadellen and Spätzle mit
+  Hackbraten was corrected to 20. Only new dishes are held to the time rule; a test keeps the catalog within it.
 - **Review sheet in sync:** a test compares the sheet with the catalog; `UPDATE_REVIEW_SHEET=1` regenerates it.
 - **Ingredients are not imported:** they are read from the code catalog (FOOD-021).
 

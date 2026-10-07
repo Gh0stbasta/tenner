@@ -1,8 +1,8 @@
 /**
  * Family dish catalog (FOOD-003): the owner's dish list and favorites (EPIC-FOOD-001, 57 dishes; „Salat mit
  * Protein“ as five variants). Quantities per adult portion, ingredients from the catalog (FOOD-021).
- * `activeMinutes` is hands-on time (decision 1); dishes above 20 active minutes stay in the catalog and are excluded
- * by the time rule until the owner changes their time or the limit. Review sheet: docs/release-2.0/food-catalog-review.md.
+ * `activeMinutes` is hands-on time (decision 1). The owner has optimized every catalog dish to at most 20 active
+ * minutes (2026-10-07); only new dishes are held to the time rule. Review sheet: docs/release-2.0/food-catalog-review.md.
  */
 
 import type { DishCategory, Lightness, MealSlot, Temperature } from "../models/dish.js";
@@ -81,7 +81,7 @@ export const CATALOG_DISHES: readonly SeedDish[] = [
     lightness: "FILLING",
     temperature: "WARM",
     ingredients: [g("lasagne-sheets", 80), g("beef-mince", 100), g("passata", 150), g("onion", 30), ml("milk", 100), g("butter", 10), g("flour", 10), g("grated-cheese", 40)],
-    activeMinutes: 25,
+    activeMinutes: 20,
     totalMinutes: 70,
   },
   { name: "Nudelauflauf", category: "PASTA", slots: BOTH, lightness: "FILLING", temperature: "WARM", ingredients: [g("pasta", 125), g("broccoli", 100), ml("cooking-cream", 80), pcs("egg", 1), g("grated-cheese", 50)], activeMinutes: 15, totalMinutes: 45 },
@@ -109,7 +109,7 @@ export const CATALOG_DISHES: readonly SeedDish[] = [
     lightness: "FILLING",
     temperature: "WARM",
     ingredients: [g("mixed-mince", 120), pcs("egg", 0.5), g("breadcrumbs", 15), g("onion", 30), g("potato", 250), ml("milk", 60), g("butter", 10)],
-    activeMinutes: 25,
+    activeMinutes: 20,
     totalMinutes: 35,
     vegetarianVariant: "mit Gemüsefrikadellen",
     proteinSourcesOverride: ["MEATBALL"],
@@ -201,7 +201,7 @@ export const CATALOG_DISHES: readonly SeedDish[] = [
     lightness: "FILLING",
     temperature: "WARM",
     ingredients: [g("carrot", 100), g("zucchini", 100), pcs("egg", 1), g("breadcrumbs", 30), g("grated-cheese", 30), g("potato", 150)],
-    activeMinutes: 25,
+    activeMinutes: 20,
     totalMinutes: 35,
   },
   { name: "Hot Dogs", category: "BURGER_WRAP", slots: BOTH, lightness: "FILLING", temperature: "WARM", ingredients: [pcs("hot-dog-bun", 2), pcs("sausage", 2), tbsp("ketchup"), tsp("mustard"), optional(g("fried-onions", 10))], activeMinutes: 10, totalMinutes: 10 },
@@ -215,7 +215,7 @@ export const CATALOG_DISHES: readonly SeedDish[] = [
     lightness: "FILLING",
     temperature: "WARM",
     ingredients: [g("spaetzle", 200), g("mixed-mince", 120), pcs("egg", 0.5), g("breadcrumbs", 15), g("onion", 30), ml("cooking-cream", 60)],
-    activeMinutes: 25,
+    activeMinutes: 20,
     totalMinutes: 70,
     vegetarianVariant: "mit Gemüsebratling",
     proteinSourcesOverride: ["MEATBALL"],
