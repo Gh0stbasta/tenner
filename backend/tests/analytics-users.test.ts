@@ -9,7 +9,7 @@ import { completionFixture, mockTennerRepository, tennerFixture } from "./mocks/
 const TODAY = "2026-10-07";
 const PERIOD = { from: "2026-09-08", to: TODAY, days: 30 };
 const context = { today: TODAY, vacation: null };
-const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: false, createdAt: "t", updatedAt: "t" };
+const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: false, canSignIn: true, createdAt: "t", updatedAt: "t" };
 const done = (tennerId: string, completedBy: string, minutes = 10): AnalyticsCompletion => ({ ...completionFixture({ tennerId, completedBy, actualMinutes: minutes }), date: "2026-10-01" });
 
 const tenners = [

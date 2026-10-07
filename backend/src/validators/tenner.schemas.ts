@@ -28,6 +28,9 @@ import {
   type UpdateCategoryRequest,
   type UpdateMemberRequest,
   type VacationRequest,
+  type CatalogImportRequest,
+  type PushSubscriptionRequest,
+  type RemovePushSubscriptionRequest,
   type UndoCompletionRequest,
   type UpdateTennerRequest,
 } from "../dto/index.js";
@@ -48,7 +51,7 @@ import {
   userIdSchema,
   utcTimestampSchema,
 } from "./common.js";
-import { ALEXA_PERSON_ID_PATTERN, ALEXA_USER_ID_PATTERN, USER_CHANNELS, WEEKDAYS as ALL_WEEKDAYS } from "../models/index.js";
+import { ALEXA_PERSON_ID_PATTERN, ALEXA_USER_ID_PATTERN, DEFAULT_OVERDUE_ALERT_TIME, PUSH_SNOOZE_OPTIONS, USER_CHANNELS, WEEKDAYS as ALL_WEEKDAYS } from "../models/index.js";
 import { isValidTimeZone } from "../utils/timezone.js";
 import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
 import { ASSIGNMENT_MODES, SHARED_ASSIGNEE, WEEK_STARTS, WEEKDAYS, type AssignmentMode, type UserId, type Weekday } from "../models/index.js";
@@ -275,9 +278,17 @@ const userChannelsSchema = z
 export const notificationPreferencesSchema = z.strictObject({
   timezone: z.string().refine(isValidTimeZone, "Must be an IANA timezone.").nullable(),
   dailyDigest: z.strictObject({ enabled: z.boolean(), time: quarterHourSchema, channels: userChannelsSchema }),
-  overdueAlerts: z.strictObject({ enabled: z.boolean(), minDaysOverdue: z.number().int().min(0).max(30), channels: userChannelsSchema }),
+  // NOTIFICATION-010: `time` may be omitted by older clients (default 18:00).
+  overdueAlerts: z.strictObject({
+    enabled: z.boolean(),
+    minDaysOverdue: z.number().int().min(0).max(30),
+    time: quarterHourSchema.default(DEFAULT_OVERDUE_ALERT_TIME),
+    channels: userChannelsSchema,
+  }),
   weeklySummary: z.strictObject({ enabled: z.boolean(), dayOfWeek: z.enum(ALL_WEEKDAYS), time: quarterHourSchema, channels: userChannelsSchema }),
   quietHours: z.strictObject({ start: quarterHourSchema, end: quarterHourSchema }).nullable(),
+  // NOTIFICATION-011; older clients omit it.
+  pushSnooze: z.enum(PUSH_SNOOZE_OPTIONS).default("1H"),
 }) satisfies z.ZodType<UpdateNotificationPreferencesRequest>;
 
 /** PUT /household (SCHEDULING-008): an IANA timezone the runtime knows; unknown fields rejected. */
@@ -335,6 +346,7 @@ export const createMemberSchema = z.strictObject({
   userId: userIdSchema.optional(),
   displayName: displayNameSchema,
   color: memberColorSchema,
+  canSignIn: z.boolean().optional(),
 }) satisfies z.ZodType<CreateMemberRequest>;
 
 /** PUT /users/{userId}: rename or recolor; userId is immutable. */
@@ -403,3 +415,23 @@ export const analyticsNeglectedSchema = z.strictObject({
     .pipe(z.number().int().min(1).max(MAX_NEGLECTED_LIMIT))
     .optional(),
 }) satisfies z.ZodType<AnalyticsNeglectedRequest, Record<string, string | undefined>>;
+
+/** POST /household/catalog (DATA-008): an empty body imports; `{ "dryRun": true }` only reports. */
+export const catalogImportSchema = z.strictObject({ dryRun: z.boolean().optional() }) satisfies z.ZodType<CatalogImportRequest>;
+
+/** Push service URLs are HTTPS and short; the endpoint is a capability URL and never logged (NOTIFICATION-009). */
+const pushEndpointSchema = z.url({ protocol: /^https$/ }).max(1000);
+const base64UrlSchema = (min: number, max: number) => z.string().regex(/^[A-Za-z0-9_-]+$/, "Must be base64url.").min(min).max(max);
+
+/** PushSubscription.toJSON() of the browser. */
+export const pushSubscriptionSchema = z.strictObject({
+  endpoint: pushEndpointSchema,
+  expirationTime: z.number().nullable().optional(),
+  // p256dh: 65-byte uncompressed P-256 key (87 base64url chars); auth: 16 bytes (22 chars).
+  keys: z.strictObject({ p256dh: base64UrlSchema(87, 88), auth: base64UrlSchema(22, 24) }),
+}) satisfies z.ZodType<PushSubscriptionRequest>;
+
+export const removePushSubscriptionSchema = z.strictObject({ endpoint: pushEndpointSchema }) satisfies z.ZodType<RemovePushSubscriptionRequest>;
+
+/** POST /push-actions (NOTIFICATION-011): the signed action token (payload.signature, base64url). */
+export const pushActionSchema = z.strictObject({ token: z.string().regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/).max(2000) });

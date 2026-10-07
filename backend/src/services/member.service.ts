@@ -43,7 +43,7 @@ export class MemberService {
       throw new ValidationError("Invalid member.", [{ field: "(root)", message: `A household can have at most ${MAX_MEMBERS} members.` }]);
     }
     const timestamp = toUtcTimestamp(this.clock());
-    const member: HouseholdMember = { userId, displayName: request.displayName, color: request.color, active: true, createdAt: timestamp, updatedAt: timestamp };
+    const member: HouseholdMember = { userId, displayName: request.displayName, color: request.color, active: true, canSignIn: request.canSignIn ?? true, createdAt: timestamp, updatedAt: timestamp };
     await this.repository.saveMembers(identity.tenantId, [...members, member], version, identity.userId, timestamp);
     return toMemberResponse(member);
   }
@@ -71,8 +71,8 @@ export class MemberService {
 }
 
 export function toMemberResponse(member: HouseholdMember): MemberResponse {
-  const { userId, displayName, color, active } = member;
-  return { userId, displayName, color, active };
+  const { userId, displayName, color, active, canSignIn } = member;
+  return { userId, displayName, color, active, canSignIn };
 }
 
 const UMLAUTS: Readonly<Record<string, string>> = { Ä: "AE", Ö: "OE", Ü: "UE", ß: "SS" };

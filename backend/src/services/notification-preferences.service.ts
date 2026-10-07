@@ -6,7 +6,7 @@
 import type { Identity } from "../auth/index.js";
 import type { NotificationPreferencesResponse } from "../dto/index.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../exceptions/index.js";
-import { DEFAULT_NOTIFICATION_PREFERENCES, SEED_MEMBERS, USER_CHANNELS, type NotificationPreferences, type UserChannel, type UserId } from "../models/index.js";
+import { DEFAULT_NOTIFICATION_PREFERENCES, withPreferenceDefaults, SEED_MEMBERS, USER_CHANNELS, type NotificationPreferences, type UserChannel, type UserId } from "../models/index.js";
 import type { HouseholdRepository } from "../repositories/index.js";
 import { toUtcTimestamp, type Clock } from "../utils/clock.js";
 import type { TimeZoneSource } from "../utils/timezone.js";
@@ -24,7 +24,8 @@ export class NotificationPreferencesService {
 
   /** Stored preferences or the defaults (for the notifier). */
   async preferencesOf(tenantId: string, userId: UserId): Promise<NotificationPreferences> {
-    return (await this.households.get(tenantId))?.notificationPreferences[userId] ?? DEFAULT_NOTIFICATION_PREFERENCES;
+    const stored = (await this.households.get(tenantId))?.notificationPreferences[userId];
+    return stored ? withPreferenceDefaults(stored) : DEFAULT_NOTIFICATION_PREFERENCES;
   }
 
   async get(identity: Identity, userId: UserId): Promise<NotificationPreferencesResponse> {

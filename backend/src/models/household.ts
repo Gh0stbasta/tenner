@@ -3,6 +3,7 @@ import type { NotificationPreferencesByMember } from "./notification-preferences
 import type { Category, UserId, WeekStart, Weekday } from "./enums.js";
 import type { HouseholdCategory } from "./category.js";
 import type { Handover } from "./handover.js";
+import type { PushSnooze, PushSubscriptionRecord } from "./push.js";
 import type { HouseholdMember } from "./user.js";
 import type { Vacation } from "./vacation.js";
 
@@ -40,6 +41,12 @@ export interface HouseholdSettings {
   /** Notification preferences per member (NOTIFICATION-002); missing members use the defaults. */
   readonly notificationPreferences: NotificationPreferencesByMember;
   readonly notificationPreferencesVersion: number;
+  /** Browser push subscriptions of all members (NOTIFICATION-009). */
+  readonly pushSubscriptions: readonly PushSubscriptionRecord[];
+  readonly pushSubscriptionsVersion: number;
+  /** Snoozed push reminders (NOTIFICATION-011). */
+  readonly pushSnoozes: readonly PushSnooze[];
+  readonly pushSnoozesVersion: number;
   readonly updatedAt: string;
   readonly updatedBy: UserId | null;
 }

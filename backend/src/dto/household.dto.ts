@@ -76,3 +76,19 @@ export interface UpdateHouseholdRequest {
   readonly workdays?: readonly Weekday[] | undefined;
   readonly defaults?: NewTennerDefaults | undefined;
 }
+
+/** POST /household/catalog (DATA-008). */
+export interface CatalogImportRequest {
+  /** Default false; true only reports what would be created. */
+  readonly dryRun?: boolean | undefined;
+}
+
+export interface CatalogImportResponse {
+  readonly dryRun: boolean;
+  /** Display names of the members created (or to be created). */
+  readonly membersCreated: readonly string[];
+  /** Titles of the Tenners created (or to be created). */
+  readonly tennersCreated: readonly string[];
+  /** Catalog titles that already exist in the household (also archived). */
+  readonly tennersSkipped: readonly string[];
+}

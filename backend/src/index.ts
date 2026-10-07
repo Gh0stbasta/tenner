@@ -18,13 +18,21 @@ import {
 import { analyticsHandler, type AnalyticsQuery } from "./handlers/analytics.js";
 import {
   getNotificationPreferencesHandler,
+  pushActionHandler,
+  subscribePushHandler,
+  unsubscribePushHandler,
   updateNotificationPreferencesHandler,
+  type HandlePushAction,
+  type SubscribePush,
+  type UnsubscribePush,
   type GetNotificationPreferences,
   type UpdateNotificationPreferences,
 } from "./handlers/notification-preferences.js";
 import { clientOf, householdGroupName, identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
 import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
+import { getSsmClient } from "./clients/ssm.js";
+import { createSecretLoader } from "./secrets/index.js";
 import { getEventBridgeClient } from "./clients/eventbridge.js";
 import { changesHousehold, createHouseholdChangePublisher, type HouseholdChangePublisher } from "./events/household-events.js";
 import { loadConfig, type AppConfig } from "./config.js";
@@ -37,10 +45,12 @@ import { getTennerHandler, type GetTenner } from "./handlers/get-tenner.js";
 import { health, type DatabaseProbe } from "./handlers/health.js";
 import {
   endVacationHandler,
+  importCatalogHandler,
   getHouseholdHandler,
   setVacationHandler,
   updateHouseholdHandler,
   type EndVacation,
+  type ImportCatalog,
   type GetHousehold,
   type SetVacation,
   type UpdateHousehold,
@@ -80,6 +90,9 @@ import {
 import {
   AlexaSpeakerService,
   NotificationPreferencesService,
+  PushActionService,
+  PushSubscriptionService,
+  CatalogImportService,
   CompleteTennerService,
   CreateTennerService,
   DashboardService,
@@ -130,6 +143,7 @@ export interface Dependencies {
   readonly resumeTenner: ResumeTenner;
   readonly setVacation: SetVacation;
   readonly endVacation: EndVacation;
+  readonly importCatalog: ImportCatalog;
   readonly listMembers: ListMembers;
   readonly createMember: CreateMember;
   readonly updateMember: UpdateMember;
@@ -141,6 +155,9 @@ export interface Dependencies {
   readonly registerAlexaUser: RegisterAlexaUser;
   readonly getNotificationPreferences: GetNotificationPreferences;
   readonly updateNotificationPreferences: UpdateNotificationPreferences;
+  readonly subscribePush: SubscribePush;
+  readonly handlePushAction: HandlePushAction;
+  readonly unsubscribePush: UnsubscribePush;
   readonly linkAlexaSpeaker: LinkAlexaSpeaker;
   readonly unlinkAlexaSpeaker: UnlinkAlexaSpeaker;
   readonly listCategories: ListCategories;
@@ -190,6 +207,8 @@ type OnboardingRouteHandler = (ctx: PrincipalContext) => Promise<ApiResult>;
 /** Routes without authentication; must match api_public_routes in terraform/locals.tf. */
 const PUBLIC_ROUTES: Readonly<Record<string, PublicRouteHandler>> = {
   "GET /health": ({ deps, logger }) => health(deps.config, deps.probeDatabase, logger),
+  // NOTIFICATION-011: authorized by the signed token in the body, not by a login.
+  "POST /push-actions": ({ event, deps, logger }) => pushActionHandler(event, deps.handlePushAction, logger),
 };
 
 /** Signed-in users without a household may call these to pick their household member (HOTFIX-001). */
@@ -216,6 +235,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "POST /tenners/{tennerId}/resume": ({ event, deps, logger, identity }) => resumeTennerHandler(event, identity, deps.resumeTenner, logger),
   "PUT /household/vacation": ({ event, deps, logger, identity }) => setVacationHandler(event, identity, deps.setVacation, logger),
   "DELETE /household/vacation": ({ deps, logger, identity }) => endVacationHandler(identity, deps.endVacation, logger),
+  "POST /household/catalog": ({ event, deps, logger, identity }) => importCatalogHandler(event, identity, deps.importCatalog, logger),
   "GET /users": ({ deps, identity }) => listMembersHandler(identity.tenantId, deps.listMembers),
   "POST /users": ({ event, deps, logger, identity }) => createMemberHandler(event, identity, deps.createMember, logger),
   "PUT /users/{userId}": ({ event, deps, logger, identity }) => updateMemberHandler(event, identity, deps.updateMember, logger),
@@ -229,6 +249,8 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /dashboard": ({ event, deps, logger, identity }) => dashboardHandler(event, identity.tenantId, deps.getDashboard, logger),
   "GET /household": ({ deps, identity }) => getHouseholdHandler(identity.tenantId, deps.getHousehold),
   "PUT /household": ({ event, deps, logger, identity }) => updateHouseholdHandler(event, identity, deps.updateHousehold, logger),
+  "PUT /users/{userId}/push-subscription": ({ event, deps, logger, identity }) => subscribePushHandler(event, identity, deps.subscribePush, logger),
+  "DELETE /users/{userId}/push-subscription": ({ event, deps, logger, identity }) => unsubscribePushHandler(event, identity, deps.unsubscribePush, logger),
   "GET /users/{userId}/notification-preferences": ({ event, deps, identity }) => getNotificationPreferencesHandler(event, identity, deps.getNotificationPreferences),
   "PUT /users/{userId}/notification-preferences": ({ event, deps, logger, identity }) =>
     updateNotificationPreferencesHandler(event, identity, deps.updateNotificationPreferences, logger),
@@ -310,9 +332,45 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   const revokeAccess = (tenantId: string, userId: string): Promise<number> =>
     membershipRepository?.removeAllMembers(householdGroupName(tenantId, userId)) ?? Promise.resolve(0);
   const alexaSpeakerService = householdRepository ? new AlexaSpeakerService(householdRepository, systemClock, config.timezone) : undefined;
-  // ALEXA-008: Alexa is a connected channel for every member once an Alexa account of the household uses the skill.
-  const connectedChannels = async (tenantId: string): Promise<UserChannel[]> => ((await alexaSpeakerService?.alexaUsersOf(tenantId))?.length ? ["ALEXA"] : []);
+  // NOTIFICATION-009: the member's registered browsers.
+  const pushSubscriptionService = householdRepository ? new PushSubscriptionService(householdRepository, systemClock) : undefined;
+  // ALEXA-008: Alexa is a connected channel for every member once an Alexa account of the household uses the skill;
+  // NOTIFICATION-009: push once the member registered a device.
+  const connectedChannels = async (tenantId: string, userId: string): Promise<UserChannel[]> => [
+    ...((await alexaSpeakerService?.alexaUsersOf(tenantId))?.length ? (["ALEXA"] as const) : []),
+    ...((await pushSubscriptionService?.subscriptionsOf(tenantId, userId))?.length ? (["WEB_PUSH"] as const) : []),
+  ];
   const notificationPreferencesService = householdRepository ? new NotificationPreferencesService(householdRepository, systemClock, timezoneOf, connectedChannels) : undefined;
+  // DATA-008: the household task catalog, imported through the regular member and Tenner services.
+  const catalogImportService =
+    memberService && createTennerService && tennerRepository
+      ? new CatalogImportService({
+          membersOf,
+          createMember: (identity, request) => memberService.createMember(identity, request),
+          tenners: tennerRepository,
+          createTenner: (identity, request, firstDue) => createTennerService.createTenner(identity, request, firstDue),
+          timezoneOf,
+          clock: systemClock,
+        })
+      : undefined;
+  // NOTIFICATION-011: notification buttons; the HMAC secret is read from Parameter Store on first use.
+  const pushActionSecretParameter = config.pushActionSecretParameter;
+  const pushActionSecrets = pushActionSecretParameter ? createSecretLoader({ client: getSsmClient() }) : undefined;
+  const pushActionService =
+    pushActionSecretParameter && pushActionSecrets && householdRepository && completeTennerService && notificationPreferencesService
+      ? new PushActionService({
+          secret: () => pushActionSecrets.get(pushActionSecretParameter),
+          membersOf,
+          preferencesOf: (tenantId, userId) => notificationPreferencesService.preferencesOf(tenantId, userId),
+          timezoneOf,
+          complete: (claims) =>
+            completeTennerService.completeTenner({ tenantId: claims.tenantId, userId: claims.userId }, claims.tennerId, {}, `push-${claims.id}`, {
+              expectedNextDue: claims.nextDue,
+            }),
+          households: householdRepository,
+          clock: systemClock,
+        })
+      : undefined;
   const memberDeactivationService =
     householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
 
@@ -342,6 +400,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     resumeTenner: pauseTennerService ? (identity, id) => pauseTennerService.resume(identity, id) : notConfigured,
     setVacation: vacationService ? (identity, request) => vacationService.setVacation(identity, request) : notConfigured,
     endVacation: vacationService ? (identity) => vacationService.endVacation(identity) : notConfigured,
+    importCatalog: catalogImportService ? (identity, dryRun) => catalogImportService.importCatalog(identity, dryRun) : notConfigured,
     listMembers: memberService ? (tenantId) => memberService.listMembers(tenantId) : notConfigured,
     createMember: memberService ? (identity, request) => memberService.createMember(identity, request) : notConfigured,
     updateMember: memberService ? (identity, userId, request) => memberService.updateMember(identity, userId, request) : notConfigured,
@@ -349,6 +408,9 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     reactivateMember: memberDeactivationService ? (identity, userId) => memberDeactivationService.reactivate(identity, userId) : notConfigured,
     startHandover: handoverService ? (identity, userId, request) => handoverService.start(identity, userId, request) : notConfigured,
     endHandover: handoverService ? (identity, userId) => handoverService.end(identity, userId) : notConfigured,
+    handlePushAction: pushActionService ? (token) => pushActionService.handle(token) : notConfigured,
+    subscribePush: pushSubscriptionService ? (identity, userId, request) => pushSubscriptionService.subscribe(identity, userId, request) : notConfigured,
+    unsubscribePush: pushSubscriptionService ? (identity, userId, endpoint) => pushSubscriptionService.unsubscribe(identity, userId, endpoint) : notConfigured,
     getNotificationPreferences: notificationPreferencesService ? (identity, userId) => notificationPreferencesService.get(identity, userId) : notConfigured,
     updateNotificationPreferences: notificationPreferencesService
       ? (identity, userId, request) => notificationPreferencesService.update(identity, userId, request)

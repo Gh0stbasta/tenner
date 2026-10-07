@@ -26,6 +26,8 @@ export default defineConfig({
         // Client-side routes (/settings, /tenners/…) are answered with the cached index.html.
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,
+        // NOTIFICATION-009: push and notification click handling (public/push-sw.js).
+        importScripts: ["push-sw.js"],
         // No runtimeCaching: API requests (other origin) always go to the network; offline data comes from the
         // persisted query cache (MOBILE-003).
       },

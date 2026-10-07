@@ -11,7 +11,7 @@ import { createTennerSchema, updateTennerSchema, validate } from "../src/validat
 import { completionFixture, mockCompletionRepository, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-05T08:00:00Z");
-const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, createdAt: "t", updatedAt: "t" };
+const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, canSignIn: true, createdAt: "t", updatedAt: "t" };
 const members = [...SEED_MEMBERS, LENA];
 const all = () => true;
 

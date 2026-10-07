@@ -12,6 +12,8 @@ export const memberSchema = z.object({
   displayName: z.string(),
   color: z.enum(MEMBER_COLORS),
   active: z.boolean(),
+  /** HOUSEHOLD-ADMIN-006: false = member without an account; never offered on the first login. */
+  canSignIn: z.boolean(),
 });
 export type Member = z.infer<typeof memberSchema>;
 
@@ -55,6 +57,8 @@ export function useMemberName(): (userId: UserId) => string {
 export interface NewMember {
   readonly displayName: string;
   readonly color: MemberColor;
+  /** Default true; fixed after creation (HOUSEHOLD-ADMIN-006). */
+  readonly canSignIn?: boolean;
 }
 
 export interface MemberChanges {

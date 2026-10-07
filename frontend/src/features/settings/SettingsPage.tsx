@@ -6,6 +6,7 @@ import { Box, Button, Typography } from "@mui/material";
 import { useState } from "react";
 import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
+import { CatalogSettings } from "../catalog/CatalogSettings";
 import { AlexaSettings } from "./AlexaSettings";
 import { CategoriesSettings } from "./CategoriesSettings";
 import { DashboardSettings } from "./DashboardSettings";
@@ -41,6 +42,7 @@ export function SettingsPage() {
       <TennerDefaultsSettings />
       <MembersSettings />
       <CategoriesSettings />
+      <CatalogSettings />
       <AlexaSettings />
       <Box
         sx={{

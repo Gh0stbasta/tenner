@@ -8,7 +8,7 @@ import { DEFAULT_MEMBERS, fail, mockFetch, ok } from "../../tests/fetchMock";
 import { renderWithProviders } from "../../tests/render";
 import { SettingsPage } from "../settings/SettingsPage";
 
-const LENA = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true };
+const LENA = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, canSignIn: true };
 
 beforeEach(() => {
   vi.spyOn(console, "info").mockImplementation(() => undefined);

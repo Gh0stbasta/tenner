@@ -7,6 +7,8 @@ export interface MemberResponse {
   readonly displayName: string;
   readonly color: MemberColor;
   readonly active: boolean;
+  /** HOUSEHOLD-ADMIN-006: false = member without an account (never claimable). */
+  readonly canSignIn: boolean;
 }
 
 export interface CreateMemberRequest {
@@ -14,6 +16,8 @@ export interface CreateMemberRequest {
   readonly userId?: UserId | undefined;
   readonly displayName: string;
   readonly color: MemberColor;
+  /** Default true; false creates a member without an account (HOUSEHOLD-ADMIN-006). Immutable afterwards. */
+  readonly canSignIn?: boolean | undefined;
 }
 
 export interface UpdateMemberRequest {

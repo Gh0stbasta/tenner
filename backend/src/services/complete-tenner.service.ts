@@ -40,7 +40,14 @@ export class CompleteTennerService {
    * the original result; reusing the key for a different request is a conflict.
    * completedBy defaults to the authenticated user; recordedBy is always the authenticated user (SECURITY-004).
    */
-  async completeTenner(identity: Identity, tennerId: string, request: CompleteTennerRequest, idempotencyKey?: string): Promise<CompleteTennerOutcome> {
+  async completeTenner(
+    identity: Identity,
+    tennerId: string,
+    request: CompleteTennerRequest,
+    idempotencyKey?: string,
+    /** NOTIFICATION-011: complete only this cycle; a Tenner already moved on answers 409 TENNER_CYCLE_CHANGED. */
+    options: { readonly expectedNextDue?: string } = {},
+  ): Promise<CompleteTennerOutcome> {
     const { tenantId } = identity;
     const completedBy = request.completedBy ?? identity.userId;
     const members = await this.membersOf(tenantId);
@@ -56,6 +63,9 @@ export class CompleteTennerService {
     const tenner = await this.tenners.getById(tenantId, tennerId);
     if (!tenner) throw new NotFoundError("Tenner not found.");
     if (!tenner.active || tenner.deletedAt !== null) throw new ConflictError("Inactive Tenners cannot be completed.", "TENNER_INACTIVE");
+    if (options.expectedNextDue !== undefined && tenner.nextDue !== options.expectedNextDue) {
+      throw new ConflictError("The Tenner was completed or changed in the meantime.", "TENNER_CYCLE_CHANGED");
+    }
 
     const now = this.clock();
     const completedAt = this.resolveCompletedAt(request.completedAt, now, tenner);

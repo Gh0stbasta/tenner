@@ -136,6 +136,9 @@ docs/backlog/
 | [NOTIFICATION-003](notifications/ticket003.md) | Implement Daily Digest | High | V2 |
 | [NOTIFICATION-004](notifications/ticket004.md) | Implement Overdue Alerts | Medium | V2 |
 | [NOTIFICATION-008](notifications/ticket008.md) | Implement Weekly Summary | Low | V2 |
+| [NOTIFICATION-009](notifications/ticket009.md) | Implement Browser Push Channel | High | V2 |
+| [NOTIFICATION-010](notifications/ticket010.md) | Implement Per-Tenner Push Reminders | High | V2 |
+| [NOTIFICATION-011](notifications/ticket011.md) | Implement Push Notification Actions | High | V2 |
 
 ### Scheduling (`scheduling/`, prefix `SCHEDULING-`)
 
@@ -177,6 +180,7 @@ docs/backlog/
 | [HOUSEHOLD-ADMIN-003](household-admin/ticket003.md) | Implement Household Settings | Medium | V2 |
 | [HOUSEHOLD-ADMIN-004](household-admin/ticket004.md) | Implement Member Deactivation | Low | V2 |
 | [HOUSEHOLD-ADMIN-005](household-admin/ticket005.md) | Introduce Household Roles | Low | Long-Term |
+| [HOUSEHOLD-ADMIN-006](household-admin/ticket006.md) | Members Without Login | High | V2 |
 
 ### User Experience (`ux/`, prefix `UX-`)
 
@@ -243,6 +247,7 @@ docs/backlog/
 | [DATA-005](data-management/ticket005.md) | Implement Member Data Erasure | Low | Long-Term |
 | [DATA-006](data-management/ticket006.md) | Establish Schema Versioning and Data Migrations | Medium | V2 |
 | [DATA-007](data-management/ticket007.md) | Implement Completion Correction | Low | V2 |
+| [DATA-008](data-management/ticket008.md) | Import the Household Task Catalog | High | V2 |
 
 ### Mobile Experience (`mobile/`, prefix `MOBILE-`)
 
@@ -336,6 +341,6 @@ the Git history. Their numbers are not reused.
 | MOBILE-006 | Implement Push Notification Subscription | Not wanted: no phone push notifications |
 | NOTIFICATION-005 | Implement Email Notification Channel | Not wanted: reminders stay in Tenner and on Alexa |
 | NOTIFICATION-006 | Implement Telegram Notification Channel | Not wanted: reminders stay in Tenner and on Alexa |
-| NOTIFICATION-007 | Implement Web Push Notification Channel | Not wanted: no push notifications |
+| NOTIFICATION-007 | Implement Web Push Notification Channel | Not wanted: no push notifications. Push was re-requested by the owner on 2026-10-07 (`docs/human/mobileReminder.md`) and is built as NOTIFICATION-009 – 011 |
 | PRODUCTIVITY-001 | Implement "I Have X Minutes" Suggestions | Not wanted |
 | INTEGRATION-002 | Implement Interactive Telegram Bot | Not wanted: needs the dropped Telegram channel (BACKLOG-002, `docs/hotfix/backlog002.md`) |

@@ -31,6 +31,8 @@ resource "aws_lambda_function" "api" {
       HOUSEHOLD_TENANT_ID  = local.household_tenant_id
       ALEXA_CLIENT_ID      = local.alexa_auth_enabled ? aws_cognito_user_pool_client.alexa[0].id : "" # ALEXA-002 audit channel
       HOUSEHOLD_EVENTS_BUS = local.alexa_notifier_enabled ? local.household_events_bus : ""           # ALEXA-007 widget refresh
+      # NOTIFICATION-011: verifies the push action links (parameter name only).
+      PUSH_ACTION_HMAC_PARAMETER = local.web_push_enabled ? local.push_action_secret_parameter : ""
     }
   }
 

@@ -20,13 +20,16 @@ import { useNotify } from "../../components/NotificationProvider";
 import { WEEKDAYS, type Weekday } from "../../types/domain";
 import { useCurrentUser } from "../completions/CurrentUserProvider";
 import {
+  notificationPreferencesKey,
   CHANNEL_LABELS,
+  PUSH_SNOOZE_LABELS,
   QUARTER_HOURS,
   useNotificationPreferences,
   useUpdateNotificationPreferences,
   type NotificationPreferences,
   type UserChannel,
 } from "../notifications/api";
+import { PushDeviceSetting } from "../notifications/PushDeviceSetting";
 import { NumberSetting } from "./NumberSetting";
 import { SettingsSection } from "./SettingsSection";
 
@@ -157,11 +160,12 @@ export function NotificationSettings() {
       {query.isError && (
         <Alert severity="error">Benachrichtigungen konnten nicht geladen werden. {errorMessage(query.error)}</Alert>
       )}
+      <PushDeviceSetting userId={userId} preferencesKey={notificationPreferencesKey(userId)} />
       {preferences && (
         <>
           {connected.length === 0 && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Noch kein Kanal verbunden. Sobald z. B. Alexa verbunden ist, kannst du hier auswählen, wohin
+              Noch kein Kanal verbunden. Sobald Push aktiviert oder Alexa verbunden ist, kannst du hier auswählen, wohin
               Benachrichtigungen gehen.
             </Alert>
           )}
@@ -191,6 +195,12 @@ export function NotificationSettings() {
             disabled={disabled}
             onToggle={(enabled) => save({ overdueAlerts: { ...preferences.overdueAlerts, enabled } })}
           >
+            <TimeSelect
+              label="Uhrzeit (abends)"
+              value={preferences.overdueAlerts.time}
+              disabled={disabled}
+              onChange={(time) => save({ overdueAlerts: { ...preferences.overdueAlerts, time } })}
+            />
             <Box sx={{ width: 220 }}>
               <NumberSetting
                 label="Ab Tagen überfällig"
@@ -208,6 +218,22 @@ export function NotificationSettings() {
               onChange={(channels) => save({ overdueAlerts: { ...preferences.overdueAlerts, channels } })}
             />
           </Block>
+          {connected.includes("WEB_PUSH") && (
+            <TextField
+              select
+              label="„Später“ in Push-Benachrichtigungen"
+              value={preferences.pushSnooze}
+              disabled={disabled}
+              sx={{ minWidth: 280, mb: 2 }}
+              onChange={(event) => save({ pushSnooze: event.target.value as NotificationPreferences["pushSnooze"] })}
+            >
+              {(Object.keys(PUSH_SNOOZE_LABELS) as NotificationPreferences["pushSnooze"][]).map((option) => (
+                <MenuItem key={option} value={option}>
+                  {PUSH_SNOOZE_LABELS[option]}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
           <Block
             title="Wochenrückblick"
             enabled={preferences.weeklySummary.enabled}

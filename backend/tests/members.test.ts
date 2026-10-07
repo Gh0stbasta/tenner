@@ -9,11 +9,12 @@ import { createMemberHandler, listMembersHandler, updateMemberHandler } from "..
 import { SEED_MEMBERS, type HouseholdMember, type HouseholdSettings } from "../src/models/index.js";
 import { DynamoDbHouseholdRepository } from "../src/repositories/index.js";
 import { CompleteTennerService, CreateTennerService, HouseholdAssignmentService, MemberService, slugify, UpdateTennerService } from "../src/services/index.js";
+import { createMemberSchema, updateMemberSchema } from "../src/validators/index.js";
 import { householdSettings, mockCompletionRepository, mockLogger, mockTennerRepository, tennerFixture, TEST_IDENTITY } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-05T08:00:00Z");
 const TS = "2026-10-05T08:00:00Z";
-const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, createdAt: TS, updatedAt: TS };
+const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, canSignIn: true, createdAt: TS, updatedAt: TS };
 
 function repository(stored?: Partial<HouseholdSettings>) {
   const settings: HouseholdSettings | undefined = stored
@@ -33,15 +34,15 @@ describe("MemberService", () => {
   it("lists the seed members until the household saves its own list", async () => {
     const service = new MemberService(repository(), () => NOW);
     await expect(service.listMembers("default")).resolves.toEqual([
-      { userId: "STEFAN", displayName: "Stefan", color: "BLUE", active: true },
-      { userId: "JULIA", displayName: "Julia", color: "PURPLE", active: true },
+      { userId: "STEFAN", displayName: "Stefan", color: "BLUE", active: true, canSignIn: true },
+      { userId: "JULIA", displayName: "Julia", color: "PURPLE", active: true, canSignIn: true },
     ]);
   });
 
   it("creates a member with a slug ID and stores the seed plus the new member (seed is idempotent)", async () => {
     const repo = repository();
     const member = await new MemberService(repo, () => NOW).createMember(TEST_IDENTITY, { displayName: "Lena", color: "GREEN" });
-    expect(member).toEqual({ userId: "LENA", displayName: "Lena", color: "GREEN", active: true });
+    expect(member).toEqual({ userId: "LENA", displayName: "Lena", color: "GREEN", active: true, canSignIn: true });
     expect(repo.saveMembers).toHaveBeenCalledWith("default", [...SEED_MEMBERS, LENA], 0, "STEFAN", TS);
   });
 
@@ -63,7 +64,7 @@ describe("MemberService", () => {
   it("renames and recolors a member; the userId stays", async () => {
     const repo = repository({ members: [...SEED_MEMBERS, LENA], membersVersion: 2 });
     const updated = await new MemberService(repo, () => NOW).updateMember(TEST_IDENTITY, "LENA", { displayName: "Lena Marie" });
-    expect(updated).toEqual({ userId: "LENA", displayName: "Lena Marie", color: "GREEN", active: true });
+    expect(updated).toEqual({ userId: "LENA", displayName: "Lena Marie", color: "GREEN", active: true, canSignIn: true });
     expect(repo.saveMembers.mock.calls[0]?.[1][2]).toMatchObject({ userId: "LENA", displayName: "Lena Marie", updatedAt: TS });
     await expect(new MemberService(repo, () => NOW).updateMember(TEST_IDENTITY, "NOBODY", { color: "RED" })).rejects.toBeInstanceOf(NotFoundError);
   });
@@ -148,7 +149,7 @@ describe("DynamoDbHouseholdRepository members", () => {
 
 describe("member handlers", () => {
   const event = (body: unknown, userId?: string) => ({ body: JSON.stringify(body), isBase64Encoded: false, pathParameters: userId ? { userId } : undefined }) as unknown as APIGatewayProxyEventV2;
-  const lena = { userId: "LENA", displayName: "Lena", color: "GREEN" as const, active: true };
+  const lena = { userId: "LENA", displayName: "Lena", color: "GREEN" as const, active: true, canSignIn: true };
 
   it("lists, creates (201) and updates members with logging", async () => {
     expect(JSON.parse((await listMembersHandler("default", async () => [lena])).body ?? "").data).toEqual([lena]);
@@ -179,5 +180,28 @@ describe("member handlers", () => {
     await expect(updateMemberHandler(event({}, "LENA"), TEST_IDENTITY, vi.fn(), mockLogger())).rejects.toBeInstanceOf(ValidationError);
     await expect(updateMemberHandler(event({ userId: "X" }, "LENA"), TEST_IDENTITY, vi.fn(), mockLogger())).rejects.toBeInstanceOf(ValidationError);
     await expect(updateMemberHandler(event({ color: "RED" }, "lena"), TEST_IDENTITY, vi.fn(), mockLogger())).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
+describe("members without login (HOUSEHOLD-ADMIN-006)", () => {
+  it("creates a member without login; the flag is part of the response", async () => {
+    const repo = repository();
+    const member = await new MemberService(repo, () => NOW).createMember(TEST_IDENTITY, { displayName: "Haushaltshilfe", color: "TEAL", canSignIn: false });
+    expect(member).toEqual({ userId: "HAUSHALTSHILFE", displayName: "Haushaltshilfe", color: "TEAL", active: true, canSignIn: false });
+    expect(repo.saveMembers).toHaveBeenCalledWith("default", [...SEED_MEMBERS, expect.objectContaining({ userId: "HAUSHALTSHILFE", canSignIn: false })], 0, "STEFAN", TS);
+  });
+
+  it("accepts canSignIn on create and rejects it on update (immutable)", () => {
+    expect(createMemberSchema.parse({ displayName: "Hilfe", color: "TEAL", canSignIn: false })).toEqual({ displayName: "Hilfe", color: "TEAL", canSignIn: false });
+    expect(updateMemberSchema.safeParse({ canSignIn: true }).success).toBe(false);
+  });
+
+  it("reads stored members without the flag as able to sign in", async () => {
+    const client = { send: vi.fn(async () => ({ Item: { tenantId: "default", members: [{ userId: "STEFAN", displayName: "Stefan", color: "BLUE" }, { userId: "HILFE", displayName: "Hilfe", color: "TEAL", canSignIn: false }] } })) };
+    const settings = await new DynamoDbHouseholdRepository(client, "t").get("default");
+    expect(settings?.members?.map((member) => [member.userId, member.canSignIn])).toEqual([
+      ["STEFAN", true],
+      ["HILFE", false],
+    ]);
   });
 });

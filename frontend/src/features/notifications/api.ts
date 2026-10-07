@@ -5,12 +5,13 @@ import { z } from "zod";
 import { apiClient } from "../../api/client";
 import { WEEKDAYS } from "../../types/domain";
 
-/** Alexa only: e-mail, Telegram and push were dropped (BACKLOG-001, CLEANUP-001). */
-export const USER_CHANNELS = ["ALEXA"] as const;
+/** Alexa (ALEXA-008) and browser push (NOTIFICATION-009). */
+export const USER_CHANNELS = ["ALEXA", "WEB_PUSH"] as const;
 export type UserChannel = (typeof USER_CHANNELS)[number];
 
 export const CHANNEL_LABELS: Record<UserChannel, string> = {
   ALEXA: "Alexa",
+  WEB_PUSH: "Push aufs Handy",
 };
 
 const channelsSchema = z.array(z.enum(USER_CHANNELS));
@@ -18,7 +19,13 @@ const channelsSchema = z.array(z.enum(USER_CHANNELS));
 const preferencesSchema = z.object({
   timezone: z.string().nullable(),
   dailyDigest: z.object({ enabled: z.boolean(), time: z.string(), channels: channelsSchema }),
-  overdueAlerts: z.object({ enabled: z.boolean(), minDaysOverdue: z.number(), channels: channelsSchema }),
+  // NOTIFICATION-010: evening reminder time (default 18:00).
+  overdueAlerts: z.object({
+    enabled: z.boolean(),
+    minDaysOverdue: z.number(),
+    time: z.string(),
+    channels: channelsSchema,
+  }),
   weeklySummary: z.object({
     enabled: z.boolean(),
     dayOfWeek: z.enum(WEEKDAYS),
@@ -26,6 +33,8 @@ const preferencesSchema = z.object({
     channels: channelsSchema,
   }),
   quietHours: z.object({ start: z.string(), end: z.string() }).nullable(),
+  /** NOTIFICATION-011: what „Später“ in a push notification does. */
+  pushSnooze: z.enum(["1H", "EVENING", "TOMORROW"]),
 });
 export type NotificationPreferences = z.infer<typeof preferencesSchema>;
 
@@ -36,7 +45,14 @@ const responseSchema = z.object({
 });
 export type NotificationPreferencesResponse = z.infer<typeof responseSchema>;
 
-const keyOf = (userId: string) => ["notification-preferences", userId] as const;
+export const PUSH_SNOOZE_LABELS: Record<NotificationPreferences["pushSnooze"], string> = {
+  "1H": "In 1 Stunde",
+  EVENING: "Heute Abend (Uhrzeit der Überfällig-Hinweise)",
+  TOMORROW: "Morgen früh (Uhrzeit des Tagesüberblicks)",
+};
+
+export const notificationPreferencesKey = (userId: string) => ["notification-preferences", userId] as const;
+const keyOf = notificationPreferencesKey;
 const pathOf = (userId: string) => `/users/${encodeURIComponent(userId)}/notification-preferences`;
 
 export function useNotificationPreferences(userId: string) {

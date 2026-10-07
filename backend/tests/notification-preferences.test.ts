@@ -4,7 +4,7 @@ import type { UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it, vi } from "vitest";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../src/exceptions/index.js";
 import { getNotificationPreferencesHandler, updateNotificationPreferencesHandler } from "../src/handlers/notification-preferences.js";
-import { DEFAULT_NOTIFICATION_PREFERENCES, type HouseholdSettings, type NotificationPreferences } from "../src/models/index.js";
+import { DEFAULT_NOTIFICATION_PREFERENCES, withPreferenceDefaults, type HouseholdSettings, type NotificationPreferences } from "../src/models/index.js";
 import { DynamoDbHouseholdRepository } from "../src/repositories/index.js";
 import { NotificationPreferencesService } from "../src/services/index.js";
 import { notificationPreferencesSchema, validate } from "../src/validators/index.js";
@@ -13,9 +13,10 @@ import { authenticatedEvent, householdSettings, mockLogger, TEST_IDENTITY } from
 const CUSTOM: NotificationPreferences = {
   timezone: "Europe/Vienna",
   dailyDigest: { enabled: true, time: "06:45", channels: ["ALEXA"] },
-  overdueAlerts: { enabled: false, minDaysOverdue: 5, channels: [] },
+  overdueAlerts: { enabled: false, minDaysOverdue: 5, time: "18:00", channels: [] },
   weeklySummary: { enabled: true, dayOfWeek: "SAT", time: "10:00", channels: [] },
   quietHours: { start: "22:00", end: "06:30" },
+  pushSnooze: "EVENING",
 };
 
 function world(settings: Partial<HouseholdSettings> | undefined = {}, connected: string[] = []) {
@@ -40,6 +41,7 @@ describe("NotificationPreferencesService", () => {
     expect(result.effectiveTimezone).toBe("Europe/Berlin");
     expect(result.channels).toEqual([
       { type: "ALEXA", connected: false },
+      { type: "WEB_PUSH", connected: false },
     ]);
   });
 
@@ -125,5 +127,31 @@ describe("DynamoDbHouseholdRepository (notificationPreferences)", () => {
       ConditionExpression: "attribute_not_exists(#version)",
       ExpressionAttributeNames: { "#list": "notificationPreferences", "#version": "notificationPreferencesVersion" },
     });
+  });
+});
+
+describe("evening alert time (NOTIFICATION-010)", () => {
+  it("gives stored preferences without a time the 18:00 default", () => {
+    const stored = { ...DEFAULT_NOTIFICATION_PREFERENCES, overdueAlerts: { enabled: true, minDaysOverdue: 3, channels: [] } } as unknown as NotificationPreferences;
+    expect(withPreferenceDefaults(stored).overdueAlerts).toEqual({ enabled: true, minDaysOverdue: 3, time: "18:00", channels: [] });
+  });
+
+  it("accepts a request without the time (older clients) and a quarter-hour time", () => {
+    const body = { ...DEFAULT_NOTIFICATION_PREFERENCES, overdueAlerts: { enabled: true, minDaysOverdue: 2, channels: [] } };
+    expect(notificationPreferencesSchema.parse(body).overdueAlerts.time).toBe("18:00");
+    expect(notificationPreferencesSchema.parse({ ...body, overdueAlerts: { ...body.overdueAlerts, time: "19:45" } }).overdueAlerts.time).toBe("19:45");
+    expect(notificationPreferencesSchema.safeParse({ ...body, overdueAlerts: { ...body.overdueAlerts, time: "19:50" } }).success).toBe(false);
+  });
+});
+
+describe("push snooze option (NOTIFICATION-011)", () => {
+  it("defaults to 1 hour for stored preferences and older clients, and accepts the three options only", () => {
+    const stored = { ...DEFAULT_NOTIFICATION_PREFERENCES, pushSnooze: undefined } as unknown as NotificationPreferences;
+    expect(withPreferenceDefaults(stored).pushSnooze).toBe("1H");
+    const body = { ...DEFAULT_NOTIFICATION_PREFERENCES } as Record<string, unknown>;
+    delete body.pushSnooze;
+    expect(notificationPreferencesSchema.parse(body).pushSnooze).toBe("1H");
+    expect(notificationPreferencesSchema.parse({ ...body, pushSnooze: "TOMORROW" }).pushSnooze).toBe("TOMORROW");
+    expect(notificationPreferencesSchema.safeParse({ ...body, pushSnooze: "NEVER" }).success).toBe(false);
   });
 });

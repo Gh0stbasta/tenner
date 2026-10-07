@@ -33,7 +33,8 @@ export class HouseholdAssignmentService {
     const groups = await this.memberships.groupsOf(principal.username);
     const users = await this.membersOf(this.tenantId);
     const members = await Promise.all(
-      users.filter((user) => user.active).map(async (user) => ({
+      // Members without an account (HOUSEHOLD-ADMIN-006) are never offered.
+      users.filter((user) => user.active && user.canSignIn).map(async (user) => ({
         userId: user.userId,
         displayName: user.displayName,
         available: (await this.memberships.memberCount(this.groupOf(user.userId))) === 0,
@@ -49,7 +50,7 @@ export class HouseholdAssignmentService {
    * this account withdraws, so a member never stays assigned to two accounts.
    */
   async assign(principal: Principal, userId: UserId): Promise<AssignmentOutcome> {
-    if (!(await this.membersOf(this.tenantId)).some((user) => user.userId === userId && user.active)) {
+    if (!(await this.membersOf(this.tenantId)).some((user) => user.userId === userId && user.active && user.canSignIn)) {
       throw new NotFoundError("Household member not found.");
     }
     const groups = await this.memberships.groupsOf(principal.username);

@@ -25,7 +25,7 @@ import { memoryDeliveryLog } from "./mocks/delivery-log.js";
 import { mockLogger, testConfig } from "./mocks/index.js";
 
 const NOW = new Date("2026-10-06T05:30:10Z"); // 07:30 in Berlin
-const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: false, createdAt: "t", updatedAt: "t" };
+const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: false, canSignIn: true, createdAt: "t", updatedAt: "t" };
 
 const message = (userId: string): NotificationMessage => ({ type: "DAILY_DIGEST", userId, subject: "Heute", textBody: "3 Tenner" });
 

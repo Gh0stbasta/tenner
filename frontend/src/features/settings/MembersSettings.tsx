@@ -38,11 +38,11 @@ export function MembersSettings() {
   const activeCount = list.filter((member) => member.active).length;
 
   const describe = (member: Member): string => {
-    if (!member.active) return `${member.userId} · Deaktiviert`;
+    // HOUSEHOLD-ADMIN-006: members without an account are marked.
+    const id = member.canSignIn ? member.userId : `${member.userId} · Ohne Anmeldung`;
+    if (!member.active) return `${id} · Deaktiviert`;
     const handover = handovers.find((candidate) => candidate.from === member.userId);
-    return handover
-      ? `${member.userId} · Vertreten von ${memberName(handover.to)} bis ${formatShortDate(handover.until)}`
-      : member.userId;
+    return handover ? `${id} · Vertreten von ${memberName(handover.to)} bis ${formatShortDate(handover.until)}` : id;
   };
 
   const end = (member: Member) =>

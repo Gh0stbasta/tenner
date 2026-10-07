@@ -9,7 +9,7 @@ import { renderWithProviders } from "../../tests/render";
 import { DashboardTennerCard } from "../dashboard/DashboardTennerCard";
 import { SettingsPage } from "../settings/SettingsPage";
 
-const LENA = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true };
+const LENA = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, canSignIn: true };
 const UNTIL = "2099-12-31";
 
 beforeEach(() => {

@@ -28,8 +28,8 @@ export function fail(status: number, code: string, message = code): MockResponse
 
 /** The household members every app screen loads (HOUSEHOLD-ADMIN-001); tests can override "GET /users". */
 export const DEFAULT_MEMBERS = [
-  { userId: "STEFAN", displayName: "Stefan", color: "BLUE", active: true },
-  { userId: "JULIA", displayName: "Julia", color: "PURPLE", active: true },
+  { userId: "STEFAN", displayName: "Stefan", color: "BLUE", active: true, canSignIn: true },
+  { userId: "JULIA", displayName: "Julia", color: "PURPLE", active: true, canSignIn: true },
 ];
 
 /** The household categories every app screen loads (HOUSEHOLD-ADMIN-002); tests can override "GET /categories". */
@@ -46,13 +46,15 @@ export const DEFAULT_CATEGORIES = [
 export const DEFAULT_NOTIFICATION_RESPONSE = {
   preferences: {
     timezone: null,
-    dailyDigest: { enabled: true, time: "07:30", channels: [] },
-    overdueAlerts: { enabled: true, minDaysOverdue: 2, channels: [] },
+    dailyDigest: { enabled: true, time: "08:00", channels: [] },
+    overdueAlerts: { enabled: true, minDaysOverdue: 2, time: "18:00", channels: [] },
     weeklySummary: { enabled: false, dayOfWeek: "SUN", time: "18:00", channels: [] },
     quietHours: { start: "21:30", end: "07:00" },
+    pushSnooze: "1H",
   },
   channels: [
     { type: "ALEXA", connected: false },
+    { type: "WEB_PUSH", connected: false },
   ],
   effectiveTimezone: "Europe/Berlin",
 };

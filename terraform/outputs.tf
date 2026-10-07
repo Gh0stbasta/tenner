@@ -149,6 +149,11 @@ output "secret_parameter_prefix" {
   value       = local.secret_parameter_prefix
 }
 
+output "web_push_public_key" {
+  description = "VAPID public key for the frontend build (VITE_WEB_PUSH_PUBLIC_KEY, NOTIFICATION-009); empty while push is disabled."
+  value       = local.web_push_enabled ? var.web_push_public_key : ""
+}
+
 output "notifier_function_name" {
   description = "Notifier Lambda (NOTIFICATION-001); empty while notifications_enabled is false."
   value       = var.notifications_enabled ? aws_lambda_function.notifier[0].function_name : ""

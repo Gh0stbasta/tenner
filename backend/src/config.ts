@@ -36,6 +36,21 @@ export interface AppConfig {
   readonly notificationsTable: string | undefined;
   /** Cognito app client of the Alexa skill (ALEXA_CLIENT_ID); undefined while Alexa is not set up (ALEXA-002). */
   readonly alexaClientId: string | undefined;
+  /** Web Push (NOTIFICATION-009); undefined while no VAPID key pair is configured. */
+  readonly webPush: WebPushConfig | undefined;
+  /** Parameter Store name of the push action HMAC secret (PUSH_ACTION_HMAC_PARAMETER, NOTIFICATION-011). */
+  readonly pushActionSecretParameter: string | undefined;
+  /** API stage URL for the action buttons in push notifications (API_URL, notifier only, NOTIFICATION-011). */
+  readonly apiUrl: string | undefined;
+}
+
+export interface WebPushConfig {
+  /** Base64url VAPID public key (WEB_PUSH_PUBLIC_KEY; not secret). */
+  readonly publicKey: string;
+  /** Parameter Store name of the VAPID private key (WEB_PUSH_PRIVATE_KEY_PARAMETER); the value is never in env. */
+  readonly privateKeyParameter: string;
+  /** VAPID subject: the web app URL (RFC 8292 allows an https URL). */
+  readonly subject: string;
 }
 
 export interface OnboardingConfig {
@@ -89,7 +104,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     appUrl: readTrimmed(env.APP_URL),
     householdEventsBus: readTrimmed(env.HOUSEHOLD_EVENTS_BUS),
     alexaApi: alexaApiConfig(env),
+    webPush: webPushConfig(env),
+    pushActionSecretParameter: readTrimmed(env.PUSH_ACTION_HMAC_PARAMETER),
+    apiUrl: readTrimmed(env.API_URL)?.replace(/\/+$/, ""),
   };
+}
+
+function webPushConfig(env: NodeJS.ProcessEnv): WebPushConfig | undefined {
+  const publicKey = readTrimmed(env.WEB_PUSH_PUBLIC_KEY);
+  const privateKeyParameter = readTrimmed(env.WEB_PUSH_PRIVATE_KEY_PARAMETER);
+  const subject = readTrimmed(env.APP_URL);
+  if (!publicKey || !privateKeyParameter || !subject) return undefined;
+  return { publicKey, privateKeyParameter, subject };
 }
 
 /** APPLICATION_TIMEZONE if it is a valid IANA zone, otherwise Europe/Berlin. */

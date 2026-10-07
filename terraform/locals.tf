@@ -69,6 +69,7 @@ locals {
     "POST /tenners/{tennerId}/resume",              # SCHEDULING-005
     "PUT /household/vacation",                      # SCHEDULING-005
     "DELETE /household/vacation",                   # SCHEDULING-005
+    "POST /household/catalog",                      # DATA-008
     "GET /users",                                   # HOUSEHOLD-ADMIN-001
     "POST /users",                                  # HOUSEHOLD-ADMIN-001
     "PUT /users/{userId}",                          # HOUSEHOLD-ADMIN-001
@@ -80,6 +81,9 @@ locals {
     "POST /categories",                             # HOUSEHOLD-ADMIN-002
     "GET /users/{userId}/notification-preferences", # NOTIFICATION-002
     "PUT /users/{userId}/notification-preferences", # NOTIFICATION-002
+    "PUT /users/{userId}/push-subscription",        # NOTIFICATION-009
+    "DELETE /users/{userId}/push-subscription",     # NOTIFICATION-009
+    "POST /push-actions",                           # NOTIFICATION-011 (public, signed token)
     "GET /household/alexa",                         # ALEXA-002
     "PUT /household/alexa-speakers/{personId}",     # ALEXA-002
     "DELETE /household/alexa-speakers/{personId}",  # ALEXA-002
@@ -88,7 +92,8 @@ locals {
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.
-  api_public_routes = ["GET /health"]
+  # POST /push-actions (NOTIFICATION-011) is authorized by the signed token in the body instead of a login.
+  api_public_routes = ["GET /health", "POST /push-actions"]
 
   # Authentication (SECURITY-002, ADR 0001). The Cognito domain prefix must be unique per region;
   # a hash of the account ID keeps it stable without exposing the account ID in the login URL.
@@ -165,7 +170,13 @@ locals {
   alexa_api_endpoint                = "https://api.eu.amazonalexa.com"
   alexa_lwa_client_id_parameter     = "${local.secret_parameter_prefix}/alexa/lwa-client-id"
   alexa_lwa_client_secret_parameter = "${local.secret_parameter_prefix}/alexa/lwa-client-secret"
-  household_events_bus              = "default"
+
+  # NOTIFICATION-009: browser push needs the notifier and a VAPID key pair (public key as variable, private key in SSM).
+  web_push_enabled               = var.notifications_enabled && var.web_push_public_key != ""
+  web_push_private_key_parameter = "${local.secret_parameter_prefix}/push/vapid-private-key"
+  # NOTIFICATION-011: HMAC secret of the action links (notifier signs, API verifies).
+  push_action_secret_parameter = "${local.secret_parameter_prefix}/push/action-secret"
+  household_events_bus         = "default"
 
   # Persistence layer (TICKET-006).
   tenners_table_name = "${local.name_prefix}-tenners"

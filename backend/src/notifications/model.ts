@@ -2,11 +2,12 @@
 
 import type { UserId } from "../models/index.js";
 
-export const NOTIFICATION_TYPES = ["DAILY_DIGEST", "OVERDUE_ALERT", "WEEKLY_SUMMARY"] as const;
+/** SNOOZED_REMINDER: a push reminder again after „Später“ (NOTIFICATION-011). */
+export const NOTIFICATION_TYPES = ["DAILY_DIGEST", "OVERDUE_ALERT", "WEEKLY_SUMMARY", "SNOOZED_REMINDER"] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
-/** LOG is the test/dry-run channel; ALEXA is added by ALEXA-008 (other channels were dropped, CLEANUP-001). */
-export const CHANNEL_TYPES = ["LOG", "ALEXA"] as const;
+/** LOG is the test/dry-run channel; ALEXA is added by ALEXA-008, WEB_PUSH by NOTIFICATION-009. */
+export const CHANNEL_TYPES = ["LOG", "ALEXA", "WEB_PUSH"] as const;
 export type ChannelType = (typeof CHANNEL_TYPES)[number];
 
 /** Rendered content; channels decide how to present it. No personal data beyond names and Tenner titles. */
@@ -18,6 +19,18 @@ export interface NotificationMessage {
   readonly deepLink?: string;
   /** Structured content for channels that cannot send free text (Alexa notifications, ALEXA-008). */
   readonly facts?: Readonly<Record<string, number | string>>;
+  /** The Tenners the message is about, for channels that notify per Tenner (browser push, NOTIFICATION-010). */
+  readonly items?: readonly NotificationItem[];
+}
+
+export interface NotificationItem {
+  readonly tennerId: string;
+  readonly title: string;
+  readonly estimatedMinutes: number;
+  /** Overdue alerts only. */
+  readonly overdueDays?: number;
+  /** The Tenner's due date the notification refers to (its cycle; NOTIFICATION-011 actions). */
+  readonly nextDue: string;
 }
 
 export interface Recipient {

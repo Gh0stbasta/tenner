@@ -2,7 +2,7 @@
  * Overdue alerts (NOTIFICATION-004): a Tenner of the member (own or shared) that is at least `minDaysOverdue` days
  * overdue is alerted once per overdue cycle (cycle = the Tenner's nextDue; completing or snoozing starts a new one),
  * plus one reminder after 2 × frequencyDays overdue. All due Tenners of a member are bundled into one message per
- * day, sent in the afternoon window (ALERT_TIME) outside quiet hours.
+ * day, sent at the member's evening time (default 18:00, NOTIFICATION-010) outside quiet hours.
  */
 
 import type { DashboardRequest, DashboardResponse, DashboardTennerResponse } from "../dto/index.js";
@@ -14,8 +14,6 @@ import type { NotificationJob } from "./notifier.js";
 import { inQuietHours, isDueAt } from "./schedule.js";
 import { bulletList, daysText, tenners } from "./text.js";
 
-/** Local time of the daily alert check (the digest covers the morning). */
-export const ALERT_TIME = "17:00";
 export const ALERT_ITEM_LIMIT = 10;
 
 export interface OverdueAlertDependencies {
@@ -70,6 +68,13 @@ export function renderAlert(items: readonly AlertItem[], recipient: Recipient, a
     textBody: lines.join("\n"),
     ...(appUrl === undefined ? {} : { deepLink: appUrl }),
     facts: { overdue: items.length, oldestDays: Math.max(...items.map((item) => item.tenner.overdueDays ?? 0)) },
+    items: items.map(({ tenner }) => ({
+      tennerId: tenner.tennerId,
+      title: tenner.title,
+      estimatedMinutes: tenner.estimatedMinutes,
+      overdueDays: tenner.overdueDays ?? 1,
+      nextDue: tenner.nextDue,
+    })),
   };
 }
 
@@ -81,7 +86,7 @@ export function overdueAlertJob(deps: OverdueAlertDependencies): NotificationJob
     async channelsDue(recipient, now) {
       const preferences = await deps.preferencesOf(recipient.tenantId, recipient.userId);
       const timezone = timezoneFor(preferences, recipient);
-      if (!preferences.overdueAlerts.enabled || !isDueAt(ALERT_TIME, now, timezone) || inQuietHours(preferences.quietHours, now, timezone)) return [];
+      if (!preferences.overdueAlerts.enabled || !isDueAt(preferences.overdueAlerts.time, now, timezone) || inQuietHours(preferences.quietHours, now, timezone)) return [];
       return withLog(preferences.overdueAlerts.channels);
     },
     async render(recipient) {

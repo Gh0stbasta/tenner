@@ -29,3 +29,25 @@ export type TimeZoneSource = (tenantId: string) => Promise<string>;
 export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
+
+/** Offset of `timeZone` from UTC at `instant`, in minutes (Berlin summer: 120). */
+function offsetMinutes(instant: Date, timeZone: string): number {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", { timeZone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      .formatToParts(instant)
+      .map((part) => [part.type, part.value]),
+  );
+  const asUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
+  return Math.round((asUtc - instant.getTime()) / 60_000);
+}
+
+/** The instant of local `date` (YYYY-MM-DD) and `time` (HH:mm) in `timeZone` (NOTIFICATION-011 snooze times). */
+export function localDateTimeToInstant(date: string, time: string, timeZone: string): Date {
+  const [year, month, day] = date.split("-").map(Number) as [number, number, number];
+  const [hours, minutes] = time.split(":").map(Number) as [number, number];
+  const wall = Date.UTC(year, month - 1, day, hours, minutes);
+  // Two passes settle the offset also next to a DST switch.
+  let instant = wall - offsetMinutes(new Date(wall), timeZone) * 60_000;
+  instant = wall - offsetMinutes(new Date(instant), timeZone) * 60_000;
+  return new Date(instant);
+}

@@ -122,6 +122,8 @@ These are outside Terraform or need the live system. Run them in AWS CloudShell 
 | A deactivated member's existing ID token stays valid up to 60 minutes (group removal applies at the next refresh) | HOUSEHOLD-ADMIN-004 |
 | API Lambda can change Cognito group membership | TD-023 |
 | Tokens in `localStorage` (XSS would expose them; mitigated by CSP) | ADR 0001 |
+| Public `POST /push-actions` (NOTIFICATION-011): whoever holds a notification's token can complete or snooze exactly that Tenner cycle within 24 hours (e.g. from a lock screen); tokens are HMAC-signed, scoped, never logged; requests are throttled with the API | NOTIFICATION-011 |
+| Browser push: push services (Google, Mozilla, Apple) see device endpoints and timing; payloads are end-to-end encrypted (RFC 8291) and contain only titles and estimates. The VAPID private key lives in Parameter Store; endpoints are never logged | NOTIFICATION-009 |
 | Offline cache: household Tenner data in `localStorage` for up to 7 days or until logout (readable on an unlocked device; same XSS exposure as the tokens) | MOBILE-003, `frontend/README.md` |
 | Offline completions carry a client-chosen `completedAt` (device clock; the backend rejects future and out-of-order times, so it can only move a completion back to the last one) | MOBILE-004 |
 | Google client secret in Terraform state | TD-021 |

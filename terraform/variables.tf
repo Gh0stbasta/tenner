@@ -207,6 +207,17 @@ variable "notifications_enabled" {
   default     = false
 }
 
+variable "web_push_public_key" {
+  description = "VAPID public key for browser push (NOTIFICATION-009), base64url (87 characters, not secret); empty = push disabled. The private key lives in Parameter Store (<secret prefix>/push/vapid-private-key). Set as GitHub variable WEB_PUSH_PUBLIC_KEY; generate both with scripts/generate-vapid-keys.mjs."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.web_push_public_key == "" || can(regex("^[A-Za-z0-9_-]{87}$", var.web_push_public_key))
+    error_message = "web_push_public_key must be empty or an 87-character base64url P-256 public key."
+  }
+}
+
 variable "notifier_log_level" {
   description = "Log level of the notifier Lambda."
   type        = string

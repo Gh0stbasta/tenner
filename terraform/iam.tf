@@ -95,3 +95,22 @@ resource "aws_iam_role_policy" "api_cognito" {
   role   = aws_iam_role.api.id
   policy = data.aws_iam_policy_document.api_cognito.json
 }
+
+# NOTIFICATION-011: the API verifies push action links with the HMAC secret (exact parameter, aws/ssm key).
+data "aws_iam_policy_document" "api_push_actions" {
+  count = local.web_push_enabled ? 1 : 0
+
+  statement {
+    sid       = "ReadPushActionSecret"
+    actions   = ["ssm:GetParameter"]
+    resources = ["${local.secret_parameter_arn_prefix}/push/action-secret"]
+  }
+}
+
+resource "aws_iam_role_policy" "api_push_actions" {
+  count = local.web_push_enabled ? 1 : 0
+
+  name   = "${local.api_role_name}-push-actions"
+  role   = aws_iam_role.api.id
+  policy = data.aws_iam_policy_document.api_push_actions[0].json
+}

@@ -15,6 +15,7 @@ const MESSAGES: Readonly<Record<string, string>> = {
   TENNER_NOT_DELETED: "Dieser Tenner ist nicht archiviert.",
   MEMBER_TAKEN: "Diese Person ist schon mit einem anderen Konto verknüpft.",
   ALREADY_ASSIGNED: "Dein Konto ist bereits verknüpft. Du wirst gleich weitergeleitet.",
+  CATALOG_MEMBERS_MISSING: "Der Aufgabenkatalog braucht die Mitglieder Stefan und Julia (IDs STEFAN, JULIA).",
   IDEMPOTENCY_KEY_REUSED: "Diese Aktion wurde bereits mit anderen Daten ausgeführt. Bitte lade neu.",
   [CLIENT_ERROR_CODES.notConfigured]: "Die App ist nicht richtig eingerichtet: die API-Adresse fehlt.",
   [CLIENT_ERROR_CODES.invalidResponse]: "Unerwartete Antwort vom Server. Bitte lade die Seite neu.",

@@ -34,7 +34,8 @@ describe("NotificationSettings (NOTIFICATION-002)", () => {
     const put = fetchMock.calls().find((call) => call.key === "PUT /users/JULIA/notification-preferences");
     expect(put?.body).toMatchObject({
       weeklySummary: { enabled: true, dayOfWeek: "SUN", time: "18:00" },
-      dailyDigest: { time: "07:30" },
+      dailyDigest: { time: "08:00" },
+      overdueAlerts: { time: "18:00" },
     });
     expect(await screen.findByRole("combobox", { name: "Tag" })).toBeInTheDocument();
   });
@@ -92,6 +93,38 @@ describe("NotificationSettings (NOTIFICATION-002)", () => {
       ).toBeChecked(),
     );
     expect(screen.queryByText(/Noch kein Kanal verbunden/)).not.toBeInTheDocument();
+  });
+
+  it("offers push and the „Später“ choice once push is connected (NOTIFICATION-009/011)", async () => {
+    const fetchMock = mockFetch({
+      "GET /users/STEFAN/notification-preferences": ok({
+        ...DEFAULT_NOTIFICATION_RESPONSE,
+        channels: DEFAULT_NOTIFICATION_RESPONSE.channels.map((channel) => ({
+          ...channel,
+          connected: channel.type === "WEB_PUSH",
+        })),
+      }),
+      "PUT /users/STEFAN/notification-preferences": echo(["WEB_PUSH"]),
+    });
+    renderWithProviders(<NotificationSettings />);
+    const group = await screen.findByRole("group", { name: "Kanäle für Überfällig-Hinweise" });
+    expect(within(group).getByRole("checkbox", { name: "Push aufs Handy" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("combobox", { name: "„Später“ in Push-Benachrichtigungen" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Heute Abend (Uhrzeit der Überfällig-Hinweise)" }));
+    await waitFor(() =>
+      expect(
+        fetchMock.calls().find((call) => call.key === "PUT /users/STEFAN/notification-preferences")?.body,
+      ).toMatchObject({
+        pushSnooze: "EVENING",
+      }),
+    );
+  });
+
+  it("hides the „Später“ choice without push", async () => {
+    mockFetch({});
+    renderWithProviders(<NotificationSettings />);
+    await screen.findByRole("switch", { name: "Tagesüberblick" });
+    expect(screen.queryByRole("combobox", { name: "„Später“ in Push-Benachrichtigungen" })).not.toBeInTheDocument();
   });
 
   it("turns quiet hours off and reports load errors", async () => {
