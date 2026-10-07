@@ -10,7 +10,7 @@ deterministic (no AI).
 |---|---|
 | **Status** | In progress. Foundation done (FOOD-001, 021, 002, 004, 003; FOOD-021 before 002 because dishes reference ingredients). Planning done (FOOD-005, 006, 009, 007, 022, 008): first usable version. Next: kitchen block, FOOD-014 |
 | **Epic** | [EPIC-FOOD-001](metaticket.md): vision, household rules R1 – R13, dish catalog, owner decisions (answered) |
-| **Backlog** | [`backlog/food/`](backlog/food/): FOOD-001 – FOOD-025 |
+| **Backlog** | [`backlog/food/`](backlog/food/): FOOD-001 – FOOD-026 |
 | **Previous release** | [Tenner 1.0](../release-1.0/README.md) |
 
 ---
@@ -65,6 +65,7 @@ flowchart LR
 | [FOOD-023](backlog/food/ticket023.md) | Meal History and Feedback | Medium | 2.0 Extended |
 | [FOOD-024](backlog/food/ticket024.md) | Evaluate Stock and AI-Generated Dish Images | Low | Long-Term |
 | [FOOD-025](backlog/food/ticket025.md) | Release Tenner 2.0 | High | 2.0 Release |
+| [FOOD-026](backlog/food/ticket026.md) | Shopping List via Alexa | Medium | 2.0 Extended |
 
 **Phases:** *2.0 Core* = the plan works every day (incl. shopping list) · *2.0 Extended* = everywhere and more
 comfortable · *Long-Term* = evaluations, not part of 2.0 · *2.0 Release* = version and release notes.
@@ -75,7 +76,7 @@ comfortable · *Long-Term* = evaluations, not part of 2.0 · *2.0 Release* = ver
 Foundation:        FOOD-001 → 002 → 021 → 004 → 003
 Planning:          FOOD-005 → 006 → 009 → 007 → 022 → 008      ← first usable version
 Kitchen:           FOOD-014 → 010 → 012 → 013 → 011
-Everywhere:        FOOD-016 → 017 → 018 → 015
+Everywhere:        FOOD-016 → 017 → 026 → 018 → 015
 Insight:           FOOD-023 → 019
 Release:           FOOD-025
 Later (evaluate):  FOOD-020, FOOD-024

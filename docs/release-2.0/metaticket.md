@@ -184,6 +184,7 @@ time, ingredients) is done in FOOD-003.
 | [FOOD-023](backlog/food/ticket023.md) | Meal History and Feedback | Medium | 2.0 Extended |
 | [FOOD-024](backlog/food/ticket024.md) | Evaluate Stock and AI-Generated Dish Images | Low | Long-Term |
 | [FOOD-025](backlog/food/ticket025.md) | Release Tenner 2.0 | High | 2.0 Release |
+| [FOOD-026](backlog/food/ticket026.md) | Shopping List via Alexa (added 2026-10-07) | Medium | 2.0 Extended |
 
 Added to the owner's breakdown:
 
@@ -206,7 +207,7 @@ Foundation:        FOOD-001 → 002 → 021 → 004 → 003
 Planning (first usable version):
                    FOOD-005 → 006 → 009 → 007 → 022 → 008
 Kitchen:           FOOD-014 → 010 → 012 → 013 → 011
-Everywhere:        FOOD-016 → 017 → 018 → 015
+Everywhere:        FOOD-016 → 017 → 026 → 018 → 015
 Insight:           FOOD-023 → 019
 Release:           FOOD-025
 Later (evaluate):  FOOD-020, FOOD-024

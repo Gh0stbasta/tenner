@@ -67,8 +67,13 @@ PATCH /meals/plans/{weekStart}/shopping-list            { check / uncheck / add 
 
 ## UI
 
-- Page „Einkaufsliste“ (from the plan page and the navigation): sections, big checkboxes, checked items move down,
-  „Eigener Eintrag“, „Liste aktualisieren“ hint when the plan changed after generation.
+- Page „Einkaufsliste“ (from the plan page and the navigation): big checkboxes, „Eigener Eintrag“, „Liste
+  aktualisieren“ hint when the plan changed after generation.
+- **Own order by drag and drop** (owner, 2026-10-07): items can be moved by drag and drop in the browser (mouse) and
+  in the installed app (touch); the order is stored with the list and the same on both phones. A new list starts in
+  section order.
+- **Ticking off** (owner, 2026-10-07): a ticked item is struck through and moves to the end of the list
+  automatically; unticking puts it back.
 - „Teilen“: Web Share API / copy as text.
 - Offline: list readable and checkable offline; check-offs are queued and synced (pattern of MOBILE-004 queue).
 - Concurrent ticking on two phones: optimistic versioning with automatic retry (merge by item key).
@@ -116,6 +121,7 @@ cd frontend && npm run lint && npm run build && npm test
 - [ ] Items can be ticked off on two phones at the same time
 - [ ] Works offline in the shop
 - [ ] Manual items and sharing possible
+- [ ] Items can be reordered by drag and drop (mouse and touch); ticked items are struck through at the end
 - [ ] Tests passing
 
 ---
@@ -141,3 +147,5 @@ cd frontend && npm run lint && npm run build && npm test
 # Out of Scope
 
 - Online grocery ordering, price comparison, supermarket-specific aisle order.
+- Syncing with the Alexa shopping list: Amazon switched off the List Management API on 2024-07-01; voice access to
+  this list through the Tenner skill is FOOD-026.
