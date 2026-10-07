@@ -6,6 +6,16 @@
 
 import { AnalyticsService } from "./analytics/index.js";
 import {
+  IngredientService,
+  MealsStore,
+  createIngredientHandler,
+  listIngredientsHandler,
+  updateIngredientHandler,
+  type CreateIngredient,
+  type ListIngredients,
+  type UpdateIngredient,
+} from "./meals/index.js";
+import {
   alexaContextHandler,
   linkAlexaSpeakerHandler,
   registerAlexaUserHandler,
@@ -180,6 +190,9 @@ export interface Dependencies {
   readonly analyticsHabits: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsHabitsResponse>;
   readonly analyticsTime: AnalyticsQuery<AnalyticsPeriodRequest, AnalyticsTimeResponse>;
   readonly analyticsHabit: (tenantId: string, tennerId: string, request: AnalyticsPeriodRequest) => Promise<AnalyticsHabitResponse>;
+  readonly listIngredients: ListIngredients;
+  readonly createIngredient: CreateIngredient;
+  readonly updateIngredient: UpdateIngredient;
 }
 
 /** Per-request context passed to route handlers. */
@@ -270,6 +283,10 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
     const tennerId = validate(tennerIdSchema, event.pathParameters?.tennerId);
     return analyticsHandler("habit", analyticsPeriodSchema, event, identity.tenantId, (tenantId, request) => deps.analyticsHabit(tenantId, tennerId, request), logger);
   },
+  // Meal planning (release 2.0).
+  "GET /meals/ingredients": ({ deps, identity }) => listIngredientsHandler(identity.tenantId, deps.listIngredients),
+  "POST /meals/ingredients": ({ event, deps, logger, identity }) => createIngredientHandler(event, identity, deps.createIngredient, logger),
+  "PUT /meals/ingredients/{ingredientId}": ({ event, deps, logger, identity }) => updateIngredientHandler(event, identity, deps.updateIngredient, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -284,6 +301,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     tables: config.tables ?? "not configured",
     onboarding: config.onboarding ?? "not configured",
     alexa: config.alexaClientId !== undefined ? "configured" : "not configured",
+    meals: config.mealsTable ?? "not configured",
   });
   const tables = config.tables;
   const notConfigured = async (): Promise<never> => {
@@ -373,6 +391,9 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
       : undefined;
   const memberDeactivationService =
     householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
+  // Meal planning (FOOD-001, ADR 0007): one store on tenner-meals for all meal services.
+  const mealsStore = config.mealsTable ? new MealsStore(getDocumentClient(), config.mealsTable) : undefined;
+  const ingredientService = mealsStore ? new IngredientService(mealsStore, systemClock) : undefined;
 
   return {
     config,
@@ -435,6 +456,9 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     analyticsTime: analyticsService ? (tenantId, request) => analyticsService.time(tenantId, request) : notConfigured,
     analyticsHabits: analyticsService ? (tenantId, request) => analyticsService.habits(tenantId, request) : notConfigured,
     analyticsHabit: analyticsService ? (tenantId, tennerId, request) => analyticsService.habit(tenantId, tennerId, request) : notConfigured,
+    listIngredients: ingredientService ? (tenantId) => ingredientService.listIngredients(tenantId) : notConfigured,
+    createIngredient: ingredientService ? (identity, request) => ingredientService.createIngredient(identity, request) : notConfigured,
+    updateIngredient: ingredientService ? (identity, ingredientId, request) => ingredientService.updateIngredient(identity, ingredientId, request) : notConfigured,
   };
 }
 

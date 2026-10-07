@@ -89,6 +89,9 @@ locals {
     "DELETE /household/alexa-speakers/{personId}",  # ALEXA-002
     "PUT /household/alexa-users/{alexaUserId}",     # ALEXA-007
     "PUT /categories/{categoryId}",                 # HOUSEHOLD-ADMIN-002
+    "GET /meals/ingredients",                       # FOOD-021
+    "POST /meals/ingredients",                      # FOOD-021
+    "PUT /meals/ingredients/{ingredientId}",        # FOOD-021
   ]
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.

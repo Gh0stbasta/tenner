@@ -2,3 +2,8 @@
 
 export * from "./keys.js";
 export * from "./repositories/meals-store.js";
+export * from "./models/ingredient.js";
+export * from "./catalog/ingredients.js";
+export * from "./services/ingredient.service.js";
+export * from "./handlers/ingredients.js";
+export * from "./validators.js";

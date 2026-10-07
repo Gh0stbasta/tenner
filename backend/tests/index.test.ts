@@ -4,6 +4,8 @@ import { ConflictError, NotFoundError, PersistenceError, ValidationError } from 
 import { correlationIdOf, createDependencies, handler, route as routeEvent, type Dependencies } from "../src/index.js";
 import { toTennerResponse } from "../src/dto/index.js";
 import { DEFAULT_NOTIFICATION_PREFERENCES } from "../src/models/index.js";
+import { CATALOG_INGREDIENTS, type ResolvedIngredient } from "../src/meals/index.js";
+import { ApplicationError } from "../src/exceptions/index.js";
 import { authenticatedEvent, jwtClaims, mockLogger, tennerFixture, testConfig, TEST_IDENTITY } from "./mocks/index.js";
 
 /** Most tests exercise authenticated requests: the event carries the default test user's verified claims. */
@@ -38,6 +40,7 @@ const household = {
 };
 
 const PREFERENCES_RESPONSE = { preferences: DEFAULT_NOTIFICATION_PREFERENCES, channels: [], effectiveTimezone: "Europe/Berlin" };
+const INGREDIENT = { ...CATALOG_INGREDIENTS[0], source: "CATALOG", overridden: false } as ResolvedIngredient;
 const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [], alexaAccounts: 0 };
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
@@ -122,6 +125,9 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     updateCategory: vi.fn(async () => ({ categoryId: "HOUSEHOLD", name: "Haushalt", icon: "CLEANING" as const, color: "BLUE" as const, sortOrder: 0, archived: true })),
     getOnboarding: vi.fn(async () => ({ assignedTo: null, members: [] })),
     assignHouseholdMember: vi.fn(async () => ({ response: { userId: "JULIA" as const }, group: "household:default:JULIA" })),
+    listIngredients: vi.fn(async () => [INGREDIENT]),
+    createIngredient: vi.fn(async () => INGREDIENT),
+    updateIngredient: vi.fn(async () => INGREDIENT),
     ...overrides,
   };
 }
@@ -441,6 +447,27 @@ describe("category routes (HOUSEHOLD-ADMIN-002)", () => {
   });
 });
 
+describe("ingredient routes (FOOD-021)", () => {
+  it("lists, creates and updates ingredients", async () => {
+    const d = deps();
+    const list = await route(event("GET /meals/ingredients"), d);
+    expect(list.statusCode).toBe(200);
+    expect(JSON.parse(list.body as string).data.ingredients).toHaveLength(1);
+    expect((await route(event("POST /meals/ingredients", {}, JSON.stringify({ name: "Rote Bete", unit: "g" })), d)).statusCode).toBe(201);
+    expect((await route(event("POST /meals/ingredients", {}, JSON.stringify({ name: "Rote Bete", unit: "kg" })), d)).statusCode).toBe(400);
+    const put = { ...event("PUT /meals/ingredients/{ingredientId}", {}, JSON.stringify({ pricePerUnit: 3 })), pathParameters: { ingredientId: "salmon" } } as APIGatewayProxyEventV2;
+    expect((await route(put, d)).statusCode).toBe(200);
+    expect(d.updateIngredient).toHaveBeenCalledWith(TEST_IDENTITY, "salmon", { pricePerUnit: 3 });
+    const badId = { ...put, pathParameters: { ingredientId: "Lachs!" } } as APIGatewayProxyEventV2;
+    expect((await route(badId, d)).statusCode).toBe(400);
+  });
+
+  it("answers 503 while the meals table is not configured", async () => {
+    const response = await route(event("GET /meals/ingredients"), deps({ listIngredients: async () => { throw new ApplicationError("SERVICE_UNAVAILABLE", 503, "Service is not configured."); } }));
+    expect(response.statusCode).toBe(503);
+  });
+});
+
 describe("PUT /tenners/{tennerId}", () => {
   const put = (id: string | undefined, payload: unknown): APIGatewayProxyEventV2 =>
     ({
@@ -676,6 +703,7 @@ describe("createDependencies", () => {
       tables: { tenners: "tenner-tenners", history: "tenner-history", households: "tenner-households" },
       onboarding: { userPoolId: "eu-central-1_TEST", tenantId: "default" },
       alexa: "not configured",
+      meals: "tenner-meals",
     });
   });
 });
