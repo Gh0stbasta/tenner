@@ -187,6 +187,16 @@ run "web_push_wiring" {
     condition     = output.web_push_public_key == var.web_push_public_key
     error_message = "The frontend build needs the public key."
   }
+
+  assert {
+    condition     = aws_lambda_function.notifier[0].environment[0].variables["PUSH_ACTION_HMAC_PARAMETER"] == "/tenner/prod/push/action-secret" && aws_lambda_function.api.environment[0].variables["PUSH_ACTION_HMAC_PARAMETER"] == "/tenner/prod/push/action-secret"
+    error_message = "Notifier (sign) and API (verify) get the name of the action secret parameter."
+  }
+
+  assert {
+    condition     = length(aws_iam_role_policy.api_push_actions) == 1 && aws_apigatewayv2_route.api["POST /push-actions"].authorization_type == "NONE"
+    error_message = "POST /push-actions is public (signed token) and the API may read the action secret."
+  }
 }
 
 run "no_web_push_without_key" {
@@ -197,7 +207,7 @@ run "no_web_push_without_key" {
   }
 
   assert {
-    condition     = aws_lambda_function.notifier[0].environment[0].variables["WEB_PUSH_PRIVATE_KEY_PARAMETER"] == "" && !contains([for statement in data.aws_iam_policy_document.notifier[0].statement : statement.sid], "ReadVapidPrivateKey") && output.web_push_public_key == ""
+    condition     = length(aws_iam_role_policy.api_push_actions) == 0 && aws_lambda_function.api.environment[0].variables["PUSH_ACTION_HMAC_PARAMETER"] == "" && aws_lambda_function.notifier[0].environment[0].variables["WEB_PUSH_PRIVATE_KEY_PARAMETER"] == "" && !contains([for statement in data.aws_iam_policy_document.notifier[0].statement : statement.sid], "ReadVapidPrivateKey") && output.web_push_public_key == ""
     error_message = "Without a VAPID key push stays disabled."
   }
 }

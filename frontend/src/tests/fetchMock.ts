@@ -50,8 +50,12 @@ export const DEFAULT_NOTIFICATION_RESPONSE = {
     overdueAlerts: { enabled: true, minDaysOverdue: 2, time: "18:00", channels: [] },
     weeklySummary: { enabled: false, dayOfWeek: "SUN", time: "18:00", channels: [] },
     quietHours: { start: "21:30", end: "07:00" },
+    pushSnooze: "1H",
   },
-  channels: [{ type: "ALEXA", connected: false }],
+  channels: [
+    { type: "ALEXA", connected: false },
+    { type: "WEB_PUSH", connected: false },
+  ],
   effectiveTimezone: "Europe/Berlin",
 };
 

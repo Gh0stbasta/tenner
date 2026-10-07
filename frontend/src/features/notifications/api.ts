@@ -33,6 +33,8 @@ const preferencesSchema = z.object({
     channels: channelsSchema,
   }),
   quietHours: z.object({ start: z.string(), end: z.string() }).nullable(),
+  /** NOTIFICATION-011: what „Später“ in a push notification does. */
+  pushSnooze: z.enum(["1H", "EVENING", "TOMORROW"]),
 });
 export type NotificationPreferences = z.infer<typeof preferencesSchema>;
 
@@ -42,6 +44,12 @@ const responseSchema = z.object({
   effectiveTimezone: z.string(),
 });
 export type NotificationPreferencesResponse = z.infer<typeof responseSchema>;
+
+export const PUSH_SNOOZE_LABELS: Record<NotificationPreferences["pushSnooze"], string> = {
+  "1H": "In 1 Stunde",
+  EVENING: "Heute Abend (Uhrzeit der Überfällig-Hinweise)",
+  TOMORROW: "Morgen früh (Uhrzeit des Tagesüberblicks)",
+};
 
 export const notificationPreferencesKey = (userId: string) => ["notification-preferences", userId] as const;
 const keyOf = notificationPreferencesKey;

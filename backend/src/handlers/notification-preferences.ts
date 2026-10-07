@@ -4,12 +4,13 @@
  */
 
 import type { Identity } from "../auth/index.js";
+import type { PushActionResult } from "../services/push-action.service.js";
 import type { NotificationPreferencesResponse, PushSubscriptionRequest, PushSubscriptionResponse, UpdateNotificationPreferencesRequest } from "../dto/index.js";
 import type { UserId } from "../models/index.js";
 import type { ApiEvent, ApiResult } from "../types/api.js";
 import { successResponse } from "../utils/http.js";
 import type { Logger } from "../utils/logger.js";
-import { notificationPreferencesSchema, parseJsonBody, pushSubscriptionSchema, removePushSubscriptionSchema, userIdSchema, validate } from "../validators/index.js";
+import { notificationPreferencesSchema, parseJsonBody, pushActionSchema, pushSubscriptionSchema, removePushSubscriptionSchema, userIdSchema, validate } from "../validators/index.js";
 
 export type GetNotificationPreferences = (identity: Identity, userId: UserId) => Promise<NotificationPreferencesResponse>;
 export type UpdateNotificationPreferences = (identity: Identity, userId: UserId, request: UpdateNotificationPreferencesRequest) => Promise<NotificationPreferencesResponse>;
@@ -49,4 +50,17 @@ export async function unsubscribePushHandler(event: ApiEvent, identity: Identity
   await unsubscribe(identity, userId, endpoint);
   logger.info("Push device removed", { event: "PushUnsubscribed", userId });
   return successResponse(200, {});
+}
+
+export type HandlePushAction = (token: string) => Promise<PushActionResult>;
+
+/**
+ * POST /push-actions (NOTIFICATION-011, no login): the service worker sends the signed token of a notification
+ * button. The token is never logged; the outcome is logged without personal data.
+ */
+export async function pushActionHandler(event: ApiEvent, handle: HandlePushAction, logger: Logger): Promise<ApiResult> {
+  const { token } = validate(pushActionSchema, parseJsonBody(event.body, event.isBase64Encoded));
+  const result = await handle(token);
+  logger.info("Push action", { event: "PushAction", action: result.action, result: result.result });
+  return successResponse(200, result);
 }

@@ -144,9 +144,9 @@ run "routes_require_jwt_except_health" {
 
   assert {
     condition = alltrue([
-      for key, route in aws_apigatewayv2_route.api : route.authorization_type == "JWT" && route.authorizer_id == "auth123" if key != "GET /health"
+      for key, route in aws_apigatewayv2_route.api : route.authorization_type == "JWT" && route.authorizer_id == "auth123" if !contains(["GET /health", "POST /push-actions"], key)
     ])
-    error_message = "All other routes must use the Cognito JWT authorizer."
+    error_message = "All other routes must use the Cognito JWT authorizer (POST /push-actions is authorized by its signed token, NOTIFICATION-011)."
   }
 
   assert {

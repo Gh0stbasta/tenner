@@ -93,6 +93,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     endVacation: vi.fn(async () => household),
     importCatalog: vi.fn(async () => ({ dryRun: false, membersCreated: [], tennersCreated: [], tennersSkipped: [] })),
     subscribePush: vi.fn(async () => 1),
+    handlePushAction: vi.fn(async () => ({ action: "SNOOZE" as const, result: "SNOOZED" as const, remindAt: "2026-10-07T09:00:00Z" })),
     unsubscribePush: vi.fn(async () => undefined),
     listMembers: vi.fn(async () => [{ userId: "STEFAN", displayName: "Stefan", color: "BLUE" as const, active: true , canSignIn: true}]),
     createMember: vi.fn(async () => ({ userId: "LENA", displayName: "Lena", color: "GREEN" as const, active: true , canSignIn: true})),

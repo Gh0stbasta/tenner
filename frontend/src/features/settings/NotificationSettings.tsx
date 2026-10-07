@@ -22,6 +22,7 @@ import { useCurrentUser } from "../completions/CurrentUserProvider";
 import {
   notificationPreferencesKey,
   CHANNEL_LABELS,
+  PUSH_SNOOZE_LABELS,
   QUARTER_HOURS,
   useNotificationPreferences,
   useUpdateNotificationPreferences,
@@ -217,6 +218,22 @@ export function NotificationSettings() {
               onChange={(channels) => save({ overdueAlerts: { ...preferences.overdueAlerts, channels } })}
             />
           </Block>
+          {connected.includes("WEB_PUSH") && (
+            <TextField
+              select
+              label="„Später“ in Push-Benachrichtigungen"
+              value={preferences.pushSnooze}
+              disabled={disabled}
+              sx={{ minWidth: 280, mb: 2 }}
+              onChange={(event) => save({ pushSnooze: event.target.value as NotificationPreferences["pushSnooze"] })}
+            >
+              {(Object.keys(PUSH_SNOOZE_LABELS) as NotificationPreferences["pushSnooze"][]).map((option) => (
+                <MenuItem key={option} value={option}>
+                  {PUSH_SNOOZE_LABELS[option]}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
           <Block
             title="Wochenrückblick"
             enabled={preferences.weeklySummary.enabled}

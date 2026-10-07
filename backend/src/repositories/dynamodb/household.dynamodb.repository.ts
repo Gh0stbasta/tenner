@@ -15,6 +15,7 @@ import {
   type CategoryIcon,
   type AlexaSpeaker,
   type AlexaUser,
+  type PushSnooze,
   type PushSubscriptionRecord,
   type NotificationPreferences,
   type NotificationPreferencesByMember,
@@ -129,6 +130,17 @@ function toPushSubscriptions(value: unknown): PushSubscriptionRecord[] {
   });
 }
 
+/** Stored push snoozes; malformed entries are dropped (NOTIFICATION-011). */
+function toPushSnoozes(value: unknown): PushSnooze[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry): PushSnooze[] => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const { userId, tennerId, nextDue, remindAt, createdAt } = entry as Record<string, unknown>;
+    if (typeof userId !== "string" || !USER_ID_PATTERN.test(userId) || typeof tennerId !== "string" || typeof nextDue !== "string" || typeof remindAt !== "string") return [];
+    return [{ userId, tennerId, nextDue, remindAt, createdAt: typeof createdAt === "string" ? createdAt : "" }];
+  });
+}
+
 /** Stored Alexa accounts; malformed entries are dropped (ALEXA-007). */
 function toAlexaUsers(value: unknown): AlexaUser[] {
   if (!Array.isArray(value)) return [];
@@ -180,6 +192,8 @@ function toSettings(item: Record<string, unknown>): HouseholdSettings {
     alexaUsersVersion: typeof item.alexaUsersVersion === "number" ? item.alexaUsersVersion : 0,
     pushSubscriptions: toPushSubscriptions(item.pushSubscriptions),
     pushSubscriptionsVersion: typeof item.pushSubscriptionsVersion === "number" ? item.pushSubscriptionsVersion : 0,
+    pushSnoozes: toPushSnoozes(item.pushSnoozes),
+    pushSnoozesVersion: typeof item.pushSnoozesVersion === "number" ? item.pushSnoozesVersion : 0,
     notificationPreferences: toNotificationPreferences(item.notificationPreferences),
     notificationPreferencesVersion: typeof item.notificationPreferencesVersion === "number" ? item.notificationPreferencesVersion : 0,
     updatedAt: String(item.updatedAt),
@@ -244,6 +258,11 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
     return this.saveVersionedList(tenantId, "alexaUsers", users, expectedVersion, actor, timestamp);
   }
 
+  /** Replace the push snoozes with optimistic locking (NOTIFICATION-011). */
+  async savePushSnoozes(tenantId: string, snoozes: readonly PushSnooze[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
+    return this.saveVersionedList(tenantId, "pushSnoozes", snoozes, expectedVersion, actor, timestamp);
+  }
+
   /** Replace the push subscriptions with optimistic locking (NOTIFICATION-009). */
   async savePushSubscriptions(tenantId: string, subscriptions: readonly PushSubscriptionRecord[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings> {
     return this.saveVersionedList(tenantId, "pushSubscriptions", subscriptions, expectedVersion, actor, timestamp);
@@ -257,7 +276,7 @@ export class DynamoDbHouseholdRepository implements HouseholdRepository {
   /** SET <list> (a list or map) and <list>Version = expected + 1, if the stored version still equals `expectedVersion` (0 = none). */
   private async saveVersionedList(
     tenantId: string,
-    name: "members" | "categories" | "handovers" | "alexaSpeakers" | "notificationPreferences" | "alexaUsers" | "pushSubscriptions",
+    name: "members" | "categories" | "handovers" | "alexaSpeakers" | "notificationPreferences" | "alexaUsers" | "pushSubscriptions" | "pushSnoozes",
     list: readonly unknown[] | object,
     expectedVersion: number,
     actor: UserId,

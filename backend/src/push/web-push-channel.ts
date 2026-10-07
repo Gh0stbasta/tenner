@@ -3,7 +3,7 @@
  * member. Subscriptions the push service reports as gone (404/410) are deleted. Endpoints and keys are never logged.
  */
 
-import type { DeliveryResult, NotificationChannel, NotificationMessage, Recipient } from "../notifications/model.js";
+import type { DeliveryResult, NotificationChannel, NotificationItem, NotificationMessage, Recipient } from "../notifications/model.js";
 import type { PushSubscriptionRecord, UserId } from "../models/index.js";
 import { sendPush, type PushOutcome, type PushRequestOptions, type VapidKeys } from "./web-push.js";
 
@@ -17,7 +17,13 @@ export interface PushPayload {
   readonly tag: string;
   /** The Tenner of a per-Tenner reminder (NOTIFICATION-010). */
   readonly tennerId?: string;
+  /** Buttons with signed action tokens (NOTIFICATION-011), sent by the service worker to `actionUrl`. */
+  readonly actions?: readonly { readonly action: "done" | "snooze"; readonly title: string; readonly token: string }[];
+  readonly actionUrl?: string;
 }
+
+/** Signs one action token for a member, Tenner and cycle (NOTIFICATION-011). */
+export type SignAction = (claims: { tenantId: string; userId: string; tennerId: string; nextDue: string; action: "DONE" | "SNOOZE" }) => Promise<string>;
 
 /** At most this many reminders per message; the rest is summarised in one more notification. */
 export const MAX_PUSH_ITEMS = 8;
@@ -33,6 +39,21 @@ export interface WebPushChannelDependencies {
   readonly appUrl: string | undefined;
   readonly now: () => Date;
   readonly send?: (subscription: PushSubscriptionRecord, payload: PushPayload, keys: VapidKeys, options: PushRequestOptions, now: Date) => Promise<PushOutcome>;
+  /** NOTIFICATION-011: action buttons; without them the notifications only open the app. */
+  readonly actions?: { readonly apiUrl: string; readonly sign: SignAction };
+}
+
+/** „✅ Erledigt“ and „⏰ Später“ on every per-Tenner reminder (Android shows two buttons; iOS none, tap opens). */
+export async function withActions(payload: PushPayload, item: NotificationItem, recipient: Recipient, actions: NonNullable<WebPushChannelDependencies["actions"]>): Promise<PushPayload> {
+  const claims = { tenantId: recipient.tenantId, userId: recipient.userId, tennerId: item.tennerId, nextDue: item.nextDue };
+  return {
+    ...payload,
+    actionUrl: `${actions.apiUrl}/push-actions`,
+    actions: [
+      { action: "done", title: "✅ Erledigt", token: await actions.sign({ ...claims, action: "DONE" }) },
+      { action: "snooze", title: "⏰ Später", token: await actions.sign({ ...claims, action: "SNOOZE" }) },
+    ],
+  };
 }
 
 const minutesText = (minutes: number): string => `${minutes} ${minutes === 1 ? "Minute" : "Minuten"}`;
@@ -81,8 +102,15 @@ export class WebPushChannel implements NotificationChannel {
     const now = this.deps.now();
     let delivered = 0;
     let lastStatus: number | undefined;
+    // Tokens are signed once per message and Tenner, the same for all devices.
+    const payloads = await Promise.all(
+      payloadsOf(message, this.deps.appUrl).map((payload) => {
+        const item = message.items?.find((candidate) => candidate.tennerId === payload.tennerId);
+        return item && this.deps.actions ? withActions(payload, item, recipient, this.deps.actions) : payload;
+      }),
+    );
     for (const subscription of subscriptions) {
-      for (const payload of payloadsOf(message, this.deps.appUrl)) {
+      for (const payload of payloads) {
         const outcome = await send(subscription, payload, keys, { ttlSeconds: PUSH_TTL_SECONDS, urgency: "normal" }, now);
         if (outcome.ok) {
           delivered += 1;

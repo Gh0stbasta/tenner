@@ -51,7 +51,7 @@ import {
   userIdSchema,
   utcTimestampSchema,
 } from "./common.js";
-import { ALEXA_PERSON_ID_PATTERN, ALEXA_USER_ID_PATTERN, DEFAULT_OVERDUE_ALERT_TIME, USER_CHANNELS, WEEKDAYS as ALL_WEEKDAYS } from "../models/index.js";
+import { ALEXA_PERSON_ID_PATTERN, ALEXA_USER_ID_PATTERN, DEFAULT_OVERDUE_ALERT_TIME, PUSH_SNOOZE_OPTIONS, USER_CHANNELS, WEEKDAYS as ALL_WEEKDAYS } from "../models/index.js";
 import { isValidTimeZone } from "../utils/timezone.js";
 import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
 import { ASSIGNMENT_MODES, SHARED_ASSIGNEE, WEEK_STARTS, WEEKDAYS, type AssignmentMode, type UserId, type Weekday } from "../models/index.js";
@@ -287,6 +287,8 @@ export const notificationPreferencesSchema = z.strictObject({
   }),
   weeklySummary: z.strictObject({ enabled: z.boolean(), dayOfWeek: z.enum(ALL_WEEKDAYS), time: quarterHourSchema, channels: userChannelsSchema }),
   quietHours: z.strictObject({ start: quarterHourSchema, end: quarterHourSchema }).nullable(),
+  // NOTIFICATION-011; older clients omit it.
+  pushSnooze: z.enum(PUSH_SNOOZE_OPTIONS).default("1H"),
 }) satisfies z.ZodType<UpdateNotificationPreferencesRequest>;
 
 /** PUT /household (SCHEDULING-008): an IANA timezone the runtime knows; unknown fields rejected. */
@@ -430,3 +432,6 @@ export const pushSubscriptionSchema = z.strictObject({
 }) satisfies z.ZodType<PushSubscriptionRequest>;
 
 export const removePushSubscriptionSchema = z.strictObject({ endpoint: pushEndpointSchema }) satisfies z.ZodType<RemovePushSubscriptionRequest>;
+
+/** POST /push-actions (NOTIFICATION-011): the signed action token (payload.signature, base64url). */
+export const pushActionSchema = z.strictObject({ token: z.string().regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/).max(2000) });

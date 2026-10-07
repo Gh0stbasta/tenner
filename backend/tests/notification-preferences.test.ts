@@ -16,6 +16,7 @@ const CUSTOM: NotificationPreferences = {
   overdueAlerts: { enabled: false, minDaysOverdue: 5, time: "18:00", channels: [] },
   weeklySummary: { enabled: true, dayOfWeek: "SAT", time: "10:00", channels: [] },
   quietHours: { start: "22:00", end: "06:30" },
+  pushSnooze: "EVENING",
 };
 
 function world(settings: Partial<HouseholdSettings> | undefined = {}, connected: string[] = []) {
@@ -140,5 +141,17 @@ describe("evening alert time (NOTIFICATION-010)", () => {
     expect(notificationPreferencesSchema.parse(body).overdueAlerts.time).toBe("18:00");
     expect(notificationPreferencesSchema.parse({ ...body, overdueAlerts: { ...body.overdueAlerts, time: "19:45" } }).overdueAlerts.time).toBe("19:45");
     expect(notificationPreferencesSchema.safeParse({ ...body, overdueAlerts: { ...body.overdueAlerts, time: "19:50" } }).success).toBe(false);
+  });
+});
+
+describe("push snooze option (NOTIFICATION-011)", () => {
+  it("defaults to 1 hour for stored preferences and older clients, and accepts the three options only", () => {
+    const stored = { ...DEFAULT_NOTIFICATION_PREFERENCES, pushSnooze: undefined } as unknown as NotificationPreferences;
+    expect(withPreferenceDefaults(stored).pushSnooze).toBe("1H");
+    const body = { ...DEFAULT_NOTIFICATION_PREFERENCES } as Record<string, unknown>;
+    delete body.pushSnooze;
+    expect(notificationPreferencesSchema.parse(body).pushSnooze).toBe("1H");
+    expect(notificationPreferencesSchema.parse({ ...body, pushSnooze: "TOMORROW" }).pushSnooze).toBe("TOMORROW");
+    expect(notificationPreferencesSchema.safeParse({ ...body, pushSnooze: "NEVER" }).success).toBe(false);
   });
 });

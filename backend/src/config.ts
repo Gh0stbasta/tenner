@@ -38,6 +38,10 @@ export interface AppConfig {
   readonly alexaClientId: string | undefined;
   /** Web Push (NOTIFICATION-009); undefined while no VAPID key pair is configured. */
   readonly webPush: WebPushConfig | undefined;
+  /** Parameter Store name of the push action HMAC secret (PUSH_ACTION_HMAC_PARAMETER, NOTIFICATION-011). */
+  readonly pushActionSecretParameter: string | undefined;
+  /** API stage URL for the action buttons in push notifications (API_URL, notifier only, NOTIFICATION-011). */
+  readonly apiUrl: string | undefined;
 }
 
 export interface WebPushConfig {
@@ -101,6 +105,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     householdEventsBus: readTrimmed(env.HOUSEHOLD_EVENTS_BUS),
     alexaApi: alexaApiConfig(env),
     webPush: webPushConfig(env),
+    pushActionSecretParameter: readTrimmed(env.PUSH_ACTION_HMAC_PARAMETER),
+    apiUrl: readTrimmed(env.API_URL)?.replace(/\/+$/, ""),
   };
 }
 

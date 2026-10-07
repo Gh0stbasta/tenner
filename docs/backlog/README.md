@@ -138,6 +138,7 @@ docs/backlog/
 | [NOTIFICATION-008](notifications/ticket008.md) | Implement Weekly Summary | Low | V2 |
 | [NOTIFICATION-009](notifications/ticket009.md) | Implement Browser Push Channel | High | V2 |
 | [NOTIFICATION-010](notifications/ticket010.md) | Implement Per-Tenner Push Reminders | High | V2 |
+| [NOTIFICATION-011](notifications/ticket011.md) | Implement Push Notification Actions | High | V2 |
 
 ### Scheduling (`scheduling/`, prefix `SCHEDULING-`)
 

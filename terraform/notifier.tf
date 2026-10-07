@@ -115,7 +115,7 @@ data "aws_iam_policy_document" "notifier" {
     content {
       sid       = "ReadVapidPrivateKey"
       actions   = ["ssm:GetParameter"]
-      resources = ["${local.secret_parameter_arn_prefix}/push/vapid-private-key"]
+      resources = ["${local.secret_parameter_arn_prefix}/push/vapid-private-key", "${local.secret_parameter_arn_prefix}/push/action-secret"]
     }
   }
 
@@ -180,6 +180,9 @@ resource "aws_lambda_function" "notifier" {
       # NOTIFICATION-009: browser push; the private key stays in Parameter Store.
       WEB_PUSH_PUBLIC_KEY            = local.web_push_enabled ? var.web_push_public_key : ""
       WEB_PUSH_PRIVATE_KEY_PARAMETER = local.web_push_enabled ? local.web_push_private_key_parameter : ""
+      # NOTIFICATION-011: action buttons (signed links to POST /push-actions).
+      PUSH_ACTION_HMAC_PARAMETER = local.web_push_enabled ? local.push_action_secret_parameter : ""
+      API_URL                    = local.web_push_enabled ? aws_apigatewayv2_stage.api.invoke_url : ""
     }
   }
 

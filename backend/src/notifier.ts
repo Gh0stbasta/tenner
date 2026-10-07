@@ -21,16 +21,17 @@ import {
   LogChannel,
   dailyDigestJob,
   overdueAlertJob,
+  snoozedReminderJob,
   runNotifier,
   type NotificationChannel,
   type NotificationJob,
   type NotifierDependencies,
   type RunSummary,
 } from "./notifications/index.js";
-import { WebPushChannel } from "./push/index.js";
+import { signActionToken, WebPushChannel } from "./push/index.js";
 import { DynamoDbDeliveryLog, DynamoDbHouseholdRepository, DynamoDbTennerRepository } from "./repositories/index.js";
 import { createSecretLoader } from "./secrets/index.js";
-import { AlexaSpeakerService, DashboardService, HouseholdService, MemberService, NotificationPreferencesService, PushSubscriptionService } from "./services/index.js";
+import { AlexaSpeakerService, DashboardService, HouseholdService, MemberService, NotificationPreferencesService, PushSnoozeService, PushSubscriptionService } from "./services/index.js";
 import { systemClock } from "./utils/clock.js";
 import { createLogger, type Logger } from "./utils/logger.js";
 
@@ -94,6 +95,7 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
   let widget: WidgetPushService | undefined;
   const channels: NotificationChannel[] = [new LogChannel(logger)];
   const secrets = alexaApi || config.webPush ? createSecretLoader({ client: getSsmClient() }) : undefined;
+  const actionSecretParameter = config.pushActionSecretParameter;
   if (alexaApi && secrets) {
     const lwa = createLwaTokenClient({
       credentials: async () => ({ clientId: await secrets.get(alexaApi.clientIdParameter), clientSecret: await secrets.get(alexaApi.clientSecretParameter) }),
@@ -135,10 +137,27 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
         vapidKeys: async () => ({ publicKey: webPush.publicKey, privateKey: await secrets.get(webPush.privateKeyParameter), subject: webPush.subject }),
         appUrl: config.appUrl,
         now: systemClock,
+        // NOTIFICATION-011: „Erledigt“/„Später“ buttons when the action secret and the API URL are configured.
+        ...(actionSecretParameter && config.apiUrl
+          ? { actions: { apiUrl: config.apiUrl, sign: async (claims) => signActionToken(claims, await secrets.get(actionSecretParameter), systemClock()) } }
+          : {}),
       }),
     );
   }
-  return { notifier: { ...notifier, channels: extensions?.channels ?? channels }, widget };
+  // NOTIFICATION-011: snoozed reminders come back through push.
+  const snoozes = new PushSnoozeService(households, systemClock);
+  const allJobs = webPush
+    ? [
+        ...notifier.jobs,
+        snoozedReminderJob({
+          snoozesOf: (tenantId) => snoozes.snoozesOf(tenantId),
+          removeSnoozes: (tenantId, list) => snoozes.remove(tenantId, list),
+          preferencesOf: content.preferencesOf,
+          dashboard,
+        }),
+      ]
+    : notifier.jobs;
+  return { notifier: { ...notifier, jobs: allJobs, channels: extensions?.channels ?? channels }, widget };
 }
 
 /** EventBridge input: a scheduled event or a HouseholdChanged event from the API. */

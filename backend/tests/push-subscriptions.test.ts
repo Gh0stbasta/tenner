@@ -163,3 +163,12 @@ describe("per-Tenner push reminders (NOTIFICATION-010)", () => {
     expect(payloads[8]).toEqual({ title: "🏠 Tenner", body: "+3 weitere Tenner", url: "https://app/dashboard", tag: "DAILY_DIGEST" });
   });
 });
+
+describe("push action configuration (NOTIFICATION-011)", () => {
+  it("reads the HMAC parameter name and the API URL without trailing slash", () => {
+    const config = loadConfig({ PUSH_ACTION_HMAC_PARAMETER: "/tenner/prod/push/action-secret", API_URL: "https://api.example/prod/" });
+    expect(config.pushActionSecretParameter).toBe("/tenner/prod/push/action-secret");
+    expect(config.apiUrl).toBe("https://api.example/prod");
+    expect(loadConfig({}).apiUrl).toBeUndefined();
+  });
+});

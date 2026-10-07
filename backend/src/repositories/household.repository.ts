@@ -1,4 +1,4 @@
-import type { AlexaSpeaker, AlexaUser, NotificationPreferencesByMember, PushSubscriptionRecord, Handover, HouseholdCategory, HouseholdMember, HouseholdSettings, HouseholdSettingsChange, UserId, Vacation } from "../models/index.js";
+import type { AlexaSpeaker, AlexaUser, NotificationPreferencesByMember, PushSnooze, PushSubscriptionRecord, Handover, HouseholdCategory, HouseholdMember, HouseholdSettings, HouseholdSettingsChange, UserId, Vacation } from "../models/index.js";
 
 /** Persistence of household settings (SCHEDULING-008). Storage failures become PersistenceError. */
 export interface HouseholdRepository {
@@ -28,6 +28,8 @@ export interface HouseholdRepository {
   ): Promise<HouseholdSettings>;
   /** Same as saveMembers for the Alexa accounts (ALEXA-007). */
   saveAlexaUsers(tenantId: string, users: readonly AlexaUser[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
+  /** NOTIFICATION-011. */
+  savePushSnoozes(tenantId: string, snoozes: readonly PushSnooze[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
   /** NOTIFICATION-009. */
   savePushSubscriptions(tenantId: string, subscriptions: readonly PushSubscriptionRecord[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;
   saveAlexaSpeakers(tenantId: string, speakers: readonly AlexaSpeaker[], expectedVersion: number, actor: UserId, timestamp: string): Promise<HouseholdSettings>;

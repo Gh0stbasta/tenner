@@ -18,9 +18,11 @@ import {
 import { analyticsHandler, type AnalyticsQuery } from "./handlers/analytics.js";
 import {
   getNotificationPreferencesHandler,
+  pushActionHandler,
   subscribePushHandler,
   unsubscribePushHandler,
   updateNotificationPreferencesHandler,
+  type HandlePushAction,
   type SubscribePush,
   type UnsubscribePush,
   type GetNotificationPreferences,
@@ -29,6 +31,8 @@ import {
 import { clientOf, householdGroupName, identityFromEvent, principalFromEvent, type Identity, type Principal } from "./auth/index.js";
 import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
+import { getSsmClient } from "./clients/ssm.js";
+import { createSecretLoader } from "./secrets/index.js";
 import { getEventBridgeClient } from "./clients/eventbridge.js";
 import { changesHousehold, createHouseholdChangePublisher, type HouseholdChangePublisher } from "./events/household-events.js";
 import { loadConfig, type AppConfig } from "./config.js";
@@ -86,6 +90,7 @@ import {
 import {
   AlexaSpeakerService,
   NotificationPreferencesService,
+  PushActionService,
   PushSubscriptionService,
   CatalogImportService,
   CompleteTennerService,
@@ -151,6 +156,7 @@ export interface Dependencies {
   readonly getNotificationPreferences: GetNotificationPreferences;
   readonly updateNotificationPreferences: UpdateNotificationPreferences;
   readonly subscribePush: SubscribePush;
+  readonly handlePushAction: HandlePushAction;
   readonly unsubscribePush: UnsubscribePush;
   readonly linkAlexaSpeaker: LinkAlexaSpeaker;
   readonly unlinkAlexaSpeaker: UnlinkAlexaSpeaker;
@@ -201,6 +207,8 @@ type OnboardingRouteHandler = (ctx: PrincipalContext) => Promise<ApiResult>;
 /** Routes without authentication; must match api_public_routes in terraform/locals.tf. */
 const PUBLIC_ROUTES: Readonly<Record<string, PublicRouteHandler>> = {
   "GET /health": ({ deps, logger }) => health(deps.config, deps.probeDatabase, logger),
+  // NOTIFICATION-011: authorized by the signed token in the body, not by a login.
+  "POST /push-actions": ({ event, deps, logger }) => pushActionHandler(event, deps.handlePushAction, logger),
 };
 
 /** Signed-in users without a household may call these to pick their household member (HOTFIX-001). */
@@ -345,6 +353,24 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
           clock: systemClock,
         })
       : undefined;
+  // NOTIFICATION-011: notification buttons; the HMAC secret is read from Parameter Store on first use.
+  const pushActionSecretParameter = config.pushActionSecretParameter;
+  const pushActionSecrets = pushActionSecretParameter ? createSecretLoader({ client: getSsmClient() }) : undefined;
+  const pushActionService =
+    pushActionSecretParameter && pushActionSecrets && householdRepository && completeTennerService && notificationPreferencesService
+      ? new PushActionService({
+          secret: () => pushActionSecrets.get(pushActionSecretParameter),
+          membersOf,
+          preferencesOf: (tenantId, userId) => notificationPreferencesService.preferencesOf(tenantId, userId),
+          timezoneOf,
+          complete: (claims) =>
+            completeTennerService.completeTenner({ tenantId: claims.tenantId, userId: claims.userId }, claims.tennerId, {}, `push-${claims.id}`, {
+              expectedNextDue: claims.nextDue,
+            }),
+          households: householdRepository,
+          clock: systemClock,
+        })
+      : undefined;
   const memberDeactivationService =
     householdRepository && tennerRepository ? new MemberDeactivationService(householdRepository, tennerRepository, revokeAccess, systemClock) : undefined;
 
@@ -382,6 +408,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     reactivateMember: memberDeactivationService ? (identity, userId) => memberDeactivationService.reactivate(identity, userId) : notConfigured,
     startHandover: handoverService ? (identity, userId, request) => handoverService.start(identity, userId, request) : notConfigured,
     endHandover: handoverService ? (identity, userId) => handoverService.end(identity, userId) : notConfigured,
+    handlePushAction: pushActionService ? (token) => pushActionService.handle(token) : notConfigured,
     subscribePush: pushSubscriptionService ? (identity, userId, request) => pushSubscriptionService.subscribe(identity, userId, request) : notConfigured,
     unsubscribePush: pushSubscriptionService ? (identity, userId, endpoint) => pushSubscriptionService.unsubscribe(identity, userId, endpoint) : notConfigured,
     getNotificationPreferences: notificationPreferencesService ? (identity, userId) => notificationPreferencesService.get(identity, userId) : notConfigured,
