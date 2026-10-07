@@ -1,6 +1,7 @@
 # Tenner Backlog
 
-This folder is the single source of truth for planned work on Tenner.
+This folder is the single source of truth for work on Tenner. Since release 1.0 (2026-10-07) it contains only
+implemented tickets; open feature tickets were removed (BACKLOG-003).
 
 Every ticket is self-contained: it states its goal, background, dependencies, scope,
 deliverables, validation commands, acceptance criteria, definition of done and
@@ -21,7 +22,6 @@ docs/backlog/
 ├── analytics/          ANALYTICS-0xx
 ├── notifications/      NOTIFICATION-0xx
 ├── scheduling/         SCHEDULING-0xx
-├── productivity/       PRODUCTIVITY-0xx
 ├── household/          HOUSEHOLD-0xx
 ├── household-admin/    HOUSEHOLD-ADMIN-0xx
 ├── ux/                 UX-0xx
@@ -30,10 +30,8 @@ docs/backlog/
 ├── operations/         OPERATIONS-0xx
 ├── data-management/    DATA-0xx
 ├── mobile/             MOBILE-0xx
-├── integrations/       INTEGRATION-0xx
 ├── alexa/              ALEXA-0xx  (Alexa skill and Echo Show)
 ├── alexaSkill/         Alexa backlog generation ticket (alexaFoundation.md)
-├── ai/                 AI-0xx
 └── future/             FUTURE-0xx
 ```
 
@@ -58,7 +56,6 @@ docs/backlog/
 | Folder | Reason |
 |---|---|
 | `scheduling/` | Recurrence rules go beyond the core completion workflow and change one central calculation |
-| `productivity/` | Features that help people decide what to do next and finish it quickly |
 | `household/` vs `household-admin/` | Shared-work features for everyday use vs. configuration done once by an admin |
 | `observability/` vs `operations/` | Signals (metrics, logs, alarms) vs. procedures (cost, backups, releases, runbooks) |
 | `data-management/` | Export, import, retention, migrations and history correction affect all domains |
@@ -75,7 +72,6 @@ docs/backlog/
 | [TICKET-001A](infra/ticket001.md) | Establish Tagging and Resource Governance Standards | Critical | MVP (existing) |
 | [TICKET-002](infra/ticket002.md) | Bootstrap Terraform Foundation | Critical | MVP (existing) |
 | [TICKET-003](infra/ticket003.md) | Create Remote Terraform State Backend | Critical | MVP (existing) |
-| [TICKET-003](infra/ticket004.md) | Create Remote Terraform State Backend | Critical | MVP (existing) |
 | [TICKET-005](infra/ticket005.md) | Create API Foundation Infrastructure | High | MVP (existing) |
 | [TICKET-006](infra/ticket006.md) | Create DynamoDB Persistence Layer | High | MVP (existing) |
 | [TICKET-007](infra/ticket007.md) | Integrate Lambda with DynamoDB | High | MVP (existing) |
@@ -92,8 +88,6 @@ docs/backlog/
 | [TICKET-018](infra/ticket018.md) | Automate Frontend Deployment | Critical | MVP |
 | [TICKET-019](infra/ticket019.md) | Implement Get Tenner API | High | MVP |
 | [TICKET-020](infra/ticket020.md) | Implement Completion History API | High | MVP |
-| [TICKET-021](infra/ticket021.md) | Introduce Environment Separation | Medium | V2 |
-| [TICKET-022](infra/ticket022.md) | Configure Custom Domain and TLS | Low | V2 |
 | [TICKET-023](infra/ticket023.md) | Fix Invalid Characters in AWS Tags and Descriptions | Critical | MVP |
 | [TICKET-024](infra/ticket024.md) | List Archived (Soft-Deleted) Tenners | High | MVP |
 
@@ -110,7 +104,6 @@ docs/backlog/
 | [FRONTEND-007](frontend/ticket007.md) | Implement Complete & Undo Completion Experience | Critical | MVP (existing) |
 | [FRONTEND-008](frontend/ticket008.md) | Implement Settings & User Preferences | High | MVP (existing) |
 | [FRONTEND-009](frontend/ticket009.md) | Implement Tenner Detail & History View | High | MVP |
-| [FRONTEND-010](frontend/ticket010.md) | Implement Household Activity History Page | Medium | V2 |
 
 ### Analytics (`analytics/`, prefix `ANALYTICS-`)
 
@@ -125,7 +118,6 @@ docs/backlog/
 | [ANALYTICS-007](analytics/ticket007.md) | Implement Household Balance Metrics | Medium | V2 |
 | [ANALYTICS-008](analytics/ticket008.md) | Implement Habit & Consistency Analytics | Medium | V2 |
 | [ANALYTICS-009](analytics/ticket009.md) | Implement Analytics Page | High | V2 |
-| [ANALYTICS-010](analytics/ticket010.md) | Introduce Analytics Pre-Aggregation | Low | Long-Term |
 
 ### Notifications (`notifications/`, prefix `NOTIFICATION-`)
 
@@ -135,7 +127,6 @@ docs/backlog/
 | [NOTIFICATION-002](notifications/ticket002.md) | Implement Reminder Preferences | High | V2 |
 | [NOTIFICATION-003](notifications/ticket003.md) | Implement Daily Digest | High | V2 |
 | [NOTIFICATION-004](notifications/ticket004.md) | Implement Overdue Alerts | Medium | V2 |
-| [NOTIFICATION-008](notifications/ticket008.md) | Implement Weekly Summary | Low | V2 |
 | [NOTIFICATION-009](notifications/ticket009.md) | Implement Browser Push Channel | High | V2 |
 | [NOTIFICATION-010](notifications/ticket010.md) | Implement Per-Tenner Push Reminders | High | V2 |
 | [NOTIFICATION-011](notifications/ticket011.md) | Implement Push Notification Actions | High | V2 |
@@ -149,18 +140,7 @@ docs/backlog/
 | [SCHEDULING-003](scheduling/ticket003.md) | Implement Snooze / Postpone Tenner | High | V2 |
 | [SCHEDULING-004](scheduling/ticket004.md) | Implement Skip Occurrence | Low | V2 |
 | [SCHEDULING-005](scheduling/ticket005.md) | Implement Pause & Vacation Mode | Medium | V2 |
-| [SCHEDULING-006](scheduling/ticket006.md) | Support Seasonal Tenners | Low | Long-Term |
-| [SCHEDULING-007](scheduling/ticket007.md) | Implement Preferred Days (Rule-Based Smart Scheduling) | Low | Long-Term |
 | [SCHEDULING-008](scheduling/ticket008.md) | Implement Timezone-Aware Due Dates | High | V2 |
-
-### Productivity (`productivity/`, prefix `PRODUCTIVITY-`)
-
-| ID | Title | Priority | Phase |
-|---|---|---|---|
-| [PRODUCTIVITY-002](productivity/ticket002.md) | Introduce Tenner Importance | Medium | V2 |
-| [PRODUCTIVITY-003](productivity/ticket003.md) | Implement Tenner Checklists | Low | V2 |
-| [PRODUCTIVITY-004](productivity/ticket004.md) | Implement Completion Notes | Low | V2 |
-| [PRODUCTIVITY-005](productivity/ticket005.md) | Implement Bulk Actions | Low | V2 |
 
 ### Household Features (`household/`, prefix `HOUSEHOLD-`)
 
@@ -168,7 +148,6 @@ docs/backlog/
 |---|---|---|---|
 | [HOUSEHOLD-001](household/ticket001.md) | Implement Rotating Assignment | Medium | V2 |
 | [HOUSEHOLD-002](household/ticket002.md) | Support Shared (Unassigned) Tenners | Medium | V2 |
-| [HOUSEHOLD-003](household/ticket003.md) | Implement Household Activity Acknowledgements | Low | Long-Term |
 | [HOUSEHOLD-004](household/ticket004.md) | Implement Temporary Handover | Low | V2 |
 
 ### Household Administration (`household-admin/`, prefix `HOUSEHOLD-ADMIN-`)
@@ -179,20 +158,13 @@ docs/backlog/
 | [HOUSEHOLD-ADMIN-002](household-admin/ticket002.md) | Implement Category Management | Medium | V2 |
 | [HOUSEHOLD-ADMIN-003](household-admin/ticket003.md) | Implement Household Settings | Medium | V2 |
 | [HOUSEHOLD-ADMIN-004](household-admin/ticket004.md) | Implement Member Deactivation | Low | V2 |
-| [HOUSEHOLD-ADMIN-005](household-admin/ticket005.md) | Introduce Household Roles | Low | Long-Term |
 | [HOUSEHOLD-ADMIN-006](household-admin/ticket006.md) | Members Without Login | High | V2 |
 
 ### User Experience (`ux/`, prefix `UX-`)
 
 | ID | Title | Priority | Phase |
 |---|---|---|---|
-| [UX-001](ux/ticket001.md) | Implement First-Run Onboarding | Medium | V2 |
-| [UX-002](ux/ticket002.md) | Implement Keyboard Shortcuts | Low | V2 |
-| [UX-003](ux/ticket003.md) | Conduct Accessibility Audit (WCAG 2.1 AA) | Medium | V2 |
-| [UX-004](ux/ticket004.md) | Implement Internationalization (German and English) | Medium | V2 |
 | [UX-005](ux/ticket005.md) | Implement Global Error Handling and Network Feedback | High | MVP |
-| [UX-006](ux/ticket006.md) | Implement Week Calendar View | Low | V2 |
-| [UX-007](ux/ticket007.md) | Establish Frontend Performance Budget | Medium | V2 |
 
 ### Security (`security/`, prefix `SECURITY-`)
 
@@ -205,12 +177,6 @@ docs/backlog/
 | [SECURITY-005](security/ticket005.md) | Harden AWS Resources | High | MVP |
 | [SECURITY-006](security/ticket006.md) | Implement Secrets Management | High | V2 |
 | [SECURITY-007](security/ticket007.md) | Implement Dependency Scanning | High | MVP |
-| [SECURITY-008](security/ticket008.md) | Harden Software Supply Chain | Medium | V2 |
-| [SECURITY-009](security/ticket009.md) | Add Infrastructure-as-Code Security Scanning | Medium | V2 |
-| [SECURITY-010](security/ticket010.md) | Add Static Code Analysis and Secret Scanning | Medium | V2 |
-| [SECURITY-011](security/ticket011.md) | Enable Multi-Factor Authentication | Low | V2 |
-| [SECURITY-012](security/ticket012.md) | Implement Security Event Logging and Audit Trail | Medium | V2 |
-| [SECURITY-013](security/ticket013.md) | Create Threat Model and Privacy Review | Medium | V2 |
 | [SECURITY-014](security/ticket014.md) | Cap API Cost with Stage Throttling | Critical | MVP |
 
 ### Observability (`observability/`, prefix `OBSERVABILITY-`)
@@ -219,34 +185,18 @@ docs/backlog/
 |---|---|---|---|
 | [OBSERVABILITY-001](observability/ticket001.md) | Create CloudWatch Operational Dashboard | Medium | V2 |
 | [OBSERVABILITY-002](observability/ticket002.md) | Implement Alarms and Alert Routing | High | V2 |
-| [OBSERVABILITY-003](observability/ticket003.md) | Publish Business and Performance Metrics | Medium | V2 |
-| [OBSERVABILITY-004](observability/ticket004.md) | Enable Distributed Tracing | Low | Long-Term |
-| [OBSERVABILITY-005](observability/ticket005.md) | Implement Frontend Error Reporting | Medium | V2 |
-| [OBSERVABILITY-006](observability/ticket006.md) | Define Logging Standards and Saved Queries | Low | V2 |
 
 ### Operations (`operations/`, prefix `OPERATIONS-`)
 
 | ID | Title | Priority | Phase |
 |---|---|---|---|
 | [OPERATIONS-001](operations/ticket001.md) | Implement Cost Monitoring and Budgets | High | MVP |
-| [OPERATIONS-002](operations/ticket002.md) | Write Operational Runbooks | Medium | V2 |
-| [OPERATIONS-003](operations/ticket003.md) | Validate Backup and Restore | High | V2 |
-| [OPERATIONS-004](operations/ticket004.md) | Implement Release Versioning and Fast Rollback | Medium | V2 |
-| [OPERATIONS-005](operations/ticket005.md) | Detect Terraform Drift | Low | V2 |
 | [OPERATIONS-006](operations/ticket006.md) | Implement Post-Deployment Smoke Tests | High | MVP |
-| [OPERATIONS-007](operations/ticket007.md) | Provide Maintenance Script Framework | Low | V2 |
 
 ### Data Management (`data-management/`, prefix `DATA-`)
 
 | ID | Title | Priority | Phase |
 |---|---|---|---|
-| [DATA-001](data-management/ticket001.md) | Implement Data Export | Medium | V2 |
-| [DATA-002](data-management/ticket002.md) | Implement Data Import | Low | V2 |
-| [DATA-003](data-management/ticket003.md) | Implement Scheduled Data Archive to S3 | Low | V2 |
-| [DATA-004](data-management/ticket004.md) | Define Data Retention Policy | Low | V2 |
-| [DATA-005](data-management/ticket005.md) | Implement Member Data Erasure | Low | Long-Term |
-| [DATA-006](data-management/ticket006.md) | Establish Schema Versioning and Data Migrations | Medium | V2 |
-| [DATA-007](data-management/ticket007.md) | Implement Completion Correction | Low | V2 |
 | [DATA-008](data-management/ticket008.md) | Import the Household Task Catalog | High | V2 |
 
 ### Mobile Experience (`mobile/`, prefix `MOBILE-`)
@@ -277,47 +227,10 @@ custom skill in development stage; skill Lambda in eu-west-1 calling the Tenner 
 | [ALEXA-009](alexa/ticket009.md) | Implement Alexa Operations and Monitoring | Medium | V2 |
 | [ALEXA-010](alexa/ticket010.md) | Use the Invocation Name "tenner board" and Keep the Skill Private | High | V2 |
 
-### Integrations (`integrations/`, prefix `INTEGRATION-`)
-
-| ID | Title | Priority | Phase |
-|---|---|---|---|
-| [INTEGRATION-001](integrations/ticket001.md) | Establish Integration Foundation | Medium | V2 |
-| [INTEGRATION-003](integrations/ticket003.md) | Implement Strava Activity Auto-Completion | Medium | V2 |
-| [INTEGRATION-004](integrations/ticket004.md) | Evaluate and Implement Garmin Connect Integration | Low | Long-Term |
-| [INTEGRATION-005](integrations/ticket005.md) | Support Zwift Rides via Strava | Low | Long-Term |
-| [INTEGRATION-006](integrations/ticket006.md) | Provide ICS Calendar Feed | Medium | V2 |
-| [INTEGRATION-007](integrations/ticket007.md) | Implement Google Calendar Two-Way Integration | Low | Long-Term |
-| [INTEGRATION-008](integrations/ticket008.md) | Implement Outlook Calendar Integration | Low | Long-Term |
-| [INTEGRATION-009](integrations/ticket009.md) | Provide Personal Access Tokens for Automations | Low | Long-Term |
-
-### AI Features (`ai/`, prefix `AI-`)
-
-| ID | Title | Priority | Phase |
-|---|---|---|---|
-| [AI-001](ai/ticket001.md) | Establish AI Foundation | Medium | V2 |
-| [AI-002](ai/ticket002.md) | Implement Natural Language Tenner Entry | Medium | V2 |
-| [AI-003](ai/ticket003.md) | Implement Suggested Tenners | Low | V2 |
-| [AI-004](ai/ticket004.md) | Implement Missed Responsibility Detection | Low | Long-Term |
-| [AI-005](ai/ticket005.md) | Implement Smart Scheduling Suggestions | Low | Long-Term |
-| [AI-006](ai/ticket006.md) | Implement Workload Balancing Recommendations | Low | Long-Term |
-| [AI-007](ai/ticket007.md) | Implement Weekly AI Insights | Low | Long-Term |
-| [AI-008](ai/ticket008.md) | Implement Tenner Assistant (Q&A) | Low | Long-Term |
-| [AI-009](ai/ticket009.md) | Implement Tenner Splitting Assistant | Low | Long-Term |
-
 ### Future / Postponed (`future/`, prefix `FUTURE-`)
 
 | ID | Title | Priority | Phase |
 |---|---|---|---|
-| [FUTURE-001](future/ticket001.md) | Support Multiple Households per User | Low | Long-Term |
-| [FUTURE-002](future/ticket002.md) | Harden Multi-Tenant Architecture | Low | Long-Term |
-| [FUTURE-003](future/ticket003.md) | Evaluate Public SaaS Offering | Low | Long-Term |
-| [FUTURE-004](future/ticket004.md) | Implement Tenner Templates | Low | Long-Term |
-| [FUTURE-005](future/ticket005.md) | Evaluate Template Marketplace | Low | Long-Term |
-| [FUTURE-006](future/ticket006.md) | Evaluate Gamification | Low | Long-Term |
-| [FUTURE-007](future/ticket007.md) | Evaluate Native Mobile App | Low | Long-Term |
-| [FUTURE-008](future/ticket008.md) | Evaluate Billing and Subscriptions | Low | Long-Term |
-| [FUTURE-009](future/ticket009.md) | Evaluate WhatsApp Notifications | Low | Long-Term |
-| [FUTURE-010](future/ticket010.md) | Evaluate Voice Assistant Integration | Low | Long-Term |
 | [FUTURE-011](future/ticket011.md) | Add Social Login (Google) | High | MVP (pulled forward) |
 
 ### Hotfix
@@ -344,3 +257,79 @@ the Git history. Their numbers are not reused.
 | NOTIFICATION-007 | Implement Web Push Notification Channel | Not wanted: no push notifications. Push was re-requested by the owner on 2026-10-07 (`docs/human/mobileReminder.md`) and is built as NOTIFICATION-009 – 011 |
 | PRODUCTIVITY-001 | Implement "I Have X Minutes" Suggestions | Not wanted |
 | INTEGRATION-002 | Implement Interactive Telegram Bot | Not wanted: needs the dropped Telegram channel (BACKLOG-002, `docs/hotfix/backlog002.md`) |
+
+Closed by the owner on 2026-10-07 after release 1.0 (BACKLOG-003, `docs/hotfix/backlog003.md`): every open feature
+ticket was removed, Tenner moves to maintenance and user recommendations. The duplicate TICKET-003 file
+(`infra/ticket004.md`, TD-001) was deleted as well. Risks these tickets would have closed are technical debt
+(TD-039, TD-040 and the entries that name them).
+
+| ID | Title | Reason |
+|---|---|---|
+| TICKET-021 | Introduce Environment Separation | Not planned after release 1.0 (BACKLOG-003) |
+| TICKET-022 | Configure Custom Domain and TLS | Not planned after release 1.0 (BACKLOG-003) |
+| FRONTEND-010 | Implement Household Activity History Page | Not planned after release 1.0 (BACKLOG-003) |
+| ANALYTICS-010 | Introduce Analytics Pre-Aggregation | Not planned after release 1.0 (BACKLOG-003) |
+| NOTIFICATION-008 | Implement Weekly Summary | Not planned after release 1.0 (BACKLOG-003) |
+| SCHEDULING-006 | Support Seasonal Tenners | Not planned after release 1.0 (BACKLOG-003) |
+| SCHEDULING-007 | Implement Preferred Days (Rule-Based Smart Scheduling) | Not planned after release 1.0 (BACKLOG-003) |
+| PRODUCTIVITY-002 | Introduce Tenner Importance | Not planned after release 1.0 (BACKLOG-003) |
+| PRODUCTIVITY-003 | Implement Tenner Checklists | Not planned after release 1.0 (BACKLOG-003) |
+| PRODUCTIVITY-004 | Implement Completion Notes | Not planned after release 1.0 (BACKLOG-003) |
+| PRODUCTIVITY-005 | Implement Bulk Actions | Not planned after release 1.0 (BACKLOG-003) |
+| HOUSEHOLD-003 | Implement Household Activity Acknowledgements | Not planned after release 1.0 (BACKLOG-003) |
+| HOUSEHOLD-ADMIN-005 | Introduce Household Roles | Not planned after release 1.0 (BACKLOG-003) |
+| UX-001 | Implement First-Run Onboarding | Not planned after release 1.0 (BACKLOG-003) |
+| UX-002 | Implement Keyboard Shortcuts | Not planned after release 1.0 (BACKLOG-003) |
+| UX-003 | Conduct Accessibility Audit (WCAG 2.1 AA) | Not planned after release 1.0 (BACKLOG-003) |
+| UX-004 | Implement Internationalization (German and English) | Not planned after release 1.0 (BACKLOG-003) |
+| UX-006 | Implement Week Calendar View | Not planned after release 1.0 (BACKLOG-003) |
+| UX-007 | Establish Frontend Performance Budget | Not planned after release 1.0 (BACKLOG-003) |
+| SECURITY-008 | Harden Software Supply Chain | Not planned after release 1.0 (BACKLOG-003) |
+| SECURITY-009 | Add Infrastructure-as-Code Security Scanning | Not planned after release 1.0 (BACKLOG-003) |
+| SECURITY-010 | Add Static Code Analysis and Secret Scanning | Not planned after release 1.0 (BACKLOG-003) |
+| SECURITY-011 | Enable Multi-Factor Authentication | Not planned after release 1.0 (BACKLOG-003) |
+| SECURITY-012 | Implement Security Event Logging and Audit Trail | Not planned after release 1.0 (BACKLOG-003) |
+| SECURITY-013 | Create Threat Model and Privacy Review | Not planned after release 1.0 (BACKLOG-003) |
+| OBSERVABILITY-003 | Publish Business and Performance Metrics | Not planned after release 1.0 (BACKLOG-003) |
+| OBSERVABILITY-004 | Enable Distributed Tracing | Not planned after release 1.0 (BACKLOG-003) |
+| OBSERVABILITY-005 | Implement Frontend Error Reporting | Not planned after release 1.0 (BACKLOG-003) |
+| OBSERVABILITY-006 | Define Logging Standards and Saved Queries | Not planned after release 1.0 (BACKLOG-003) |
+| OPERATIONS-002 | Write Operational Runbooks | Not planned after release 1.0 (BACKLOG-003) |
+| OPERATIONS-003 | Validate Backup and Restore | Not planned after release 1.0 (BACKLOG-003) |
+| OPERATIONS-004 | Implement Release Versioning and Fast Rollback | Not planned after release 1.0 (BACKLOG-003) |
+| OPERATIONS-005 | Detect Terraform Drift | Not planned after release 1.0 (BACKLOG-003) |
+| OPERATIONS-007 | Provide Maintenance Script Framework | Not planned after release 1.0 (BACKLOG-003) |
+| DATA-001 | Implement Data Export | Not planned after release 1.0 (BACKLOG-003) |
+| DATA-002 | Implement Data Import | Not planned after release 1.0 (BACKLOG-003) |
+| DATA-003 | Implement Scheduled Data Archive to S3 | Not planned after release 1.0 (BACKLOG-003) |
+| DATA-004 | Define Data Retention Policy | Not planned after release 1.0 (BACKLOG-003) |
+| DATA-005 | Implement Member Data Erasure | Not planned after release 1.0 (BACKLOG-003) |
+| DATA-006 | Establish Schema Versioning and Data Migrations | Not planned after release 1.0 (BACKLOG-003) |
+| DATA-007 | Implement Completion Correction | Not planned after release 1.0 (BACKLOG-003) |
+| INTEGRATION-001 | Establish Integration Foundation | Not planned after release 1.0 (BACKLOG-003) |
+| INTEGRATION-003 | Implement Strava Activity Auto-Completion | Not planned after release 1.0 (BACKLOG-003) |
+| INTEGRATION-004 | Evaluate and Implement Garmin Connect Integration | Not planned after release 1.0 (BACKLOG-003) |
+| INTEGRATION-005 | Support Zwift Rides via Strava | Not planned after release 1.0 (BACKLOG-003) |
+| INTEGRATION-006 | Provide ICS Calendar Feed | Not planned after release 1.0 (BACKLOG-003) |
+| INTEGRATION-007 | Implement Google Calendar Two-Way Integration | Not planned after release 1.0 (BACKLOG-003) |
+| INTEGRATION-008 | Implement Outlook Calendar Integration | Not planned after release 1.0 (BACKLOG-003) |
+| INTEGRATION-009 | Provide Personal Access Tokens for Automations | Not planned after release 1.0 (BACKLOG-003) |
+| AI-001 | Establish AI Foundation | Not planned after release 1.0 (BACKLOG-003) |
+| AI-002 | Implement Natural Language Tenner Entry | Not planned after release 1.0 (BACKLOG-003) |
+| AI-003 | Implement Suggested Tenners | Not planned after release 1.0 (BACKLOG-003) |
+| AI-004 | Implement Missed Responsibility Detection | Not planned after release 1.0 (BACKLOG-003) |
+| AI-005 | Implement Smart Scheduling Suggestions | Not planned after release 1.0 (BACKLOG-003) |
+| AI-006 | Implement Workload Balancing Recommendations | Not planned after release 1.0 (BACKLOG-003) |
+| AI-007 | Implement Weekly AI Insights | Not planned after release 1.0 (BACKLOG-003) |
+| AI-008 | Implement Tenner Assistant (Q&A) | Not planned after release 1.0 (BACKLOG-003) |
+| AI-009 | Implement Tenner Splitting Assistant | Not planned after release 1.0 (BACKLOG-003) |
+| FUTURE-001 | Support Multiple Households per User | Not planned after release 1.0 (BACKLOG-003) |
+| FUTURE-002 | Harden Multi-Tenant Architecture | Not planned after release 1.0 (BACKLOG-003) |
+| FUTURE-003 | Evaluate Public SaaS Offering | Not planned after release 1.0 (BACKLOG-003) |
+| FUTURE-004 | Implement Tenner Templates | Not planned after release 1.0 (BACKLOG-003) |
+| FUTURE-005 | Evaluate Template Marketplace | Not planned after release 1.0 (BACKLOG-003) |
+| FUTURE-006 | Evaluate Gamification | Not planned after release 1.0 (BACKLOG-003) |
+| FUTURE-007 | Evaluate Native Mobile App | Not planned after release 1.0 (BACKLOG-003) |
+| FUTURE-008 | Evaluate Billing and Subscriptions | Not planned after release 1.0 (BACKLOG-003) |
+| FUTURE-009 | Evaluate WhatsApp Notifications | Not planned after release 1.0 (BACKLOG-003) |
+| FUTURE-010 | Evaluate Voice Assistant Integration | Not planned after release 1.0 (BACKLOG-003) |

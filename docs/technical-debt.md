@@ -1,6 +1,13 @@
 # Technical Debt
 
-## TD-001: Duplicate ticket file for TICKET-003
+> **Since release 1.0 (2026-10-07, BACKLOG-003):** no feature tickets are planned. Ticket IDs in the "Suggested
+> Improvement" and "Related Work" sections name the change that would fix the debt; removed tickets are listed in
+> [`backlog/README.md`](backlog/README.md#removed-tickets). Fixing a debt item now starts with a maintenance ticket.
+
+## TD-001: Duplicate ticket file for TICKET-003 (resolved)
+
+> Resolved by BACKLOG-003 (2026-10-07): the duplicate `infra/ticket004.md` was deleted with the owner's decision to
+> close the backlog.
 
 ### Description
 
@@ -1093,3 +1100,60 @@ sync on this specific validation error.
 ### Related Work
 
 MOBILE-004, TICKET-013 (`backend/src/services/complete-tenner.service.ts`), `frontend/src/features/offline/`.
+
+---
+
+## TD-039: Backup restore was never tested
+
+### Description
+
+All DynamoDB tables have point-in-time recovery and deletion protection, but nobody has restored a table and pointed
+the API at it. The restore procedure, its duration and the switch-over are unknown.
+
+### Reason
+
+OPERATIONS-003 (validate backup and restore) was removed when the backlog was closed after release 1.0
+(BACKLOG-003).
+
+### Impact
+
+After a data loss (bad deploy, wrong manual change) the recovery would be improvised. Point-in-time recovery keeps
+35 days, so the data is likely recoverable, but the time to recover and the steps are untested. Reliability risk.
+
+### Suggested Improvement
+
+A maintenance ticket: restore the Tenners table (`<prefix>-tenners`) to a new table with point-in-time recovery, compare item counts,
+write the steps into `docs/runbooks/`, delete the copy. About one hour; costs cents.
+
+### Related Work
+
+BACKLOG-003, OPERATIONS-003 (removed), `terraform/dynamodb.tf`, `terraform/notifier.tf`.
+
+---
+
+## TD-040: Production is the only environment
+
+### Description
+
+Every merge to `main` deploys straight to production. There is no staging or dev environment where `terraform apply`
+and the deployed app run before production.
+
+### Reason
+
+TICKET-021 (environment separation) was removed when the backlog was closed after release 1.0 (BACKLOG-003). For one
+household the extra environment was not worth its effort.
+
+### Impact
+
+Problems that only appear on `apply` or in the deployed app (AWS-side validation, Alexa, push) reach the household
+directly (see also TD-015). The PR plan, the tests and the post-deploy smoke tests reduce, but do not remove, this
+risk.
+
+### Suggested Improvement
+
+Keep changes small and roll back with a revert commit. If changes become riskier, add a `dev` environment
+(`terraform/environments/dev/`, separate state key, separate Cognito pool) as a maintenance ticket.
+
+### Related Work
+
+BACKLOG-003, TICKET-021 (removed), TD-011, TD-015, `.github/workflows/deploy.yml`.

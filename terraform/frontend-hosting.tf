@@ -151,7 +151,7 @@ resource "aws_cloudfront_response_headers_policy" "frontend" {
     }
 
     # connect-src allows the regional API Gateway domain. The exact API host would create a dependency
-    # cycle (CORS needs the CloudFront domain); TICKET-022 (custom domain) narrows this.
+    # cycle (CORS needs the CloudFront domain); only a custom domain would narrow this (TD-025).
     content_security_policy {
       content_security_policy = join("; ", [
         "default-src 'self'",
@@ -231,7 +231,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   # With the default *.cloudfront.net certificate CloudFront always uses the TLSv1 security policy and ignores
   # other values (they only caused a permanent plan diff). Modern browsers still negotiate TLS 1.2/1.3.
-  # Enforcing TLS 1.2+ needs a custom domain with an ACM certificate (TICKET-022, TD-025). SECURITY-005.
+  # Enforcing TLS 1.2+ needs a custom domain with an ACM certificate (TD-025). SECURITY-005.
   viewer_certificate {
     cloudfront_default_certificate = true
     minimum_protocol_version       = "TLSv1"

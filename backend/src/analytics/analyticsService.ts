@@ -1,6 +1,6 @@
 /**
  * Analytics endpoints (ANALYTICS-001 ff.): aggregates on the fly from tenner-history (completedAt-index) and the
- * current Tenners. Household volume is small; pre-aggregation is ANALYTICS-010.
+ * current Tenners. Household volume is small, so there is no pre-aggregation (TD-033).
  */
 
 import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, AnalyticsBalanceResponse, AnalyticsHabitResponse, AnalyticsHabitsResponse, AnalyticsTimeResponse, HouseholdResponse } from "../dto/index.js";

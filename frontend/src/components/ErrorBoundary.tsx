@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
-    // Remote reporting follows with OBSERVABILITY-005.
+    // There is no remote error reporting; errors stay in the browser console.
     console.error("Unhandled rendering error", { message: error.message, componentStack: info.componentStack });
   }
 

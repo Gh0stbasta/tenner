@@ -480,6 +480,6 @@ Without `ALEXA_SKILL_ID` nothing Alexa-related is deployed.
 
 - `pr.yml` uses the deploy role for `terraform plan`, so pull request code runs with
   deploy permissions (TD-008).
-- Actions are referenced by major version tag, not commit SHA (TD-009, SECURITY-008).
+- Actions are referenced by major version tag, not commit SHA (TD-009).
 - Pull requests from forks get no OIDC token, so their Terraform job fails.
   Only same-repository branches are supported.

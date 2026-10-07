@@ -298,7 +298,7 @@ GET    /analytics/habits/{id}  (ANALYTICS-008)
 
 Analytics are computed on the fly per request from `tenner-history` (Query on `completedAt-index`, never a Scan) and
 the current Tenners, using pure aggregation functions in `backend/src/analytics/`. At household volume (a few
-thousand completions per year) this needs no pre-aggregated tables (ANALYTICS-010 if measurements require it).
+thousand completions per year) this needs no pre-aggregated tables (pre-aggregation only if measurements require it, TD-033).
 Metric definitions: [`analytics.md`](analytics.md). New completions store `previousNextDue` (the due date at
 completion time) for the on-time rate and `actualMinutesSource` (`USER` or `DEFAULT`) for estimate accuracy; older
 completions are left out of both.
@@ -402,7 +402,8 @@ Quick Add defaults that a device stored before are offered once for upload while
 built-in defaults; accepting or dismissing removes them from the device.
 
 Consumers: the timezone is used by all date calculations; the defaults by Quick Add and the create dialog. Week
-start and workdays are stored for ANALYTICS-002 and SCHEDULING-007, which do not exist yet.
+start is used by the analytics periods (ANALYTICS-002); workdays are stored but unused (SCHEDULING-007 was not
+built).
 
 ## Category
 
@@ -710,7 +711,7 @@ handlers / services → repositories (every key and query uses identity.tenantId
 - **Errors:** no claims → `401 UNAUTHORIZED`; signed in without exactly one valid household group → `403 FORBIDDEN`
   (403, because a new token would not help and the frontend treats 401 as "log in again").
 - **Permissions inside a household:** every member may read and change every Tenner of the household.
-  Roles are out of scope (HOUSEHOLD-ADMIN-005).
+  Roles are out of scope (HOUSEHOLD-ADMIN-005 was not built).
 - Records written before authentication have `null` audit fields (TD-019).
 
 #### First-login self-assignment (HOTFIX-001)
@@ -727,7 +728,7 @@ Signed in, no household group → GET /onboarding (principal = cognito:username)
 The onboarding routes need a verified token (`cognito:username`) but no household; every other route still
 needs exactly one household group.
 
-## Future
+## Possible Extensions (not planned since release 1.0)
 
 - MFA (SECURITY-011)
 - Sign in with Apple (FUTURE-011 follow-up)
@@ -911,7 +912,7 @@ terraform/
 ├── outputs.tf           shared outputs
 ├── tests/               offline `terraform test` suites (mocked provider)
 ├── modules/             reusable modules (only when a pattern repeats)
-└── environments/prod/   environment-specific configuration (TICKET-003, TICKET-021)
+└── environments/prod/   environment-specific configuration (TICKET-003; production only, TD-040)
 ```
 
 ## Versions
@@ -1154,7 +1155,7 @@ All tables use:
 Every key starts with `tenantId`, which comes from the verified household group in the ID token (SECURITY-004,
 FUTURE-011). All
 current data belongs to `default`. More households can be added without redesigning the tables (FUTURE-001).
-Tenant isolation is enforced in code until FUTURE-002.
+Tenant isolation is enforced in code (FUTURE-002 was not built).
 
 ## Cost
 
@@ -1353,7 +1354,7 @@ Browser ──HTTPS──> CloudFront (tenner-cloudfront, PriceClass_100, HTTP/2
 | SPA routing | 403/404 from S3 → `/index.html` with status 200 |
 | Caching | `/assets/*` (content-hashed) uses `Managed-CachingOptimized`. Everything else, including `index.html`, uses `Managed-CachingDisabled`, so new deployments are visible immediately |
 | Security headers | HSTS (1 year), `nosniff`, `X-Frame-Options: DENY`, `strict-origin-when-cross-origin`, CSP |
-| CSP | `connect-src 'self' https://*.execute-api.<region>.amazonaws.com`. A wildcard is needed because the exact API host would create a Terraform cycle; TICKET-022 narrows it |
+| CSP | `connect-src 'self' https://*.execute-api.<region>.amazonaws.com`. A wildcard is needed because the exact API host would create a Terraform cycle; only a custom domain would narrow it (TD-025) |
 | CORS (central, on the HTTP API) | Origin only `https://<cloudfront-domain>`. Methods GET/POST/PUT/DELETE/OPTIONS. Headers `content-type`, `idempotency-key`, `x-correlation-id`, `authorization`. Exposes `x-correlation-id` |
 | Rollback | S3 versioning keeps previous objects for 30 days. Normal rollback is a revert on `main` |
 | Cost | under 1 USD/month at household traffic (CloudFront free tier 1 TB/month, S3 a few MB) |
@@ -1375,7 +1376,7 @@ Browser ── CloudFront (index.html, assets/*) ── S3 tenner-frontend-<env>
 | Concern | Decision |
 |---|---|
 | Stack | React 19, TypeScript (strict), Vite 8, MUI 9, React Router 8, TanStack Query 5, React Hook Form, Zod |
-| Language | German UI (decision 2026-10-02); internationalization follows with UX-004 |
+| Language | German UI (decision 2026-10-02); no internationalization (UX-004 was not built) |
 | Configuration | `VITE_API_BASE_URL`, injected at build time by `deploy.yml` from the Terraform output `api_endpoint`; read only in `src/config.ts` |
 | API access | `src/api/client.ts` only (ESLint forbids `fetch` elsewhere): envelope unwrapping, Zod validation of payloads, `ApiError` with status and backend error code |
 | Server state | TanStack Query; reads retry transient failures (network, 429, 5xx) up to 3 times, writes are never retried automatically |
@@ -1391,7 +1392,7 @@ Out of scope for MVP.
 ## Notifications
 
 Foundation implemented (NOTIFICATION-001); channels are the log and Alexa (ALEXA-008). E-mail, Telegram and push
-channels were dropped on 2026-10-06 (BACKLOG-001); WhatsApp is only an evaluation (FUTURE-009).
+channels were dropped on 2026-10-06 (BACKLOG-001); WhatsApp was not pursued (FUTURE-009 removed by BACKLOG-003).
 
 ```text
 EventBridge rule rate(15 minutes) ──► Lambda tenner-notifier (backend/src/notifier.ts, own role)
