@@ -44,7 +44,7 @@ days: start a new beta test in the developer console (Distribution → Beta Test
 ## Notifications not arriving
 
 1. Web app → Benachrichtigungen: Alexa chosen for the type, not inside quiet hours; digest at its time, overdue
-   alerts at 17:00.
+   alerts at the evening time (default 18:00).
 2. Alexa app → Tenner → Berechtigungen: Erinnerungen allowed, Benachrichtigungen on (or „Alexa, sag Tenner Board,
    aktiviere Erinnerungen“).
 3. Notifier logs `NotificationDelivery` with `channel ALEXA`: `ALEXA_HTTP_403` = permission or schema rejected;

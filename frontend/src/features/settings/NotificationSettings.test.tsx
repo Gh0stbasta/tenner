@@ -34,7 +34,8 @@ describe("NotificationSettings (NOTIFICATION-002)", () => {
     const put = fetchMock.calls().find((call) => call.key === "PUT /users/JULIA/notification-preferences");
     expect(put?.body).toMatchObject({
       weeklySummary: { enabled: true, dayOfWeek: "SUN", time: "18:00" },
-      dailyDigest: { time: "07:30" },
+      dailyDigest: { time: "08:00" },
+      overdueAlerts: { time: "18:00" },
     });
     expect(await screen.findByRole("combobox", { name: "Tag" })).toBeInTheDocument();
   });

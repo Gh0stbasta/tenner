@@ -46,8 +46,8 @@ export const DEFAULT_CATEGORIES = [
 export const DEFAULT_NOTIFICATION_RESPONSE = {
   preferences: {
     timezone: null,
-    dailyDigest: { enabled: true, time: "07:30", channels: [] },
-    overdueAlerts: { enabled: true, minDaysOverdue: 2, channels: [] },
+    dailyDigest: { enabled: true, time: "08:00", channels: [] },
+    overdueAlerts: { enabled: true, minDaysOverdue: 2, time: "18:00", channels: [] },
     weeklySummary: { enabled: false, dayOfWeek: "SUN", time: "18:00", channels: [] },
     quietHours: { start: "21:30", end: "07:00" },
   },

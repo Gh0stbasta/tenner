@@ -74,7 +74,7 @@ Alexa is a notification channel of the notifier (NOTIFICATION-001) for every Ale
 
 | Tenner notification | On Alexa |
 |---|---|
-| Overdue alert (NOTIFICATION-004, 17:00) | notification indicator (Proactive Event `AMAZON.MessageAlert.Activated`, count only — schemas allow no titles) |
+| Overdue alert (NOTIFICATION-004, member's evening time, default 18:00) | notification indicator (Proactive Event `AMAZON.MessageAlert.Activated`, count only — schemas allow no titles) |
 | Daily digest (NOTIFICATION-003, member's time) | spoken reminder 60 s later: „Tenner: Heute 4 Tenner, 40 Minuten, 1 überfällig. Sag: Alexa, sag Tenner Board, starte meinen Tag, für Details.“ — created by the skill from a Skill Messaging message (only way to create reminders out of session) |
 
 Setup (owner, after the widget prerequisites — LWA client in Parameter Store):

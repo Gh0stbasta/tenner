@@ -7,7 +7,7 @@ import { DIGEST_ITEM_LIMIT, LogChannel, dailyDigestJob, renderDigest, runNotifie
 import { mockLogger } from "./mocks/index.js";
 
 const RECIPIENT: Recipient = { tenantId: "default", userId: "STEFAN", displayName: "Stefan", timezone: "Europe/Berlin" };
-const AT_0730 = new Date("2026-10-06T05:30:00Z"); // 07:30 Berlin
+const AT_0800 = new Date("2026-10-06T06:00:00Z"); // 08:00 Berlin (NOTIFICATION-010 default)
 
 const item = (title: string, overrides: Partial<DashboardTennerResponse> = {}): DashboardTennerResponse => ({
   tennerId: title,
@@ -86,11 +86,11 @@ describe("renderDigest", () => {
 
 describe("dailyDigestJob", () => {
   it("is due at the configured local time only (Timezone-Correct Send Time)", async () => {
-    expect(await job().job.channelsDue(RECIPIENT, AT_0730)).toEqual(["LOG"]);
-    expect(await job().job.channelsDue(RECIPIENT, new Date("2026-10-06T06:00:00Z"))).toEqual([]);
-    expect(await job({ timezone: "Europe/London" }).job.channelsDue(RECIPIENT, new Date("2026-10-06T06:30:00Z"))).toEqual(["LOG"]);
-    expect(await job({ dailyDigest: { enabled: true, time: "07:30", channels: ["ALEXA"] } }).job.channelsDue(RECIPIENT, AT_0730)).toEqual(["LOG", "ALEXA"]);
-    expect(await job({ dailyDigest: { enabled: false, time: "07:30", channels: [] } }).job.channelsDue(RECIPIENT, AT_0730)).toEqual([]);
+    expect(await job().job.channelsDue(RECIPIENT, AT_0800)).toEqual(["LOG"]);
+    expect(await job().job.channelsDue(RECIPIENT, new Date("2026-10-06T06:30:00Z"))).toEqual([]);
+    expect(await job({ timezone: "Europe/London" }).job.channelsDue(RECIPIENT, new Date("2026-10-06T07:00:00Z"))).toEqual(["LOG"]);
+    expect(await job({ dailyDigest: { enabled: true, time: "08:00", channels: ["ALEXA"] } }).job.channelsDue(RECIPIENT, AT_0800)).toEqual(["LOG", "ALEXA"]);
+    expect(await job({ dailyDigest: { enabled: false, time: "08:00", channels: [] } }).job.channelsDue(RECIPIENT, AT_0800)).toEqual([]);
   });
 
   it("respects quiet hours (Quiet Hours)", async () => {
@@ -100,7 +100,7 @@ describe("dailyDigestJob", () => {
 
   it("asks the dashboard for the member's own and shared Tenners (Assigned And Shared Tenners)", async () => {
     const { job: digest, deps } = job();
-    const message = await digest.render(RECIPIENT, AT_0730);
+    const message = await digest.render(RECIPIENT, AT_0800);
     expect(deps.dashboard).toHaveBeenCalledWith("default", { assignedTo: "STEFAN" });
     expect(message?.textBody).toContain("• Spülmaschine");
   });
@@ -123,10 +123,27 @@ describe("dailyDigestJob", () => {
       channels: [new LogChannel(logger)],
       log,
       logger,
-      now: () => AT_0730,
+      now: () => AT_0800,
     };
     expect((await runNotifier(deps)).deliveries.SENT).toBe(1);
-    expect((await runNotifier({ ...deps, now: () => new Date("2026-10-06T05:40:00Z") })).deliveries).toEqual({ SENT: 0, FAILED: 0, SKIPPED: 1 });
+    expect((await runNotifier({ ...deps, now: () => new Date("2026-10-06T06:10:00Z") })).deliveries).toEqual({ SENT: 0, FAILED: 0, SKIPPED: 1 });
     expect([...records]).toEqual(["default#STEFAN#DAILY_DIGEST#LOG#2026-10-06"]);
+  });
+});
+
+describe("digest items (NOTIFICATION-010)", () => {
+  it("lists the Tenners due today for per-Tenner reminders", () => {
+    const message = renderDigest(DAY, RECIPIENT, 480, undefined);
+    expect(message?.items?.map((entry) => [entry.title, entry.estimatedMinutes])).toEqual([
+      ["Büro saugen", 10],
+      ["Mobility", 15],
+      ["Spülmaschine", 5],
+    ]);
+    expect(message?.items?.[0]).toMatchObject({ tennerId: "Büro saugen", nextDue: expect.any(String) });
+  });
+
+  it("defaults to 08:00 and the evening alert to 18:00", () => {
+    expect(DEFAULT_NOTIFICATION_PREFERENCES.dailyDigest.time).toBe("08:00");
+    expect(DEFAULT_NOTIFICATION_PREFERENCES.overdueAlerts.time).toBe("18:00");
   });
 });

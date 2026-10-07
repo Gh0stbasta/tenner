@@ -413,7 +413,9 @@ when the GitHub **variable** `NOTIFICATIONS_ENABLED` is `true`. Before setting i
 - IAM: create/manage `tenner-notifier-role` and its inline policy, `iam:PassRole` for it to Lambda
 - CloudWatch Logs: `/tenner/notifier`
 
-Content: the daily digest (NOTIFICATION-003) at each member's time and overdue alerts (NOTIFICATION-004) at 17:00; until a real channel is connected it is
+Content: the daily digest (NOTIFICATION-003) at each member's time (default 08:00) and overdue alerts
+(NOTIFICATION-004) at each member's evening time (default 18:00, NOTIFICATION-010). Push sends one notification per
+Tenner („🏠 Tenner · Heute: … · Geschätzter Aufwand: … Minuten“). Until a real channel is connected it is
 written to the notifier log only (`NotificationLogged`).
 
 #### Browser push (NOTIFICATION-009)

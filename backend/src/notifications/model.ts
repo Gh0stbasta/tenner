@@ -18,6 +18,18 @@ export interface NotificationMessage {
   readonly deepLink?: string;
   /** Structured content for channels that cannot send free text (Alexa notifications, ALEXA-008). */
   readonly facts?: Readonly<Record<string, number | string>>;
+  /** The Tenners the message is about, for channels that notify per Tenner (browser push, NOTIFICATION-010). */
+  readonly items?: readonly NotificationItem[];
+}
+
+export interface NotificationItem {
+  readonly tennerId: string;
+  readonly title: string;
+  readonly estimatedMinutes: number;
+  /** Overdue alerts only. */
+  readonly overdueDays?: number;
+  /** The Tenner's due date the notification refers to (its cycle; NOTIFICATION-011 actions). */
+  readonly nextDue: string;
 }
 
 export interface Recipient {

@@ -19,7 +19,13 @@ const channelsSchema = z.array(z.enum(USER_CHANNELS));
 const preferencesSchema = z.object({
   timezone: z.string().nullable(),
   dailyDigest: z.object({ enabled: z.boolean(), time: z.string(), channels: channelsSchema }),
-  overdueAlerts: z.object({ enabled: z.boolean(), minDaysOverdue: z.number(), channels: channelsSchema }),
+  // NOTIFICATION-010: evening reminder time (default 18:00).
+  overdueAlerts: z.object({
+    enabled: z.boolean(),
+    minDaysOverdue: z.number(),
+    time: z.string(),
+    channels: channelsSchema,
+  }),
   weeklySummary: z.object({
     enabled: z.boolean(),
     dayOfWeek: z.enum(WEEKDAYS),

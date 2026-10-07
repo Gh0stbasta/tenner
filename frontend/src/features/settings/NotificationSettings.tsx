@@ -194,6 +194,12 @@ export function NotificationSettings() {
             disabled={disabled}
             onToggle={(enabled) => save({ overdueAlerts: { ...preferences.overdueAlerts, enabled } })}
           >
+            <TimeSelect
+              label="Uhrzeit (abends)"
+              value={preferences.overdueAlerts.time}
+              disabled={disabled}
+              onChange={(time) => save({ overdueAlerts: { ...preferences.overdueAlerts, time } })}
+            />
             <Box sx={{ width: 220 }}>
               <NumberSetting
                 label="Ab Tagen überfällig"

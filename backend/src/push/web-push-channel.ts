@@ -15,7 +15,12 @@ export interface PushPayload {
   readonly url: string;
   /** Replaces an older notification with the same tag on the device. */
   readonly tag: string;
+  /** The Tenner of a per-Tenner reminder (NOTIFICATION-010). */
+  readonly tennerId?: string;
 }
+
+/** At most this many reminders per message; the rest is summarised in one more notification. */
+export const MAX_PUSH_ITEMS = 8;
 
 /** Push services keep a message for an offline phone this long; a reminder is stale after half a day. */
 export const PUSH_TTL_SECONDS = 12 * 3600;
@@ -30,10 +35,35 @@ export interface WebPushChannelDependencies {
   readonly send?: (subscription: PushSubscriptionRecord, payload: PushPayload, keys: VapidKeys, options: PushRequestOptions, now: Date) => Promise<PushOutcome>;
 }
 
-/** One notification for the whole message (the per-Tenner reminders follow with NOTIFICATION-010). */
+const minutesText = (minutes: number): string => `${minutes} ${minutes === 1 ? "Minute" : "Minuten"}`;
+const daysText = (days: number): string => `${days} ${days === 1 ? "Tag" : "Tagen"}`;
+
+/**
+ * NOTIFICATION-010: one notification per Tenner (docs/human/mobileReminder.md: „🏠 Tenner · Heute: … · Geschätzter
+ * Aufwand: 10 Minuten“), tagged per Tenner so a newer reminder replaces an older one. Messages without items (e.g.
+ * the weekly summary) stay one notification.
+ */
 export function payloadsOf(message: NotificationMessage, appUrl: string | undefined): PushPayload[] {
-  const body = message.textBody.length > BODY_LIMIT ? `${message.textBody.slice(0, BODY_LIMIT - 1)}…` : message.textBody;
-  return [{ title: message.subject, body, url: message.deepLink ?? appUrl ?? "/", tag: message.type }];
+  const base = appUrl ?? "";
+  const items = message.items ?? [];
+  if (items.length === 0) {
+    const body = message.textBody.length > BODY_LIMIT ? `${message.textBody.slice(0, BODY_LIMIT - 1)}…` : message.textBody;
+    return [{ title: message.subject, body, url: message.deepLink ?? appUrl ?? "/", tag: message.type }];
+  }
+  const payloads: PushPayload[] = items.slice(0, MAX_PUSH_ITEMS).map((item) => ({
+    title: "🏠 Tenner",
+    body: [
+      item.overdueDays === undefined ? `Heute: ${item.title}` : `Überfällig seit ${daysText(item.overdueDays)}: ${item.title}`,
+      `Geschätzter Aufwand: ${minutesText(item.estimatedMinutes)}`,
+    ].join("\n"),
+    url: `${base}/tenners/${encodeURIComponent(item.tennerId)}`,
+    tag: `tenner-${item.tennerId}`,
+    tennerId: item.tennerId,
+  }));
+  if (items.length > MAX_PUSH_ITEMS) {
+    payloads.push({ title: "🏠 Tenner", body: `+${items.length - MAX_PUSH_ITEMS} weitere Tenner`, url: `${base}/dashboard`, tag: message.type });
+  }
+  return payloads;
 }
 
 export class WebPushChannel implements NotificationChannel {

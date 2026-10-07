@@ -144,3 +144,22 @@ describe("web push configuration", () => {
     expect(loadConfig({ WEB_PUSH_PUBLIC_KEY: "pub", APP_URL: "https://app" }).webPush).toBeUndefined();
   });
 });
+
+describe("per-Tenner push reminders (NOTIFICATION-010)", () => {
+  const item = (n: number, overdueDays?: number) => ({ tennerId: `t-${n}`, title: `Tenner ${n}`, estimatedMinutes: n === 1 ? 1 : 10, nextDue: "2026-10-07", ...(overdueDays === undefined ? {} : { overdueDays }) });
+  const message = (items: ReturnType<typeof item>[]) => ({ type: "DAILY_DIGEST" as const, userId: "STEFAN", subject: "Heute", textBody: "…", items });
+
+  it("sends one notification per Tenner, tagged per Tenner, opening its page", () => {
+    expect(payloadsOf(message([item(1), item(2, 3)]), "https://app")).toEqual([
+      { title: "🏠 Tenner", body: "Heute: Tenner 1\nGeschätzter Aufwand: 1 Minute", url: "https://app/tenners/t-1", tag: "tenner-t-1", tennerId: "t-1" },
+      { title: "🏠 Tenner", body: "Überfällig seit 3 Tagen: Tenner 2\nGeschätzter Aufwand: 10 Minuten", url: "https://app/tenners/t-2", tag: "tenner-t-2", tennerId: "t-2" },
+    ]);
+    expect(payloadsOf(message([item(2, 1)]), undefined)[0]).toMatchObject({ body: "Überfällig seit 1 Tag: Tenner 2\nGeschätzter Aufwand: 10 Minuten", url: "/tenners/t-2" });
+  });
+
+  it("caps the reminders and summarises the rest", () => {
+    const payloads = payloadsOf(message(Array.from({ length: 11 }, (_, index) => item(index + 2))), "https://app");
+    expect(payloads).toHaveLength(9);
+    expect(payloads[8]).toEqual({ title: "🏠 Tenner", body: "+3 weitere Tenner", url: "https://app/dashboard", tag: "DAILY_DIGEST" });
+  });
+});

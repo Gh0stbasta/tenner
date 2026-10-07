@@ -46,6 +46,8 @@ export function renderDigest(dashboard: DashboardResponse, recipient: Recipient,
     textBody: lines.join("\n").trimEnd(),
     ...(appUrl === undefined ? {} : { deepLink: appUrl }),
     facts: { dueToday: due.length, overdue: overdue.length, minutes },
+    // NOTIFICATION-010: the morning push names each Tenner due today (overdue ones follow in the evening).
+    items: due.map((tenner) => ({ tennerId: tenner.tennerId, title: tenner.title, estimatedMinutes: tenner.estimatedMinutes, nextDue: tenner.nextDue })),
   };
 }
 

@@ -51,7 +51,7 @@ import {
   userIdSchema,
   utcTimestampSchema,
 } from "./common.js";
-import { ALEXA_PERSON_ID_PATTERN, ALEXA_USER_ID_PATTERN, USER_CHANNELS, WEEKDAYS as ALL_WEEKDAYS } from "../models/index.js";
+import { ALEXA_PERSON_ID_PATTERN, ALEXA_USER_ID_PATTERN, DEFAULT_OVERDUE_ALERT_TIME, USER_CHANNELS, WEEKDAYS as ALL_WEEKDAYS } from "../models/index.js";
 import { isValidTimeZone } from "../utils/timezone.js";
 import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
 import { ASSIGNMENT_MODES, SHARED_ASSIGNEE, WEEK_STARTS, WEEKDAYS, type AssignmentMode, type UserId, type Weekday } from "../models/index.js";
@@ -278,7 +278,13 @@ const userChannelsSchema = z
 export const notificationPreferencesSchema = z.strictObject({
   timezone: z.string().refine(isValidTimeZone, "Must be an IANA timezone.").nullable(),
   dailyDigest: z.strictObject({ enabled: z.boolean(), time: quarterHourSchema, channels: userChannelsSchema }),
-  overdueAlerts: z.strictObject({ enabled: z.boolean(), minDaysOverdue: z.number().int().min(0).max(30), channels: userChannelsSchema }),
+  // NOTIFICATION-010: `time` may be omitted by older clients (default 18:00).
+  overdueAlerts: z.strictObject({
+    enabled: z.boolean(),
+    minDaysOverdue: z.number().int().min(0).max(30),
+    time: quarterHourSchema.default(DEFAULT_OVERDUE_ALERT_TIME),
+    channels: userChannelsSchema,
+  }),
   weeklySummary: z.strictObject({ enabled: z.boolean(), dayOfWeek: z.enum(ALL_WEEKDAYS), time: quarterHourSchema, channels: userChannelsSchema }),
   quietHours: z.strictObject({ start: quarterHourSchema, end: quarterHourSchema }).nullable(),
 }) satisfies z.ZodType<UpdateNotificationPreferencesRequest>;
