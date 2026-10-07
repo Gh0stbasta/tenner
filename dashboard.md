@@ -1,6 +1,6 @@
 # 🧭 Tenner — Executive Dashboard
 
-> Snapshot of **2026-10-06**. Updated with every pull request (see *About this dashboard* at the end).
+> Snapshot of **2026-10-07**. Updated with every pull request (see *About this dashboard* at the end).
 
 ## 📌 Executive Summary
 
