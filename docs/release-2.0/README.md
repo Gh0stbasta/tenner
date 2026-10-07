@@ -9,7 +9,7 @@ deterministic (no AI).
 | | |
 |---|---|
 | **Status** | Planned. Backlog generated on 2026-10-07; implementation starts with FOOD-001 |
-| **Epic** | [EPIC-FOOD-001](metaticket.md): vision, household rules R1 – R13, dish catalog, owner decisions |
+| **Epic** | [EPIC-FOOD-001](metaticket.md): vision, household rules R1 – R13, dish catalog, owner decisions (answered) |
 | **Backlog** | [`backlog/food/`](backlog/food/): FOOD-001 – FOOD-025 |
 | **Previous release** | [Tenner 1.0](../release-1.0/README.md) |
 
@@ -88,8 +88,9 @@ first heading, sections Type … Out of Scope, an "Implementation Status" sectio
 
 ---
 
-## Owner Decisions Before or During Implementation
+## Owner Decisions
 
-Listed in [EPIC-FOOD-001](metaticket.md#owner-decisions-needed): 20-minute limit (active or total time), coconut and
-the nut allergy, protein sources for R7, base-ingredient groups for R8, weekday lunches, family details in the public
-Git history.
+All six questions were answered on 2026-10-07 and applied to the tickets: 20 minutes = active cooking time; coconut
+milk is tolerated; R7 counts animal protein sources (poultry, beef, pork, fish); Spätzle count as pasta, gnocchi and
+Schupfnudeln are separate; weekday lunches only for the two adults; family details stay in the Git history and are
+unrecognizable in current files. Details: [EPIC-FOOD-001](metaticket.md#owner-decisions).

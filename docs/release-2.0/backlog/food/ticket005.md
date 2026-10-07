@@ -63,14 +63,14 @@ Each violation: `{ rule: "R5", severity: HARD | SOFT, slotIds, message }` with a
 | Rule | Implementation |
 |---|---|
 | R1 Allergy | dish allergen tags ∩ any eater's allergies = ∅ |
-| R2 Suitable for all | every eater: vegetarian → dish vegetarian, or protein in exceptions, or `vegetarianVariant` set |
+| R2 Suitable for all | every eater **present at the meal** (attendance, FOOD-004): vegetarian → dish vegetarian, or meat only in the exceptions, or `vegetarianVariant` set; R1 and R3 also apply to the present eaters |
 | R3 Dislikes | dish tags/ingredients ∩ household and eater dislikes = ∅ |
 | R4 Time | `activeMinutes ≤ maxActiveMinutes` |
 | R5 Chicken | chicken dishes only in `chicken.allowedSlots`, at most `maxPerWeek` |
 | R6 Burger | at most `maxBurgerPerWeek` dishes of category `BURGER_WRAP` with burger flag |
-| R7 Protein | each tag in `limitedProteinTags` at most once per week |
-| R8 Base | the same `baseTag` at most once per day |
-| R9 Light lunch | weekday lunches only `LIGHT` dishes |
+| R7 Protein | each tag in `limitedProteinTags` (default `POULTRY`, `BEEF`, `PORK`, `FISH`) at most once per week; egg, dairy and legumes not limited |
+| R8 Base | the same `baseTag` at most once per day (`PASTA` incl. Spätzle; `GNOCCHI` and `SCHUPFNUDELN` separate) |
+| R9 Light lunch | weekday lunches (adults only) only `LIGHT` dishes; weekend lunches unrestricted |
 | R10 Warm dinner | soft: penalty for cold or light dinners |
 | R11 Salad lunch | soft above `maxSaladLunchesPerWeek` (hard limit 2 × that value) |
 | R12 Variety | hard: no dish and no group twice in a week; soft: penalty for dishes of last week |
@@ -87,8 +87,9 @@ Rule parameters come from the profile (FOOD-004), never from constants in the en
 One positive and one negative test per rule (R1 – R13)
 Chicken: Monday dinner ok, Wednesday dinner rejected, second chicken rejected
 Vegetarian exception: Spaghetti Bolognese ok, Köttbullar ok only with variant
+Attendance: weekday lunch checks only the adults; weekend lunch and dinner check all eaters
+Protein: two fish dishes in one week rejected; two egg dishes allowed
 Base: pasta lunch + pasta dinner rejected; pasta lunch + rice dinner ok
-Protein: two egg dishes in one week rejected
 Messages in German, rule IDs stable
 Property test: checkWeek of a random valid plan reports no hard violation
 ```
@@ -138,7 +139,7 @@ cd backend && npm run lint && npm run typecheck && npm test
 # Assumptions
 
 - „Hühnchen nur 1×“ means at most once, not exactly once (a week without chicken is valid).
-- Protein and base groups follow the defaults in EPIC-FOOD-001 decisions 3 and 4 until the owner decides.
+- Protein and base groups follow EPIC-FOOD-001 decisions 3 and 4; pork counts as its own source.
 
 ---
 

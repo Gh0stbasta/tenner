@@ -60,9 +60,12 @@ Classification rules:
   dishes need none (allowed exceptions).
 - **Lunch candidates** (light): salads, Onigiri, Ramen, Mikrowellenrisotto, Eierreis, Ofengemüse, Gemüse-Toasts,
   Sandwiches, Mozzarella-Tomaten-Baguettes, Kartoffeln mit Butter, Linseneintopf, Gemüsecurry … — the seed marks
-  `LIGHT`; filling dishes are dinner-only.
-- **Time:** `activeMinutes` is the hands-on time; dishes above 20 active minutes are marked so the rules exclude
-  them (owner decides per dish, EPIC-FOOD-001 decision 1).
+  `LIGHT`; filling dishes are for dinner and weekend lunch (weekday lunch is for the two adults only, decision 5).
+- **Time:** `activeMinutes` is the hands-on time (EPIC-FOOD-001, decision 1); oven and simmering time go into
+  `totalMinutes` only. Lasagne, Ofenrigatoni or Linseneintopf stay plannable when their active time is ≤ 20 minutes.
+- **Protein and base** follow decisions 3 and 4: protein tag only for poultry, beef, pork (incl. sausages) and fish;
+  Spätzle are pasta, gnocchi and Schupfnudeln have their own base groups.
+- **Coconut** is not an allergen for the family (decision 2): Curryreis mit Kokosmilch is a normal dish.
 
 ## Import
 
@@ -83,7 +86,7 @@ owner can check slot, lightness, protein, base and time at a glance before the i
 Seed schema: every dish valid against the FOOD-002 model
 Every owner dish present exactly once (name list test)
 Variant groups as specified
-No seed dish contains NUTS; dishes with APPLE or COCONUT are tagged
+No seed dish contains NUTS; dishes with APPLE are tagged
 Import idempotent: second run adds nothing
 Dry run writes nothing
 ```

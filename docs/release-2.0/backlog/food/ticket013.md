@@ -46,7 +46,8 @@ FOOD-002
 
 ## Calculation
 
-- Family cost per dish = Σ ingredient quantity per adult portion × Σ portion factors × price per unit;
+- Family cost per dish = Σ ingredient quantity per adult portion × Σ portion factors × price per unit (dish view:
+  whole family; plan and week total: the eaters present at each meal, e.g. two adults on weekday lunches);
   pantry ingredients count with a small flat amount.
 - `costOverride` (EUR) on the dish replaces the calculation.
 - Tier from household thresholds (profile, defaults from the owner): `€` up to 6 EUR, `€€` up to 10 EUR, `€€€`

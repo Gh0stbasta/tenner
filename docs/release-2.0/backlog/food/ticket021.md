@@ -50,8 +50,8 @@ FOOD-001
 | `ingredientId` | stable slug, e.g. `pasta`, `salmon`, `apple` |
 | `name` | German display name |
 | `tags` | allergens (EU 14 major allergens plus custom tags such as `APPLE`, `COCONUT`), `MEAT`, `POULTRY`, `FISH`, `PORK` … |
-| `proteinTag` | optional: `CHICKEN`, `BEEF_MINCE`, `SAUSAGE`, `SALMON`, `FISH_FINGERS`, `EGG`, `HALLOUMI`, `SOY`, … (R7) |
-| `baseTag` | optional: `PASTA`, `TEIGWAREN`, `RICE`, `POTATO`, `BREAD`, `GRAIN` (R8) |
+| `proteinTag` | optional, animal protein sources only (R7, decision 3): `POULTRY`, `BEEF` (incl. mixed minced meat), `PORK` (incl. sausages), `FISH` |
+| `baseTag` | optional (R8, decision 4): `PASTA` (incl. Spätzle), `GNOCCHI`, `SCHUPFNUDELN`, `RICE`, `POTATO`, `BREAD`, `GRAIN` |
 | `shoppingSection` | `GEMUESE_OBST`, `KUEHLREGAL`, `FLEISCH_FISCH`, `TROCKENWAREN`, `TIEFKUEHL`, `BACKWAREN`, `GEWUERZE`, `SONSTIGES` |
 | `defaultUnit` | `g`, `ml`, `Stück`, `EL`, `TL` (conversion to g/ml for nutrition) |
 | `nutritionPer100` | kcal, protein, carbs, fat (rough values, FOOD-012) |
@@ -73,7 +73,7 @@ FOOD-001
 ```text
 Catalog schema validation (every seed ingredient complete, unique IDs)
 Every seed dish references only catalog ingredients
-Allergen and protein tags present where expected (nuts, apple, coconut, chicken, egg, salmon)
+Allergen and protein tags present where expected (nuts, apple; poultry, beef, pork, fish)
 Unit conversion
 Custom ingredient create and edit
 ```
@@ -124,8 +124,7 @@ cd backend && npm run lint && npm run typecheck && npm test
 
 - Nutrition and price values are rough, self-maintained estimates (no licensed food database, no live prices);
   they are labelled „ca.“ in the UI.
-- Coconut carries its own tag `COCONUT`, so the owner can decide whether it counts for the nut allergy
-  (EPIC-FOOD-001, decision 2).
+- Coconut is not treated as a nut (EPIC-FOOD-001, decision 2); it keeps an informational tag `COCONUT`.
 
 ---
 

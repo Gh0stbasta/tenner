@@ -52,7 +52,7 @@ eaters: [
     memberId?            link to a Tenner member (optional)
     portionFactor        default ADULT 1.0, CHILD 0.5
     diet: OMNIVORE | VEGETARIAN
-    vegetarianExceptions: protein tags allowed anyway (e.g. BEEF_MINCE, SAUSAGE)
+    vegetarianExceptions: ingredients allowed anyway (e.g. minced meat, sausages)
     allergies: tags (hard)          e.g. NUTS, APPLE
     dislikes: tags or ingredient IDs (hard)
     likes: ingredient IDs or dish groups (soft weighting)
@@ -61,12 +61,12 @@ eaters: [
 household: {
   dislikes: tags/ingredients for everyone (TOFU, QUINOA, BLUE_CHEESE_SAUCE)
   maxActiveMinutes: 20
-  lunchDays: all 7 days (default)
+  attendance: { weekdayLunch: [eaterIds], weekendLunch: all, dinner: all }   (decision 5)
   lightLunchOnWeekdays: true
   maxSaladLunchesPerWeek: 2
   chicken: { maxPerWeek: 1, allowedSlots: [MON#DINNER, TUE#DINNER] }
   maxBurgerPerWeek: 1
-  limitedProteinTags: [CHICKEN, SALMON, EGG, SAUSAGE, SOY, …]   (R7)
+  limitedProteinTags: [POULTRY, BEEF, PORK, FISH]   (R7, decision 3)
   mealTimes: { lunch: "12:00", dinner: "18:00" }               (FOOD-015, FOOD-016)
 }
 ```
@@ -124,6 +124,7 @@ cd frontend && npm run lint && npm run typecheck && npm run build && npm test
 # Acceptance Criteria
 
 - [ ] Allergies, preferences, dislikes, children and portion sizes can be stored per eater
+- [ ] Who eats weekday lunch, weekend lunch and dinner is stored (default: weekday lunch adults only)
 - [ ] Household rules editable with the owner's values as defaults
 - [ ] Health data never appears in logs or notifications
 - [ ] Tests passing
@@ -143,12 +144,14 @@ cd frontend && npm run lint && npm run typecheck && npm run build && npm test
 
 # Assumptions
 
-- The owner enters the family once in the app (about five minutes); the repository is public, so no personal seed.
-- Every eater eats every planned meal (EPIC-FOOD-001, decision 5).
+- The owner enters the family once in the app (about five minutes); the repository keeps family details
+  unrecognizable (EPIC-FOOD-001, decision 6), so there is no personal seed.
+- Attendance per meal type (decision 5): Monday – Friday lunch only the two adults, weekend lunch and every dinner
+  all eaters. Defaults: weekday lunch = all adults, everything else = all eaters.
 
 ---
 
 # Out of Scope
 
-- Per-meal attendance („Ein Erwachsener isst Mittwoch auswärts“).
+- Attendance for single days („Ein Erwachsener isst Mittwoch auswärts“); only the weekday/weekend pattern is stored.
 - Calorie targets per person.

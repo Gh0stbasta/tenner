@@ -49,7 +49,7 @@ FOOD-004
 ```text
 for each planned slot in range (default: from today to week end; option: whole week)
   for each ingredient of the dish (optional ingredients excluded unless chosen)
-    quantity × sum of eaters' portion factors
+    quantity × sum of the portion factors of the eaters present at that meal (FOOD-004 attendance)
 group by ingredientId + unit → convert units where possible → round up to sensible steps (e.g. 50 g, 1 Stück)
 sort by shopping section (Gemüse & Obst, Kühlregal, …), pantry items in a collapsed „Vorrat“ section
 ```

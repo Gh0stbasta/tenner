@@ -79,9 +79,9 @@ Users can:
 
 # Owner Input: Household Rules
 
-The family details given by the owner (names, ages, allergies) are **not** repeated in this file or in any ticket,
-because the repository is public (see Assumptions). They are entered once in the app's family profile (FOOD-004).
-The rules below are the planning-relevant content.
+The family details given by the owner (names, ages) are made unrecognizable in this file and in every ticket (owner
+decision 6). They are entered once in the app's family profile (FOOD-004). The rules below are the planning-relevant
+content.
 
 ## Eaters
 
@@ -90,6 +90,9 @@ The rules below are the planning-relevant content.
 | Adult 1 | Allergic to nuts and apples |
 | Adult 2 | Vegetarian; occasionally eats minced meat (Hackfleisch) or sausages (Würstchen) |
 | Child 1 – 3 | Toddler and preschool age; smaller portions |
+
+**Who eats when (decision 5):** Monday to Friday lunch only the two adults; weekend lunch and every dinner the
+whole family.
 
 ## Preferences
 
@@ -105,12 +108,12 @@ The rules below are the planning-relevant content.
 | R1 | No dish may contain an ingredient an eater is allergic to | Hard |
 | R2 | Every meal must be suitable for every eater (vegetarian, or meat only in the vegetarian's allowed exceptions, or a vegetarian variant of the dish exists) | Hard |
 | R3 | No disliked ingredient (tofu, quinoa, blue-cheese sauce) | Hard |
-| R4 | Preparation time at most 20 minutes per meal | Hard |
+| R4 | Active cooking time at most 20 minutes per meal (oven or simmering time does not count) | Hard |
 | R5 | Chicken at most once per week, and only on Monday **or** Tuesday dinner | Hard |
 | R6 | Burger dishes at most once per week | Hard |
-| R7 | Each tracked protein source (e.g. salmon, chicken, egg, sausage, soy) at most once per week | Hard |
-| R8 | The same base ingredient (e.g. pasta, rice, potatoes) at most once per day | Hard |
-| R9 | Weekday lunches are light and low in calories | Hard |
+| R7 | Each animal protein source — poultry, beef, pork (incl. sausages), fish — at most once per week | Hard |
+| R8 | The same base ingredient at most once per day; groups: pasta (incl. Spätzle), gnocchi, Schupfnudeln, rice, potatoes, bread | Hard |
+| R9 | Weekday lunches (adults only) are light and low in calories | Hard |
 | R10 | Dinners are preferably warm and filling | Soft |
 | R11 | Salads at lunch only occasionally (not every day) | Soft |
 | R12 | Variety: no dish twice in a week; prefer dishes not eaten last week | Hard (week) / Soft (last week) |
@@ -214,21 +217,26 @@ owner rates it most valuable.
 
 ---
 
-# Owner Decisions Needed
+# Owner Decisions
 
-None of these block the start (FOOD-001 – 004); each ticket records a default assumption.
+Answered by the owner on 2026-10-07; the tickets follow them.
 
-1. **„Max 20 minutes“:** active cooking time or total time? Lasagne, Ofenrigatoni or Linseneintopf need longer in
-   the oven or pot. Default: the limit applies to active time; total time is shown.
-2. **Coconut milk and the nut allergy** (Curryreis mit Kokosmilch): coconut is sometimes labelled as a tree nut.
-   Default: coconut is tagged and excluded for the allergic eater until the owner confirms it is safe.
-3. **Which protein sources count for R7?** Default: meat and fish types, egg, sausage, soy, halloumi; cheese as an
-   ingredient, dairy and legumes do not count.
-4. **Base-ingredient groups for R8:** do Spätzle, Gnocchi and Schupfnudeln count as pasta? Default: own groups
-   (Spätzle/Schupfnudeln = „Teigwaren“, Gnocchi = potatoes).
-5. **Weekday lunches:** planned for all seven days and all eaters? Default: yes, as in the vision.
-6. **Public repository:** the original epic text with the family details is in the public Git history. Removing it
-   needs a history rewrite of `main` (owner decision).
+| # | Question | Decision |
+|---|---|---|
+| 1 | „Max 20 minutes“: active or total time? | **Active cooking time.** Oven and simmering time do not count; total time is shown (R4) |
+| 2 | Coconut milk and the nut allergy | **Coconut milk is tolerated.** Coconut is not an allergen for the family; Curryreis mit Kokosmilch stays in the catalog |
+| 3 | Which protein sources count for R7? | **Animal protein sources such as poultry, beef or fish.** Tags: `POULTRY`, `BEEF`, `PORK`, `FISH`; each at most once per week |
+| 4 | Base-ingredient groups for R8 | **Spätzle count as pasta; gnocchi and Schupfnudeln are separate groups** |
+| 5 | Who eats lunch? | **Monday to Friday only the two adults; at the weekend the children too.** Dinner always with the whole family |
+| 6 | Family details in the public repository | **Not sensitive.** The Git history stays as it is; current files make the details unrecognizable |
+
+Consequences:
+
+- Decision 3: egg, cheese (also halloumi and feta), other dairy and legumes are not limited by R7. Pork is counted as
+  its own source because sausages and Hackfleisch are the vegetarian adult's exceptions; mixed minced meat counts as
+  beef. Assumption, to be corrected in the ingredient catalog if wrong (FOOD-021).
+- Decision 5: weekday lunches are planned for two portions and only have to suit the adults (R2 for the eaters
+  present); shopping list and cost use the eaters of each meal (FOOD-004, FOOD-013, FOOD-014).
 
 ---
 
@@ -240,8 +248,8 @@ None of these block the start (FOOD-001 – 004); each ticket records a default 
   criteria, definition of done, assumptions, out of scope)
 - [x] Every capability of the vision and every owner ticket idea is covered by a ticket
 - [x] Every planning rule R1 – R13 is assigned to a ticket (FOOD-005)
-- [x] Recommended order and open owner decisions documented
-- [x] No personal family details (names, birth years, health data) in the generated files
+- [x] Recommended order documented; owner decisions 1 – 6 recorded and applied to the tickets (2026-10-07)
+- [x] Family details (names, birth years) unrecognizable in the generated files (owner decision 6)
 - [x] Release 2.0 index (`docs/release-2.0/README.md`), maintenance backlog, roadmap, `CLAUDE.md` and dashboard
   point to the release 2.0 backlog
 
@@ -252,7 +260,7 @@ None of these block the start (FOOD-001 – 004); each ticket records a default 
 - [x] Implementation completed (tickets generated)
 - [x] Tests completed (documentation only; link check, ticket structure check)
 - [x] Documentation updated
-- [x] Technical debt documented (none new; open decisions listed above)
+- [x] Technical debt documented (none new)
 - [x] Acceptance criteria verified
 - [x] Git commit created
 
@@ -265,9 +273,9 @@ None of these block the start (FOOD-001 – 004); each ticket records a default 
   1.0's are archived in `docs/release-1.0/`. Maintenance (`MAINT`) and recommendations (`REC`) stay in
   `docs/backlog/`.
 - **Owner numbering kept:** FOOD-001 – FOOD-020 keep the owner's numbers and titles; added tickets start at FOOD-021.
-- **No personal data in the repository:** the repository is public. The family's names, birth years and allergies
-  are health and family data; they are entered in the app (stored in DynamoDB like all household data) and never
-  committed. Seeds contain dishes and generic rules only.
+- **Family details:** the owner does not consider them sensitive (decision 6); the Git history keeps the original
+  text, current files use roles (Adult 1, Child 1 …). The real profile is entered in the app and stored in DynamoDB
+  like all household data; seeds contain dishes and generic rules only.
 - **Deterministic first:** no AI service is used in release 2.0 (owner goal). AI-generated images and an AI planner
   are evaluations (FOOD-020, FOOD-024).
 - **One household,** as in release 1.0.
@@ -284,4 +292,5 @@ None of these block the start (FOOD-001 – 004); each ticket records a default 
 
 # Implementation Status
 
-Done (2026-10-07): 25 tickets generated in `docs/release-2.0/backlog/food/`. Next: FOOD-001.
+Done (2026-10-07): 25 tickets generated in `docs/release-2.0/backlog/food/`; owner decisions 1 – 6 applied on the
+same day. Next: FOOD-001.
