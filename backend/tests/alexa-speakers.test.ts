@@ -14,7 +14,7 @@ import { authenticatedEvent, householdSettings, mockLogger, TEST_IDENTITY } from
 const PERSON = "amzn1.ask.person.ABCDEF123";
 const OTHER_PERSON = "amzn1.ask.person.XYZ";
 const NOW = new Date("2026-10-05T08:00:00Z");
-const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: false, createdAt: "t", updatedAt: "t" };
+const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: false, canSignIn: true, createdAt: "t", updatedAt: "t" };
 
 /** Cognito access token claims as the HTTP API JWT authorizer passes them (no aud, username instead of cognito:username). */
 const accessTokenClaims = (groups = "[household:default:STEFAN]") => ({

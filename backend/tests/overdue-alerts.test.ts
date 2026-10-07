@@ -48,7 +48,7 @@ function setup(items: () => DashboardTenner[], preferences: Partial<Notification
   const run = (now: Date) =>
     runNotifier({
       tenantId: "default",
-      members: async () => [{ userId: "STEFAN", displayName: "Stefan", color: "BLUE", active: true, createdAt: "t", updatedAt: "t" }],
+      members: async () => [{ userId: "STEFAN", displayName: "Stefan", color: "BLUE", active: true, canSignIn: true, createdAt: "t", updatedAt: "t" }],
       timezoneOf: async () => "Europe/Berlin",
       jobs: [job],
       channels: [new LogChannel(logger)],

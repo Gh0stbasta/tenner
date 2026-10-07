@@ -35,7 +35,7 @@ describe("shared Tenners", () => {
   });
 
   it("can receive the Tenners of a deactivated member", async () => {
-    const lena: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, createdAt: "t", updatedAt: "t" };
+    const lena: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, canSignIn: true, createdAt: "t", updatedAt: "t" };
     const households = { get: vi.fn(async () => householdSettings({ members: [...SEED_MEMBERS, lena], membersVersion: 1 })), saveMembers: vi.fn(async () => householdSettings()) };
     const tenners = mockTennerRepository();
     tenners.list.mockResolvedValue([tennerFixture({ tennerId: "a", assignedTo: "LENA" })]);

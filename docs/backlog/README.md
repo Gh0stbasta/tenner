@@ -177,6 +177,7 @@ docs/backlog/
 | [HOUSEHOLD-ADMIN-003](household-admin/ticket003.md) | Implement Household Settings | Medium | V2 |
 | [HOUSEHOLD-ADMIN-004](household-admin/ticket004.md) | Implement Member Deactivation | Low | V2 |
 | [HOUSEHOLD-ADMIN-005](household-admin/ticket005.md) | Introduce Household Roles | Low | Long-Term |
+| [HOUSEHOLD-ADMIN-006](household-admin/ticket006.md) | Members Without Login | High | V2 |
 
 ### User Experience (`ux/`, prefix `UX-`)
 

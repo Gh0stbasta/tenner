@@ -551,7 +551,8 @@ Since FUTURE-011, Cognito creates a user on every first Google sign-in. Their us
 administrator deletes them. Since HOTFIX-001, a new user picks a household member on the first login; each
 member can be claimed once. **Until every member is claimed, a stranger who knows the URL can claim a free
 member and gets full household access.** After that, strangers see "Kein freier Platz" (403). Since
-HOUSEHOLD-ADMIN-001, every member added in the settings is a new free place until its person signs in.
+HOUSEHOLD-ADMIN-001, every member added in the settings is a new free place until its person signs in. Members created "Ohne
+Anmeldung" (HOUSEHOLD-ADMIN-006, e.g. the household help) are never a free place.
 
 ### Reason
 

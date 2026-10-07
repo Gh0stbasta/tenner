@@ -335,6 +335,7 @@ export const createMemberSchema = z.strictObject({
   userId: userIdSchema.optional(),
   displayName: displayNameSchema,
   color: memberColorSchema,
+  canSignIn: z.boolean().optional(),
 }) satisfies z.ZodType<CreateMemberRequest>;
 
 /** PUT /users/{userId}: rename or recolor; userId is immutable. */

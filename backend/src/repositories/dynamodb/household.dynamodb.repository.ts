@@ -44,7 +44,7 @@ function toMembers(value: unknown): HouseholdMember[] | null {
   if (!Array.isArray(value)) return null;
   return value.flatMap((entry): HouseholdMember[] => {
     if (typeof entry !== "object" || entry === null) return [];
-    const { userId, displayName, color, active, createdAt, updatedAt } = entry as Record<string, unknown>;
+    const { userId, displayName, color, active, canSignIn, createdAt, updatedAt } = entry as Record<string, unknown>;
     if (typeof userId !== "string" || !USER_ID_PATTERN.test(userId) || typeof displayName !== "string") return [];
     return [
       {
@@ -52,6 +52,8 @@ function toMembers(value: unknown): HouseholdMember[] | null {
         displayName,
         color: colorOf(color),
         active: active !== false,
+        // Members stored before HOUSEHOLD-ADMIN-006 can sign in.
+        canSignIn: canSignIn !== false,
         createdAt: typeof createdAt === "string" ? createdAt : "",
         updatedAt: typeof updatedAt === "string" ? updatedAt : "",
       },

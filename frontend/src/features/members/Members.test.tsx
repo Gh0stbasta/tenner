@@ -11,7 +11,7 @@ import { SettingsPage } from "../settings/SettingsPage";
 import { CreateTennerDialog } from "../tenners/CreateTennerDialog";
 import { fallbackName } from "./api";
 
-const LENA = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true };
+const LENA = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, canSignIn: true };
 
 beforeEach(() => {
   vi.spyOn(console, "info").mockImplementation(() => undefined);
@@ -79,6 +79,44 @@ describe("members settings", () => {
       displayName: "Lena",
       color: "GREEN",
     });
+  });
+
+  it("adds a member without login and marks it in the list (HOUSEHOLD-ADMIN-006)", async () => {
+    const help = {
+      userId: "HAUSHALTSHILFE",
+      displayName: "Haushaltshilfe",
+      color: "TEAL",
+      active: true,
+      canSignIn: false,
+    };
+    let created = false;
+    const fetchMock = setup({
+      "GET /users": () => ok(created ? [...DEFAULT_MEMBERS, help] : DEFAULT_MEMBERS),
+      "POST /users": () => {
+        created = true;
+        return ok(help, 201);
+      },
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Mitglied hinzufügen" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Mitglied hinzufügen" }));
+    await userEvent.type(dialog.getByRole("textbox", { name: "Name" }), "Haushaltshilfe");
+    await userEvent.click(dialog.getByRole("switch", { name: "Ohne Anmeldung (z. B. Haushaltshilfe)" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Speichern" }));
+    expect(await screen.findByText("„Haushaltshilfe“ hinzugefügt.")).toBeInTheDocument();
+    expect(fetchMock.calls().find((call) => call.key === "POST /users")?.body).toEqual({
+      displayName: "Haushaltshilfe",
+      color: "GREEN",
+      canSignIn: false,
+    });
+    const list = within(await screen.findByRole("list", { name: "Mitglieder" }));
+    expect(await list.findByText("HAUSHALTSHILFE · Ohne Anmeldung")).toBeInTheDocument();
+  });
+
+  it("offers the login switch only when adding a member", async () => {
+    setup();
+    await userEvent.click(await screen.findByRole("button", { name: "Stefan bearbeiten" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Mitglied bearbeiten" }));
+    expect(dialog.queryByRole("switch")).not.toBeInTheDocument();
   });
 
   it("renames a member and keeps the ID", async () => {

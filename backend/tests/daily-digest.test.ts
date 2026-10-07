@@ -117,7 +117,7 @@ describe("dailyDigestJob", () => {
     const logger = mockLogger();
     const deps = {
       tenantId: "default",
-      members: async () => [{ userId: "STEFAN", displayName: "Stefan", color: "BLUE" as const, active: true, createdAt: "t", updatedAt: "t" }],
+      members: async () => [{ userId: "STEFAN", displayName: "Stefan", color: "BLUE" as const, active: true, canSignIn: true, createdAt: "t", updatedAt: "t" }],
       timezoneOf: async () => "Europe/Berlin",
       jobs: [job().job],
       channels: [new LogChannel(logger)],

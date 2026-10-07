@@ -28,8 +28,8 @@ export function fail(status: number, code: string, message = code): MockResponse
 
 /** The household members every app screen loads (HOUSEHOLD-ADMIN-001); tests can override "GET /users". */
 export const DEFAULT_MEMBERS = [
-  { userId: "STEFAN", displayName: "Stefan", color: "BLUE", active: true },
-  { userId: "JULIA", displayName: "Julia", color: "PURPLE", active: true },
+  { userId: "STEFAN", displayName: "Stefan", color: "BLUE", active: true, canSignIn: true },
+  { userId: "JULIA", displayName: "Julia", color: "PURPLE", active: true, canSignIn: true },
 ];
 
 /** The household categories every app screen loads (HOUSEHOLD-ADMIN-002); tests can override "GET /categories". */

@@ -7,7 +7,7 @@ import { toHouseholdResponse } from "../src/services/index.js";
 import { completionFixture, mockTennerRepository, tennerFixture } from "./mocks/index.js";
 
 const PERIOD = { from: "2026-09-08", to: "2026-10-07", days: 30 };
-const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, createdAt: "t", updatedAt: "t" };
+const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, canSignIn: true, createdAt: "t", updatedAt: "t" };
 const done = (completedBy: string, minutes: number, tennerId = "h"): AnalyticsCompletion => ({ ...completionFixture({ completedBy, actualMinutes: minutes, tennerId }), date: "2026-10-01" });
 // 10 minutes every 7 days = 10 weekly minutes each.
 const weekly = (tennerId: string, assignedTo: string, category = "HOUSEHOLD") => tennerFixture({ tennerId, assignedTo, category, estimatedMinutes: 10, frequencyDays: 7 });

@@ -11,7 +11,7 @@ import { completionFixture, householdSettings, mockCompletionRepository, mockLog
 
 const TODAY = "2026-10-05";
 const NOW = new Date(`${TODAY}T08:00:00Z`);
-const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, createdAt: "t", updatedAt: "t" };
+const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, canSignIn: true, createdAt: "t", updatedAt: "t" };
 const MEMBERS = [...SEED_MEMBERS, LENA];
 
 /** In-memory household item and Tenner table. */

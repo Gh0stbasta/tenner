@@ -177,3 +177,18 @@ describe("CognitoHouseholdMembershipRepository", () => {
     await expect(repository.memberCount("household:default:LENA")).resolves.toBe(0);
   });
 });
+
+describe("members without login (HOUSEHOLD-ADMIN-006)", () => {
+  const WITH_HELP = async () => [...SEED_MEMBERS, { userId: "HILFE", displayName: "Haushaltshilfe", color: "TEAL" as const, active: true, canSignIn: false, createdAt: "t", updatedAt: "t" }];
+
+  it("are never offered on the first login", async () => {
+    const result = await new HouseholdAssignmentService(store(), "default", WITH_HELP).getOnboarding(ME);
+    expect(result.members.map((member) => member.userId)).toEqual(["STEFAN", "JULIA"]);
+  });
+
+  it("cannot be claimed, even when all other members are taken", async () => {
+    const memberships = store({ [STEFAN]: ["google_1"], [JULIA]: ["google_2"] });
+    await expect(new HouseholdAssignmentService(memberships, "default", WITH_HELP).assign(ME, "HILFE")).rejects.toMatchObject({ statusCode: 404 });
+    expect(memberships.addMember).not.toHaveBeenCalled();
+  });
+});

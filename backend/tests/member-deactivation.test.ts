@@ -11,7 +11,7 @@ import { householdSettings, mockCompletionRepository, mockLogger, mockTennerRepo
 
 const NOW = new Date("2026-10-05T08:00:00Z");
 const TS = "2026-10-05T08:00:00Z";
-const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, createdAt: TS, updatedAt: TS };
+const LENA: HouseholdMember = { userId: "LENA", displayName: "Lena", color: "GREEN", active: true, canSignIn: true, createdAt: TS, updatedAt: TS };
 
 function setup(members: readonly HouseholdMember[] = [...SEED_MEMBERS, LENA], assigned = [tennerFixture({ tennerId: "a", assignedTo: "LENA" }), tennerFixture({ tennerId: "b", assignedTo: "LENA", active: false })]) {
   const households = {
@@ -39,7 +39,7 @@ describe("MemberDeactivationService", () => {
     expect(households.saveMembers.mock.calls[0]?.[1].find((m) => m.userId === "LENA")).toMatchObject({ active: false, displayName: "Lena", updatedAt: TS });
     expect(households.saveMembers.mock.calls[0]?.[2]).toBe(4);
     expect(revokeAccess).toHaveBeenCalledWith("default", "LENA");
-    expect(result).toEqual({ member: { userId: "LENA", displayName: "Lena", color: "GREEN", active: false }, reassigned: 2, reassignedTo: "JULIA", revokedAccounts: 1 });
+    expect(result).toEqual({ member: { userId: "LENA", displayName: "Lena", color: "GREEN", active: false, canSignIn: true }, reassigned: 2, reassignedTo: "JULIA", revokedAccounts: 1 });
   });
 
   it("needs no reassignment for members without Tenners", async () => {
@@ -76,7 +76,7 @@ describe("MemberDeactivationService", () => {
 
   it("reactivates a deactivated member", async () => {
     const { households, service } = setup([...SEED_MEMBERS, { ...LENA, active: false }]);
-    await expect(service.reactivate(TEST_IDENTITY, "LENA")).resolves.toEqual({ userId: "LENA", displayName: "Lena", color: "GREEN", active: true });
+    await expect(service.reactivate(TEST_IDENTITY, "LENA")).resolves.toEqual({ userId: "LENA", displayName: "Lena", color: "GREEN", active: true, canSignIn: true });
     expect(households.saveMembers.mock.calls[0]?.[1].find((m) => m.userId === "LENA")?.active).toBe(true);
     await expect(setup().service.reactivate(TEST_IDENTITY, "LENA")).rejects.toBeInstanceOf(ConflictError);
     await expect(setup().service.reactivate(TEST_IDENTITY, "NOBODY")).rejects.toMatchObject({ statusCode: 404 });
@@ -127,7 +127,7 @@ describe("CognitoHouseholdMembershipRepository.removeAllMembers", () => {
 
 describe("deactivation handlers", () => {
   const event = (body: string | undefined, userId = "LENA") => ({ body, isBase64Encoded: false, pathParameters: { userId } }) as unknown as APIGatewayProxyEventV2;
-  const result = { member: { userId: "LENA", displayName: "Lena", color: "GREEN" as const, active: false }, reassigned: 2, reassignedTo: "JULIA", revokedAccounts: 1 };
+  const result = { member: { userId: "LENA", displayName: "Lena", color: "GREEN" as const, active: false, canSignIn: true }, reassigned: 2, reassignedTo: "JULIA", revokedAccounts: 1 };
 
   it("deactivates with logging and accepts an empty body", async () => {
     const logger = mockLogger();
