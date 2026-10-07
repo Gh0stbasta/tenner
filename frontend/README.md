@@ -139,6 +139,10 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 - Consumers: Quick Add and the create dialog use the defaults; the dashboard hides upcoming, per-person,
   per-category and recent-activity sections when switched off (due today and overdue always show).
 - The current user is **not** selectable: it comes from the Google login (SECURITY-003/004).
+- **Essen: Familienprofil** (FOOD-004, `src/features/meals/FoodProfileSettings.tsx`): household-wide, stored on the
+  server (`GET/PUT /meals/profile`). People with adult/child, portion, vegetarian with exceptions, allergies (⚠),
+  dislikes and likes (`EaterDialog`); planning rules and who eats when (`FoodRulesDialog`; default: weekday lunch
+  only adults). Every change saves the whole profile.
 
 ## Installable App (MOBILE-001)
 

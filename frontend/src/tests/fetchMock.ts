@@ -59,6 +59,21 @@ export const DEFAULT_NOTIFICATION_RESPONSE = {
   effectiveTimezone: "Europe/Berlin",
 };
 
+/** The family food profile before the first save (FOOD-004). */
+export const DEFAULT_FOOD_RULES = {
+  dislikeTags: ["TOFU", "QUINOA", "BLUE_CHEESE"],
+  dislikeIngredients: [],
+  maxActiveMinutes: 20,
+  attendance: { weekdayLunch: null, weekendLunch: null, dinner: null },
+  lightLunchOnWeekdays: true,
+  maxSaladLunchesPerWeek: 2,
+  chicken: { maxPerWeek: 1, allowedSlots: ["MON#DINNER", "TUE#DINNER"] },
+  maxBurgerPerWeek: 1,
+  limitedProteinTags: ["POULTRY", "FISH", "MINCE", "BURGER_PATTY", "SAUSAGE", "MEATBALL", "HAM"],
+  mealTimes: { lunch: "12:00", dinner: "18:00" },
+};
+export const DEFAULT_FOOD_PROFILE = { eaters: [], household: DEFAULT_FOOD_RULES, updatedAt: null };
+
 export function mockFetch(routes: Record<string, MockHandler>): FetchMock {
   const handlers: Record<string, MockHandler> = {
     "GET /users": ok(DEFAULT_MEMBERS),
@@ -66,6 +81,8 @@ export function mockFetch(routes: Record<string, MockHandler>): FetchMock {
     "GET /users/STEFAN/notification-preferences": ok(DEFAULT_NOTIFICATION_RESPONSE),
     "GET /users/JULIA/notification-preferences": ok(DEFAULT_NOTIFICATION_RESPONSE),
     "GET /household/alexa": ok({ account: { userId: "STEFAN" }, members: DEFAULT_MEMBERS, speakers: [] }),
+    "GET /meals/profile": ok(DEFAULT_FOOD_PROFILE),
+    "GET /meals/ingredients": ok({ ingredients: [] }),
     ...routes,
   };
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

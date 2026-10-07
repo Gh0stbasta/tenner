@@ -2,6 +2,8 @@
 
 import { z } from "zod";
 import { DISH_CATEGORIES, LIGHTNESS, MEAL_SLOTS, TEMPERATURES } from "./models/dish.js";
+import { DIETS, EATER_TYPES, WEEK_SLOTS, type WeekSlot } from "./models/profile.js";
+import { USER_ID_PATTERN } from "../models/index.js";
 import { BASE_TAGS, INGREDIENT_ID_PATTERN, INGREDIENT_TAGS, INGREDIENT_UNITS, PROTEIN_TAGS, QUANTITY_UNITS, SHOPPING_SECTIONS } from "./models/ingredient.js";
 
 export const MEAL_LIMITS = {
@@ -159,3 +161,57 @@ export const listDishesQuerySchema = z
   .strict();
 
 export type ListDishesQuery = z.output<typeof listDishesQuerySchema>;
+
+const ingredientRefs = z.array(ingredientIdSchema).max(100).refine(distinct, "Entries must be distinct.");
+const groupRefs = z.array(z.string().trim().min(1).max(MEAL_LIMITS.groupMax)).max(50).refine(distinct, "Entries must be distinct.");
+const eaterIdSchema = z.string().regex(/^[A-Za-z0-9-]{1,40}$/, "Invalid eater ID.");
+const timeOfDaySchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Time must be HH:MM.");
+
+const eaterSchema = z
+  .object({
+    eaterId: eaterIdSchema.optional(),
+    name: z.string().trim().min(1).max(40),
+    type: z.enum(EATER_TYPES),
+    memberId: z.string().regex(USER_ID_PATTERN, "Invalid household member ID.").optional(),
+    portionFactor: z.number().min(0.1).max(2).optional(),
+    diet: z.enum(DIETS).default("OMNIVORE"),
+    vegetarianExceptions: z.array(z.enum(PROTEIN_TAGS)).max(PROTEIN_TAGS.length).refine(distinct, "Entries must be distinct.").default([]),
+    allergies: tagsSchema.default([]),
+    dislikeTags: tagsSchema.default([]),
+    dislikeIngredients: ingredientRefs.default([]),
+    likeIngredients: ingredientRefs.default([]),
+    likeGroups: groupRefs.default([]),
+  })
+  .strict();
+
+const attendanceList = z.array(eaterIdSchema).max(20).refine(distinct, "Entries must be distinct.").nullable();
+
+export const foodProfileSchema = z
+  .object({
+    eaters: z.array(eaterSchema).max(20),
+    household: z
+      .object({
+        dislikeTags: tagsSchema,
+        dislikeIngredients: ingredientRefs,
+        maxActiveMinutes: z.number().int().min(5).max(MEAL_LIMITS.activeMinutesMax),
+        attendance: z.object({ weekdayLunch: attendanceList, weekendLunch: attendanceList, dinner: attendanceList }).strict(),
+        lightLunchOnWeekdays: z.boolean(),
+        maxSaladLunchesPerWeek: z.number().int().min(0).max(7),
+        chicken: z
+          .object({
+            maxPerWeek: z.number().int().min(0).max(14),
+            allowedSlots: z
+              .array(z.enum(WEEK_SLOTS as [WeekSlot, ...WeekSlot[]]))
+              .max(WEEK_SLOTS.length)
+              .refine(distinct, "Entries must be distinct."),
+          })
+          .strict(),
+        maxBurgerPerWeek: z.number().int().min(0).max(14),
+        limitedProteinTags: z.array(z.enum(PROTEIN_TAGS)).max(PROTEIN_TAGS.length).refine(distinct, "Entries must be distinct."),
+        mealTimes: z.object({ lunch: timeOfDaySchema, dinner: timeOfDaySchema }).strict(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type FoodProfileRequest = z.output<typeof foodProfileSchema>;

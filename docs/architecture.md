@@ -1446,6 +1446,12 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   No deletes (archiving is a flag).
 - **Access:** the API role reads and writes the table with GetItem, PutItem, UpdateItem and Query (`terraform/iam.tf`);
   the API receives the name as `MEALS_TABLE`. Without it the meal routes answer 503.
+- **Ingredients** (FOOD-021): catalog in code, household ingredients and changes to catalog values as
+  `INGREDIENT#<id>`; merged on read.
+- **Dishes** (FOOD-002): `DISH#<uuid>`; vegetarian, tags, protein sources and base ingredients are derived from the
+  current ingredients on every read; archive instead of delete.
+- **Family food profile** (FOOD-004): one `PROFILE` item with eaters and household rules; defaults reproduce the
+  owner's rules. `eatersAt(profile, weekday, slot)` is the one place that says who eats a meal (weekday lunch: adults).
 - **Security:** same JWT authorizer and tenant isolation as all routes; allergies in the profile are never logged.
 - **Cost:** within the DynamoDB free tier.
 

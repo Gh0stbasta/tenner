@@ -9,6 +9,11 @@ import {
   DishService,
   IngredientService,
   MealsStore,
+  ProfileService,
+  getFoodProfileHandler,
+  updateFoodProfileHandler,
+  type GetFoodProfile,
+  type UpdateFoodProfile,
   archiveDishHandler,
   createDishHandler,
   getDishHandler,
@@ -211,6 +216,8 @@ export interface Dependencies {
   readonly updateDish: UpdateDish;
   readonly archiveDish: ArchiveDish;
   readonly restoreDish: ArchiveDish;
+  readonly getFoodProfile: GetFoodProfile;
+  readonly updateFoodProfile: UpdateFoodProfile;
 }
 
 /** Per-request context passed to route handlers. */
@@ -311,6 +318,8 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "PUT /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => updateDishHandler(event, identity, deps.updateDish, logger),
   "DELETE /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => archiveDishHandler(event, identity, deps.archiveDish, logger),
   "POST /meals/dishes/{dishId}/restore": ({ event, deps, logger, identity }) => restoreDishHandler(event, identity, deps.restoreDish, logger),
+  "GET /meals/profile": ({ deps, identity }) => getFoodProfileHandler(identity.tenantId, deps.getFoodProfile),
+  "PUT /meals/profile": ({ event, deps, logger, identity }) => updateFoodProfileHandler(event, identity, deps.updateFoodProfile, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -418,6 +427,10 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
   // Meal planning (FOOD-001, ADR 0007): one store on tenner-meals for all meal services.
   const mealsStore = config.mealsTable ? new MealsStore(getDocumentClient(), config.mealsTable) : undefined;
   const ingredientService = mealsStore ? new IngredientService(mealsStore, systemClock) : undefined;
+  const profileService =
+    mealsStore && ingredientService
+      ? new ProfileService({ store: mealsStore, ingredientsOf: (tenantId) => ingredientService.ingredientsOf(tenantId), membersOf, clock: systemClock, ids: uuidGenerator })
+      : undefined;
   const dishService = mealsStore && ingredientService ? new DishService(mealsStore, (tenantId) => ingredientService.ingredientsOf(tenantId), systemClock, uuidGenerator) : undefined;
 
   return {
@@ -490,6 +503,8 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     updateDish: dishService ? (identity, dishId, request) => dishService.updateDish(identity, dishId, request) : notConfigured,
     archiveDish: dishService ? (identity, dishId) => dishService.archiveDish(identity, dishId) : notConfigured,
     restoreDish: dishService ? (identity, dishId) => dishService.restoreDish(identity, dishId) : notConfigured,
+    getFoodProfile: profileService ? (tenantId) => profileService.getProfile(tenantId) : notConfigured,
+    updateFoodProfile: profileService ? (identity, request) => profileService.updateProfile(identity, request) : notConfigured,
   };
 }
 

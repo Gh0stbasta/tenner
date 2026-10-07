@@ -4,7 +4,7 @@ import { ConflictError, NotFoundError, PersistenceError, ValidationError } from 
 import { correlationIdOf, createDependencies, handler, route as routeEvent, type Dependencies } from "../src/index.js";
 import { toTennerResponse } from "../src/dto/index.js";
 import { DEFAULT_NOTIFICATION_PREFERENCES } from "../src/models/index.js";
-import { CATALOG_INGREDIENTS, type DishResponse, type ResolvedIngredient } from "../src/meals/index.js";
+import { CATALOG_INGREDIENTS, DEFAULT_HOUSEHOLD_FOOD_RULES, EMPTY_FOOD_PROFILE, type DishResponse, type ResolvedIngredient } from "../src/meals/index.js";
 import { ApplicationError } from "../src/exceptions/index.js";
 import { authenticatedEvent, jwtClaims, mockLogger, tennerFixture, testConfig, TEST_IDENTITY } from "./mocks/index.js";
 
@@ -159,6 +159,8 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     updateDish: vi.fn(async () => DISH),
     archiveDish: vi.fn(async () => DISH),
     restoreDish: vi.fn(async () => DISH),
+    getFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
+    updateFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
     ...overrides,
   };
 }
@@ -526,6 +528,18 @@ describe("dish routes (FOOD-002)", () => {
     expect((await route(withDish("GET /meals/dishes/{dishId}", undefined, "not-a-uuid"), d)).statusCode).toBe(400);
     expect((await route(event("POST /meals/dishes", {}, JSON.stringify({ name: "X" })), d)).statusCode).toBe(400);
     expect((await route(withDish("PUT /meals/dishes/{dishId}", JSON.stringify({})), d)).statusCode).toBe(400);
+  });
+});
+
+describe("food profile routes (FOOD-004)", () => {
+  it("reads and replaces the profile without logging its values", async () => {
+    const logger = mockLogger();
+    const d = deps({ logger });
+    expect((await route(event("GET /meals/profile"), d)).statusCode).toBe(200);
+    const body = { eaters: [{ name: "Erwachsener 1", type: "ADULT", allergies: ["NUTS", "APPLE"] }], household: DEFAULT_HOUSEHOLD_FOOD_RULES };
+    expect((await route(event("PUT /meals/profile", {}, JSON.stringify(body)), d)).statusCode).toBe(200);
+    expect(JSON.stringify(vi.mocked(logger.info).mock.calls)).not.toContain("NUTS");
+    expect((await route(event("PUT /meals/profile", {}, JSON.stringify({ eaters: [] })), d)).statusCode).toBe(400);
   });
 });
 

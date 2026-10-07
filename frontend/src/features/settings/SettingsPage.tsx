@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
 import { CatalogSettings } from "../catalog/CatalogSettings";
+import { FoodProfileSettings } from "../meals/FoodProfileSettings";
 import { AlexaSettings } from "./AlexaSettings";
 import { CategoriesSettings } from "./CategoriesSettings";
 import { DashboardSettings } from "./DashboardSettings";
@@ -43,6 +44,7 @@ export function SettingsPage() {
       <MembersSettings />
       <CategoriesSettings />
       <CatalogSettings />
+      <FoodProfileSettings />
       <AlexaSettings />
       <Box
         sx={{

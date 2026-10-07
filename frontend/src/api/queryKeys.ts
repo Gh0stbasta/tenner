@@ -13,4 +13,8 @@ export const queryKeys = {
   alexa: ["household", "alexa"] as const,
   members: ["members"] as const,
   categories: ["categories"] as const,
+  /** Meal planning (release 2.0). */
+  meals: ["meals"] as const,
+  mealIngredients: ["meals", "ingredients"] as const,
+  mealProfile: ["meals", "profile"] as const,
 };
