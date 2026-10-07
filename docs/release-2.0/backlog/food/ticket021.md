@@ -102,7 +102,7 @@ cd backend && npm run lint && npm run typecheck && npm test
 # Acceptance Criteria
 
 - [x] Every allergy and dislike from the owner input can be expressed as a tag
-- [ ] Every seed dish's ingredients resolve (checked by FOOD-003's coverage test; the seed dishes do not exist yet)
+- [x] Every seed dish's ingredients resolve (verified with FOOD-003, `backend/tests/meals-catalog.test.ts`)
 - [x] Nutrition and price values present for every non-pantry ingredient
 - [x] Custom ingredients possible
 - [x] Tests passing
@@ -149,7 +149,7 @@ cd backend && npm run lint && npm run typecheck && npm test
 
 # Implementation Status
 
-Done (2026-10-07), except the seed-dish coverage criterion, which FOOD-003 verifies.
+Done (2026-10-07); the seed-dish coverage criterion was verified with FOOD-003.
 
 - Model and units: `backend/src/meals/models/ingredient.ts`; catalog: `backend/src/meals/catalog/ingredients.ts`.
 - Service: `backend/src/meals/services/ingredient.service.ts`; schemas: `backend/src/meals/validators.ts`;

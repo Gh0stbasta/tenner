@@ -13,3 +13,6 @@ export * from "./handlers/dishes.js";
 export * from "./models/profile.js";
 export * from "./services/profile.service.js";
 export * from "./handlers/profile.js";
+export * from "./catalog/dishes.js";
+export * from "./services/meal-catalog-import.service.js";
+export * from "./handlers/catalog.js";

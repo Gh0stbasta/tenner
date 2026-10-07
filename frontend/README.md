@@ -143,6 +143,8 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   server (`GET/PUT /meals/profile`). People with adult/child, portion, vegetarian with exceptions, allergies (⚠),
   dislikes and likes (`EaterDialog`); planning rules and who eats when (`FoodRulesDialog`; default: weekday lunch
   only adults). Every change saves the whole profile.
+- **Essen: Gerichtekatalog** (FOOD-003, `src/features/meals/MealCatalogSettings.tsx`): „Katalog prüfen“ (dry run) →
+  „Jetzt importieren“ (`POST /meals/catalog`); safe to repeat.
 
 ## Installable App (MOBILE-001)
 

@@ -82,7 +82,8 @@ const unique = <T>(values: readonly T[]): T[] => [...new Set(values)];
 
 /** Derive diet, tags, protein and base from the dish's ingredients. */
 export interface DerivableDish {
-  readonly ingredients: readonly DishIngredient[];
+  /** `optional` may be missing (seed dishes): then the ingredient is required. */
+  readonly ingredients: readonly (Pick<DishIngredient, "ingredientId"> & { readonly optional?: boolean | undefined })[];
   readonly proteinSourcesOverride?: readonly ProteinTag[] | null | undefined;
   readonly baseTagsOverride?: readonly BaseTag[] | null | undefined;
 }

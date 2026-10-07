@@ -8,7 +8,10 @@ import { AnalyticsService } from "./analytics/index.js";
 import {
   DishService,
   IngredientService,
+  MealCatalogImportService,
   MealsStore,
+  importMealCatalogHandler,
+  type ImportMealCatalog,
   ProfileService,
   getFoodProfileHandler,
   updateFoodProfileHandler,
@@ -218,6 +221,7 @@ export interface Dependencies {
   readonly restoreDish: ArchiveDish;
   readonly getFoodProfile: GetFoodProfile;
   readonly updateFoodProfile: UpdateFoodProfile;
+  readonly importMealCatalog: ImportMealCatalog;
 }
 
 /** Per-request context passed to route handlers. */
@@ -320,6 +324,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "POST /meals/dishes/{dishId}/restore": ({ event, deps, logger, identity }) => restoreDishHandler(event, identity, deps.restoreDish, logger),
   "GET /meals/profile": ({ deps, identity }) => getFoodProfileHandler(identity.tenantId, deps.getFoodProfile),
   "PUT /meals/profile": ({ event, deps, logger, identity }) => updateFoodProfileHandler(event, identity, deps.updateFoodProfile, logger),
+  "POST /meals/catalog": ({ event, deps, logger, identity }) => importMealCatalogHandler(event, identity, deps.importMealCatalog, logger),
 };
 
 const CORRELATION_HEADER = "x-correlation-id";
@@ -432,6 +437,9 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
       ? new ProfileService({ store: mealsStore, ingredientsOf: (tenantId) => ingredientService.ingredientsOf(tenantId), membersOf, clock: systemClock, ids: uuidGenerator })
       : undefined;
   const dishService = mealsStore && ingredientService ? new DishService(mealsStore, (tenantId) => ingredientService.ingredientsOf(tenantId), systemClock, uuidGenerator) : undefined;
+  const mealCatalogImportService = dishService
+    ? new MealCatalogImportService({ dishesOf: (tenantId) => dishService.dishesOf(tenantId), createDish: (identity, request) => dishService.createDish(identity, request) })
+    : undefined;
 
   return {
     config,
@@ -503,6 +511,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     updateDish: dishService ? (identity, dishId, request) => dishService.updateDish(identity, dishId, request) : notConfigured,
     archiveDish: dishService ? (identity, dishId) => dishService.archiveDish(identity, dishId) : notConfigured,
     restoreDish: dishService ? (identity, dishId) => dishService.restoreDish(identity, dishId) : notConfigured,
+    importMealCatalog: mealCatalogImportService ? (identity, dryRun) => mealCatalogImportService.importCatalog(identity, dryRun) : notConfigured,
     getFoodProfile: profileService ? (tenantId) => profileService.getProfile(tenantId) : notConfigured,
     updateFoodProfile: profileService ? (identity, request) => profileService.updateProfile(identity, request) : notConfigured,
   };

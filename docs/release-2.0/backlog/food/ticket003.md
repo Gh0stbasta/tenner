@@ -117,22 +117,22 @@ cd frontend && npm run lint && npm run build && npm test
 
 # Acceptance Criteria
 
-- [ ] All 57 dishes from the owner's lists available after one import („Salat mit Protein“ as its variants)
-- [ ] Each dish classified for every planning rule
-- [ ] Import idempotent with dry run
-- [ ] Owner reviewed the classification (review sheet)
-- [ ] Tests passing
+- [x] All 57 dishes from the owner's lists available after one import („Salat mit Protein“ as its variants)
+- [x] Each dish classified for every planning rule
+- [x] Import idempotent with dry run
+- [ ] Owner reviewed the classification (review sheet `docs/release-2.0/food-catalog-review.md`) — owner action
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
@@ -140,9 +140,31 @@ cd frontend && npm run lint && npm run build && npm test
 
 - „Gnocchi mit Soße“ from the dish list is the same as the favorites' tomato and spinach sauce variants.
 - Quantities are typical recipe amounts per adult portion; the owner may adjust them in the editor.
+- **61 dishes:** the 57 owner dishes with „Salat mit Protein“ as five variants (Halloumi, Ei, Feta, Lachs, Hähnchen).
+- **Classification choices to review:** Burgerwraps use minced meat (protein `MINCE`) but count as a burger (R6);
+  Frikadellen and Hackbraten are `MEATBALL` (shaped minced meat) and carry a vegetarian variant; Flammkuchen and
+  Schupfnudeln are vegetarian with optional ham; „Spätzle“ is Spätzle with butter and peas; Grießbrei, Kaiserschmarrn
+  and Onigiri are lunch only; Apfelmus is an optional side (Kartoffelpuffer, Kaiserschmarrn).
+- **Above 20 active minutes** (excluded by R4 with the default limit): Lasagne, Frikadellen mit Kartoffelbrei,
+  Gemüsefrikadellen, Spätzle mit Hackbraten — marked ⚠ in the review sheet.
+- **Review sheet in sync:** a test compares the sheet with the catalog; `UPDATE_REVIEW_SHEET=1` regenerates it.
+- **Ingredients are not imported:** they are read from the code catalog (FOOD-021).
 
 ---
 
 # Out of Scope
 
 - Recipes with cooking steps; dish photos (FOOD-011).
+
+---
+
+# Implementation Status
+
+Done (2026-10-07), except the owner's review of the classification.
+
+- Seed: `backend/src/meals/catalog/dishes.ts`; import: `backend/src/meals/services/meal-catalog-import.service.ts`,
+  `handlers/catalog.ts`; route `POST /meals/catalog`.
+- Settings → „Essen: Gerichtekatalog“ (`frontend/src/features/meals/MealCatalogSettings.tsx`).
+- Review sheet: `docs/release-2.0/food-catalog-review.md` (generated, checked by `backend/tests/meals-catalog.test.ts`).
+- Owner actions after deploy: Settings → „Essen: Gerichtekatalog“ → „Katalog prüfen“ → „Jetzt importieren“; check the
+  review sheet and adjust dishes in the editor (FOOD-010) or tell Claude.

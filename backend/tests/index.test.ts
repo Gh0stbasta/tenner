@@ -161,6 +161,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     restoreDish: vi.fn(async () => DISH),
     getFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
     updateFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
+    importMealCatalog: vi.fn(async (_identity: unknown, dryRun: boolean) => ({ dryRun, dishesCreated: ["Onigiri"], dishesSkipped: [] })),
     ...overrides,
   };
 }
@@ -540,6 +541,17 @@ describe("food profile routes (FOOD-004)", () => {
     expect((await route(event("PUT /meals/profile", {}, JSON.stringify(body)), d)).statusCode).toBe(200);
     expect(JSON.stringify(vi.mocked(logger.info).mock.calls)).not.toContain("NUTS");
     expect((await route(event("PUT /meals/profile", {}, JSON.stringify({ eaters: [] })), d)).statusCode).toBe(400);
+  });
+});
+
+describe("meal catalog route (FOOD-003)", () => {
+  it("previews with a dry run and imports otherwise", async () => {
+    const d = deps();
+    expect((await route(event("POST /meals/catalog", {}, JSON.stringify({ dryRun: true })), d)).statusCode).toBe(200);
+    expect(d.importMealCatalog).toHaveBeenLastCalledWith(TEST_IDENTITY, true);
+    expect((await route(event("POST /meals/catalog"), d)).statusCode).toBe(200);
+    expect(d.importMealCatalog).toHaveBeenLastCalledWith(TEST_IDENTITY, false);
+    expect((await route(event("POST /meals/catalog", {}, JSON.stringify({ dryRun: "yes" })), d)).statusCode).toBe(400);
   });
 });
 

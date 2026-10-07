@@ -103,3 +103,28 @@ export function attendingEaters(eaters: readonly Eater[], attendance: Attendance
   if (configured !== null) return eaters.filter((eater) => configured.includes(eater.eaterId));
   return meal === "weekdayLunch" ? WEEKDAY_LUNCH_DEFAULT(eaters) : [...eaters];
 }
+
+const mealCatalogImportSchema = z.object({
+  dryRun: z.boolean(),
+  dishesCreated: z.array(z.string()),
+  dishesSkipped: z.array(z.string()),
+});
+export type MealCatalogImport = z.infer<typeof mealCatalogImportSchema>;
+
+function importMealCatalog(dryRun: boolean): Promise<MealCatalogImport> {
+  return apiClient.post("/meals/catalog", { schema: mealCatalogImportSchema, body: { dryRun } });
+}
+
+/** Dry run of the dish catalog import (FOOD-003). */
+export function useMealCatalogPreview() {
+  return useMutation({ mutationFn: () => importMealCatalog(true) });
+}
+
+/** The dish catalog import; afterwards every meal query is reloaded. */
+export function useImportMealCatalog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => importMealCatalog(false),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.meals }),
+  });
+}
