@@ -22,7 +22,15 @@
           "metadata": {
             "name": "Tenner",
             "description": "Heute fällige Tenner, offene Minuten und Überfälliges auf einen Blick.",
-            "keywords": ["tenner", "haushalt", "aufgaben"]
+            "keywords": [
+              "tenner",
+              "haushalt",
+              "aufgaben"
+            ],
+            "iconUri": "${WEB_APP_URL}/icons/icon-512.png",
+            "previews": [
+              "${WEB_APP_URL}/alexa/widget-preview.png"
+            ]
           }
         }
       ]
