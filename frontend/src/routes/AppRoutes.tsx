@@ -35,7 +35,9 @@ export function AppRoutes({ onLogout }: AppRoutesProps) {
         <Route path="tenners" element={<TennersPage />} />
         <Route path="tenners/:tennerId" element={<TennerDetailPage />} />
         <Route path="essen" element={<MealPlanPage />} />
-        <Route path="essen/einkaufsliste" element={<ShoppingListPage />} />
+        <Route path="einkaufsliste" element={<ShoppingListPage />} />
+        {/* FOOD-027: old address of the shopping list (bookmarks, installed app). */}
+        <Route path="essen/einkaufsliste" element={<Navigate to="/einkaufsliste" replace />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />

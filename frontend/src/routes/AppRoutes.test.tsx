@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockFetch, ok } from "../tests/fetchMock";
+import { fail, mockFetch, ok } from "../tests/fetchMock";
 import { dashboard } from "../tests/fixtures";
 import { renderWithProviders } from "../tests/render";
 import { AppRoutes } from "./AppRoutes";
@@ -43,6 +43,16 @@ describe("AppRoutes", () => {
   it("renders /essen (FOOD-009)", async () => {
     renderRoutes("/essen");
     expect(await screen.findByRole("heading", { level: 1, name: "Essen" })).toBeInTheDocument();
+  });
+
+  it.each(["/einkaufsliste", "/essen/einkaufsliste"])("renders the shopping list at %s (FOOD-027)", async (route) => {
+    mockFetch({ "GET /meals/plans/current/shopping-list": fail(404, "NOT_FOUND") });
+    renderRoutes(route);
+    expect(await screen.findByText(/noch keinen Essensplan/)).toBeInTheDocument();
+    const [side, bottom] = screen.getAllByRole("navigation", { name: "Hauptnavigation" });
+    expect(within(side as HTMLElement).getByRole("link", { name: "Einkaufsliste" })).toHaveClass("active");
+    expect(within(side as HTMLElement).getByRole("link", { name: "Essen" })).not.toHaveClass("active");
+    expect(within(bottom as HTMLElement).getByRole("link", { name: "Einkaufsliste" })).toHaveClass("Mui-selected");
   });
 
   it("shows a not-found page for unknown routes", () => {

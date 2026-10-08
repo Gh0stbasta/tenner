@@ -8,6 +8,7 @@ import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";
 import ListAltOutlinedIcon from "@mui/icons-material/ListAltOutlined";
 import RestaurantOutlinedIcon from "@mui/icons-material/RestaurantOutlined";
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import {
@@ -39,6 +40,7 @@ const ICONS: Readonly<Record<string, ReactNode>> = {
   "/dashboard": <DashboardOutlinedIcon />,
   "/tenners": <ListAltOutlinedIcon />,
   "/essen": <RestaurantOutlinedIcon />,
+  "/einkaufsliste": <ShoppingCartOutlinedIcon />,
   "/analytics": <InsightsOutlinedIcon />,
   "/settings": <SettingsOutlinedIcon />,
 };
@@ -89,7 +91,8 @@ function BottomNavigationBar() {
             component={NavLink}
             to={item.path}
             value={item.path}
-            label={item.label}
+            label={item.shortLabel ?? item.label}
+            aria-label={item.label}
             icon={ICONS[item.path]}
             sx={{ minWidth: 0 }}
           />

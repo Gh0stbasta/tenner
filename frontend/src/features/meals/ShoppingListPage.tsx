@@ -1,5 +1,5 @@
 /**
- * Shopping list /essen/einkaufsliste (FOOD-014): the week's ingredients in the household's own order (drag and drop
+ * Shopping list /einkaufsliste (FOOD-014, own navigation entry since FOOD-027): the week's ingredients in the household's own order (drag and drop
  * with mouse, touch or keyboard), ticked items struck through at the end, pantry items collapsed, own items, sharing.
  * Readable and usable offline: changes are queued and sent later (useShoppingChanges).
  */
