@@ -19,7 +19,7 @@ describe("AssignmentPage", () => {
   it("first login: welcomes the user and offers Stefan and Julia", async () => {
     mockFetch({ "GET /onboarding": ok({ assignedTo: null, members: FREE }) });
     renderPage();
-    expect(await screen.findByRole("heading", { name: "Willkommen bei Tenner" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Willkommen in der Zentrale" })).toBeInTheDocument();
     expect(screen.getByText(/noch keiner Person im Haushalt zugeordnet/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ich bin Stefan" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Ich bin Julia" })).toBeEnabled();
@@ -41,7 +41,7 @@ describe("AssignmentPage", () => {
     mockFetch({ "GET /onboarding": ok({ assignedTo: "JULIA", members: FREE }) });
     const { onAssigned } = renderPage();
     await waitFor(() => expect(onAssigned).toHaveBeenCalledOnce());
-    expect(screen.queryByRole("heading", { name: "Willkommen bei Tenner" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Willkommen in der Zentrale" })).not.toBeInTheDocument();
   });
 
   it("shows taken members as unavailable", async () => {
@@ -107,7 +107,7 @@ describe("AssignmentPage", () => {
   it("onboarding cannot be loaded: shows an error with retry", async () => {
     mockFetch({ "GET /onboarding": fail(503, "SERVICE_UNAVAILABLE") });
     renderPage();
-    expect(await screen.findByText("Tenner ist gerade nicht erreichbar")).toBeInTheDocument();
+    expect(await screen.findByText("Die Zentrale ist gerade nicht erreichbar")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /erneut/i })).toBeInTheDocument();
   });
 });

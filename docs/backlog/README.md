@@ -64,3 +64,4 @@ and a changelog entry on top of that.
 | Ticket | Title | Decision | Status |
 |---|---|---|---|
 | [REC-001](recommendations/ticket001.md) | Missed Tenners disappear and count as not done | Accepted (2026-10-08) | Done |
+| [REC-002](recommendations/ticket002.md) | Rename the app to „Zentrale“ and Tenners to „Aufgaben“ | Accepted (2026-10-08) | Done (device check open) |

@@ -30,7 +30,7 @@ function worker(fetchImpl: (url: string, init: RequestInit) => Promise<Response>
 }
 
 const payload = {
-  title: "🏠 Tenner",
+  title: "🏠 Zentrale",
   body: "Heute: Kleines Bad\nGeschätzter Aufwand: 10 Minuten",
   url: "https://app.example/tenners/t-1",
   tag: "tenner-t-1",
@@ -49,7 +49,7 @@ describe("push service worker", () => {
     const { scope, dispatch } = worker();
     await dispatch("push", { data: { json: () => payload } });
     expect(scope.registration.showNotification).toHaveBeenCalledWith(
-      "🏠 Tenner",
+      "🏠 Zentrale",
       expect.objectContaining({
         body: payload.body,
         tag: "tenner-t-1",
@@ -66,7 +66,7 @@ describe("push service worker", () => {
     const { scope, dispatch } = worker();
     await dispatch("push", { data: { json: () => JSON.parse("x"), text: () => "Hallo" } });
     expect(scope.registration.showNotification).toHaveBeenCalledWith(
-      "Tenner",
+      "Zentrale",
       expect.objectContaining({ body: "Hallo", actions: [] }),
     );
   });
@@ -82,7 +82,7 @@ describe("push service worker", () => {
       expect.objectContaining({ method: "POST", body: JSON.stringify({ token: "tok-done" }) }),
     );
     expect(scope.registration.showNotification).toHaveBeenCalledWith(
-      "Tenner",
+      "Zentrale",
       expect.objectContaining({ body: "✅ Erledigt: Kleines Bad", tag: "tenner-t-1" }),
     );
     expect(scope.clients.openWindow).not.toHaveBeenCalled();
@@ -97,7 +97,7 @@ describe("push service worker", () => {
       notification: notification({ url: "/", actionUrl: "https://api/x", tokens: { snooze: "t" } }),
     });
     expect(snoozed.scope.registration.showNotification).toHaveBeenCalledWith(
-      "Tenner",
+      "Zentrale",
       expect.objectContaining({ body: expect.stringMatching(/^⏰ Erinnere dich um \d\d:\d\d Uhr wieder\.$/) }),
     );
     const done = worker(async () => Response.json({ data: { action: "DONE", result: "ALREADY_DONE", title: null } }));
@@ -106,7 +106,7 @@ describe("push service worker", () => {
       notification: notification({ url: "/", actionUrl: "https://api/x", tokens: { done: "t" } }),
     });
     expect(done.scope.registration.showNotification).toHaveBeenCalledWith(
-      "Tenner",
+      "Zentrale",
       expect.objectContaining({ body: "✅ War schon erledigt." }),
     );
   });

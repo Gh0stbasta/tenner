@@ -9,10 +9,10 @@ import { CreateTennerDialog } from "./CreateTennerDialog";
 
 function renderDialog(onClose = vi.fn()) {
   const result = renderWithProviders(<CreateTennerDialog open onClose={onClose} />);
-  return { ...result, onClose, dialog: screen.getByRole("dialog", { name: "Tenner anlegen" }) };
+  return { ...result, onClose, dialog: screen.getByRole("dialog", { name: "Aufgabe anlegen" }) };
 }
 
-const submitButton = () => screen.getByRole("button", { name: "Tenner anlegen" });
+const submitButton = () => screen.getByRole("button", { name: "Aufgabe anlegen" });
 
 async function fillValid() {
   await userEvent.type(screen.getByRole("textbox", { name: "Titel" }), "Fenster putzen");
@@ -172,7 +172,7 @@ describe("CreateTennerDialog", () => {
     await userEvent.click(submitButton());
     expect(
       await screen.findByText(
-        "Tenner konnte nicht angelegt werden. Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+        "Aufgabe konnte nicht angelegt werden. Die Zentrale ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Titel" })).toHaveValue("Fenster putzen");
@@ -187,7 +187,7 @@ describe("CreateTennerDialog", () => {
     await fillValid();
     await waitFor(() => expect(submitButton()).toBeEnabled());
     await userEvent.click(submitButton());
-    await screen.findByText(/^Tenner konnte nicht angelegt werden/);
+    await screen.findByText(/^Aufgabe konnte nicht angelegt werden/);
     expect(fetchMock.calls().filter((call) => call.key === "POST /tenners")).toHaveLength(1);
   });
 

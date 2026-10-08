@@ -151,7 +151,7 @@ describe("vacation settings", () => {
 
     expect(
       await screen.findByText(
-        "🏖 Urlaub gespeichert. 4 Tenner nach hinten verschoben. 1 wurden gerade geändert und behalten ihr Datum.",
+        "🏖 Urlaub gespeichert. 4 Aufgaben nach hinten verschoben. 1 wurden gerade geändert und behalten ihr Datum.",
       ),
     ).toBeInTheDocument();
     expect(fetchMock.calls().find((call) => call.key === "PUT /household/vacation")?.body).toEqual({

@@ -19,7 +19,7 @@ describe("MealPlanPage (FOOD-009)", () => {
     renderWithProviders(<MealPlanPage />);
     expect(
       await screen.findByText(
-        "Der Essensplan entsteht, sobald Tenner wer mitisst (Familienprofil) und eure Gerichte (Gerichtekatalog) kennt.",
+        "Der Essensplan entsteht, sobald die Zentrale wer mitisst (Familienprofil) und eure Gerichte (Gerichtekatalog) kennt.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Einrichten" })).toHaveAttribute("href", "/settings");

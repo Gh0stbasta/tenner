@@ -60,8 +60,8 @@ export function PushDeviceSetting({
       {state === "unsupported" &&
         (needsInstallForPush() ? (
           <Alert severity="info" sx={{ mt: 1 }}>
-            Auf iPhone und iPad funktioniert Push nur, wenn Tenner als App installiert ist (Teilen → Zum
-            Home-Bildschirm). Öffne Tenner danach über das App-Symbol.
+            Auf iPhone und iPad funktioniert Push nur, wenn die Zentrale als App installiert ist (Teilen → Zum
+            Home-Bildschirm). Öffne Aufgaben danach über das App-Symbol.
           </Alert>
         ) : (
           <Alert severity="info" sx={{ mt: 1 }}>
@@ -70,7 +70,7 @@ export function PushDeviceSetting({
         ))}
       {state === "denied" && (
         <Alert severity="warning" sx={{ mt: 1 }}>
-          Benachrichtigungen sind für Tenner blockiert. Erlaube sie in den Browser- bzw. App-Einstellungen.
+          Benachrichtigungen sind für die Zentrale blockiert. Erlaube sie in den Browser- bzw. App-Einstellungen.
         </Alert>
       )}
       {state === "off" && (

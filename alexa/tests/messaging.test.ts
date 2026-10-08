@@ -27,14 +27,14 @@ function setup(status = 201) {
 describe("reminders from skill messages", () => {
   it("creates a one-time reminder in 60 seconds with the request's API token (Briefing Reminder Created)", async () => {
     const { skill, fetchMock } = setup();
-    const response = await skill.invoke(message({ type: "REMINDER", text: "Tenner: Heute 4 Tenner." }));
+    const response = await skill.invoke(message({ type: "REMINDER", text: "Aufgaben: Heute 4 Aufgaben." }));
     expect(response.response.outputSpeech).toBeUndefined();
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.eu.amazonalexa.com/v1/alerts/reminders");
     expect(init.headers).toMatchObject({ authorization: "Bearer api-token" });
     expect(JSON.parse(String(init.body))).toMatchObject({
       trigger: { type: "SCHEDULED_RELATIVE", offsetInSeconds: 60 },
-      alertInfo: { spokenInfo: { content: [{ locale: "de-DE", text: "Tenner: Heute 4 Tenner." }] } },
+      alertInfo: { spokenInfo: { content: [{ locale: "de-DE", text: "Aufgaben: Heute 4 Aufgaben." }] } },
     });
   });
 

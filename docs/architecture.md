@@ -2,7 +2,11 @@
 
 ## Project
 
-**Tenner** is a lightweight serverless web application that helps individuals and families stay on top of recurring responsibilities through small, manageable tasks.
+> **Name (REC-002, 2026-10-08):** the app is called **Zentrale**, the recurring tasks are called **Aufgaben** in the
+> UI, in Alexa („Alexa, öffne Familien Zentrale“) and in notifications. „Tenner“ remains the internal name: repository,
+> code (`tenner`, `tennerId`), AWS resources (`tenner-*`), API routes (`/tenners`) and the older documents.
+
+**Tenner** (in the UI: **Zentrale**) is a lightweight serverless web application that helps individuals and families stay on top of recurring responsibilities through small, manageable tasks.
 
 The idea is simple:
 

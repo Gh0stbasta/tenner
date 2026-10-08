@@ -54,7 +54,7 @@
         "items": [
           {
             "type": "Text",
-            "text": "Tenner",
+            "text": "Zentrale",
             "fontSize": "@titleSize",
             "fontWeight": "bold",
             "color": "@primary"

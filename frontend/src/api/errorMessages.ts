@@ -3,16 +3,16 @@
 import { CLIENT_ERROR_CODES, isApiError } from "./errors";
 
 export const DEFAULT_ERROR_MESSAGE = "Bitte versuche es erneut.";
-export const UNREACHABLE_MESSAGE = "Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.";
+export const UNREACHABLE_MESSAGE = "Die Zentrale ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.";
 
 const MESSAGES: Readonly<Record<string, string>> = {
   VALIDATION_ERROR: "Bitte prüfe die markierten Eingaben.",
   UNAUTHORIZED: "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an.",
-  NOT_FOUND: "Dieser Tenner existiert nicht mehr.",
-  CONCURRENT_MODIFICATION: "Jemand anderes hat diesen Tenner geändert. Lade neu, um den aktuellen Stand zu sehen.",
-  TENNER_INACTIVE: "Dieser Tenner ist inaktiv.",
+  NOT_FOUND: "Diese Aufgabe existiert nicht mehr.",
+  CONCURRENT_MODIFICATION: "Jemand anderes hat diese Aufgabe geändert. Lade neu, um den aktuellen Stand zu sehen.",
+  TENNER_INACTIVE: "Diese Aufgabe ist inaktiv.",
   NO_COMPLETION_TO_UNDO: "Es gibt keine Erledigung, die zurückgenommen werden kann.",
-  TENNER_NOT_DELETED: "Dieser Tenner ist nicht archiviert.",
+  TENNER_NOT_DELETED: "Diese Aufgabe ist nicht archiviert.",
   MEMBER_TAKEN: "Diese Person ist schon mit einem anderen Konto verknüpft.",
   ALREADY_ASSIGNED: "Dein Konto ist bereits verknüpft. Du wirst gleich weitergeleitet.",
   CATALOG_MEMBERS_MISSING: "Der Aufgabenkatalog braucht die Mitglieder Stefan und Julia (IDs STEFAN, JULIA).",

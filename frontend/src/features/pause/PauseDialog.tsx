@@ -66,7 +66,7 @@ export function PauseDialog({ tenner, onClose }: PauseDialogProps) {
         <DialogTitle id={titleId}>„{tenner.title}“ pausieren</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Pausierte Tenner erscheinen nicht als fällig oder überfällig. Ohne Datum bleibt der Tenner pausiert, bis du
+            Pausierte Aufgaben erscheinen nicht als fällig oder überfällig. Ohne Datum bleibt die Aufgabe pausiert, bis du
             ihn fortsetzt.
           </DialogContentText>
           {pause.isError && (
@@ -82,7 +82,7 @@ export function PauseDialog({ tenner, onClose }: PauseDialogProps) {
             fullWidth
             error={invalid}
             helperText={
-              invalid ? "Bitte ein Datum in der Zukunft wählen." : "Danach ist der Tenner automatisch wieder aktiv."
+              invalid ? "Bitte ein Datum in der Zukunft wählen." : "Danach ist die Aufgabe automatisch wieder aktiv."
             }
             slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: tomorrow } }}
           />

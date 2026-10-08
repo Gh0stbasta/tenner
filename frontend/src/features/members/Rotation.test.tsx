@@ -31,8 +31,8 @@ describe("rotating assignment", () => {
     expect(await rotation.findByRole("button", { name: "Stefan" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Bitte mindestens zwei Personen auswählen.")).toBeInTheDocument();
     await userEvent.click(rotation.getByRole("button", { name: "Julia" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Tenner anlegen" })).toBeEnabled());
-    await userEvent.click(screen.getByRole("button", { name: "Tenner anlegen" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Aufgabe anlegen" })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: "Aufgabe anlegen" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(fetchMock.calls().find((call) => call.key === "POST /tenners")?.body).toMatchObject({
       assignedTo: "STEFAN",

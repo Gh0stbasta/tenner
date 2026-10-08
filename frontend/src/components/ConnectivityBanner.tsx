@@ -13,9 +13,9 @@ export function ConnectivityBanner() {
   const unreachable = useApiUnreachable();
   const dataAge = useDataAge();
   const message = !online
-    ? "Keine Internetverbindung. Tenner aktualisiert sich, sobald du wieder online bist."
+    ? "Keine Internetverbindung. Die Zentrale aktualisiert sich, sobald du wieder online bist."
     : unreachable
-      ? "Tenner ist nicht erreichbar. Neuer Versuch läuft…"
+      ? "Die Zentrale ist nicht erreichbar. Neuer Versuch läuft…"
       : null;
   return (
     <Collapse in={message !== null} unmountOnExit>

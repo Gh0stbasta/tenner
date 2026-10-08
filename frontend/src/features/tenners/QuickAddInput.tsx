@@ -35,7 +35,7 @@ export function QuickAddInput({
       sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
     >
       <TextField
-        label="Was soll ein Tenner werden?"
+        label="Was soll eine Aufgabe werden?"
         placeholder="z. B. Büro saugen"
         size="small"
         fullWidth

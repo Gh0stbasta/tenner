@@ -117,7 +117,7 @@ function QuickAddFab() {
   return (
     <Fab
       color="primary"
-      aria-label="Tenner schnell anlegen"
+      aria-label="Aufgabe schnell anlegen"
       onClick={onClick}
       sx={{
         display: { xs: "flex", md: "none" },
@@ -147,7 +147,7 @@ export function AppLayout({ headerActions }: AppLayoutProps) {
       >
         <Toolbar>
           <Typography variant="h6" component="p" sx={{ flexGrow: 1, fontWeight: 700 }}>
-            Tenner
+            Aufgaben
           </Typography>
           {headerActions}
         </Toolbar>

@@ -2,9 +2,9 @@
 
 const LOCALE = "de-DE";
 
-/** "1 Tenner" / "3 Tenner" – the word is the same in singular and plural. */
+/** "1 Aufgabe" / "3 Aufgaben" (REC-002: Tenner are called Aufgaben in the UI). */
 export function formatTennerCount(count: number): string {
-  return `${count} Tenner`;
+  return `${count} ${count === 1 ? "Aufgabe" : "Aufgaben"}`;
 }
 
 /** "10 Min." */

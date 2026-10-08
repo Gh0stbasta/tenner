@@ -12,7 +12,7 @@ const NOW = new Date("2026-10-06T15:00:00Z");
 const RECIPIENT: Recipient = { tenantId: "default", userId: "STEFAN", displayName: "Stefan", timezone: "Europe/Berlin" };
 const ACCOUNT = "amzn1.ask.account.HOUSEHOLD";
 const json = (status: number) => new Response("{}", { status });
-const OVERDUE: NotificationMessage = { type: "OVERDUE_ALERT", userId: "STEFAN", subject: "Überfällig: 2 Tenner", textBody: "…", facts: { overdue: 2, oldestDays: 5 } };
+const OVERDUE: NotificationMessage = { type: "OVERDUE_ALERT", userId: "STEFAN", subject: "Überfällig: 2 Aufgaben", textBody: "…", facts: { overdue: 2, oldestDays: 5 } };
 const DIGEST: NotificationMessage = { type: "DAILY_DIGEST", userId: "STEFAN", subject: "Heute", textBody: "…", facts: { dueToday: 4, overdue: 1, minutes: 40 } };
 
 function channel(outcome: AlexaApiOutcome = { ok: true }, users = [ACCOUNT]) {
@@ -40,7 +40,7 @@ describe("AlexaChannel", () => {
     expect(await alexa.send(DIGEST, RECIPIENT)).toEqual({ status: "SENT" });
     expect(deps.skillMessaging.send).toHaveBeenCalledWith("token-alexa:skill_messaging", ACCOUNT, {
       type: "REMINDER",
-      text: "Tenner: Heute 4 Tenner, 40 Minuten, 1 überfällig. Sag: Alexa, sag Tenner Board, starte meinen Tag, für Details.",
+      text: "Zentrale: Heute 4 Aufgaben, 40 Minuten, 1 überfällig. Sag: Alexa, sag Familien Zentrale, starte meinen Tag, für Details.",
     });
   });
 
@@ -58,7 +58,7 @@ describe("AlexaChannel", () => {
   });
 
   it("words the reminder without overdue part when there is none", () => {
-    expect(reminderText({ ...DIGEST, facts: { dueToday: 2, overdue: 0, minutes: 15 } })).toBe("Tenner: Heute 2 Tenner, 15 Minuten. Sag: Alexa, sag Tenner Board, starte meinen Tag, für Details.");
+    expect(reminderText({ ...DIGEST, facts: { dueToday: 2, overdue: 0, minutes: 15 } })).toBe("Zentrale: Heute 2 Aufgaben, 15 Minuten. Sag: Alexa, sag Familien Zentrale, starte meinen Tag, für Details.");
   });
 });
 
@@ -73,7 +73,7 @@ describe("Alexa API clients", () => {
       timestamp: "2026-10-06T15:00:00.000Z",
       referenceId: "r1",
       expiryTime: "2026-10-07T14:00:00.000Z",
-      event: { name: "AMAZON.MessageAlert.Activated", payload: { state: { status: "UNREAD", freshness: "NEW" }, messageGroup: { creator: { name: "Tenner" }, count: 2, urgency: "URGENT" } } },
+      event: { name: "AMAZON.MessageAlert.Activated", payload: { state: { status: "UNREAD", freshness: "NEW" }, messageGroup: { creator: { name: "Zentrale" }, count: 2, urgency: "URGENT" } } },
       relevantAudience: { type: "Unicast", payload: { user: ACCOUNT } },
     });
     const live = vi.fn(async () => json(202));

@@ -54,12 +54,12 @@ export async function alertItems(deps: OverdueAlertDependencies, recipient: Reci
 
 export function renderAlert(items: readonly AlertItem[], recipient: Recipient, appUrl: string | undefined): NotificationMessage {
   const lines = [
-    `${recipient.displayName}, ${items.length === 1 ? "ein Tenner ist" : `${items.length} Tenner sind`} überfällig:`,
+    `${recipient.displayName}, ${items.length === 1 ? "eine Aufgabe ist" : `${items.length} Aufgaben sind`} überfällig:`,
     ...bulletList(
       items.map((item) => `${item.tenner.title} — ${daysText(item.tenner.overdueDays ?? 1)}${item.escalation ? " (Erinnerung)" : ""}`),
       ALERT_ITEM_LIMIT,
     ),
-    ...(appUrl === undefined ? [] : ["", `Tenner öffnen → ${appUrl}`]),
+    ...(appUrl === undefined ? [] : ["", `Zentrale öffnen → ${appUrl}`]),
   ];
   return {
     type: "OVERDUE_ALERT",

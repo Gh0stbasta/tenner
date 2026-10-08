@@ -25,10 +25,10 @@ describe("CatalogSettings (DATA-008)", () => {
     renderWithProviders(<CatalogSettings />);
     await userEvent.click(section().getByRole("button", { name: "Katalog prüfen" }));
     expect(
-      await section().findByText("2 neue Tenner · Mitglied Haushaltshilfe (ohne Anmeldung) · 1 schon vorhanden"),
+      await section().findByText("2 neue Aufgaben · Mitglied Haushaltshilfe (ohne Anmeldung) · 1 schon vorhanden"),
     ).toBeInTheDocument();
     await userEvent.click(section().getByRole("button", { name: "Jetzt importieren" }));
-    expect(await screen.findByText("Aufgabenkatalog importiert: 2 Tenner angelegt.")).toBeInTheDocument();
+    expect(await screen.findByText("Aufgabenkatalog importiert: 2 Aufgaben angelegt.")).toBeInTheDocument();
     expect(
       fetchMock
         .calls()

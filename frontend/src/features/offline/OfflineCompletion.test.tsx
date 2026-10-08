@@ -142,7 +142,7 @@ describe("offline completion (MOBILE-004)", () => {
     renderDashboard();
     expect(
       await screen.findByText(
-        "✅ Offline-Erledigung „Büro saugen“ übertragen. „Fenster“ nicht übernommen: Der Tenner wurde inzwischen gelöscht oder archiviert.",
+        "✅ Offline-Erledigung „Büro saugen“ übertragen. „Fenster“ nicht übernommen: Die Aufgabe wurde inzwischen gelöscht oder archiviert.",
       ),
     ).toBeInTheDocument();
     await waitFor(() => expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull());

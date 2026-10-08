@@ -43,12 +43,12 @@ describe("member deactivation", () => {
     });
     await userEvent.click(await (await members()).findByRole("button", { name: "Lena deaktivieren" }));
     const dialog = within(await screen.findByRole("dialog", { name: "Lena deaktivieren?" }));
-    const target = await dialog.findByRole("combobox", { name: "3 Tenner übertragen an" });
+    const target = await dialog.findByRole("combobox", { name: "3 Aufgaben übertragen an" });
     expect(target).toHaveTextContent("Stefan");
     await userEvent.click(target);
     await userEvent.click(await screen.findByRole("option", { name: "Julia" }));
     await userEvent.click(dialog.getByRole("button", { name: "Deaktivieren" }));
-    expect(await screen.findByText("Lena deaktiviert. 3 Tenner an Julia übertragen.")).toBeInTheDocument();
+    expect(await screen.findByText("Lena deaktiviert. 3 Aufgaben an Julia übertragen.")).toBeInTheDocument();
     expect(fetchMock.calls().find((call) => call.key === "POST /users/LENA/deactivate")?.body).toEqual({
       reassignTo: "JULIA",
     });
@@ -62,7 +62,7 @@ describe("member deactivation", () => {
     });
     await userEvent.click(await (await members()).findByRole("button", { name: "Lena deaktivieren" }));
     const dialog = within(await screen.findByRole("dialog"));
-    expect(await dialog.findByText("Es sind keine Tenner zugeordnet.")).toBeInTheDocument();
+    expect(await dialog.findByText("Es sind keine Aufgaben zugeordnet.")).toBeInTheDocument();
     await userEvent.click(dialog.getByRole("button", { name: "Deaktivieren" }));
     expect(await dialog.findByText(/^Deaktivieren fehlgeschlagen\./)).toBeInTheDocument();
     expect(fetchMock.calls().find((call) => call.key === "POST /users/LENA/deactivate")?.body).toEqual({});

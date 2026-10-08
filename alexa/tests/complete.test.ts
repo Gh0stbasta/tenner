@@ -123,7 +123,7 @@ describe("CompleteIntent", () => {
   it("confirms Tenners that are not due yet (Not-Yet-Due Confirmation)", async () => {
     const { skill, api } = setup({ "GET /household/alexa": juliaContext });
     const question = await skill.invoke(intentRequest("CompleteIntent", { tenner: { value: "auto waschen" } }, julia));
-    expect(ssml(question)).toBe("<speak>Auto waschen erledigen? Der ist erst am 12. Oktober fällig.</speak>");
+    expect(ssml(question)).toBe("<speak>Auto waschen erledigen? Die ist erst am 12. Oktober fällig.</speak>");
     expect(posts(api.calls)).toHaveLength(0);
     await skill.invoke(followUp("AMAZON.YesIntent", {}, question.sessionAttributes, julia));
     expect(posts(api.calls)[0]?.[0]).toBe(`${API_BASE}/tenners/auto/complete`);

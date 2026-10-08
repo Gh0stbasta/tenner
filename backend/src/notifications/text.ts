@@ -7,8 +7,8 @@ export function greeting(localMinutes: number): string {
   return "Guten Abend";
 }
 
-/** „1 Tenner“ / „3 Tenner“ — Tenner has the same plural. */
-export const tenners = (count: number): string => `${count} Tenner`;
+/** „1 Aufgabe“ / „3 Aufgaben“ (REC-002: Tenner are called Aufgaben in texts). */
+export const tenners = (count: number): string => `${count} ${count === 1 ? "Aufgabe" : "Aufgaben"}`;
 
 /** „ — 1 Tag“ / „ — 3 Tage“ */
 export const daysText = (days: number): string => `${days} ${days === 1 ? "Tag" : "Tage"}`;

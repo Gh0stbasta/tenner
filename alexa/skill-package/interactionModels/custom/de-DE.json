@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "tenner board",
+      "invocationName": "familien zentrale",
       "intents": [
         {
           "name": "EnableRemindersIntent",
@@ -76,7 +76,7 @@
             "was ich heute machen muss",
             "was steht heute an",
             "was heute ansteht",
-            "welche tenner sind heute fällig",
+            "welche aufgaben sind heute fällig",
             "was ist heute für {member} fällig",
             "was muss {member} heute machen",
             "was steht heute für {member} an",
@@ -96,7 +96,7 @@
             "was überfällig ist",
             "was habe ich vergessen",
             "was ich vergessen habe",
-            "welche tenner sind überfällig",
+            "welche aufgaben sind überfällig",
             "was ist bei {member} überfällig",
             "was hat {member} vergessen"
           ]
@@ -164,7 +164,7 @@
           "name": "AMAZON.HelpIntent",
           "samples": [
             "was kann ich fragen",
-            "wie funktioniert tenner"
+            "wie funktioniert die zentrale"
           ]
         },
         {

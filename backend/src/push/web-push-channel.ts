@@ -72,7 +72,7 @@ export function payloadsOf(message: NotificationMessage, appUrl: string | undefi
     return [{ title: message.subject, body, url: message.deepLink ?? appUrl ?? "/", tag: message.type }];
   }
   const payloads: PushPayload[] = items.slice(0, MAX_PUSH_ITEMS).map((item) => ({
-    title: "🏠 Tenner",
+    title: "🏠 Zentrale",
     body: [
       item.overdueDays === undefined ? `Heute: ${item.title}` : `Überfällig seit ${daysText(item.overdueDays)}: ${item.title}`,
       `Geschätzter Aufwand: ${minutesText(item.estimatedMinutes)}`,
@@ -82,7 +82,7 @@ export function payloadsOf(message: NotificationMessage, appUrl: string | undefi
     tennerId: item.tennerId,
   }));
   if (items.length > MAX_PUSH_ITEMS) {
-    payloads.push({ title: "🏠 Tenner", body: `+${items.length - MAX_PUSH_ITEMS} weitere Tenner`, url: `${base}/dashboard`, tag: message.type });
+    payloads.push({ title: "🏠 Zentrale", body: `+${items.length - MAX_PUSH_ITEMS} weitere Aufgaben`, url: `${base}/dashboard`, tag: message.type });
   }
   return payloads;
 }

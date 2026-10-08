@@ -43,7 +43,7 @@ function titles(tenners: readonly DashboardTenner[]): string {
   const shown = tenners.slice(0, BRIEFING_TITLES).map((tenner) => tenner.title);
   const hidden = tenners.length - shown.length;
   if (hidden === 0) return joinAlternatives(shown, "und");
-  return `${shown.join(", ")} und ${hidden === 1 ? "ein weiterer" : `${NUMBER[hidden] ?? hidden} weitere`}`;
+  return `${shown.join(", ")} und ${hidden === 1 ? "eine weitere" : `${NUMBER[hidden] ?? hidden} weitere`}`;
 }
 
 function vacationUntil(dashboard: BriefingDashboard): string | undefined {
@@ -110,7 +110,7 @@ export function buildBriefing({ dashboard, members, speaker, now, timeZone }: Br
 
   // 7. Closing question (6. „gestern erledigt“ is optional and not part of this version)
   const suggestion = [...overdue].sort(byRule)[0] ?? [...due].sort(byRule)[0];
-  if (suggestion) parts.push("Soll ich dir den ersten Tenner nennen?");
+  if (suggestion) parts.push("Soll ich dir die erste Aufgabe nennen?");
 
   // ≤ 40 s: first drop the titles, then the household sentence.
   if (wordCount(parts.join(" ")) > MAX_BRIEFING_WORDS) parts[todayIndex] = today(false);

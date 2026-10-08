@@ -8,7 +8,7 @@ export const CONTINUE_REPROMPT = "Soll ich weiterlesen? Sag ja oder nein.";
 const LISTING_ATTRIBUTE = "listing";
 
 /**
- * Speak a plain-text answer (escaped for SSML) and show it as a card. A one-shot request („Alexa, frag Tenner Board, …“)
+ * Speak a plain-text answer (escaped for SSML) and show it as a card. A one-shot request („Alexa, frag Familien Zentrale, …“)
  * ends the session; inside an open session Tenner waits for the next question. `question` keeps the session open
  * with that reprompt (e.g. a listing continuation). Voice only: the skill shows no APL views (MAINT-006).
  */

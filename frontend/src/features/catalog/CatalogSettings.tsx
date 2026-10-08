@@ -8,9 +8,10 @@ import { errorMessage } from "../../api/errorMessages";
 import { useNotify } from "../../components/NotificationProvider";
 import { SettingsSection } from "../settings/SettingsSection";
 import { useCatalogPreview, useImportCatalog, type CatalogImport } from "./api";
+import { formatTennerCount } from "../../utils/format";
 
 function summary(preview: CatalogImport): string {
-  const parts = [`${preview.tennersCreated.length} neue Tenner`];
+  const parts = [`${preview.tennersCreated.length} ${preview.tennersCreated.length === 1 ? "neue Aufgabe" : "neue Aufgaben"}`];
   if (preview.membersCreated.length > 0) parts.push(`Mitglied ${preview.membersCreated.join(", ")} (ohne Anmeldung)`);
   if (preview.tennersSkipped.length > 0) parts.push(`${preview.tennersSkipped.length} schon vorhanden`);
   return parts.join(" · ");
@@ -26,7 +27,7 @@ export function CatalogSettings() {
   const runImport = () =>
     importer.mutate(undefined, {
       onSuccess: (imported) => {
-        notify({ message: `Aufgabenkatalog importiert: ${imported.tennersCreated.length} Tenner angelegt.` });
+        notify({ message: `Aufgabenkatalog importiert: ${formatTennerCount(imported.tennersCreated.length)} angelegt.` });
         preview.reset();
       },
     });
@@ -34,7 +35,7 @@ export function CatalogSettings() {
   return (
     <SettingsSection
       title="Aufgabenkatalog"
-      description="Legt eure wiederkehrenden Aufgaben (täglich, wöchentlich, 12- und 26-Wochen-Rotation) und die Haushaltshilfe an. Vorhandene Tenner mit gleichem Titel werden übersprungen."
+      description="Legt eure wiederkehrenden Aufgaben (täglich, wöchentlich, 12- und 26-Wochen-Rotation) und die Haushaltshilfe an. Vorhandene Aufgaben mit gleichem Titel werden übersprungen."
     >
       {(preview.error ?? importer.error) && (
         <Alert severity="error" sx={{ mb: 2 }}>

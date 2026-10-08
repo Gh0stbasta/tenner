@@ -171,7 +171,7 @@ export function EaterDialog({ eater, pending, error, onSave, onClose }: EaterDia
             </Stack>
             <TextField
               select
-              label="Tenner-Mitglied (optional)"
+              label="Haushaltsmitglied (optional)"
               value={memberId}
               onChange={(event) => setMemberId(event.target.value)}
             >

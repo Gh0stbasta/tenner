@@ -71,7 +71,7 @@ describe("completion and undo", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Rückgängig" }));
     expect(
       await screen.findByText(
-        "Rückgängig machen fehlgeschlagen. Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+        "Rückgängig machen fehlgeschlagen. Die Zentrale ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
       ),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
@@ -96,7 +96,7 @@ describe("completion and undo", () => {
     await userEvent.click(await completeButton("Büro saugen"));
     expect(
       await screen.findByText(
-        "„Büro saugen“ konnte nicht erledigt werden. Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+        "„Büro saugen“ konnte nicht erledigt werden. Die Zentrale ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
       ),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));

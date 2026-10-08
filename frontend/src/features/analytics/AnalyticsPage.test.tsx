@@ -155,7 +155,7 @@ describe("AnalyticsPage", () => {
     expect(within(share.getByRole("list", { name: "Legende" })).getAllByRole("listitem")).toHaveLength(2);
     expect(share.getByText("Ausgewogenheit: 92 % (100 % = alle gleich viel)")).toBeInTheDocument();
 
-    const neglect = await section("Vernachlässigte Tenner");
+    const neglect = await section("Vernachlässigte Aufgaben");
     expect(await neglect.findByRole("link", { name: "Fensterbänke putzen" })).toHaveAttribute("href", "/tenners/t-12");
     expect(neglect.getByText("2 / 6")).toBeInTheDocument();
 

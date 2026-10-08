@@ -9,12 +9,12 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    payload = { title: "Tenner", body: event.data ? event.data.text() : "" };
+    payload = { title: "Zentrale", body: event.data ? event.data.text() : "" };
   }
   const actions = Array.isArray(payload.actions) ? payload.actions : [];
   const tokens = Object.fromEntries(actions.map((entry) => [entry.action, entry.token]));
   event.waitUntil(
-    self.registration.showNotification(payload.title || "Tenner", {
+    self.registration.showNotification(payload.title || "Zentrale", {
       body: payload.body || "",
       tag: payload.tag || "tenner",
       icon: "/icons/icon-192.png",
@@ -42,7 +42,7 @@ async function openTenner(url) {
 
 /** Feedback after a button: a short notification that replaces the reminder. */
 function confirm(tag, body) {
-  return self.registration.showNotification("Tenner", {
+  return self.registration.showNotification("Zentrale", {
     body,
     tag,
     icon: "/icons/icon-192.png",

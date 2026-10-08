@@ -11,8 +11,8 @@ export function DuplicateWarningDialog({ similar, onCreateAnyway, onCancel }: Du
   return (
     <ConfirmDialog
       open={similar !== null}
-      title="Ähnlicher Tenner vorhanden"
-      message={similar ? `Es gibt bereits einen ähnlichen Tenner: „${similar.title}“.` : ""}
+      title="Ähnliche Aufgabe vorhanden"
+      message={similar ? `Es gibt bereits eine ähnliche Aufgabe: „${similar.title}“.` : ""}
       confirmLabel="Trotzdem anlegen"
       onConfirm={onCreateAnyway}
       onCancel={onCancel}

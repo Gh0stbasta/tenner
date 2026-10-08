@@ -11,6 +11,7 @@ import type { Category } from "../../types/domain";
 import { useCategoryName, useSelectableCategories } from "../categories/api";
 import { formatShortDate } from "../../utils/format";
 import { useEndVacation, useHousehold, useSetVacation, useToday, type Vacation } from "../household/api";
+import { formatTennerCount } from "../../utils/format";
 
 function describe(vacation: Vacation, categoryName: (categoryId: Category) => string): string {
   const categories =
@@ -52,7 +53,7 @@ function VacationForm({ vacation }: { readonly vacation: Vacation | null }) {
       {
         onSuccess: (result) =>
           notify({
-            message: `🏖 Urlaub gespeichert. ${result.rescheduled} Tenner nach hinten verschoben.${
+            message: `🏖 Urlaub gespeichert. ${formatTennerCount(result.rescheduled)} nach hinten verschoben.${
               result.conflicts > 0 ? ` ${result.conflicts} wurden gerade geändert und behalten ihr Datum.` : ""
             }`,
           }),

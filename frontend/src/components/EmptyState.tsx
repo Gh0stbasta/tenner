@@ -30,8 +30,8 @@ export function NoTennersFound({ action }: { readonly action?: ReactNode }) {
   return (
     <EmptyState
       icon={<AssignmentOutlinedIcon aria-hidden />}
-      title="Keine Tenner gefunden"
-      description="Passe die Filter an oder lege deinen ersten Tenner an."
+      title="Keine Aufgaben gefunden"
+      description="Passe die Filter an oder lege deine erste Aufgabe an."
       action={action}
     />
   );
@@ -42,7 +42,7 @@ export function NoDashboardData() {
     <EmptyState
       icon={<CelebrationOutlinedIcon aria-hidden />}
       title="🎉 Alles erledigt."
-      description="Heute ist kein Tenner fällig."
+      description="Heute ist keine Aufgabe fällig."
     />
   );
 }
@@ -52,7 +52,7 @@ export function NoAnalyticsAvailable() {
     <EmptyState
       icon={<InsightsOutlinedIcon aria-hidden />}
       title="Noch keine Auswertung"
-      description="Sobald Tenner erledigt werden, erscheinen hier Auswertungen."
+      description="Sobald Aufgaben erledigt werden, erscheinen hier Auswertungen."
     />
   );
 }

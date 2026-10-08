@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Post-deploy Alexa health check (ALEXA-009): simulates „öffne tenner board“ on the development stage through SMAPI and
+# Post-deploy Alexa health check (ALEXA-009): simulates „öffne familien zentrale“ on the development stage through SMAPI and
 # fails unless the skill answers with a text that names Tenner (the welcome, or the link prompt when the
 # simulating account is not linked). Uses the same ASK credentials as scripts/deploy-alexa-skill.sh.
 #
@@ -29,12 +29,12 @@ ask() {
 # answers, report a warning instead of failing the deploy. A wrong answer or a skill error still fails.
 simulate_once() {
   local simulation_id result status waited=0
-  simulation_id="$(ask smapi simulate-skill -s "${SKILL_ID}" -g "${STAGE}" --input-content "öffne tenner board" --device-locale "${LOCALE}" | jq -r '.id')"
+  simulation_id="$(ask smapi simulate-skill -s "${SKILL_ID}" -g "${STAGE}" --input-content "öffne familien zentrale" --device-locale "${LOCALE}" | jq -r '.id')"
   while true; do
     result="$(ask smapi get-skill-simulation -s "${SKILL_ID}" -g "${STAGE}" -i "${simulation_id}")"
     status="$(jq -r '.status' <<<"${result}")"
     if [[ "${status}" != "IN_PROGRESS" ]]; then
-      python3 "$(dirname "$0")/check_alexa_simulation.py" "Tenner" <<<"${result}"
+      python3 "$(dirname "$0")/check_alexa_simulation.py" "Zentrale" <<<"${result}"
       return $?
     fi
     if (( waited >= MAX_WAIT_SECONDS )); then
@@ -57,5 +57,5 @@ for attempt in $(seq 1 "${SIMULATOR_ATTEMPTS}"); do
     sleep "${SIMULATOR_RETRY_SECONDS}"
   fi
 done
-echo "::warning title=Alexa health check skipped::Amazon's skill simulator failed ${SIMULATOR_ATTEMPTS} times; the skill was not checked. Test "Alexa, öffne Tenner Board" by hand (docs/runbooks/alexa.md)."
+echo "::warning title=Alexa health check skipped::Amazon's skill simulator failed ${SIMULATOR_ATTEMPTS} times; the skill was not checked. Test "Alexa, öffne Familien Zentrale" by hand (docs/runbooks/alexa.md)."
 exit 0

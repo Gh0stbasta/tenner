@@ -98,11 +98,11 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
   return (
     <Dialog open={open} onClose={close} fullScreen={fullScreen} fullWidth maxWidth="sm" aria-labelledby={titleId}>
       <form onSubmit={(event) => void submit(event)} noValidate>
-        <DialogTitle id={titleId}>Tenner anlegen</DialogTitle>
+        <DialogTitle id={titleId}>Aufgabe anlegen</DialogTitle>
         <DialogContent>
           {create.isError && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              Tenner konnte nicht angelegt werden. {errorMessage(create.error)}
+              Aufgabe konnte nicht angelegt werden. {errorMessage(create.error)}
             </Alert>
           )}
           <TennerForm form={form} disabled={create.isPending} />
@@ -112,7 +112,7 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
             Abbrechen
           </Button>
           <Button type="submit" variant="contained" disabled={!form.formState.isValid || create.isPending}>
-            Tenner anlegen
+            Aufgabe anlegen
           </Button>
         </DialogActions>
       </form>

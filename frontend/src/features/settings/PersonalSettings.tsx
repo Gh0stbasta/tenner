@@ -17,7 +17,7 @@ export function PersonalSettings() {
       <Stack spacing={2}>
         <TextField
           select
-          label="Zuständig für neue Tenner"
+          label="Zuständig für neue Aufgaben"
           value={preferences.defaultAssignedTo}
           onChange={(event) => update({ defaultAssignedTo: event.target.value as DefaultAssignee })}
           fullWidth

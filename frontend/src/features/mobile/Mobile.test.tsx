@@ -150,7 +150,7 @@ describe("mobile navigation", () => {
       within(bottom)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Dashboard", "Tenner", "Essen", "Einkauf", "Auswertung", "Einstellungen"]);
+    ).toEqual(["Dashboard", "Aufgaben", "Essen", "Einkauf", "Auswertung", "Einstellungen"]);
     expect(within(bottom).getByRole("link", { name: "Einstellungen" })).toHaveClass("Mui-selected");
   });
 
@@ -158,14 +158,14 @@ describe("mobile navigation", () => {
     mockFetch({});
     renderLayout("/dashboard");
     Element.prototype.scrollIntoView = vi.fn();
-    await userEvent.click(screen.getByRole("button", { name: "Tenner schnell anlegen" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aufgabe schnell anlegen" }));
     expect(screen.getByRole("textbox", { name: "Quick Add" })).toHaveFocus();
   });
 
   it("navigates to the dashboard Quick Add from other pages", async () => {
     mockFetch({});
     renderLayout("/settings");
-    await userEvent.click(screen.getByRole("button", { name: "Tenner schnell anlegen" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aufgabe schnell anlegen" }));
     expect(await screen.findByRole("textbox", { name: "Quick Add" })).toBeInTheDocument();
   });
 

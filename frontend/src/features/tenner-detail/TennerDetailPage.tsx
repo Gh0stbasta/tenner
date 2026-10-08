@@ -25,7 +25,7 @@ import { TennerDetailHeader } from "./TennerDetailHeader";
 function BackLink() {
   return (
     <Button component={Link} to="/tenners" startIcon={<ArrowBackIcon />} sx={{ mb: 1, ml: -1 }}>
-      Alle Tenner
+      Alle Aufgaben
     </Button>
   );
 }
@@ -54,17 +54,17 @@ export function TennerDetailPage() {
   const [archiveCandidate, setArchiveCandidate] = useState<Tenner | null>(null);
   const pauseControls = usePauseControls();
 
-  if (tenner.isPending) return <PageLoading label="Tenner wird geladen" />;
+  if (tenner.isPending) return <PageLoading label="Aufgabe wird geladen" />;
   if (tenner.isError) {
     if (isApiError(tenner.error) && tenner.error.status === 404) {
       return (
         <EmptyState
           icon={<SearchOffOutlinedIcon aria-hidden />}
-          title="Tenner nicht gefunden"
-          description="Diesen Tenner gibt es nicht (mehr)."
+          title="Aufgabe nicht gefunden"
+          description="Diese Aufgabe gibt es nicht (mehr)."
           action={
             <Button component={Link} to="/tenners" variant="contained">
-              Zu allen Tennern
+              Zu allen Aufgaben
             </Button>
           }
         />
@@ -74,7 +74,7 @@ export function TennerDetailPage() {
       <>
         <BackLink />
         <ErrorAlert
-          title="Tenner konnte nicht geladen werden"
+          title="Aufgabe konnte nicht geladen werden"
           message={errorMessage(tenner.error)}
           onRetry={() => void tenner.refetch()}
         />

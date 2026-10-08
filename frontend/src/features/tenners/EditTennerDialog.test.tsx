@@ -33,7 +33,7 @@ describe("EditTennerDialog", () => {
 
   it("loads the existing values and read-only facts; save is disabled without changes", () => {
     renderDialog();
-    expect(screen.getByRole("dialog", { name: "Tenner bearbeiten" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Aufgabe bearbeiten" })).toBeInTheDocument();
     expect(titleInput()).toHaveValue("Büro saugen");
     expect(screen.getByRole("spinbutton", { name: "Wiederholen alle" })).toHaveValue(14);
     expect(screen.getByRole("combobox", { name: "Einheit" })).toHaveTextContent("Tage");
@@ -82,7 +82,7 @@ describe("EditTennerDialog", () => {
       frequencyInterval: 1,
       weekdays: null,
     });
-    expect(await screen.findByText("✅ Tenner aktualisiert.")).toBeInTheDocument();
+    expect(await screen.findByText("✅ Aufgabe aktualisiert.")).toBeInTheDocument();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.dashboard });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.tenners });
   });
@@ -153,7 +153,7 @@ describe("EditTennerDialog", () => {
     await userEvent.click(saveButton());
     expect(
       await screen.findByText(
-        "Änderungen konnten nicht gespeichert werden. Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+        "Änderungen konnten nicht gespeichert werden. Die Zentrale ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
       ),
     ).toBeInTheDocument();
     expect(titleInput()).toHaveValue("Büro saugen neu");

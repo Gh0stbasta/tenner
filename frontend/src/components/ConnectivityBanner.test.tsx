@@ -8,8 +8,8 @@ import { renderWithProviders } from "../tests/render";
 import { z } from "zod";
 import { ConnectivityBanner } from "./ConnectivityBanner";
 
-const OFFLINE = "Keine Internetverbindung. Tenner aktualisiert sich, sobald du wieder online bist.";
-const UNREACHABLE = "Tenner ist nicht erreichbar. Neuer Versuch läuft…";
+const OFFLINE = "Keine Internetverbindung. Die Zentrale aktualisiert sich, sobald du wieder online bist.";
+const UNREACHABLE = "Die Zentrale ist nicht erreichbar. Neuer Versuch läuft…";
 
 function Probe() {
   const query = useQuery({

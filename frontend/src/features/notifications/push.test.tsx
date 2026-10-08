@@ -115,7 +115,7 @@ describe("PushDeviceSetting (NOTIFICATION-009)", () => {
   it("explains unsupported browsers and the iPhone install requirement", async () => {
     vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)");
     renderWithProviders(<PushDeviceSetting userId="STEFAN" preferencesKey={["p"]} publicKey={KEY} />);
-    expect(await screen.findByText(/nur, wenn Tenner als App installiert ist/)).toBeInTheDocument();
+    expect(await screen.findByText(/nur, wenn die Zentrale als App installiert ist/)).toBeInTheDocument();
   });
 
   it("enables push on this device, refreshes the channels and can disable it again", async () => {
@@ -139,7 +139,7 @@ describe("PushDeviceSetting (NOTIFICATION-009)", () => {
   it("explains a blocked permission", async () => {
     installPush({ permission: "denied" });
     renderWithProviders(<PushDeviceSetting userId="STEFAN" preferencesKey={["p"]} publicKey={KEY} />);
-    expect(await screen.findByText(/Benachrichtigungen sind für Tenner blockiert/)).toBeInTheDocument();
+    expect(await screen.findByText(/Benachrichtigungen sind für die Zentrale blockiert/)).toBeInTheDocument();
   });
 
   it("reports a failed registration", async () => {

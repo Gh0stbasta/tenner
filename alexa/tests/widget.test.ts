@@ -34,7 +34,7 @@ describe("widget package", () => {
     expect(manifest.publishingInformation.locales["de-DE"]?.[0]).toMatchObject({
       targetViewport: "WIDGET_M",
       // Required by Amazon (MAINT-003); the deploy replaces the placeholder with the web app URL.
-      metadata: { name: "Tenner", iconUri: "${WEB_APP_URL}/icons/icon-512.png", previews: ["${WEB_APP_URL}/alexa/widget-preview.png"] },
+      metadata: { name: "Zentrale", iconUri: "${WEB_APP_URL}/icons/icon-512.png", previews: ["${WEB_APP_URL}/alexa/widget-preview.png"] },
     });
     const presentation = read(manifest.manifest.presentationDefinitions[0]?.url ?? "") as { type: string; documentUrl: string; datasourceUrl: string };
     expect(presentation.type).toBe("APL_PRESENTATION");

@@ -23,7 +23,7 @@ describe("DashboardPage", () => {
     renderWithProviders(<DashboardPage />);
 
     expect(await screen.findByRole("heading", { level: 1, name: "Heute" })).toBeInTheDocument();
-    expect(screen.getByText("Freitag, 2. Oktober · 2 Tenner · 25 Min. · 1 überfällig")).toBeInTheDocument();
+    expect(screen.getByText("Freitag, 2. Oktober · 2 Aufgaben · 25 Min. · 1 überfällig")).toBeInTheDocument();
 
     const summary = screen.getByRole("region", { name: "Übersicht" });
     expect(within(summary).getByText("Heute fällig").nextSibling).toHaveTextContent("1");
@@ -41,7 +41,7 @@ describe("DashboardPage", () => {
 
     expect(within(screen.getByRole("region", { name: "Nach Person" })).getByText("Julia")).toBeInTheDocument();
     expect(
-      within(screen.getByRole("region", { name: "Nach Kategorie" })).getByText("1 Tenner · 15 Min."),
+      within(screen.getByRole("region", { name: "Nach Kategorie" })).getByText("1 Aufgabe · 15 Min."),
     ).toBeInTheDocument();
   });
 
@@ -96,7 +96,7 @@ describe("DashboardPage", () => {
     await userEvent.click(await screen.findByRole("button", { name: "„Haustür putzen“ erledigen" }));
     expect(
       await screen.findByText(
-        "„Haustür putzen“ konnte nicht erledigt werden. Jemand anderes hat diesen Tenner geändert. Lade neu, um den aktuellen Stand zu sehen.",
+        "„Haustür putzen“ konnte nicht erledigt werden. Jemand anderes hat diese Aufgabe geändert. Lade neu, um den aktuellen Stand zu sehen.",
       ),
     ).toBeInTheDocument();
     // The optimistic removal is rolled back.

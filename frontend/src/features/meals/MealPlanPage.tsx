@@ -88,7 +88,7 @@ function SetupHint({ plan }: { readonly plan: MealPlan }) {
         </Button>
       }
     >
-      Der Essensplan entsteht, sobald Tenner {missing.join(" und ")} kennt.
+      Der Essensplan entsteht, sobald die Zentrale {missing.join(" und ")} kennt.
     </Alert>
   );
 }

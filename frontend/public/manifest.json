@@ -1,6 +1,6 @@
 {
-  "name": "Tenner",
-  "short_name": "Tenner",
+  "name": "Zentrale",
+  "short_name": "Zentrale",
   "description": "Kleine wiederkehrende Aufgaben in zehn Minuten.",
   "lang": "de",
   "id": "/",
@@ -16,9 +16,9 @@
   ],
   "shortcuts": [
     {
-      "name": "Neuer Tenner",
+      "name": "Neue Aufgabe",
       "short_name": "Neu",
-      "description": "Schnell einen Tenner anlegen",
+      "description": "Schnell eine Aufgabe anlegen",
       "url": "/dashboard?quickAdd=1",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },

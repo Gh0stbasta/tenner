@@ -22,8 +22,8 @@ describe("shared Tenners", () => {
     await userEvent.type(screen.getByRole("textbox", { name: "Titel" }), "Spülmaschine ausräumen");
     await userEvent.click(screen.getByRole("combobox", { name: "Zuständig" }));
     await userEvent.click(await screen.findByRole("option", { name: "Alle (gemeinsam)" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Tenner anlegen" })).toBeEnabled());
-    await userEvent.click(screen.getByRole("button", { name: "Tenner anlegen" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Aufgabe anlegen" })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: "Aufgabe anlegen" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(fetchMock.calls().find((call) => call.key === "POST /tenners")?.body).toMatchObject({
       assignedTo: "HOUSEHOLD",
@@ -45,7 +45,7 @@ describe("shared Tenners", () => {
     renderWithProviders(<DashboardPage />);
     expect(await screen.findByText("Gemeinsam · 10 Min.")).toBeInTheDocument();
     const byPerson = within(screen.getByRole("region", { name: "Nach Person" }));
-    expect(await byPerson.findByText("2 Tenner (davon 1 gemeinsam) · 15 Min.")).toBeInTheDocument();
+    expect(await byPerson.findByText("2 Aufgaben (davon 1 gemeinsam) · 15 Min.")).toBeInTheDocument();
   });
 
   it("can be filtered on the Tenners page", async () => {

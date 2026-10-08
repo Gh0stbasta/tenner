@@ -16,6 +16,7 @@ import { errorMessage } from "../../api/errorMessages";
 import { useNotify } from "../../components/NotificationProvider";
 import { useActiveMembers, useAssignedTennerCount, useDeactivateMember, type Member } from "./api";
 import { SHARED_OPTION } from "./useAssignees";
+import { formatTennerCount } from "../../utils/format";
 
 export interface DeactivateMemberDialogProps {
   readonly member: Member;
@@ -39,7 +40,7 @@ export function DeactivateMemberDialog({ member, onClose }: DeactivateMemberDial
       {
         onSuccess: (result) => {
           const moved =
-            result.reassigned > 0 && target ? ` ${result.reassigned} Tenner an ${target.displayName} übertragen.` : "";
+            result.reassigned > 0 && target ? ` ${formatTennerCount(result.reassigned)} an ${target.displayName} übertragen.` : "";
           notify({ message: `${member.displayName} deaktiviert.${moved}` });
           onClose();
         },
@@ -51,7 +52,7 @@ export function DeactivateMemberDialog({ member, onClose }: DeactivateMemberDial
       <DialogTitle id={titleId}>{member.displayName} deaktivieren?</DialogTitle>
       <DialogContent>
         <DialogContentText sx={{ mb: 2 }}>
-          Der Verlauf bleibt erhalten. {member.displayName} kann danach keine Tenner mehr übernehmen oder erledigen, und
+          Der Verlauf bleibt erhalten. {member.displayName} kann danach keine Aufgaben mehr übernehmen oder erledigen, und
           angemeldete Konten verlieren den Zugriff.
         </DialogContentText>
         {deactivate.isError && (
@@ -60,13 +61,13 @@ export function DeactivateMemberDialog({ member, onClose }: DeactivateMemberDial
           </Alert>
         )}
         {count.isPending ? (
-          <DialogContentText>Zugeordnete Tenner werden geladen …</DialogContentText>
+          <DialogContentText>Zugeordnete Aufgaben werden geladen …</DialogContentText>
         ) : count.isError ? (
-          <Alert severity="error">Zugeordnete Tenner konnten nicht geladen werden.</Alert>
+          <Alert severity="error">Zugeordnete Aufgaben konnten nicht geladen werden.</Alert>
         ) : needsTarget ? (
           <TextField
             select
-            label={`${count.data} Tenner übertragen an`}
+            label={`${formatTennerCount(count.data)} übertragen an`}
             value={target?.userId ?? ""}
             onChange={(event) => setReassignTo(event.target.value)}
             fullWidth
@@ -78,7 +79,7 @@ export function DeactivateMemberDialog({ member, onClose }: DeactivateMemberDial
             ))}
           </TextField>
         ) : (
-          <DialogContentText>Es sind keine Tenner zugeordnet.</DialogContentText>
+          <DialogContentText>Es sind keine Aufgaben zugeordnet.</DialogContentText>
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>

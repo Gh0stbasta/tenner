@@ -41,7 +41,7 @@ export function createProactiveEventsClient(apiEndpoint: string, stage: "develop
           name: "AMAZON.MessageAlert.Activated",
           payload: {
             state: { status: "UNREAD", freshness: "NEW" },
-            messageGroup: { creator: { name: "Tenner" }, count: alert.count, urgency: "URGENT" },
+            messageGroup: { creator: { name: "Zentrale" }, count: alert.count, urgency: "URGENT" },
           },
         },
         relevantAudience: { type: "Unicast", payload: { user: alexaUserId } },

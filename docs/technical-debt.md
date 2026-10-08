@@ -1190,3 +1190,29 @@ based on the missed history events.
 ### Related Work
 
 REC-001, NOTIFICATION-004, ALEXA-003, `backend/src/services/missed-tenner.service.ts`.
+
+## TD-042: Internal name „Tenner“ differs from the product name „Zentrale“
+
+### Description
+
+Since REC-002 the household sees „Zentrale“ and „Aufgaben“. The repository, code identifiers, AWS resources
+(`tenner-*`), API routes (`/tenners`), the Alexa widget package IDs and most documents still say „Tenner“.
+
+### Reason
+
+Renaming the AWS resources would recreate the DynamoDB tables (data loss) and change the domain and sign-in
+configuration. Renaming the package IDs would orphan installed widgets. Renaming every identifier would be a large
+change with no benefit for the household.
+
+### Impact
+
+New contributors need the naming note in README and architecture. There is no runtime, cost or security impact.
+
+### Suggested Improvement
+
+Keep the internal name. If a full rename is ever wanted, do it as a planned migration ticket: new tables with data
+copy, a new Cognito domain prefix and a new skill package.
+
+### Related Work
+
+REC-002, README.md, docs/architecture.md.

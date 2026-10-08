@@ -8,7 +8,7 @@ import { renderWithProviders } from "../../tests/render";
 import { DEFAULT_PREFERENCES } from "../settings/preferences";
 import { QuickAddTenner } from "./QuickAddTenner";
 
-const input = () => screen.getByRole("textbox", { name: "Was soll ein Tenner werden?" });
+const input = () => screen.getByRole("textbox", { name: "Was soll eine Aufgabe werden?" });
 const posts = (fetchMock: FetchMock) => fetchMock.calls().filter((call) => call.key === "POST /tenners");
 
 function setup(
@@ -78,12 +78,12 @@ describe("QuickAddTenner", () => {
   it("warns about a similar Tenner and creates only after confirmation", async () => {
     const { fetchMock } = setup();
     await userEvent.type(input(), "vacuum office{Enter}");
-    const dialog = await screen.findByRole("dialog", { name: "Ähnlicher Tenner vorhanden" });
-    expect(within(dialog).getByText("Es gibt bereits einen ähnlichen Tenner: „Vacuum Office“.")).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", { name: "Ähnliche Aufgabe vorhanden" });
+    expect(within(dialog).getByText("Es gibt bereits eine ähnliche Aufgabe: „Vacuum Office“.")).toBeInTheDocument();
 
     await userEvent.click(within(dialog).getByRole("button", { name: "Abbrechen" }));
     expect(posts(fetchMock)).toHaveLength(0);
-    const field = await screen.findByRole("textbox", { name: "Was soll ein Tenner werden?" });
+    const field = await screen.findByRole("textbox", { name: "Was soll eine Aufgabe werden?" });
     expect(field).toHaveValue("vacuum office");
 
     await userEvent.type(field, "{Enter}");
@@ -96,7 +96,7 @@ describe("QuickAddTenner", () => {
     await userEvent.type(input(), "Wash Car{Enter}");
     expect(
       await screen.findByText(
-        "Tenner konnte nicht angelegt werden. Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+        "Aufgabe konnte nicht angelegt werden. Die Zentrale ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
       ),
     ).toBeInTheDocument();
     expect(input()).toHaveValue("Wash Car");

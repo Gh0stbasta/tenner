@@ -61,7 +61,7 @@ export function SkipDialog({ tenner, open, onClose }: SkipDialogProps) {
         <DialogTitle id={titleId}>„{tenner.title}“ diesmal überspringen?</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Der Tenner wird nicht als erledigt gezählt und ist erst im nächsten Zyklus wieder fällig.
+            Die Aufgabe wird nicht als erledigt gezählt und ist erst im nächsten Zyklus wieder fällig.
           </DialogContentText>
           {skip.isError && (
             <Alert severity="error" sx={{ mb: 2 }}>

@@ -204,7 +204,7 @@ jobs:
             "$(terraform -chdir="$TF_DIR" output -raw alexa_skill_lambda_arn)" \
             "$(terraform -chdir="$TF_DIR" output -raw frontend_url)"
 
-      # ALEXA-009: simulated „öffne tenner board“ against the development stage; fails the deployment on a wrong answer.
+      # ALEXA-009: simulated „öffne familien zentrale“ against the development stage; fails the deployment on a wrong answer.
       - name: Alexa health check
         if: hashFiles('terraform/**/*.tf') != '' && vars.ALEXA_SKILL_ID != ''
         env:

@@ -1,12 +1,14 @@
-# Tenner Alexa Skill
+# Zentrale Alexa Skill
 
-German (de-DE) Alexa custom skill "Tenner" ([ADR 0005](../docs/decisions/0005-alexa-platform.md), Alexa backlog
+Since REC-002 the skill is called „Zentrale“, invocation „familien zentrale“; the code keeps the internal name Tenner.
+
+German (de-DE) Alexa custom skill "Zentrale" ([ADR 0005](../docs/decisions/0005-alexa-platform.md), Alexa backlog
 [`docs/release-1.0/backlog/alexa/`](../docs/release-1.0/backlog/alexa/)). This folder is its own npm package, next to `backend/` and
 `frontend/`; Terraform for the skill Lambda lives in [`terraform/alexa.tf`](../terraform/alexa.tf).
 
 **Current state (ALEXA-008):** Alexa notifications and reminders, Echo Show home-screen widget (ALEXA-007), plus daily briefing („starte meinen Tag“, also from an Alexa routine), completing and undoing Tenners by voice
 (ALEXA-004), today/overdue/suggestion/work-left
-questions (ALEXA-003, see "Supported Phrases"), account linking and speaker recognition (ALEXA-002). „Alexa, öffne Tenner Board“ greets the recognized
+questions (ALEXA-003, see "Supported Phrases"), account linking and speaker recognition (ALEXA-002). „Alexa, öffne Familien Zentrale“ greets the recognized
 member by name, asks an unknown voice once „Wer spricht gerade?“ and asks unlinked accounts to link Tenner in the
 Alexa app. Help, stop, cancel, fallback and session end are handled. The skill is voice only: since MAINT-006 it
 shows no APL views on screen devices, only the home-screen widget (owner decision).
@@ -18,7 +20,7 @@ alexa/
 ├── skill-package/
 │   ├── skill.json                          manifest (de-DE, development stage); endpoint filled at deploy time
 │   ├── dataStorePackages/tenner-status/    home-screen widget APL package (ALEXA-007, Amazon's layout since MAINT-002)
-│   └── interactionModels/custom/de-DE.json invocation name "tenner board", intents, samples
+│   └── interactionModels/custom/de-DE.json invocation name "familien zentrale", intents, samples
 ├── src/
 │   ├── index.ts                            Lambda handler
 │   ├── skill.ts                            skill builder, handler order
@@ -96,14 +98,14 @@ Alexa is a notification channel of the notifier (NOTIFICATION-001) for every Ale
 | Tenner notification | On Alexa |
 |---|---|
 | Overdue alert (NOTIFICATION-004, member's evening time, default 18:00) | notification indicator (Proactive Event `AMAZON.MessageAlert.Activated`, count only — schemas allow no titles) |
-| Daily digest (NOTIFICATION-003, member's time) | spoken reminder 60 s later: „Tenner: Heute 4 Tenner, 40 Minuten, 1 überfällig. Sag: Alexa, sag Tenner Board, starte meinen Tag, für Details.“ — created by the skill from a Skill Messaging message (only way to create reminders out of session) |
+| Daily digest (NOTIFICATION-003, member's time) | spoken reminder 60 s later: „Tenner: Heute 4 Tenner, 40 Minuten, 1 überfällig. Sag: Alexa, sag Familien Zentrale, starte meinen Tag, für Details.“ — created by the skill from a Skill Messaging message (only way to create reminders out of session) |
 
 Setup (owner, after the widget prerequisites — LWA client in Parameter Store):
 
 1. Web app → Einstellungen → Benachrichtigungen: choose **Alexa** for „Tagesüberblick“ and/or „Überfällig-Hinweise“
    (offered once an Alexa account of the household used the skill).
 2. Alexa app → Tenner → Berechtigungen: allow **Erinnerungen** and turn on **Benachrichtigungen** — or say „Alexa,
-   sag Tenner Board, aktiviere Erinnerungen“ (voice consent).
+   sag Familien Zentrale, aktiviere Erinnerungen“ (voice consent).
 3. Quiet hours and the per-type toggles in Tenner's settings apply; one alert/digest per member and day.
 
 The manifest declares the reminder and notifications (`alexa::devices:all:notifications:write`, required by Amazon
@@ -112,7 +114,7 @@ development stage uses the development Proactive Events endpoint (`ALEXA_SKILL_S
 
 ## Daily Briefing and Routine (ALEXA-005)
 
-„Alexa, sag Tenner Board, starte meinen Tag“ speaks, in this order and only non-empty parts: greeting by time of day in
+„Alexa, sag Familien Zentrale, starte meinen Tag“ speaks, in this order and only non-empty parts: greeting by time of day in
 the household timezone („Guten Morgen, Stefan.“), today's Tenners of the speaker (own + shared; household-wide
 without a recognized speaker) with up to three titles, overdue ones (longest first), the household total and the
 other members' counts (only with more than one member), a vacation notice, and „Soll ich dir den ersten Tenner
@@ -120,7 +122,7 @@ nennen?“ („ja“ → suggestion, then „erledigt“ completes it). At most 
 first, then the household sentence. On an Echo Show the dashboard is shown while speaking.
 
 **Every morning automatically (Alexa routine, owner):** Alexa app → Mehr → Routinen → „+“ → Wenn: Zeitplan, z. B.
-7:00 an Werktagen → Aktion hinzufügen: „Benutzerdefiniert“ → „sag Tenner Board, starte meinen Tag“ (or Skills → Tenner)
+7:00 an Werktagen → Aktion hinzufügen: „Benutzerdefiniert“ → „sag Familien Zentrale, starte meinen Tag“ (or Skills → Tenner)
 → Von: Echo Show Küche → Speichern. Routines run without a recognized speaker, so the briefing is household-wide.
 Skills cannot create routines themselves (the Routines Kit was discontinued on 2026-05-13); verify the menu names
 in the current Alexa app.
@@ -133,7 +135,7 @@ devices get the same speech and card as voice-only devices. The code is in the G
 
 ## Supported Phrases (de-DE)
 
-Inside the skill („Alexa, öffne Tenner Board“, then …) or one-shot („Alexa, frag Tenner Board, …“). „für Julia“ / „bei Julia“
+Inside the skill („Alexa, öffne Familien Zentrale“, then …) or one-shot („Alexa, frag Familien Zentrale, …“). „für Julia“ / „bei Julia“
 works with every question; otherwise the answer is for the recognized speaker (own + shared Tenners) or, if nobody
 is recognized, for the whole household.
 
@@ -210,13 +212,13 @@ a notice.
    eu-west-1), then `scripts/deploy-alexa-skill.sh` uploads the manifest with the Lambda ARN and the interaction
    model to the **development** stage, waits for the model build and enables testing on the development stage
    (`set-skill-enablement`, the console's "Skill testing is enabled in: Development"; idempotent).
-5. On a household Echo: „Alexa, öffne Tenner Board“. The post-deploy health check fails on a wrong answer or a skill
+5. On a household Echo: „Alexa, öffne Familien Zentrale“. The post-deploy health check fails on a wrong answer or a skill
    error. When Amazon's simulator itself fails, it only warns (docs/runbooks/alexa.md).
 
 The skill stays in the development stage: it works on all Echo devices of the developer account without
 certification. Other Amazon accounts would need a beta test (at most 90 days); the skill is never published.
 
-Invocation name: **„tenner board“** (ALEXA-010, as registered in the developer console). The interaction model in
+Invocation name: **„familien zentrale“** (ALEXA-010, as registered in the developer console). The interaction model in
 `interactionModels/custom/de-DE.json` must keep the same name, because every deployment overwrites the console.
 
 ### Private skill (ALEXA-010)
@@ -254,7 +256,7 @@ The skill acts as a household member through the same Cognito user pool and Goog
 5. Alexa app → Skills → Tenner → **Link account** → sign in with the Google account you use in Tenner.
 6. Voice recognition (optional): each person creates a voice profile in the Alexa app and enables
    "Personalize skills" for Tenner (permission `alexa::person_id:read` in `skill-package/skill.json`). On the first
-   „Alexa, öffne Tenner Board“ Alexa asks „Wer spricht gerade?“; the answer is stored. Settings → Alexa in the web app
+   „Alexa, öffne Familien Zentrale“ Alexa asks „Wer spricht gerade?“; the answer is stored. Settings → Alexa in the web app
    lists and removes these mappings.
 
 Error messages: not linked → „Bitte verknüpfe Tenner in der Alexa-App“ plus a link card; 401 (link expired or

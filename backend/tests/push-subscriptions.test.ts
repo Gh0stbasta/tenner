@@ -105,7 +105,7 @@ describe("DynamoDbHouseholdRepository push subscriptions", () => {
 });
 
 describe("WebPushChannel", () => {
-  const message = { type: "DAILY_DIGEST" as const, userId: "STEFAN", subject: "Heute: 2 Tenner", textBody: "x".repeat(400), deepLink: "https://app.example.com" };
+  const message = { type: "DAILY_DIGEST" as const, userId: "STEFAN", subject: "Heute: 2 Aufgaben", textBody: "x".repeat(400), deepLink: "https://app.example.com" };
   const recipient = { tenantId: "default", userId: "STEFAN", displayName: "Stefan", timezone: "Europe/Berlin" };
   const keys = { publicKey: "pub", privateKey: "priv", subject: "https://app.example.com" };
 
@@ -118,7 +118,7 @@ describe("WebPushChannel", () => {
     const { channel: push, send } = channel([device(1), device(2)]);
     expect(await push.send(message, recipient)).toEqual({ status: "SENT" });
     expect(send).toHaveBeenCalledTimes(2);
-    expect(send).toHaveBeenCalledWith(device(1), { title: "Heute: 2 Tenner", body: `${"x".repeat(299)}…`, url: "https://app.example.com", tag: "DAILY_DIGEST" }, keys, { ttlSeconds: 43200, urgency: "normal" }, NOW);
+    expect(send).toHaveBeenCalledWith(device(1), { title: "Heute: 2 Aufgaben", body: `${"x".repeat(299)}…`, url: "https://app.example.com", tag: "DAILY_DIGEST" }, keys, { ttlSeconds: 43200, urgency: "normal" }, NOW);
   });
 
   it("skips members without a device and removes gone subscriptions", async () => {
@@ -146,21 +146,21 @@ describe("web push configuration", () => {
 });
 
 describe("per-Tenner push reminders (NOTIFICATION-010)", () => {
-  const item = (n: number, overdueDays?: number) => ({ tennerId: `t-${n}`, title: `Tenner ${n}`, estimatedMinutes: n === 1 ? 1 : 10, nextDue: "2026-10-07", ...(overdueDays === undefined ? {} : { overdueDays }) });
+  const item = (n: number, overdueDays?: number) => ({ tennerId: `t-${n}`, title: `Aufgaben ${n}`, estimatedMinutes: n === 1 ? 1 : 10, nextDue: "2026-10-07", ...(overdueDays === undefined ? {} : { overdueDays }) });
   const message = (items: ReturnType<typeof item>[]) => ({ type: "DAILY_DIGEST" as const, userId: "STEFAN", subject: "Heute", textBody: "…", items });
 
   it("sends one notification per Tenner, tagged per Tenner, opening its page", () => {
     expect(payloadsOf(message([item(1), item(2, 3)]), "https://app")).toEqual([
-      { title: "🏠 Tenner", body: "Heute: Tenner 1\nGeschätzter Aufwand: 1 Minute", url: "https://app/tenners/t-1", tag: "tenner-t-1", tennerId: "t-1" },
-      { title: "🏠 Tenner", body: "Überfällig seit 3 Tagen: Tenner 2\nGeschätzter Aufwand: 10 Minuten", url: "https://app/tenners/t-2", tag: "tenner-t-2", tennerId: "t-2" },
+      { title: "🏠 Zentrale", body: "Heute: Aufgaben 1\nGeschätzter Aufwand: 1 Minute", url: "https://app/tenners/t-1", tag: "tenner-t-1", tennerId: "t-1" },
+      { title: "🏠 Zentrale", body: "Überfällig seit 3 Tagen: Aufgaben 2\nGeschätzter Aufwand: 10 Minuten", url: "https://app/tenners/t-2", tag: "tenner-t-2", tennerId: "t-2" },
     ]);
-    expect(payloadsOf(message([item(2, 1)]), undefined)[0]).toMatchObject({ body: "Überfällig seit 1 Tag: Tenner 2\nGeschätzter Aufwand: 10 Minuten", url: "/tenners/t-2" });
+    expect(payloadsOf(message([item(2, 1)]), undefined)[0]).toMatchObject({ body: "Überfällig seit 1 Tag: Aufgaben 2\nGeschätzter Aufwand: 10 Minuten", url: "/tenners/t-2" });
   });
 
   it("caps the reminders and summarises the rest", () => {
     const payloads = payloadsOf(message(Array.from({ length: 11 }, (_, index) => item(index + 2))), "https://app");
     expect(payloads).toHaveLength(9);
-    expect(payloads[8]).toEqual({ title: "🏠 Tenner", body: "+3 weitere Tenner", url: "https://app/dashboard", tag: "DAILY_DIGEST" });
+    expect(payloads[8]).toEqual({ title: "🏠 Zentrale", body: "+3 weitere Aufgaben", url: "https://app/dashboard", tag: "DAILY_DIGEST" });
   });
 });
 

@@ -9,9 +9,9 @@ const speaker: Audience = { kind: "speaker", member: STEFAN };
 
 describe("number wording", () => {
   it("uses words for small counts and the right minute form", () => {
-    expect(tennerCount(1)).toBe("ein Tenner");
-    expect(tennerCount(3)).toBe("drei Tenner");
-    expect(tennerCount(15)).toBe("15 Tenner");
+    expect(tennerCount(1)).toBe("eine Aufgabe");
+    expect(tennerCount(3)).toBe("drei Aufgaben");
+    expect(tennerCount(15)).toBe("15 Aufgaben");
     expect(minutes(1)).toBe("eine Minute");
     expect(minutes(25)).toBe("25 Minuten");
     expect([dueIn(1), dueIn(2), dueIn(5)]).toEqual(["morgen", "übermorgen", "in 5 Tagen"]);
@@ -22,19 +22,19 @@ describe("todayAnswer", () => {
   it("starts with the number, lists three and offers the rest (Today For Known Speaker)", () => {
     const answer = todayAnswer(KITCHEN_DAY, speaker);
     expect(answer.text).toBe(
-      "Vier Tenner für dich heute, zusammen 55 Minuten: Auto waschen (30 Minuten), Altglas (5 Minuten) und Pflanzen gießen (10 Minuten). Soll ich den letzten auch vorlesen?",
+      "Vier Aufgaben für dich heute, zusammen 55 Minuten: Auto waschen (30 Minuten), Altglas (5 Minuten) und Pflanzen gießen (10 Minuten). Soll ich die letzte auch vorlesen?",
     );
     expect(answer.remaining).toEqual(["Spülmaschine ausräumen (10 Minuten)"]);
   });
 
   it("speaks household-wide and mentions overdue Tenners when everything fits (Today For Unknown Speaker)", () => {
     const answer = todayAnswer(dashboard({ overdue: [dashboardTenner({ overdueDays: 2 })] }), household);
-    expect(answer.text).toBe("Ein Tenner heute, zusammen 10 Minuten: Büro saugen (10 Minuten). Außerdem ist ein Tenner überfällig.");
+    expect(answer.text).toBe("Eine Aufgabe heute, zusammen 10 Minuten: Büro saugen (10 Minuten). Außerdem ist eine Aufgabe überfällig.");
     expect(answer.remaining).toEqual([]);
   });
 
   it("names another member", () => {
-    expect(todayAnswer(dashboard(), { kind: "member", member: JULIA }).text).toMatch(/^Ein Tenner für Julia heute/);
+    expect(todayAnswer(dashboard(), { kind: "member", member: JULIA }).text).toMatch(/^Eine Aufgabe für Julia heute/);
   });
 
   it("says nothing is due and names the next Tenner (Nothing Due)", () => {
@@ -49,7 +49,7 @@ describe("todayAnswer", () => {
 
 describe("overdueAnswer", () => {
   it("orders by days overdue and says since when (Overdue Ordering And Wording)", () => {
-    expect(overdueAnswer(KITCHEN_DAY, household).text).toBe("Zwei Tenner sind überfällig: Haustür putzen (seit 4 Tagen) und Fenster putzen (seit gestern).");
+    expect(overdueAnswer(KITCHEN_DAY, household).text).toBe("Zwei Aufgaben sind überfällig: Haustür putzen (seit 4 Tagen) und Fenster putzen (seit gestern).");
   });
 
   it("praises an empty list", () => {
@@ -61,7 +61,7 @@ describe("overdueAnswer", () => {
     const first = overdueAnswer(many, household);
     expect(first.text).toMatch(/Soll ich die restlichen vier vorlesen\?$/);
     const second = continueListing(first.remaining);
-    expect(second.text).toBe("Weiter: T3 (seit 7 Tagen), T4 (seit 6 Tagen) und T5 (seit 5 Tagen). Soll ich den letzten auch vorlesen?");
+    expect(second.text).toBe("Weiter: T3 (seit 7 Tagen), T4 (seit 6 Tagen) und T5 (seit 5 Tagen). Soll ich die letzte auch vorlesen?");
     expect(continueListing(second.remaining)).toEqual({ text: "Weiter: T6 (seit 4 Tagen).", remaining: [] });
   });
 });

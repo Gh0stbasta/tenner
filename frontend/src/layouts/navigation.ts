@@ -9,7 +9,7 @@ export interface NavigationItem {
 
 export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { label: "Dashboard", path: "/dashboard" },
-  { label: "Tenner", path: "/tenners" },
+  { label: "Aufgaben", path: "/tenners" },
   { label: "Essen", path: "/essen" },
   { label: "Einkaufsliste", path: "/einkaufsliste", shortLabel: "Einkauf" },
   { label: "Auswertung", path: "/analytics" },

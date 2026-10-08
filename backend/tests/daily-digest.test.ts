@@ -60,9 +60,9 @@ describe("renderDigest", () => {
   it("renders today, overdue, minutes and the deep link (Digest Content Rendering)", () => {
     const message = renderDigest(DAY, RECIPIENT, 450, "https://tenner.example");
     expect(message?.textBody).toBe(
-      ["Guten Morgen, Stefan ☀️", "", "Heute (3 Tenner · ~30 Min.)", "• Büro saugen", "• Mobility", "• Spülmaschine", "", "Überfällig (1)", "• Auto waschen — 3 Tage", "", "Tenner öffnen → https://tenner.example"].join("\n"),
+      ["Guten Morgen, Stefan ☀️", "", "Heute (3 Aufgaben · ~30 Min.)", "• Büro saugen", "• Mobility", "• Spülmaschine", "", "Überfällig (1)", "• Auto waschen — 3 Tage", "", "Zentrale öffnen → https://tenner.example"].join("\n"),
     );
-    expect(message).toMatchObject({ type: "DAILY_DIGEST", userId: "STEFAN", subject: "Heute: 3 Tenner · ~40 Min. · 1 überfällig", deepLink: "https://tenner.example", facts: { dueToday: 3, overdue: 1, minutes: 40 } });
+    expect(message).toMatchObject({ type: "DAILY_DIGEST", userId: "STEFAN", subject: "Heute: 3 Aufgaben · ~40 Min. · 1 überfällig", deepLink: "https://tenner.example", facts: { dueToday: 3, overdue: 1, minutes: 40 } });
   });
 
   it("skips empty days (Empty Day Skipped)", () => {
@@ -75,7 +75,7 @@ describe("renderDigest", () => {
     expect(text.split("\n").filter((line) => line.startsWith("• T"))).toHaveLength(DIGEST_ITEM_LIMIT);
     expect(text).toContain("+3 weitere");
     expect(text).toContain("• Alt — 1 Tag");
-    expect(text).not.toContain("Tenner öffnen");
+    expect(text).not.toContain("Zentrale öffnen");
   });
 
   it("greets by local time", () => {
