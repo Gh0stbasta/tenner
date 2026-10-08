@@ -12,7 +12,7 @@ import { NoIntentHandler, OverdueIntentHandler, SuggestIntentHandler, TodayInten
 import { SessionEndedRequestHandler } from "./handlers/sessionEnded.js";
 import { SpeakerIntentHandler } from "./handlers/speaker.js";
 import { StopIntentHandler } from "./handlers/stop.js";
-import { AplRuntimeErrorHandler, DataStoreErrorHandler, UnknownSystemRequestHandler, touchSessionInterceptor } from "./handlers/system.js";
+import { AplRuntimeErrorHandler, DataStoreErrorHandler, SystemExceptionHandler, UnknownSystemRequestHandler, touchSessionInterceptor } from "./handlers/system.js";
 import { TouchCompleteHandler } from "./handlers/touch.js";
 import { OpenDashboardHandler, WidgetInstalledHandler, WidgetLifecycleHandler } from "./handlers/widget.js";
 import { logResponse, startTimer } from "./requestLog.js";
@@ -37,6 +37,7 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
       WidgetLifecycleHandler,
       AplRuntimeErrorHandler,
       DataStoreErrorHandler,
+      SystemExceptionHandler,
       // Other system messages before the intent handlers, which read the session (MAINT-004).
       UnknownSystemRequestHandler,
       // Answers to open completion questions come before the general handlers of the same intents.

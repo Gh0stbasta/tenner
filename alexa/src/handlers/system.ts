@@ -27,6 +27,26 @@ export const AplRuntimeErrorHandler: RequestHandler = {
   },
 };
 
+/**
+ * Alexa rejected the skill's previous response (e.g. speech or a view for a widget event in INLINE mode). The skill
+ * must not answer it; the logged error type and message name the problem (MAINT-005).
+ */
+export const SystemExceptionHandler: RequestHandler = {
+  canHandle(input: HandlerInput): boolean {
+    return getRequestType(input.requestEnvelope) === "System.ExceptionEncountered";
+  },
+  handle(input: HandlerInput): Response {
+    const request = input.requestEnvelope.request as unknown as { requestId: string; error?: { type?: string; message?: string }; cause?: { requestId?: string } };
+    logEvent("info", "system_exception", {
+      requestId: request.requestId,
+      errorType: request.error?.type ?? "unknown",
+      errorMessage: short(request.error?.message),
+      causeRequestId: request.cause?.requestId,
+    });
+    return input.responseBuilder.getResponse();
+  },
+};
+
 /** The Data Store could not deliver widget data to a device (e.g. device offline); the next push repeats it. */
 export const DataStoreErrorHandler: RequestHandler = {
   canHandle(input: HandlerInput): boolean {

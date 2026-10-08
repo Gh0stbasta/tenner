@@ -54,7 +54,10 @@
             "type": "SendEvent",
             "arguments": [
               "openDashboard"
-            ]
+            ],
+            "flags": {
+              "interactionMode": "STANDARD"
+            }
           }
         ],
         "item": {
