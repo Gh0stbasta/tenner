@@ -1,26 +1,26 @@
 # 🧭 Tenner — Executive Dashboard
 
-> Snapshot of **2026-10-07**. Updated with every pull request (see *About this dashboard* at the end).
+> Snapshot of **2026-10-08**. Updated with every pull request (see *About this dashboard* at the end).
 
 ## 📌 Executive Summary
 
 | | |
 |---|---|
-| **Project health** | 🟡 **Live, widget tap not working**: the last deploy (PR #36) is green and the alarm is quiet, but Alexa rejects the answer to a widget tap — this PR fixes it; all 1,785 automated tests pass (backend 1,057, frontend 443, alexa 161, Terraform 76, scripts 48) |
+| **Project health** | 🟢 **Live**: the Tenner widget shows data since the Parameter Store fix; the broken Echo Show view goes away with this PR; all 1,772 automated tests pass (backend 1,064, frontend 443, alexa 141, Terraform 76, scripts 48; fewer alexa tests because the views were removed) |
 | **Current phase** | **Release 2.0 — Family Meal Planning, in progress.** Release 1.0 is in maintenance |
-| **Current focus** | This pull request: widget tap opens the skill (MAINT-005, interaction mode STANDARD) |
-| **Biggest blocker** | None; until this PR is deployed a tap on the widget does nothing |
-| **Recommended next action** | Merge, then tap the widget on the Echo Show 21 (remove and add it if it does not update) |
+| **Current focus** | This pull request: skill without Echo Show views, widget only (MAINT-006), and a meal widget „Tenner Essen“ with today's lunch and dinner (FOOD-018) |
+| **Biggest blocker** | None |
+| **Recommended next action** | Merge, then add the widget „Tenner Essen“ on the Echo Show 21 |
 
 ## 📈 Progress
 
 ```text
 Release 1.0  ████████████████████ 100%  104 / 104 tickets done (tag v1.0.0 still to set)
-Release 2.0  █████████░░░░░░░░░░░  46%   12 /  26 FOOD tickets (foundation, planning, shopping list)
-Maintenance   5 done (MAINT-001 – 005; device checks open) · REC 0
+Release 2.0  ██████████░░░░░░░░░░  50%   13 /  26 FOOD tickets (foundation, planning, shopping list, meal widget)
+Maintenance   6 done (MAINT-001 – 006; device checks open) · REC 0
 ```
 
-✅ Completed: **122** (104 + EPIC-FOOD-001 + 12 FOOD + 5 MAINT) · 🚧 In progress: **0** · 📋 Open: **14** (release 2.0)
+✅ Completed: **124** (104 + EPIC-FOOD-001 + 13 FOOD + 6 MAINT) · 🚧 In progress: **0** · 📋 Open: **13** (release 2.0)
 
 ## 🧩 Feature Status
 
@@ -28,9 +28,9 @@ Maintenance   5 done (MAINT-001 – 005; device checks open) · REC 0
 |---|---|
 | ✅ Google login, one household, private data | ✅ Foundation: meals table, 105 ingredients, dishes, family profile and rules, 61-dish catalog (FOOD-001 – 004, 021) |
 | ✅ Tenners, scheduling, household, task catalog, analytics | ✅ Weekly plan with rules R1 – R13, made automatically; replace, choose, swap, lock, regenerate (FOOD-005 – 009, 022) |
-| ✅ Phone app with offline use | 🆕 Shopping list: own order by drag and drop, ticked items struck through, offline in the shop (FOOD-014) · 🔲 dish editor, nutrition, cost, photos (FOOD-010 – 013) |
-| ✅ Push per Tenner with „Erledigt“/„Später“ | 🔲 Morning push, „Was gibt es heute?“, shopping list via Alexa, meal widget, calendar feed (FOOD-016, 017, 026, 018, 015) |
-| ✅ Alexa „Tenner Board“ with Echo Show — 🆕 widget live (MAINT-002 – 005) | 🔲 History, feedback, food analytics (FOOD-023, 019); release (FOOD-025) |
+| ✅ Phone app with offline use | ✅ Shopping list: own order by drag and drop, ticked items struck through, offline in the shop (FOOD-014) · 🔲 dish editor, nutrition, cost, photos (FOOD-010 – 013) |
+| ✅ Push per Tenner with „Erledigt“/„Später“ | 🆕 Meal widget „Tenner Essen“: today's lunch and dinner, from 20:00 tomorrow's (FOOD-018) · 🔲 morning push, „Was gibt es heute?“, shopping list via Alexa, calendar feed (FOOD-016, 017, 026, 015) |
+| ✅ Alexa „Tenner Board“ by voice, Tenner widget on the Echo Show — 🆕 no screen views any more (MAINT-006, your decision) | 🔲 History, feedback, food analytics (FOOD-023, 019); release (FOOD-025) |
 
 Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Release 2.0 plan: [`docs/release-2.0/README.md`](docs/release-2.0/README.md) · AI stays out of 2.0 (FOOD-020, FOOD-024 are evaluations).
 
@@ -72,8 +72,8 @@ Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Relea
 
 ## 🎯 Recommended Next Actions
 
-1. **Merge this PR**, then tap the widget; if nothing opens, send me the skill log line `system_exception` (put logs in `docs/errors/` without account IDs).
-2. **Echo Show 21:** check that the widget shows today's numbers; after a longer pause „Alexa, öffne Tenner Board“ (cold start fix).
+1. **Merge this PR**, then on the Echo Show 21: add the widget „Tenner Essen“ (it fills within a minute or with the next plan change); check that „Alexa, öffne Tenner Board“ only speaks and shows no blue bar.
+2. **Widgets:** if one stays empty, send me the notifier log lines `WidgetPushed` / `MealWidgetFailed` (put logs in `docs/errors/` without account IDs).
 3. **Essen → Einkaufsliste:** try sorting by drag and drop on the phone; if not done yet: family profile and dish catalog in Einstellungen, [review sheet](docs/release-2.0/food-catalog-review.md).
 4. **Next:** rest of the kitchen block (FOOD-010 dish editor → 012 nutrition → 013 cost → 011 photos).
 5. **Still open from 1.0:** tag `v1.0.0` and GitHub release (`docs/release-1.0/hotfix/release001.md`).
@@ -82,6 +82,6 @@ Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Relea
 
 ## ℹ About this dashboard
 
-- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (maintenance; a ticket counts as done when it has an "Implementation Status" section), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (35 deploy runs; runs 34 – 35 green, run 33 red at the skill package step).
-- **Counting:** release 2.0: 12 of 26 FOOD tickets done (FOOD-026 added 2026-10-07; FOOD-003 with the owner's review still open counts as done), the epic EPIC-FOOD-001 done. Maintenance: MAINT-001 – 005 done (device checks of MAINT-002 and MAINT-005 open). Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets (REPORTING-001/002, BACKLOG-001 – 003, CLEANUP-001, RELEASE-001); owner inputs in `docs/release-1.0/human/` and planning files with other names are not counted. Debt levels are an assessment for this dashboard.
+- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (maintenance; a ticket counts as done when it has an "Implementation Status" section), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (37 deploy runs; runs 34, 35 and 37 green, run 36 cancelled by the next push).
+- **Counting:** release 2.0: 13 of 26 FOOD tickets done (FOOD-026 added 2026-10-07; FOOD-003 with the owner's review still open counts as done), the epic EPIC-FOOD-001 done. Maintenance: MAINT-001 – 006 done (device checks of MAINT-002, 005 and 006 open). Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets (REPORTING-001/002, BACKLOG-001 – 003, CLEANUP-001, RELEASE-001); owner inputs in `docs/release-1.0/human/` and planning files with other names are not counted. Debt levels are an assessment for this dashboard.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).

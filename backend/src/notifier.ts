@@ -11,6 +11,7 @@ import {
   createProactiveEventsClient,
   createSkillMessagingClient,
   WidgetPushService,
+  type DayMeal,
 } from "./alexa/index.js";
 import { getDocumentClient } from "./clients/dynamodb.js";
 import { createMealServices, type MealPlanService } from "./meals/index.js";
@@ -94,6 +95,17 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
     now: systemClock,
   };
 
+  // FOOD-006: the current and the next week always have a meal plan (notifications and Alexa read it).
+  const mealPlans = config.mealsTable
+    ? createMealServices({
+        client,
+        tableName: config.mealsTable,
+        membersOf,
+        settingsOf: (tenantId) => householdService.settingsOf(tenantId),
+        clock: systemClock,
+        ids: uuidGenerator,
+      }).plans
+    : undefined;
   const alexaApi = config.alexaApi;
   let widget: WidgetPushService | undefined;
   const channels: NotificationChannel[] = [new LogChannel(logger)];
@@ -111,6 +123,7 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
       dashboard,
       members: membersOf,
       timezoneOf,
+      ...(mealPlans ? { mealsOn: (tenantId: string, date: string) => mealsOn(mealPlans, tenantId, date) } : {}),
       lwa,
       dataStore: createDataStoreClient(alexaApi.endpoint, fetchImpl),
       log,
@@ -160,18 +173,16 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
         }),
       ]
     : notifier.jobs;
-  // FOOD-006: the current and the next week always have a meal plan (notifications and Alexa read it).
-  const mealPlans = config.mealsTable
-    ? createMealServices({
-        client,
-        tableName: config.mealsTable,
-        membersOf,
-        settingsOf: (tenantId) => householdService.settingsOf(tenantId),
-        clock: systemClock,
-        ids: uuidGenerator,
-      }).plans
-    : undefined;
   return { notifier: { ...notifier, jobs: allJobs, channels: extensions?.channels ?? channels }, widget, mealPlans };
+}
+
+/** FOOD-018: the meals of one date from the current or the next week's plan (tomorrow can be in the next week). */
+export async function mealsOn(mealPlans: Pick<MealPlanService, "getPlan">, tenantId: string, date: string): Promise<readonly DayMeal[]> {
+  for (const week of ["current", "next"] as const) {
+    const slots = (await mealPlans.getPlan(tenantId, week)).slots.filter((slot) => slot.date === date);
+    if (slots.length > 0) return slots;
+  }
+  return [];
 }
 
 /** EventBridge input: a scheduled event or a HouseholdChanged event from the API. */

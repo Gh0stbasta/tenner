@@ -8,7 +8,6 @@ import { fetchDashboard, type DashboardTenner } from "../dashboard.js";
 import { apiOf, loadHousehold } from "../session.js";
 import { isIntent } from "./intentRequest.js";
 import { answer } from "./respond.js";
-import { renderDashboard } from "./screen.js";
 
 const OFFER_ATTRIBUTE = "briefingSuggestion";
 const SUGGESTED_ATTRIBUTE = "suggestedTennerId";
@@ -32,7 +31,6 @@ export const BriefingIntentHandler: RequestHandler = {
     // One household-wide dashboard: personal parts are filtered from it, the household part uses its totals.
     const dashboard = (await fetchDashboard(apiOf(input), undefined)) as BriefingDashboard;
     const briefing = buildBriefing({ dashboard, members: household.context.members, speaker: household.speaker, now: new Date(), timeZone: household.context.timezone });
-    renderDashboard(input, dashboard, household.context.members, undefined);
     setOffer(input, briefing.suggestion);
     return briefing.suggestion ? answer(input, briefing.text, "Soll ich dir den ersten Tenner nennen?") : answer(input, briefing.text);
   },

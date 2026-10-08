@@ -27,5 +27,12 @@
       }
     ],
     "updatedAt": "2026-10-06T07:00:00.000Z"
+  },
+  "meals": {
+    "title": "Heute",
+    "date": "2026-10-06",
+    "lunch": "Onigiri",
+    "dinner": "Lasagne",
+    "updatedAt": "2026-10-06T07:00:00.000Z"
   }
 }

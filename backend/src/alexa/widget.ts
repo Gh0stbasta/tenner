@@ -1,19 +1,25 @@
 /**
- * Echo Show home-screen widget (ALEXA-007): a small household summary pushed with the Data Store API after every
- * change (debounced to one push per minute) and at the start of each household day. The widget renders from the
- * pushed data only; it never calls the skill.
+ * Echo Show home-screen widgets (ALEXA-007, FOOD-018): a small household summary (`tenner/status`) and today's meals
+ * (`tenner/meals`, „Morgen“ from 20:00 household time) pushed with the Data Store API after every change (debounced to
+ * one push per minute), at the start of each household day and at 20:00. The widgets render from the pushed data only;
+ * they never call the skill.
  */
 
 import type { DashboardRequest, DashboardResponse } from "../dto/index.js";
+import type { MealSlot } from "../meals/models/dish.js";
 import type { HouseholdMember } from "../models/index.js";
 import { deliveryRecord, type DeliveryLog } from "../notifications/delivery.js";
 import { localTime } from "../notifications/schedule.js";
 import type { Logger } from "../utils/logger.js";
-import { DATASTORE_SCOPE, type DataStoreClient } from "./datastore-client.js";
+import { DATASTORE_SCOPE, MEALS_KEY, WIDGET_KEY, type DataStoreClient, type DataStoreObject } from "./datastore-client.js";
 import type { LwaTokenClient } from "./lwa-client.js";
 
 export const DEBOUNCE_MS = 60_000;
 export const WIDGET_NEXT_ITEMS = 2;
+/** From this household hour the meal widget shows tomorrow (after dinner). */
+export const MEAL_WIDGET_EVENING_HOUR = 20;
+/** Shown for an empty meal. */
+export const NO_MEAL = "–";
 
 export interface WidgetSummary {
   readonly date: string;
@@ -43,12 +49,49 @@ export function widgetSummary(dashboard: DashboardResponse, members: readonly Ho
   };
 }
 
+/** One planned meal of a day, as the meal plan returns it (dish null = nothing planned). */
+export interface DayMeal {
+  readonly slot: MealSlot;
+  readonly dish: { readonly name: string } | null;
+}
+
+export interface MealWidget {
+  /** „Heute“ until 20:00 household time, then „Morgen“. */
+  readonly title: string;
+  readonly date: string;
+  readonly lunch: string;
+  readonly dinner: string;
+  readonly updatedAt: string;
+}
+
+/** The household day the meal widget shows and its title: today, or tomorrow from 20:00. */
+export function mealDay(now: Date, timezone: string): { readonly date: string; readonly title: string } {
+  const local = localTime(now, timezone);
+  if (local.minutes < MEAL_WIDGET_EVENING_HOUR * 60) return { date: local.date, title: "Heute" };
+  const next = new Date(Date.parse(`${local.date}T00:00:00Z`) + 24 * 60 * 60_000).toISOString().slice(0, 10);
+  return { date: next, title: "Morgen" };
+}
+
+/** Payload for the meal widget: dish names only, „–“ for an empty meal. */
+export function mealWidget(day: { readonly date: string; readonly title: string }, meals: readonly DayMeal[], now: Date): MealWidget {
+  const nameOf = (slot: MealSlot) => meals.find((meal) => meal.slot === slot)?.dish?.name ?? NO_MEAL;
+  return { title: day.title, date: day.date, lunch: nameOf("LUNCH"), dinner: nameOf("DINNER"), updatedAt: now.toISOString() };
+}
+
+/** Day and part of day (before/after 20:00): a new phase means the meal widget shows another day. */
+const phaseOf = (now: Date, timezone: string): string => {
+  const local = localTime(now, timezone);
+  return `${local.date}#${local.minutes < MEAL_WIDGET_EVENING_HOUR * 60 ? "DAY" : "EVENING"}`;
+};
+
 export interface WidgetPushDependencies {
   readonly alexaUsers: (tenantId: string) => Promise<readonly string[]>;
   readonly removeAlexaUser: (tenantId: string, alexaUserId: string) => Promise<void>;
   readonly dashboard: (tenantId: string, request: DashboardRequest) => Promise<DashboardResponse>;
   readonly members: (tenantId: string) => Promise<readonly HouseholdMember[]>;
   readonly timezoneOf: (tenantId: string) => Promise<string>;
+  /** FOOD-018: the meals of one household date; undefined without meal planning (only the status is pushed). */
+  readonly mealsOn?: ((tenantId: string, date: string) => Promise<readonly DayMeal[]>) | undefined;
   readonly lwa: LwaTokenClient;
   readonly dataStore: DataStoreClient;
   readonly log: Pick<DeliveryLog, "get" | "mark">;
@@ -74,27 +117,33 @@ export class WidgetPushService {
     await this.push(tenantId, now, "CHANGE");
   }
 
-  /** Scheduled run: push at the start of a new household day, or when a debounced change is still pending. */
+  /**
+   * Scheduled run: push at the start of a new household day, at 20:00 (the meal widget switches to tomorrow), or when
+   * a debounced change is still pending.
+   */
   async onSchedule(tenantId: string): Promise<void> {
     const now = this.deps.now();
     const timezone = await this.deps.timezoneOf(tenantId);
     const last = await this.deps.log.get(lastKey(tenantId));
     const dirty = await this.deps.log.get(dirtyKey(tenantId));
     const newDay = last === undefined || localTime(new Date(last.createdAt), timezone).date !== localTime(now, timezone).date;
+    const evening = !newDay && last !== undefined && phaseOf(new Date(last.createdAt), timezone) !== phaseOf(now, timezone);
     const pending = dirty !== undefined && (last === undefined || Date.parse(dirty.createdAt) > Date.parse(last.createdAt));
-    if (newDay || pending) await this.push(tenantId, now, newDay ? "DAY_START" : "PENDING_CHANGE");
+    if (newDay || evening || pending) await this.push(tenantId, now, newDay ? "DAY_START" : evening ? "EVENING" : "PENDING_CHANGE");
   }
 
   private async push(tenantId: string, now: Date, reason: string): Promise<void> {
     const users = await this.deps.alexaUsers(tenantId);
     if (users.length === 0) return;
     const [dashboard, members] = await Promise.all([this.deps.dashboard(tenantId, {}), this.deps.members(tenantId)]);
-    const content = widgetSummary(dashboard, members, now);
+    const objects: DataStoreObject[] = [{ key: WIDGET_KEY, content: widgetSummary(dashboard, members, now) }];
+    const meals = await this.meals(tenantId, now);
+    if (meals !== undefined) objects.push({ key: MEALS_KEY, content: meals });
     const token = await this.deps.lwa.token(DATASTORE_SCOPE);
     let pushed = 0;
     for (const alexaUserId of users) {
-      let outcome = await this.deps.dataStore.putWidgetData(token, alexaUserId, content);
-      if (!outcome.ok && !outcome.userGone) outcome = await this.deps.dataStore.putWidgetData(token, alexaUserId, content); // retry once
+      let outcome = await this.deps.dataStore.putObjects(token, alexaUserId, objects);
+      if (!outcome.ok && !outcome.userGone) outcome = await this.deps.dataStore.putObjects(token, alexaUserId, objects); // retry once
       if (outcome.ok) {
         pushed += 1;
       } else if (outcome.userGone) {
@@ -106,6 +155,18 @@ export class WidgetPushService {
     }
     await this.mark(lastKey(tenantId), tenantId, now);
     this.deps.logger.info("Widget pushed", { event: "WidgetPushed", reason, targets: users.length, pushed });
+  }
+
+  /** FOOD-018: a failing meal plan never blocks the status widget; the meal widget keeps its last data. */
+  private async meals(tenantId: string, now: Date): Promise<MealWidget | undefined> {
+    if (this.deps.mealsOn === undefined) return undefined;
+    try {
+      const day = mealDay(now, await this.deps.timezoneOf(tenantId));
+      return mealWidget(day, await this.deps.mealsOn(tenantId, day.date), now);
+    } catch (error) {
+      this.deps.logger.warn("Meal widget data unavailable", { event: "MealWidgetFailed", error: error instanceof Error ? error.name : "UnknownError" });
+      return undefined;
+    }
   }
 
   private async mark(key: string, tenantId: string, now: Date): Promise<void> {

@@ -9,7 +9,6 @@ import { SPEECH } from "../speech.js";
 import { resolveAudience, type ResolvedAudience } from "./audience.js";
 import { isIntent } from "./intentRequest.js";
 import { CONTINUE_REPROMPT, answer, listingOf, setListing } from "./respond.js";
-import { renderDashboard, renderOverdueList } from "./screen.js";
 
 const SUGGESTION_ATTRIBUTE = "suggestedTennerId";
 
@@ -28,19 +27,13 @@ function answerListing(input: HandlerInput, result: Answer): Response {
 export const TodayIntentHandler: RequestHandler = {
   canHandle: (input) => isIntent(input, "TodayIntent"),
   handle: (input) =>
-    withDashboard(input, (dashboard, { audience, members, assignedTo }) => {
-      renderDashboard(input, dashboard, members, assignedTo);
-      return answerListing(input, todayAnswer(dashboard, audience));
-    }),
+    withDashboard(input, (dashboard, { audience }) => answerListing(input, todayAnswer(dashboard, audience))),
 };
 
 export const OverdueIntentHandler: RequestHandler = {
   canHandle: (input) => isIntent(input, "OverdueIntent"),
   handle: (input) =>
-    withDashboard(input, (dashboard, { audience, members, assignedTo }) => {
-      renderOverdueList(input, dashboard, members, assignedTo);
-      return answerListing(input, overdueAnswer(dashboard, audience));
-    }),
+    withDashboard(input, (dashboard, { audience }) => answerListing(input, overdueAnswer(dashboard, audience))),
 };
 
 export const SuggestIntentHandler: RequestHandler = {

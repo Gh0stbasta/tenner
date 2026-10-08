@@ -36,6 +36,9 @@
             "packages": [
               {
                 "id": "tenner-status"
+              },
+              {
+                "id": "meal-today"
               }
             ]
           },

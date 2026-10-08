@@ -4,18 +4,17 @@ German (de-DE) Alexa custom skill "Tenner" ([ADR 0005](../docs/decisions/0005-al
 [`docs/release-1.0/backlog/alexa/`](../docs/release-1.0/backlog/alexa/)). This folder is its own npm package, next to `backend/` and
 `frontend/`; Terraform for the skill Lambda lives in [`terraform/alexa.tf`](../terraform/alexa.tf).
 
-**Current state (ALEXA-008):** Alexa notifications and reminders, Echo Show home-screen widget (ALEXA-007), plus daily briefing („starte meinen Tag“, also from an Alexa routine), Echo Show
-dashboard with touch completion (ALEXA-006), completing and undoing Tenners by voice
+**Current state (ALEXA-008):** Alexa notifications and reminders, Echo Show home-screen widget (ALEXA-007), plus daily briefing („starte meinen Tag“, also from an Alexa routine), completing and undoing Tenners by voice
 (ALEXA-004), today/overdue/suggestion/work-left
 questions (ALEXA-003, see "Supported Phrases"), account linking and speaker recognition (ALEXA-002). „Alexa, öffne Tenner Board“ greets the recognized
 member by name, asks an unknown voice once „Wer spricht gerade?“ and asks unlinked accounts to link Tenner in the
-Alexa app. Help, stop, cancel, fallback and session end are handled.
+Alexa app. Help, stop, cancel, fallback and session end are handled. The skill is voice only: since MAINT-006 it
+shows no APL views on screen devices, only the home-screen widget (owner decision).
 
 ## Layout
 
 ```text
 alexa/
-├── apl/                                    APL documents: dashboard.json, list.json (ALEXA-006)
 ├── skill-package/
 │   ├── skill.json                          manifest (de-DE, development stage); endpoint filled at deploy time
 │   ├── dataStorePackages/tenner-status/    home-screen widget APL package (ALEXA-007, Amazon's layout since MAINT-002)
@@ -26,7 +25,6 @@ alexa/
 │   ├── handlers/                           one file per request/intent type
 │   ├── speech.ts                           all German response texts
 │   ├── briefing.ts                         daily briefing builder (pure, ALEXA-005)
-│   ├── apl.ts                              Echo Show datasources (pure, ALEXA-006)
 │   ├── answers.ts                          spoken answers from the dashboard (pure, ALEXA-003)
 │   ├── dashboard.ts                        GET /dashboard types and call
 │   ├── matcher.ts                          spoken text → Tenner (pure, ALEXA-004)
@@ -38,16 +36,23 @@ alexa/
 └── tests/                                  vitest, request envelopes in tests/envelopes.ts
 ```
 
-## Echo Show Widget (ALEXA-007)
+## Echo Show Widgets (ALEXA-007, FOOD-018)
+
+**Tenner Essen** (`skill-package/dataStorePackages/meal-today/`, FOOD-018) shows lunch and dinner of today, from
+20:00 household time those of tomorrow („Morgen“), „–“ for an empty meal. It is bound to the Data Store object
+`tenner/meals`, which the notifier pushes together with `tenner/status` (same triggers, plus one push at 20:00). No
+tap action; until the first push it shows „Essen“ with „–“. Add it like the status widget („Tenner Essen“).
+
+**Tenner (status):**
 
 A home-screen widget (`skill-package/dataStorePackages/tenner-status/`: `manifest.json` with `packageType
 APL_PACKAGE`, `presentations/default.tpl`, `documents/document.json` bound to the Data Store object `tenner/status`,
-`datasources/default.json`) shows „Heute: 3“, open minutes, overdue and the next two Tenners. Tapping it opens the
-skill on the dashboard. `skill.json` declares it (`ALEXA_DATASTORE_PACKAGEMANAGER` with package `tenner-status`,
+`datasources/default.json`) shows „Heute: 3“, open minutes, overdue and the next two Tenners. It has no tap action
+(MAINT-006, the skill shows no views). `skill.json` declares both (`ALEXA_DATASTORE_PACKAGEMANAGER` with packages `tenner-status` and `meal-today`,
 `ALEXA_DATA_STORE`, extension `alexaext:datastore:10`); the deploy imports the whole skill package (`ask deploy
 --target skill-metadata`), because `update-skill-manifest` does not upload widget packages (MAINT-002). Amazon
 requires an icon and a preview image per widget: they are served by the web app (`/icons/icon-512.png`,
-`/alexa/widget-preview.png`); the manifest has `${WEB_APP_URL}`, which `scripts/render_alexa_widget.py` replaces with
+`/alexa/widget-preview.png`, `/alexa/meal-widget-preview.png`); the manifest has `${WEB_APP_URL}`, which `scripts/render_alexa_widget.py` replaces with
 the Terraform output `frontend_url` at deploy time (MAINT-003).
 
 **Add it on the Echo Show (owner):** swipe left on the home screen → „+“ (or Einstellungen → Widgets) → „Tenner“.
@@ -55,17 +60,18 @@ When the widget is installed, Amazon sends `Alexa.DataStore.PackageManager.Usage
 Alexa account (`PUT /household/alexa-users/{id}`), which publishes a HouseholdChanged event, so the notifier fills
 the widget within about a minute. Until then — or without account linking — it shows „Öffnen zum Laden“. Removal,
 updates and installation errors are logged (`widget_lifecycle`, `widget_installation_error`). APL runtime errors,
-Data Store errors and other system messages are logged without speech and do not count as skill errors; a widget
-tap without a session gets an empty session so the dashboard opens (MAINT-004). The tap uses `SendEvent` with
-`interactionMode STANDARD`: without it the event is `INLINE` and Alexa rejects any speech or view in the answer
-(`System.ExceptionEncountered`, MAINT-005).
+Data Store errors and other system messages are logged without speech and do not count as skill errors. A tap
+event from an older widget version (1.1.0 had `SendEvent ["openDashboard"]`) gets an empty session (MAINT-004) and
+an empty answer (`unhandled_request`, MAINT-006).
 
 How the data gets there (no request to the skill when the widget renders):
 
 ```text
 API write (complete, undo, create, …) ──PutEvents "HouseholdChanged"──► EventBridge ──► tenner-notifier
-tenner-notifier (every 15 min) ── day start in the household timezone / pending change ──┘
-   └── household dashboard → WidgetSummary → LWA token (alexa::datastore) → Data Store PUT_OBJECT (target USER)
+tenner-notifier (every 15 min) ── day start / 20:00 in the household timezone / pending change ──┘
+   └── household dashboard → WidgetSummary ─┐
+       meal plan (today, from 20:00 tomorrow) → MealWidget ─┴► LWA token (alexa::datastore) → Data Store, one
+                                                                request with PUT_OBJECT status + meals (target USER)
 ```
 
 - Debounce: at most one push per minute; changes inside that minute are pushed by the next scheduled run.
@@ -119,30 +125,11 @@ first, then the household sentence. On an Echo Show the dashboard is shown while
 Skills cannot create routines themselves (the Routines Kit was discontinued on 2026-05-13); verify the menu names
 in the current Alexa app.
 
-## Echo Show (ALEXA-006)
+## Echo Show (ALEXA-006, removed in MAINT-006)
 
-Screen devices (`Alexa.Presentation.APL` in the request) get APL documents from `apl/`; voice-only devices are
-unchanged. Documents only bind to datasources built in `src/apl.ts` (pure, tested).
-
-| View | Shown on | Content |
-|---|---|---|
-| Dashboard (`apl/dashboard.json`) | launch (household-wide), „was ist heute fällig“ (filtered like the answer), after a completion (with „✓ Erledigt: …“ banner) | date, „Heute: 3 Tenner · 25 Minuten offen · 1 überfällig“, columns per member (max. 3, then „Weitere: …“) plus „Alle“, overdue band |
-| List (`apl/list.json`) | „was ist überfällig“ | scrollable overdue list, „⚠ seit 4 Tagen · Julia“ |
-
-Layout by viewport (no pixel layouts): Echo Show 5 (< 1100 × 600 dp) shows summary + the next three Tenners;
-Echo Show 8/10 member columns; from 1600 dp (Show 15/21) additionally the overdue band and larger type (body
-40 dp instead of 32 dp); portrait (Show 15 upright) stacks columns and overdue. Dark surface `#1c1f24`, primary
-`#1976d2`, member accent colors from the ANALYTICS-009 dark palette by member position — always with the written
-name; overdue uses icon + text, not color alone.
-
-Tapping a Tenner row (touch target ≥ 64 dp) sends `SendEvent ["complete", tennerId, title]`; the skill completes
-it like a voice completion (speaker or „Wer hat … gemacht?“, request ID as idempotency key), says „Erledigt: …“
-and re-renders the dashboard with the banner. While a view is on screen the session stays open **without** an open
-microphone (no reprompt); the device returns to its home screen after its own inactivity timeout (document
-`idleTimeout` 2 minutes; verify the actual behavior per device).
-
-**Not yet done:** screenshots per device class (needs the APL authoring tool in the developer console or the
-devices); rendering was verified structurally by tests only.
+The Echo Show views of ALEXA-006 (dashboard and overdue list as APL documents, touch completion) were removed in
+MAINT-006: on the Echo Show 21 they rendered incomplete, and the owner wants only the home-screen widget. Screen
+devices get the same speech and card as voice-only devices. The code is in the Git history before MAINT-006.
 
 ## Supported Phrases (de-DE)
 
@@ -173,7 +160,7 @@ the only member, or the answer to „Wer hat … gemacht?“. The Alexa request 
 retries never complete twice. Logs carry match outcome, score and Tenner ID only.
 
 One-shot questions end the session after the answer; inside an open session Tenner asks „Was möchtest du noch
-wissen?“. Every answer also appears as a card in the Alexa app (APL screens follow in ALEXA-006).
+wissen?“. Every answer also appears as a card in the Alexa app.
 
 ## Development
 
