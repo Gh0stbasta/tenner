@@ -32,6 +32,9 @@ export class CreateTennerService {
     requireSelectableCategory(await this.categoriesOf(identity.tenantId), request.category);
     const now = this.clock();
     const timestamp = toUtcTimestamp(now);
+    const today = dateInTimeZone(now, await this.timezoneOf(identity.tenantId));
+    // HOTFIX-006: due on the start day at the earliest; a past start date makes it due today.
+    const startDate = request.startDate ?? today;
     const tenner: Tenner = {
       tenantId: identity.tenantId,
       tennerId: this.newId(),
@@ -48,7 +51,8 @@ export class CreateTennerService {
       originalAssignee: null,
       lastCompleted: null,
       // DATA-008: the catalog import sets the first due date (weekday and rotation slot); the API never does.
-      nextDue: firstDue ?? dateInTimeZone(now, await this.timezoneOf(identity.tenantId)),
+      nextDue: firstDue ?? (startDate > today ? startDate : today),
+      startDate,
       snoozedUntil: null,
       pausedAt: null,
       pausedUntil: null,

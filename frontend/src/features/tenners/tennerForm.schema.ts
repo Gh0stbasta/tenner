@@ -48,6 +48,8 @@ export const tennerFormSchema = z
     rotating: z.boolean(),
     rotation: z.array(z.string()),
     active: z.boolean(),
+    /** HOTFIX-006: first active day; before it the Aufgabe is not due and not shown. */
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Bitte ein Datum wählen."),
   })
   .refine((values) => !values.rotating || values.rotation.length >= 2, {
     path: ["rotation"],

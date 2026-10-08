@@ -428,10 +428,10 @@ and a Tenner fixture.
 | Route | Response |
 |---|---|
 | `GET /health` | `200 {"status":"ok","application":"tenner","environment":"prod","database":"connected"}`. Returns `503` with `"status":"error"` and `database` `unreachable` or `misconfigured` |
-| `POST /tenners` | `201 { success: true, data: TennerResponse }` (TICKET-009). Returns `400 VALIDATION_ERROR` with `details`, `409 CONFLICT` if the ID exists, `500 PERSISTENCE_ERROR` |
+| `POST /tenners` | `201 { success: true, data: TennerResponse }` (TICKET-009). Optional `startDate` (YYYY-MM-DD, HOTFIX-006, default today): first due on that day, not on the dashboard before; a past date means due today. Returns `400 VALIDATION_ERROR` with `details`, `409 CONFLICT` if the ID exists, `500 PERSISTENCE_ERROR` |
 | `GET /tenners` | `200 { success: true, data: TennerResponse[] }` (TICKET-010). `assignedTo=<member>` also returns shared Tenners (`HOUSEHOLD`, HOUSEHOLD-002). Returns `400 VALIDATION_ERROR` for invalid parameters |
 | `GET /tenners/{tennerId}` | `200 { success: true, data: TennerResponse }` (TICKET-019). Soft-deleted Tenners → `404` unless `?includeDeleted=true`. Returns `400` for an invalid id or query |
-| `PUT /tenners/{tennerId}` | `200 { success: true, data: TennerResponse }` (TICKET-011). Returns `400 VALIDATION_ERROR` or `404 NOT_FOUND` |
+| `PUT /tenners/{tennerId}` | `200 { success: true, data: TennerResponse }` (TICKET-011). `startDate` (HOTFIX-006): from today on it also moves `nextDue` to it; a past date is only stored. Responses always carry `startDate` (creation date for Tenners created before). Returns `400 VALIDATION_ERROR` or `404 NOT_FOUND` |
 | `DELETE /tenners/{tennerId}` | `200 { success: true, data: { tennerId, deleted: true } }` (TICKET-012, soft delete, idempotent). Returns `404 NOT_FOUND` |
 | `POST /tenners/{tennerId}/complete` | `200 { success: true, data: { tenner, completion } }` (TICKET-013). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |
 | `POST /tenners/{tennerId}/undo-completion` | `200 { success: true, data: { tenner, revertedCompletion } }` (TICKET-014). Returns `400`, `404`, or `409` with `TENNER_INACTIVE`, `NO_COMPLETION_TO_UNDO`, `CONCURRENT_MODIFICATION` or `IDEMPOTENCY_KEY_REUSED` |

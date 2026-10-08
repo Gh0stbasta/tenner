@@ -59,6 +59,12 @@ and a changelog entry on top of that.
 | [MAINT-005](maintenance/ticket005.md) | Widget tap rejected by Alexa (interaction mode) | Done (device check open) |
 | [MAINT-006](maintenance/ticket006.md) | Alexa skill without Echo Show views (widget only) | Done (device check open) |
 
+### Owner hotfix tickets (`../hotfix/`)
+
+| Ticket | Title | Status |
+|---|---|---|
+| [HOTFIX-006](../hotfix/setDateOnTask.md) | Startdatum für Aufgaben | Done |
+
 ### Recommendations
 
 | Ticket | Title | Decision | Status |

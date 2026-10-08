@@ -156,10 +156,25 @@ describe("CreateTennerDialog", () => {
       weekdays: null,
       assignmentMode: "FIXED",
       rotation: null,
+      startDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
     });
     expect(await screen.findByText("✅ „Fenster putzen“ angelegt.")).toBeInTheDocument();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.dashboard });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.tenners });
+  });
+
+  it("starts today by default and sends a chosen start date (HOTFIX-006)", async () => {
+    const fetchMock = mockFetch({ "POST /tenners": ok(tenner({ title: "Fenster putzen" }), 201) });
+    const { onClose } = renderDialog();
+    const start = screen.getByLabelText(/Startdatum/);
+    expect((start as HTMLInputElement).value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    await fillValid();
+    await userEvent.clear(start);
+    await userEvent.type(start, "2026-12-01");
+    await waitFor(() => expect(submitButton()).toBeEnabled());
+    await userEvent.click(submitButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(fetchMock.calls().find((call) => !call.key.startsWith("GET "))?.body).toMatchObject({ startDate: "2026-12-01" });
   });
 
   it("keeps the input and shows an error when saving fails", async () => {

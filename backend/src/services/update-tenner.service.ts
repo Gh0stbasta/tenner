@@ -7,6 +7,7 @@ import { requireSelectableCategory, type CategorySource } from "./category.servi
 import type { TennerRepository, TennerUpdate } from "../repositories/index.js";
 import { requireAssignee, requireMember, type MemberSource } from "./member.service.js";
 import { toUtcTimestamp, type Clock } from "../utils/clock.js";
+import { dateInTimeZone, type TimeZoneSource } from "../utils/timezone.js";
 
 export class UpdateTennerService {
   constructor(
@@ -14,12 +15,14 @@ export class UpdateTennerService {
     private readonly clock: Clock,
     private readonly membersOf: MemberSource = async () => SEED_MEMBERS,
     private readonly categoriesOf: CategorySource = async () => SEED_CATEGORIES,
+    private readonly timezoneOf: TimeZoneSource = async () => "Europe/Berlin",
   ) {}
 
   /**
    * Apply a validated partial update. Only allowed fields are copied (protected fields can never pass),
    * updatedAt/updatedBy are refreshed, and the schedule (lastCompleted, nextDue) stays untouched even when
-   * the frequency changes.
+   * the frequency changes. HOTFIX-006: a start date from today on also moves nextDue to it (the Tenner is not
+   * active before); a start date in the past is only stored.
    */
   async updateTenner(identity: Identity, tennerId: string, request: UpdateTennerRequest): Promise<UpdateTennerResponse> {
     if (request.assignedTo !== undefined || request.rotation) {
@@ -43,9 +46,16 @@ export class UpdateTennerService {
       assignmentMode: request.assignmentMode,
       rotation: request.rotation,
       active: request.active,
+      ...(await this.startChange(identity.tenantId, request.startDate)),
       updatedAt: toUtcTimestamp(this.clock()),
       updatedBy: identity.userId,
     };
     return toTennerResponse(await this.repository.update(identity.tenantId, tennerId, changes));
+  }
+
+  private async startChange(tenantId: string, startDate: string | undefined): Promise<Pick<TennerUpdate, "startDate" | "nextDue">> {
+    if (startDate === undefined) return {};
+    const today = dateInTimeZone(this.clock(), await this.timezoneOf(tenantId));
+    return startDate >= today ? { startDate, nextDue: startDate } : { startDate };
   }
 }

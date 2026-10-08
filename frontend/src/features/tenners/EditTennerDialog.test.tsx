@@ -57,6 +57,19 @@ describe("EditTennerDialog", () => {
     expect(saveButton()).toBeDisabled();
   });
 
+  it("shows the start date and sends it when changed (HOTFIX-006)", async () => {
+    const fetchMock = mockFetch({ "PUT /tenners/t-9": ok({ ...EXISTING, startDate: "2026-12-01", nextDue: "2026-12-01" }) });
+    const { onClose } = renderDialog({ ...EXISTING, startDate: "2026-10-01" });
+    const start = screen.getByLabelText(/Startdatum/);
+    expect(start).toHaveValue("2026-10-01");
+    await userEvent.clear(start);
+    await userEvent.type(start, "2026-12-01");
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(fetchMock.calls().find((call) => !call.key.startsWith("GET "))?.body).toEqual({ startDate: "2026-12-01" });
+  });
+
   it("sends only changed fields, closes, notifies and refreshes", async () => {
     const fetchMock = mockFetch({
       "PUT /tenners/t-9": ok({
