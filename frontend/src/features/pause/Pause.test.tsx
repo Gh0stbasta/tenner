@@ -1,12 +1,11 @@
-/** SCHEDULING-005: pause, resume, paused dashboard section and vacation settings. */
+/** SCHEDULING-005: pause, resume and vacation settings (the paused dashboard section was removed by UI-001). */
 
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { dashboard, dashboardTenner, tenner } from "../../tests/fixtures";
+import { tenner } from "../../tests/fixtures";
 import { mockFetch, ok } from "../../tests/fetchMock";
 import { renderWithProviders } from "../../tests/render";
-import { DashboardPage } from "../dashboard/DashboardPage";
 import { SettingsPage } from "../settings/SettingsPage";
 import { tennerStatus } from "../tenners/status";
 import { TennersPage } from "../tenners/TennersPage";
@@ -94,39 +93,6 @@ describe("pause and resume on the Tenners page", () => {
   });
 });
 
-describe("paused section on the dashboard", () => {
-  it("lists paused Tenners with their pause end", async () => {
-    mockFetch({
-      "GET /dashboard": ok(
-        dashboard({
-          paused: [
-            {
-              ...dashboardTenner({ tennerId: "p-1", title: "Rasen mähen" }),
-              pausedUntil: "2026-10-09",
-              pauseReason: "PAUSE",
-            },
-            {
-              ...dashboardTenner({ tennerId: "p-2", title: "Fenster putzen" }),
-              pausedUntil: null,
-              pauseReason: "PAUSE",
-            },
-            {
-              ...dashboardTenner({ tennerId: "p-3", title: "Bad putzen" }),
-              pausedUntil: "2026-10-09",
-              pauseReason: "VACATION",
-            },
-          ],
-        }),
-      ),
-    });
-    renderWithProviders(<DashboardPage />);
-    const section = within(await screen.findByRole("region", { name: /^Pausiert/ }));
-    expect(section.getByText("Pausiert bis Fr., 9. Okt.")).toBeInTheDocument();
-    expect(section.getByText("Pausiert bis auf Weiteres")).toBeInTheDocument();
-    expect(section.getByText("Urlaub bis Fr., 9. Okt.")).toBeInTheDocument();
-    expect(section.queryByRole("button", { name: /erledigen/ })).not.toBeInTheDocument();
-  });
-});
 
 describe("vacation settings", () => {
   it("saves a vacation for selected categories", async () => {

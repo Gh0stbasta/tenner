@@ -215,3 +215,41 @@ und nicht wie ein Reporting- oder Analysebereich.
 ## Definition of Done
 
 Das Dashboard wird zur täglichen Familienübersicht und zeigt ausschließlich die für heute relevanten Informationen.
+
+---
+
+# Implementation Status
+
+Umgesetzt am 2026-10-08.
+
+- **Dashboard** (`frontend/src/features/dashboard/DashboardPage.tsx`): Überschrift „Heute“ mit Datum, ohne
+  Kennzahlen. Darunter drei Karten:
+  - **Heute essen wir** (`meals/TodayMealsCard.tsx`): die größte Karte, mindestens 220 bzw. 260 px hoch, mit
+    Mittag und Abend in großer Schrift. Ohne Plan steht dort „Für heute ist noch nichts geplant.“
+  - **Heute erledigen wir** (`dashboard/TodayTasksCard.tsx`):
+    - Oben stehen die heute erledigten Aufgaben, abgehakt und durchgestrichen (aus „Zuletzt erledigt“).
+    - Darunter stehen die offenen Aufgaben von heute, jeweils mit Erledigen-Haken. Erledigen, Wischen, Verschieben
+      und Überspringen funktionieren wie bisher, „Rückgängig“ inklusive.
+    - Überfällige Aufgaben gibt es seit REC-001 kaum noch. Erscheinen sie doch, stehen sie in dieser Liste.
+  - **Für morgen einkaufen** (`dashboard/ShoppingTomorrowCard.tsx`): offene Einträge der Einkaufsliste, die eine
+    Mahlzeit von morgen braucht, mit Stückzahlen (FOOD-028). Am letzten Tag der Woche kommen sie aus der Liste der
+    nächsten Woche. Ohne Einträge steht dort „Keine Einkäufe notwendig“.
+- **Entfernt:**
+  - „Aufgabe erstellen“ (Schnell anlegen), die Kennzahlen, „Heute fällig“, „Überfällig“, „Demnächst“, „Pausiert“,
+    „Nach Person“, „Nach Kategorie“ und „Zuletzt erledigt“.
+  - Der Bereich „Dashboard“ in den Einstellungen, dessen Schalter nichts mehr bewirken.
+- **Aufgaben anlegen:**
+  - Der Plus-Knopf auf dem Handy und die App-Verknüpfung „Neue Aufgabe“ öffnen jetzt „Aufgaben“ mit dem
+    Schnell-Anlegen (`/tenners?quickAdd=1`).
+
+## Annahmen
+
+- „Heute erledigen wir“ zeigt die Aufgaben des ganzen Haushalts. Die Person steht unter jedem Eintrag.
+- Erledigte Aufgaben kommen aus den letzten 10 Erledigungen. An einem sehr vollen Tag können ältere erledigte
+  Aufgaben fehlen. Das ist als TD-043 notiert.
+
+## Tests
+
+- `frontend/src/features/dashboard/DashboardPage.test.tsx`.
+- Angepasst: `meals/MealPlanPage.test.tsx`, `settings/SettingsPage.test.tsx`, `mobile/Mobile.test.tsx`,
+  `install/Install.test.tsx`.

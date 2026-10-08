@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fail, mockFetch, ok, type MockResponse } from "../../tests/fetchMock";
@@ -33,10 +33,9 @@ describe("completion and undo", () => {
     renderWithProviders(<DashboardPage />);
     await userEvent.click(await completeButton("Büro saugen"));
 
-    await waitFor(() => expect(screen.queryByRole("region", { name: /^Heute fällig/ })).not.toBeInTheDocument());
-    expect(
-      within(screen.getByRole("region", { name: "Übersicht" })).getByText("Minuten offen").nextSibling,
-    ).toHaveTextContent("15");
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "„Büro saugen“ erledigen" })).not.toBeInTheDocument(),
+    );
     pending.resolve(ok(completeResponse()));
     expect(await screen.findByText("✅ „Büro saugen“ erledigt.")).toBeInTheDocument();
   });

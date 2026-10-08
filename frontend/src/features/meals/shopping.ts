@@ -116,3 +116,8 @@ export function shareText(title: string, items: readonly ShoppingItem[]): string
     ...(pantry.length > 0 ? ["", "Vorrat prüfen:", ...pantry.map(itemLine)] : []),
   ].join("\n");
 }
+
+/** Open items needed for a meal on `date` (UI-001: „Für morgen einkaufen“). */
+export function itemsFor(items: readonly ShoppingItem[], date: string): ShoppingItem[] {
+  return items.filter((item) => !item.checked && item.usedFor.some((slotId) => slotId.startsWith(`${date}#`)));
+}

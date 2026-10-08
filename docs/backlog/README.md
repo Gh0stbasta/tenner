@@ -64,6 +64,7 @@ and a changelog entry on top of that.
 | Ticket | Title | Status |
 |---|---|---|
 | [HOTFIX-006](../hotfix/setDateOnTask.md) | Startdatum für Aufgaben | Done |
+| [UI-001](../hotfix/redesignDashboard.md) | Dashboard-Redesign: Fokus auf den heutigen Tag | Done |
 
 ### Recommendations
 
