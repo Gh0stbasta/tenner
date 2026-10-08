@@ -36,16 +36,23 @@ alexa/
 └── tests/                                  vitest, request envelopes in tests/envelopes.ts
 ```
 
-## Echo Show Widget (ALEXA-007)
+## Echo Show Widgets (ALEXA-007, FOOD-018)
+
+**Tenner Essen** (`skill-package/dataStorePackages/meal-today/`, FOOD-018) shows lunch and dinner of today, from
+20:00 household time those of tomorrow („Morgen“), „–“ for an empty meal. It is bound to the Data Store object
+`tenner/meals`, which the notifier pushes together with `tenner/status` (same triggers, plus one push at 20:00). No
+tap action; until the first push it shows „Essen“ with „–“. Add it like the status widget („Tenner Essen“).
+
+**Tenner (status):**
 
 A home-screen widget (`skill-package/dataStorePackages/tenner-status/`: `manifest.json` with `packageType
 APL_PACKAGE`, `presentations/default.tpl`, `documents/document.json` bound to the Data Store object `tenner/status`,
 `datasources/default.json`) shows „Heute: 3“, open minutes, overdue and the next two Tenners. It has no tap action
-(MAINT-006, the skill shows no views). `skill.json` declares it (`ALEXA_DATASTORE_PACKAGEMANAGER` with package `tenner-status`,
+(MAINT-006, the skill shows no views). `skill.json` declares both (`ALEXA_DATASTORE_PACKAGEMANAGER` with packages `tenner-status` and `meal-today`,
 `ALEXA_DATA_STORE`, extension `alexaext:datastore:10`); the deploy imports the whole skill package (`ask deploy
 --target skill-metadata`), because `update-skill-manifest` does not upload widget packages (MAINT-002). Amazon
 requires an icon and a preview image per widget: they are served by the web app (`/icons/icon-512.png`,
-`/alexa/widget-preview.png`); the manifest has `${WEB_APP_URL}`, which `scripts/render_alexa_widget.py` replaces with
+`/alexa/widget-preview.png`, `/alexa/meal-widget-preview.png`); the manifest has `${WEB_APP_URL}`, which `scripts/render_alexa_widget.py` replaces with
 the Terraform output `frontend_url` at deploy time (MAINT-003).
 
 **Add it on the Echo Show (owner):** swipe left on the home screen → „+“ (or Einstellungen → Widgets) → „Tenner“.
@@ -61,8 +68,10 @@ How the data gets there (no request to the skill when the widget renders):
 
 ```text
 API write (complete, undo, create, …) ──PutEvents "HouseholdChanged"──► EventBridge ──► tenner-notifier
-tenner-notifier (every 15 min) ── day start in the household timezone / pending change ──┘
-   └── household dashboard → WidgetSummary → LWA token (alexa::datastore) → Data Store PUT_OBJECT (target USER)
+tenner-notifier (every 15 min) ── day start / 20:00 in the household timezone / pending change ──┘
+   └── household dashboard → WidgetSummary ─┐
+       meal plan (today, from 20:00 tomorrow) → MealWidget ─┴► LWA token (alexa::datastore) → Data Store, one
+                                                                request with PUT_OBJECT status + meals (target USER)
 ```
 
 - Debounce: at most one push per minute; changes inside that minute are pushed by the next scheduled run.

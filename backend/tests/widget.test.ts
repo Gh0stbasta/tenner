@@ -1,11 +1,11 @@
 /** ALEXA-007: Echo Show widget — LWA tokens, Data Store push, summary, debounce, day start, routing. */
 
 import { describe, expect, it, vi } from "vitest";
-import { DATASTORE_SCOPE, LWA_TOKEN_URL, LwaError, WidgetPushService, createDataStoreClient, createLwaTokenClient, widgetSummary, type DataStoreClient } from "../src/alexa/index.js";
+import { DATASTORE_SCOPE, LWA_TOKEN_URL, LwaError, WidgetPushService, createDataStoreClient, createLwaTokenClient, mealDay, mealWidget, widgetSummary, type DataStoreClient, type DayMeal } from "../src/alexa/index.js";
 import { loadConfig } from "../src/config.js";
 import type { DashboardResponse } from "../src/dto/index.js";
 import { SEED_MEMBERS } from "../src/models/index.js";
-import { createNotifierRuntime, handleNotifierEvent, type NotifierRuntime } from "../src/notifier.js";
+import { createNotifierRuntime, handleNotifierEvent, mealsOn, type NotifierRuntime } from "../src/notifier.js";
 import { memoryDeliveryLog } from "./mocks/delivery-log.js";
 import { mockLogger, testConfig } from "./mocks/index.js";
 
@@ -41,18 +41,31 @@ describe("LWA token client", () => {
 describe("Data Store client", () => {
   it("puts the widget object for one user", async () => {
     const fetchMock = vi.fn(async () => json(200, {}));
-    expect(await createDataStoreClient("https://api.eu.amazonalexa.com", fetchMock as unknown as typeof fetch).putWidgetData("tok", "amzn1.ask.account.X", { dueToday: 3 })).toEqual({ ok: true });
+    expect(await createDataStoreClient("https://api.eu.amazonalexa.com", fetchMock as unknown as typeof fetch).putObjects("tok", "amzn1.ask.account.X", [{ key: "status", content: { dueToday: 3 } }])).toEqual({ ok: true });
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.eu.amazonalexa.com/v1/datastore/commands");
     expect(init.headers).toMatchObject({ authorization: "Bearer tok" });
     expect(JSON.parse(String(init.body))).toEqual({ commands: [{ type: "PUT_OBJECT", namespace: "tenner", key: "status", content: { dueToday: 3 } }], target: { type: "USER", id: "amzn1.ask.account.X" } });
   });
 
+  it("puts several widget objects in one request (FOOD-018)", async () => {
+    const fetchMock = vi.fn(async () => json(200, {}));
+    await createDataStoreClient("https://x", fetchMock as unknown as typeof fetch).putObjects("tok", "u", [
+      { key: "status", content: { dueToday: 3 } },
+      { key: "meals", content: { lunch: "Onigiri" } },
+    ]);
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect((JSON.parse(String(init.body)) as { commands: unknown[] }).commands).toEqual([
+      { type: "PUT_OBJECT", namespace: "tenner", key: "status", content: { dueToday: 3 } },
+      { type: "PUT_OBJECT", namespace: "tenner", key: "meals", content: { lunch: "Onigiri" } },
+    ]);
+  });
+
   it("reports gone users and other failures", async () => {
     const client = (response: () => Promise<Response>) => createDataStoreClient("https://x", response as unknown as typeof fetch);
-    expect(await client(async () => json(404, {})).putWidgetData("t", "u", {})).toEqual({ ok: false, status: 404, userGone: true });
-    expect(await client(async () => json(500, {})).putWidgetData("t", "u", {})).toEqual({ ok: false, status: 500, userGone: false });
-    expect(await client(async () => Promise.reject(new Error("x"))).putWidgetData("t", "u", {})).toEqual({ ok: false, status: undefined, userGone: false });
+    expect(await client(async () => json(404, {})).putObjects("t", "u", [])).toEqual({ ok: false, status: 404, userGone: true });
+    expect(await client(async () => json(500, {})).putObjects("t", "u", [])).toEqual({ ok: false, status: 500, userGone: false });
+    expect(await client(async () => Promise.reject(new Error("x"))).putObjects("t", "u", [])).toEqual({ ok: false, status: undefined, userGone: false });
   });
 });
 
@@ -91,10 +104,10 @@ describe("widgetSummary (Summary Payload Mapping)", () => {
   });
 });
 
-function pushSetup(options: { users?: string[]; dataStore?: DataStoreClient } = {}) {
+function pushSetup(options: { users?: string[]; dataStore?: DataStoreClient; mealsOn?: (tenantId: string, date: string) => Promise<readonly DayMeal[]> } = {}) {
   const clock = { now: new Date("2026-10-06T07:00:00Z") };
   const { log, records } = memoryDeliveryLog();
-  const dataStore = options.dataStore ?? { putWidgetData: vi.fn(async () => ({ ok: true as const })) };
+  const dataStore = options.dataStore ?? { putObjects: vi.fn(async () => ({ ok: true as const })) };
   const removeAlexaUser = vi.fn(async () => undefined);
   const lwa = { token: vi.fn(async () => "tok") };
   const logger = mockLogger();
@@ -104,6 +117,7 @@ function pushSetup(options: { users?: string[]; dataStore?: DataStoreClient } = 
     dashboard: async () => DASHBOARD,
     members: async () => SEED_MEMBERS,
     timezoneOf: async () => "Europe/Berlin",
+    ...(options.mealsOn ? { mealsOn: options.mealsOn } : {}),
     lwa,
     dataStore,
     log,
@@ -122,47 +136,47 @@ describe("WidgetPushService", () => {
     await w.service.onChange("default");
     w.advance(20_000);
     await w.service.onChange("default");
-    expect(w.dataStore.putWidgetData).toHaveBeenCalledOnce();
+    expect(w.dataStore.putObjects).toHaveBeenCalledOnce();
     expect(w.lwa.token).toHaveBeenCalledWith("alexa::datastore");
     expect(w.records.has("default#WIDGET#DIRTY")).toBe(true);
     // The pending change is pushed by the next scheduled run.
     w.advance(15 * 60_000);
     await w.service.onSchedule("default");
-    expect(w.dataStore.putWidgetData).toHaveBeenCalledTimes(2);
+    expect(w.dataStore.putObjects).toHaveBeenCalledTimes(2);
     w.advance(15 * 60_000);
     await w.service.onSchedule("default");
-    expect(w.dataStore.putWidgetData).toHaveBeenCalledTimes(2);
+    expect(w.dataStore.putObjects).toHaveBeenCalledTimes(2);
     w.advance(61_000);
     await w.service.onChange("default");
-    expect(w.dataStore.putWidgetData).toHaveBeenCalledTimes(3);
+    expect(w.dataStore.putObjects).toHaveBeenCalledTimes(3);
   });
 
   it("pushes once at the start of a new household day (Day Start Push In Household Timezone)", async () => {
     const w = pushSetup();
     await w.service.onSchedule("default"); // nothing pushed yet → day start
-    expect(w.dataStore.putWidgetData).toHaveBeenCalledOnce();
+    expect(w.dataStore.putObjects).toHaveBeenCalledOnce();
     w.advance(60 * 60_000);
     await w.service.onSchedule("default");
-    expect(w.dataStore.putWidgetData).toHaveBeenCalledOnce();
+    expect(w.dataStore.putObjects).toHaveBeenCalledOnce();
     w.advance(16 * 60 * 60_000); // 2026-10-06T23:00Z = 01:00 on 7 October in Berlin
     await w.service.onSchedule("default");
-    expect(w.dataStore.putWidgetData).toHaveBeenCalledTimes(2);
+    expect(w.dataStore.putObjects).toHaveBeenCalledTimes(2);
   });
 
   it("retries a failed push once and logs (Push Failure Logged And Retried Once)", async () => {
-    const putWidgetData = vi.fn(async () => ({ ok: false as const, status: 500, userGone: false }));
-    const w = pushSetup({ dataStore: { putWidgetData } });
+    const putObjects = vi.fn(async () => ({ ok: false as const, status: 500, userGone: false }));
+    const w = pushSetup({ dataStore: { putObjects } });
     await w.service.onChange("default");
-    expect(putWidgetData).toHaveBeenCalledTimes(2);
+    expect(putObjects).toHaveBeenCalledTimes(2);
     expect(w.logger.warn).toHaveBeenCalledWith("Widget push failed", { event: "WidgetPushFailed", status: 500 });
     expect(JSON.stringify(w.logger.info.mock.calls)).not.toContain("amzn1.ask.account");
   });
 
   it("removes users Amazon no longer accepts (Unlinked User Removed From Push Targets)", async () => {
-    const putWidgetData = vi.fn(async () => ({ ok: false as const, status: 404, userGone: true }));
-    const w = pushSetup({ dataStore: { putWidgetData } });
+    const putObjects = vi.fn(async () => ({ ok: false as const, status: 404, userGone: true }));
+    const w = pushSetup({ dataStore: { putObjects } });
     await w.service.onChange("default");
-    expect(putWidgetData).toHaveBeenCalledOnce();
+    expect(putObjects).toHaveBeenCalledOnce();
     expect(w.removeAlexaUser).toHaveBeenCalledWith("default", "amzn1.ask.account.A");
   });
 
@@ -170,6 +184,73 @@ describe("WidgetPushService", () => {
     const w = pushSetup({ users: [] });
     await w.service.onChange("default");
     expect(w.lwa.token).not.toHaveBeenCalled();
+  });
+});
+
+describe("meal widget (FOOD-018)", () => {
+  const MEALS: DayMeal[] = [
+    { slot: "LUNCH", dish: { name: "Onigiri" } },
+    { slot: "DINNER", dish: { name: "Lasagne" } },
+  ];
+
+  it("shows today until 20:00 household time, then tomorrow (also across a month end)", () => {
+    expect(mealDay(new Date("2026-10-06T17:59:00Z"), "Europe/Berlin")).toEqual({ date: "2026-10-06", title: "Heute" });
+    expect(mealDay(new Date("2026-10-06T18:00:00Z"), "Europe/Berlin")).toEqual({ date: "2026-10-07", title: "Morgen" });
+    expect(mealDay(new Date("2026-10-31T19:30:00Z"), "Europe/Berlin")).toEqual({ date: "2026-11-01", title: "Morgen" });
+    expect(mealDay(new Date("2026-10-06T22:30:00Z"), "Europe/Berlin")).toEqual({ date: "2026-10-07", title: "Heute" });
+  });
+
+  it("maps full, partial and empty days to dish names", () => {
+    const now = new Date("2026-10-06T07:00:00Z");
+    const day = { date: "2026-10-06", title: "Heute" };
+    expect(mealWidget(day, MEALS, now)).toEqual({ title: "Heute", date: "2026-10-06", lunch: "Onigiri", dinner: "Lasagne", updatedAt: "2026-10-06T07:00:00.000Z" });
+    expect(mealWidget(day, [{ slot: "LUNCH", dish: null }, { slot: "DINNER", dish: { name: "Lasagne" } }], now)).toMatchObject({ lunch: "–", dinner: "Lasagne" });
+    expect(mealWidget(day, [], now)).toMatchObject({ lunch: "–", dinner: "–" });
+  });
+
+  it("pushes the meals with the status in one request", async () => {
+    const mealsOnMock = vi.fn(async () => MEALS);
+    const w = pushSetup({ mealsOn: mealsOnMock });
+    await w.service.onChange("default");
+    expect(mealsOnMock).toHaveBeenCalledWith("default", "2026-10-06");
+    const objects = (w.dataStore.putObjects as ReturnType<typeof vi.fn>).mock.calls[0]?.[2] as { key: string; content: unknown }[];
+    expect(objects.map((object) => object.key)).toEqual(["status", "meals"]);
+    expect(objects[1]?.content).toMatchObject({ title: "Heute", lunch: "Onigiri", dinner: "Lasagne" });
+  });
+
+  it("still pushes the status when the meal plan fails", async () => {
+    const w = pushSetup({ mealsOn: async () => Promise.reject(new TypeError("boom")) });
+    await w.service.onChange("default");
+    const objects = (w.dataStore.putObjects as ReturnType<typeof vi.fn>).mock.calls[0]?.[2] as { key: string }[];
+    expect(objects.map((object) => object.key)).toEqual(["status"]);
+    expect(w.logger.warn).toHaveBeenCalledWith("Meal widget data unavailable", { event: "MealWidgetFailed", error: "TypeError" });
+  });
+
+  it("pushes once more at 20:00 so the widget shows tomorrow", async () => {
+    const w = pushSetup({ mealsOn: async () => MEALS });
+    await w.service.onSchedule("default"); // 09:00 Berlin: day start
+    w.advance(10 * 60 * 60_000 + 50 * 60_000); // 19:50
+    await w.service.onSchedule("default");
+    expect(w.dataStore.putObjects).toHaveBeenCalledOnce();
+    w.advance(15 * 60_000); // 20:05
+    await w.service.onSchedule("default");
+    expect(w.dataStore.putObjects).toHaveBeenCalledTimes(2);
+    expect(w.logger.info).toHaveBeenLastCalledWith("Widget pushed", { event: "WidgetPushed", reason: "EVENING", targets: 1, pushed: 1 });
+    w.advance(15 * 60_000);
+    await w.service.onSchedule("default");
+    expect(w.dataStore.putObjects).toHaveBeenCalledTimes(2);
+  });
+
+  it("reads the date from the current week, else from the next week", async () => {
+    const plan = (slots: { date: string; slot: string; dish: { name: string } | null }[]) => ({ slots });
+    const getPlan = vi.fn(async (_tenantId: string, week: string) =>
+      week === "current" ? plan([{ date: "2026-10-11", slot: "DINNER", dish: { name: "Suppe" } }]) : plan([{ date: "2026-10-12", slot: "LUNCH", dish: null }]),
+    );
+    const plans = { getPlan } as unknown as Parameters<typeof mealsOn>[0];
+    expect(await mealsOn(plans, "default", "2026-10-11")).toEqual([{ date: "2026-10-11", slot: "DINNER", dish: { name: "Suppe" } }]);
+    expect(getPlan).toHaveBeenCalledTimes(1);
+    expect(await mealsOn(plans, "default", "2026-10-12")).toEqual([{ date: "2026-10-12", slot: "LUNCH", dish: null }]);
+    expect(await mealsOn(plans, "default", "2026-10-30")).toEqual([]);
   });
 });
 

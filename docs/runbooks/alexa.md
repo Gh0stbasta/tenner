@@ -34,7 +34,9 @@ days: start a new beta test in the developer console (Distribution → Beta Test
 
 ## Widget not updating
 
-1. Notifier logs: `WidgetPushed` (reason, targets, pushed) / `WidgetPushFailed` (status) / `WidgetUpdateFailed`.
+1. Notifier logs: `WidgetPushed` (reason `CHANGE`, `DAY_START`, `EVENING`, `PENDING_CHANGE`; targets, pushed) /
+   `WidgetPushFailed` (status) / `WidgetUpdateFailed`. Meal widget (FOOD-018): `MealWidgetFailed` means the meal
+   plan could not be read; the status widget is still pushed, the meal widget keeps its last data.
 2. `secret unavailable` → set `/tenner/prod/alexa/lwa-client-id` and `…/lwa-client-secret` (README → "Secrets").
 3. `targets: 0` → no Alexa account registered yet: open the skill once („Alexa, öffne Tenner Board“).
 4. Status 401/403 → wrong LWA client or missing Data Store permission in the console; 404/410 → the account was

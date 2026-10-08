@@ -1,0 +1,39 @@
+{
+  "manifest": {
+    "id": "meal-today",
+    "version": "1.0.0",
+    "installStateChanges": "INFORM",
+    "updateStateChanges": "INFORM",
+    "presentationDefinitions": [
+      {
+        "url": "presentations/default.tpl"
+      }
+    ],
+    "appliesTo": "${viewport.mode == 'HUB'}"
+  },
+  "packageVersion": "1.0",
+  "packageType": "APL_PACKAGE",
+  "publishingInformation": {
+    "schemaVersion": "1.0",
+    "locales": {
+      "de-DE": [
+        {
+          "targetViewport": "WIDGET_M",
+          "metadata": {
+            "name": "Tenner Essen",
+            "description": "Mittag- und Abendessen von heute, ab 20 Uhr von morgen.",
+            "keywords": [
+              "tenner",
+              "essen",
+              "essensplan"
+            ],
+            "iconUri": "${WEB_APP_URL}/icons/icon-512.png",
+            "previews": [
+              "${WEB_APP_URL}/alexa/meal-widget-preview.png"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

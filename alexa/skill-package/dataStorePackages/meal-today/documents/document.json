@@ -1,0 +1,93 @@
+{
+  "type": "APL",
+  "version": "2023.2",
+  "theme": "dark",
+  "description": "Tenner meal widget (FOOD-018): today's lunch and dinner, tomorrow's from 20:00 household time. Bound to the Data Store object tenner/meals (MealWidget in backend/src/alexa/widget.ts). No tap action (MAINT-006).",
+  "extensions": [
+    {
+      "name": "DataStore",
+      "uri": "alexaext:datastore:10"
+    }
+  ],
+  "settings": {
+    "DataStore": {
+      "dataBindings": [
+        {
+          "namespace": "tenner",
+          "key": "meals",
+          "dataBindingName": "meals",
+          "dataType": "OBJECT"
+        }
+      ]
+    }
+  },
+  "resources": [
+    {
+      "colors": {
+        "background": "#1c1f24",
+        "text": "#ffffff",
+        "muted": "#b8bec6",
+        "primary": "#1976d2"
+      },
+      "dimensions": {
+        "titleSize": "28dp",
+        "labelSize": "22dp",
+        "dishSize": "34dp",
+        "pad": "16dp"
+      }
+    }
+  ],
+  "mainTemplate": {
+    "parameters": [
+      "payload"
+    ],
+    "items": [
+      {
+        "type": "Container",
+        "width": "100%",
+        "height": "100%",
+        "backgroundColor": "@background",
+        "paddingLeft": "@pad",
+        "paddingRight": "@pad",
+        "paddingTop": "@pad",
+        "items": [
+          {
+            "type": "Text",
+            "text": "${meals.title == null ? 'Essen' : meals.title}",
+            "fontSize": "@titleSize",
+            "fontWeight": "bold",
+            "color": "@primary"
+          },
+          {
+            "type": "Text",
+            "text": "Mittag",
+            "paddingTop": "8dp",
+            "fontSize": "@labelSize",
+            "color": "@muted"
+          },
+          {
+            "type": "Text",
+            "text": "${meals.lunch == null ? '–' : meals.lunch}",
+            "fontSize": "@dishSize",
+            "color": "@text",
+            "maxLines": 1
+          },
+          {
+            "type": "Text",
+            "text": "Abend",
+            "paddingTop": "8dp",
+            "fontSize": "@labelSize",
+            "color": "@muted"
+          },
+          {
+            "type": "Text",
+            "text": "${meals.dinner == null ? '–' : meals.dinner}",
+            "fontSize": "@dishSize",
+            "color": "@text",
+            "maxLines": 1
+          }
+        ]
+      }
+    ]
+  }
+}
