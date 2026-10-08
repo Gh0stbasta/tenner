@@ -54,12 +54,15 @@ describe("Tenner skill (ALEXA-001)", () => {
     expect(info.mock.calls.map(([line]) => JSON.parse(String(line)).event)).toEqual(["session_ended", "skill_request"]);
   });
 
-  it("answers unknown request types with a spoken error instead of failing", async () => {
+  it("logs unknown system request types quietly instead of counting them as errors (MAINT-004)", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const response = await skill.invoke(unknownRequest("Some.UnknownRequest"));
-    expect(ssml(response)).toBe(`<speak>${SPEECH.error}</speak>`);
-    expect(response.response.shouldEndSession).toBe(true);
-    expect(JSON.parse(String(error.mock.calls[0]?.[0]))).toMatchObject({ event: "skill_error", requestType: "Some.UnknownRequest" });
+    expect(response.response.outputSpeech).toBeUndefined();
+    expect(error).not.toHaveBeenCalled();
+    expect(info.mock.calls.map(([line]) => JSON.parse(String(line)) as Record<string, unknown>)).toContainEqual(
+      expect.objectContaining({ event: "unhandled_request", requestType: "Some.UnknownRequest" }),
+    );
   });
 
   it("rejects requests for another skill ID without answering", async () => {

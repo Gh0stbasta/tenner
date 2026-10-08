@@ -54,7 +54,8 @@ and a changelog entry on top of that.
 |---|---|---|
 | [MAINT-001](maintenance/ticket001.md) | Alexa skill — time budget instead of a fixed 2 s per API call | Done |
 | [MAINT-002](maintenance/ticket002.md) | Deliver the Echo Show home-screen widget | Done (device check by the owner open) |
-| [MAINT-003](maintenance/ticket003.md) | Widget icon and preview for the skill package import | Done (green deploy open) |
+| [MAINT-003](maintenance/ticket003.md) | Widget icon and preview for the skill package import | Done |
+| [MAINT-004](maintenance/ticket004.md) | Widget system messages counted as skill errors | Done (device check open) |
 
 ### Recommendations
 

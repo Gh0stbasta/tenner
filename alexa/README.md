@@ -54,7 +54,9 @@ the Terraform output `frontend_url` at deploy time (MAINT-003).
 When the widget is installed, Amazon sends `Alexa.DataStore.PackageManager.UsagesInstalled`; the skill registers the
 Alexa account (`PUT /household/alexa-users/{id}`), which publishes a HouseholdChanged event, so the notifier fills
 the widget within about a minute. Until then — or without account linking — it shows „Öffnen zum Laden“. Removal,
-updates and installation errors are logged (`widget_lifecycle`, `widget_installation_error`).
+updates and installation errors are logged (`widget_lifecycle`, `widget_installation_error`). APL runtime errors,
+Data Store errors and other system messages are logged without speech and do not count as skill errors; a widget
+tap without a session gets an empty session so the dashboard opens (MAINT-004).
 
 How the data gets there (no request to the skill when the widget renders):
 
