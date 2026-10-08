@@ -18,7 +18,9 @@ export interface ShoppingItem {
   readonly key: string;
   readonly ingredientId: string | null;
   readonly name: string;
+  /** FOOD-028: a count („2×“), no weights; null for own items. */
   readonly quantity: number | null;
+  /** FOOD-028: "Stück" for generated items (lists stored before FOOD-028 may hold "g"/"ml", see normalizeItem). */
   readonly unit: IngredientUnit | null;
   readonly section: ShoppingSection;
   /** Basic supply (salt, oil): shown collapsed, not subtracted from a stock. */
@@ -58,11 +60,20 @@ export interface GenerationInput {
   readonly from: string;
 }
 
-/** Round up to steps a shop sells (buying a little more is better than too little). */
-export function roundUp(quantity: number, unit: IngredientUnit): number {
+/**
+ * FOOD-028 (owner decision 2026-10-08): the list shows counts only, no grams or millilitres. Pieces are rounded up
+ * („3× Zwiebeln“); weighed ingredients count once per meal that needs them („2× Hackfleisch“), since the catalog
+ * has no pack sizes.
+ */
+export function countOf(quantity: number, unit: IngredientUnit, meals: number): number {
   if (unit === "Stück") return Math.max(1, Math.ceil(quantity - 1e-9));
-  const step = quantity < 100 ? 10 : quantity < 1000 ? 50 : 100;
-  return Math.ceil(quantity / step - 1e-9) * step;
+  return Math.max(1, meals);
+}
+
+/** Items of lists stored before FOOD-028 carry grams or millilitres; they are shown as counts too. */
+export function normalizeItem(item: ShoppingItem): ShoppingItem {
+  if (item.quantity === null || item.unit === null || item.unit === "Stück") return item;
+  return { ...item, quantity: countOf(item.quantity, item.unit, item.usedFor.length), unit: "Stück" };
 }
 
 const sectionIndex = (section: ShoppingSection): number => SHOPPING_SECTIONS.indexOf(section);
@@ -74,7 +85,7 @@ function compareItems(a: ShoppingItem, b: ShoppingItem): number {
 
 /**
  * Ingredients of the planned meals from `from` on: quantity per adult portion × the portion factors of the eaters
- * at that meal, summed per ingredient in its base unit and rounded up. Optional ingredients, cooked or skipped meals
+ * at that meal, summed per ingredient in its base unit and turned into a count (FOOD-028). Optional ingredients, cooked or skipped meals
  * and meals without eaters are left out.
  */
 export function generateItems(input: GenerationInput): ShoppingItem[] {
@@ -101,8 +112,8 @@ export function generateItems(input: GenerationInput): ShoppingItem[] {
       key: ingredient.ingredientId,
       ingredientId: ingredient.ingredientId,
       name: ingredient.name,
-      quantity: roundUp(quantity, ingredient.unit),
-      unit: ingredient.unit,
+      quantity: countOf(quantity, ingredient.unit, usedFor.length),
+      unit: "Stück" as const,
       section: ingredient.shoppingSection,
       pantry: ingredient.pantry,
       checked: false,
