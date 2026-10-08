@@ -66,4 +66,19 @@ describe("system messages (MAINT-004)", () => {
     expect(error).not.toHaveBeenCalled();
     expect(response.response.directives?.some((directive) => directive.type === "Alexa.Presentation.APL.RenderDocument")).toBe(true);
   });
+
+  it("logs a rejected response with Alexa's error type and message (MAINT-005)", async () => {
+    const { response, info, error } = run({
+      type: "System.ExceptionEncountered",
+      error: { type: "INVALID_RESPONSE", message: "Speech is not allowed in INLINE mode." },
+      cause: { requestId: "amzn1.echo-api.request.cause" },
+    });
+    expect((await response).response.outputSpeech).toBeUndefined();
+    expect(error).not.toHaveBeenCalled();
+    expect(lines(info).find((line) => line.event === "system_exception")).toMatchObject({
+      errorType: "INVALID_RESPONSE",
+      errorMessage: "Speech is not allowed in INLINE mode.",
+      causeRequestId: "amzn1.echo-api.request.cause",
+    });
+  });
 });

@@ -54,8 +54,8 @@ describe("widget package", () => {
     for (const field of ["status.dueToday", "status.openMinutes", "status.overdue", "status.next", "data.title", "data.minutes", "data.member"]) expect(text).toContain(field);
   });
 
-  it("opens the dashboard on tap", () => {
-    expect(JSON.stringify(document)).toContain('"arguments":["openDashboard"]');
+  it("opens the skill on tap in STANDARD mode (MAINT-005: INLINE allows no speech or view)", () => {
+    expect(JSON.stringify(document)).toContain('"arguments":["openDashboard"],"flags":{"interactionMode":"STANDARD"}');
   });
 });
 

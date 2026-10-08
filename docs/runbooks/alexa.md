@@ -61,7 +61,8 @@ days: start a new beta test in the developer console (Distribution → Beta Test
 3. `skill_error` with `requestType`: a bug in a handler → fix and redeploy. Since MAINT-004 system messages are
    not skill errors: `apl_runtime_error` (an APL document — widget or Echo Show view — failed on the device; `errors`
    names type and reason), `datastore_error` (widget data not delivered; `errorType`) and `unhandled_request`
-   (another request type the skill does not use) are info lines.
+   (another request type the skill does not use) are info lines. `system_exception` (MAINT-005) means Alexa rejected
+   the skill's previous response; `errorType`/`errorMessage` say why, `causeRequestId` points to that response.
 
 ## Deploy warning "Alexa health check skipped"
 
