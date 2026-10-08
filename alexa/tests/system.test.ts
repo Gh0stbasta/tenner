@@ -52,7 +52,7 @@ describe("system messages (MAINT-004)", () => {
     expect(lines(intent.error).some((line) => line.event === "skill_error")).toBe(true);
   });
 
-  it("opens the dashboard when a widget tap arrives without a session", async () => {
+  it("answers a tap from an old widget version without a session quietly and without a view (MAINT-006)", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const api = fakeApi({ "GET /dashboard": { data: KITCHEN_DAY }, "GET /tenners": { data: [] } });
@@ -64,7 +64,8 @@ describe("system messages (MAINT-004)", () => {
     delete (tap as { session?: unknown }).session;
     const response = await skill.invoke(tap);
     expect(error).not.toHaveBeenCalled();
-    expect(response.response.directives?.some((directive) => directive.type === "Alexa.Presentation.APL.RenderDocument")).toBe(true);
+    expect(response.response.directives ?? []).toEqual([]);
+    expect(response.response.outputSpeech).toBeUndefined();
   });
 
   it("logs a rejected response with Alexa's error type and message (MAINT-005)", async () => {

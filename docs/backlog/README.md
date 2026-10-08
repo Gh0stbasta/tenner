@@ -57,6 +57,7 @@ and a changelog entry on top of that.
 | [MAINT-003](maintenance/ticket003.md) | Widget icon and preview for the skill package import | Done |
 | [MAINT-004](maintenance/ticket004.md) | Widget system messages counted as skill errors | Done (alarm quiet since the deploy) |
 | [MAINT-005](maintenance/ticket005.md) | Widget tap rejected by Alexa (interaction mode) | Done (device check open) |
+| [MAINT-006](maintenance/ticket006.md) | Alexa skill without Echo Show views (widget only) | Done (device check open) |
 
 ### Recommendations
 

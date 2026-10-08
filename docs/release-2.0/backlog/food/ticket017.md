@@ -60,8 +60,9 @@ was kochen wir heute
 - „Heute gibt es mittags Onigiri und abends Linseneintopf.“; one meal asked → only that one; empty slot → „Für
   heute Abend ist noch nichts geplant.“
 - Vegetarian variant mentioned when set („Burger, für Vegetarier mit Veggie-Patty“).
-- APL card on Echo Show devices with today's meals and images.
-- Daily briefing (ALEXA-005) gets a meal sentence; Echo Show dashboard (ALEXA-006) a meal section.
+- No APL card: since MAINT-006 the skill shows no views (owner decision, 2026-10-08); today's meals are on the
+  Echo Show home-screen widget (FOOD-018).
+- Daily briefing (ALEXA-005) gets a meal sentence.
 
 ## API
 
@@ -75,8 +76,7 @@ was kochen wir heute
 Utterance and slot resolution (heute, morgen, Datum, Mittag, Abend)
 Answers for full, partial and empty days
 Variant wording
-APL document renders with and without images
-Briefing and dashboard include meals
+Briefing includes meals
 API error → friendly fallback speech
 ```
 
@@ -88,8 +88,8 @@ Coverage for new code: 80% minimum.
 
 ```text
 Intent and utterances
-Answer builder, APL card
-Briefing and dashboard extension
+Answer builder
+Briefing extension
 Tests
 ```
 
@@ -109,7 +109,7 @@ scripts/check_alexa_simulation.py   (deploy health check, extended with one meal
 
 - [ ] „Was gibt es heute?“ answered with today's meals
 - [ ] Tomorrow and single meals can be asked
-- [ ] Briefing and Echo Show dashboard show meals
+- [ ] Briefing includes meals (no Echo Show view, MAINT-006)
 - [ ] Skill stays private
 - [ ] Tests passing
 

@@ -59,7 +59,7 @@ days: start a new beta test in the developer console (Distribution → Beta Test
    handler's calls). Alexa's limit is 8 s. A single `apiStatus 0` right after `platform.initStart` is a cold start;
    it is only a problem when it repeats.
 3. `skill_error` with `requestType`: a bug in a handler → fix and redeploy. Since MAINT-004 system messages are
-   not skill errors: `apl_runtime_error` (an APL document — widget or Echo Show view — failed on the device; `errors`
+   not skill errors: `apl_runtime_error` (the widget's APL document failed on the device; `errors`
    names type and reason), `datastore_error` (widget data not delivered; `errorType`) and `unhandled_request`
    (another request type the skill does not use) are info lines. `system_exception` (MAINT-005) means Alexa rejected
    the skill's previous response; `errorType`/`errorMessage` say why, `causeRequestId` points to that response.

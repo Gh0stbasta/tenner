@@ -1,11 +1,9 @@
-/** ALEXA-007, MAINT-002: widget APL package in Amazon's format, the tap handler and the install lifecycle. */
+/** ALEXA-007, MAINT-002: widget APL package in Amazon's format and the install lifecycle. */
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import type { RequestEnvelope } from "ask-sdk-model";
 import { createSkill } from "../src/skill.js";
 import { SKILL_ID, envelope } from "./envelopes.js";
 import { API_BASE, fakeApi } from "./fakeApi.js";
-import { KITCHEN_DAY } from "./dashboardFixtures.js";
 
 const PACKAGE = "../skill-package/dataStorePackages/tenner-status/";
 const read = (name: string) => JSON.parse(readFileSync(new URL(`${PACKAGE}${name}`, import.meta.url), "utf8")) as Record<string, unknown>;
@@ -54,23 +52,10 @@ describe("widget package", () => {
     for (const field of ["status.dueToday", "status.openMinutes", "status.overdue", "status.next", "data.title", "data.minutes", "data.member"]) expect(text).toContain(field);
   });
 
-  it("opens the skill on tap in STANDARD mode (MAINT-005: INLINE allows no speech or view)", () => {
-    expect(JSON.stringify(document)).toContain('"arguments":["openDashboard"],"flags":{"interactionMode":"STANDARD"}');
-  });
-});
-
-describe("OpenDashboardHandler", () => {
-  it("answers a widget tap like a launch with the dashboard", async () => {
-    vi.spyOn(console, "info").mockImplementation(() => undefined);
-    const api = fakeApi({ "GET /dashboard": { data: KITCHEN_DAY }, "GET /tenners": { data: [] } });
-    const skill = createSkill({ tennerApiBaseUrl: API_BASE, skillId: SKILL_ID, apiTimeoutMs: 200 }, api.fetch);
-    const request: RequestEnvelope = envelope(
-      { type: "Alexa.Presentation.APL.UserEvent", arguments: ["openDashboard"] },
-      { supportedInterfaces: { "Alexa.Presentation.APL": { runtime: { maxVersion: "2023.2" } } } },
-    );
-    const response = await skill.invoke(request);
-    expect(response.response.directives?.some((directive) => directive.type === "Alexa.Presentation.APL.RenderDocument")).toBe(true);
-    vi.restoreAllMocks();
+  it("has no tap action: the skill shows no views (MAINT-006)", () => {
+    const text = JSON.stringify(document);
+    expect(text).not.toContain("SendEvent");
+    expect(text).not.toContain("TouchWrapper");
   });
 });
 

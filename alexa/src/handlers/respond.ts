@@ -1,7 +1,6 @@
 import type { HandlerInput } from "ask-sdk-core";
 import type { Response } from "ask-sdk-model";
 import { SKILL_TITLE, esc } from "../speech.js";
-import { hasScreen, screenOf } from "./screen.js";
 
 export const FOLLOW_UP = "Was möchtest du noch wissen?";
 export const CONTINUE_REPROMPT = "Soll ich weiterlesen? Sag ja oder nein.";
@@ -11,13 +10,11 @@ const LISTING_ATTRIBUTE = "listing";
 /**
  * Speak a plain-text answer (escaped for SSML) and show it as a card. A one-shot request („Alexa, frag Tenner Board, …“)
  * ends the session; inside an open session Tenner waits for the next question. `question` keeps the session open
- * with that reprompt (e.g. a listing continuation). While an APL view is on screen (ALEXA-006) the session stays
- * open without an open microphone, so the view remains.
+ * with that reprompt (e.g. a listing continuation). Voice only: the skill shows no APL views (MAINT-006).
  */
 export function answer(input: HandlerInput, text: string, question?: string): Response {
   const builder = input.responseBuilder.speak(esc(text)).withSimpleCard(SKILL_TITLE, text);
   if (question !== undefined) return builder.reprompt(esc(question)).getResponse();
-  if (hasScreen(input) && screenOf(input) !== undefined) return builder.getResponse();
   if (input.requestEnvelope.session?.new !== false) return builder.withShouldEndSession(true).getResponse();
   return builder.reprompt(FOLLOW_UP).getResponse();
 }

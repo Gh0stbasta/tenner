@@ -6,8 +6,6 @@ import { fetchTenners, type TennerSummary } from "../tenners.js";
 import { TennerApiError } from "../tennerApi.js";
 import { SPEECH } from "../speech.js";
 import { entitiesDirective } from "./members.js";
-import { fetchDashboard } from "../dashboard.js";
-import { hasScreen, renderDashboard } from "./screen.js";
 import { setDialogState } from "./state.js";
 
 /**
@@ -28,11 +26,6 @@ export const LaunchRequestHandler: RequestHandler = {
       return builder.speak(SPEECH.whoIsSpeaking(names)).reprompt(SPEECH.whoIsSpeakingReprompt(names)).getResponse();
     }
     const speech = household.speaker ? SPEECH.welcomeMember(household.speaker.displayName) : SPEECH.welcome;
-    if (hasScreen(input)) {
-      // ALEXA-006: the household's day on screen; no open microphone so the dashboard stays visible.
-      renderDashboard(input, await fetchDashboard(apiOf(input), undefined), household.context.members, undefined);
-      return builder.speak(speech).getResponse();
-    }
     return builder.speak(speech).reprompt(SPEECH.welcomeReprompt).getResponse();
   },
 };

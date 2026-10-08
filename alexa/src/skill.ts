@@ -13,8 +13,7 @@ import { SessionEndedRequestHandler } from "./handlers/sessionEnded.js";
 import { SpeakerIntentHandler } from "./handlers/speaker.js";
 import { StopIntentHandler } from "./handlers/stop.js";
 import { AplRuntimeErrorHandler, DataStoreErrorHandler, SystemExceptionHandler, UnknownSystemRequestHandler, touchSessionInterceptor } from "./handlers/system.js";
-import { TouchCompleteHandler } from "./handlers/touch.js";
-import { OpenDashboardHandler, WidgetInstalledHandler, WidgetLifecycleHandler } from "./handlers/widget.js";
+import { WidgetInstalledHandler, WidgetLifecycleHandler } from "./handlers/widget.js";
 import { logResponse, startTimer } from "./requestLog.js";
 import { linkInterceptor } from "./session.js";
 
@@ -31,8 +30,6 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
       messageReceivedHandler(fetchImpl),
       PermissionResponseHandler,
       EnableRemindersIntentHandler,
-      TouchCompleteHandler,
-      OpenDashboardHandler,
       WidgetInstalledHandler,
       WidgetLifecycleHandler,
       AplRuntimeErrorHandler,
