@@ -6,21 +6,21 @@
 
 | | |
 |---|---|
-| **Project health** | 🟡 **Live, one step red**: the deploy of PR #34 shipped backend, web app and the skill code, but Amazon rejected the skill package (widget images missing) — this PR fixes it; all 1,780 automated tests pass (backend 1,057, frontend 443, alexa 156, Terraform 76, scripts 48) |
+| **Project health** | 🟡 **Live, alarm on the widget**: the last deploy (PR #35) is green and the Echo Show widget can be added, but loading it sets off `tenner-alexa-skill-error-rate` — this PR fixes it; all 1,784 automated tests pass (backend 1,057, frontend 443, alexa 160, Terraform 76, scripts 48) |
 | **Current phase** | **Release 2.0 — Family Meal Planning, in progress.** Release 1.0 is in maintenance |
-| **Current focus** | This pull request: widget icon and preview so Amazon accepts the skill package (MAINT-003) |
-| **Biggest blocker** | The Echo Show widget is not live until this PR is deployed; the skill itself works as before |
-| **Recommended next action** | Merge, watch the deploy step „Deploy Alexa skill package“, then add the Tenner widget on the Echo Show 21 |
+| **Current focus** | This pull request: widget system messages no longer count as skill errors (MAINT-004) |
+| **Biggest blocker** | None; until this PR is deployed the widget sets off false skill-error alarms |
+| **Recommended next action** | Merge, reload the widget on the Echo Show 21 and check that the alarm stays quiet |
 
 ## 📈 Progress
 
 ```text
 Release 1.0  ████████████████████ 100%  104 / 104 tickets done (tag v1.0.0 still to set)
 Release 2.0  █████████░░░░░░░░░░░  46%   12 /  26 FOOD tickets (foundation, planning, shopping list)
-Maintenance   3 done (MAINT-001 – 003; device check and green deploy open) · REC 0
+Maintenance   4 done (MAINT-001 – 004; device checks open) · REC 0
 ```
 
-✅ Completed: **120** (104 + EPIC-FOOD-001 + 12 FOOD + 3 MAINT) · 🚧 In progress: **0** · 📋 Open: **14** (release 2.0)
+✅ Completed: **121** (104 + EPIC-FOOD-001 + 12 FOOD + 4 MAINT) · 🚧 In progress: **0** · 📋 Open: **14** (release 2.0)
 
 ## 🧩 Feature Status
 
@@ -30,7 +30,7 @@ Maintenance   3 done (MAINT-001 – 003; device check and green deploy open) · 
 | ✅ Tenners, scheduling, household, task catalog, analytics | ✅ Weekly plan with rules R1 – R13, made automatically; replace, choose, swap, lock, regenerate (FOOD-005 – 009, 022) |
 | ✅ Phone app with offline use | 🆕 Shopping list: own order by drag and drop, ticked items struck through, offline in the shop (FOOD-014) · 🔲 dish editor, nutrition, cost, photos (FOOD-010 – 013) |
 | ✅ Push per Tenner with „Erledigt“/„Später“ | 🔲 Morning push, „Was gibt es heute?“, shopping list via Alexa, meal widget, calendar feed (FOOD-016, 017, 026, 018, 015) |
-| ✅ Alexa „Tenner Board“ with Echo Show — 🆕 widget now really delivered (MAINT-002) | 🔲 History, feedback, food analytics (FOOD-023, 019); release (FOOD-025) |
+| ✅ Alexa „Tenner Board“ with Echo Show — 🆕 widget live (MAINT-002 – 004) | 🔲 History, feedback, food analytics (FOOD-023, 019); release (FOOD-025) |
 
 Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Release 2.0 plan: [`docs/release-2.0/README.md`](docs/release-2.0/README.md) · AI stays out of 2.0 (FOOD-020, FOOD-024 are evaluations).
 
@@ -72,8 +72,8 @@ Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Relea
 
 ## 🎯 Recommended Next Actions
 
-1. **Merge this PR** and check the deploy step „Deploy Alexa skill package“; on an error, send it to me.
-2. **Echo Show 21:** swipe left → „+“ → „Tenner“ (widget); after a longer pause „Alexa, öffne Tenner Board“ (cold start fix).
+1. **Merge this PR**, then load the widget again; if an alarm comes, send me the skill log line (`apl_runtime_error`, `datastore_error` or `unhandled_request`).
+2. **Echo Show 21:** check that the widget shows today's numbers; after a longer pause „Alexa, öffne Tenner Board“ (cold start fix).
 3. **Essen → Einkaufsliste:** try sorting by drag and drop on the phone; if not done yet: family profile and dish catalog in Einstellungen, [review sheet](docs/release-2.0/food-catalog-review.md).
 4. **Next:** rest of the kitchen block (FOOD-010 dish editor → 012 nutrition → 013 cost → 011 photos).
 5. **Still open from 1.0:** tag `v1.0.0` and GitHub release (`docs/release-1.0/hotfix/release001.md`).
@@ -82,6 +82,6 @@ Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Relea
 
 ## ℹ About this dashboard
 
-- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (maintenance; a ticket counts as done when it has an "Implementation Status" section), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (33 deploy runs; run 33 for PR #34 red at the skill package step, the four before green).
-- **Counting:** release 2.0: 12 of 26 FOOD tickets done (FOOD-026 added 2026-10-07; FOOD-003 with the owner's review still open counts as done), the epic EPIC-FOOD-001 done. Maintenance: MAINT-001 – 003 done (MAINT-002 device check and MAINT-003 green deploy open). Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets (REPORTING-001/002, BACKLOG-001 – 003, CLEANUP-001, RELEASE-001); owner inputs in `docs/release-1.0/human/` and planning files with other names are not counted. Debt levels are an assessment for this dashboard.
+- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (maintenance; a ticket counts as done when it has an "Implementation Status" section), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (34 deploy runs; run 34 for PR #35 green incl. the skill package import, run 33 red at that step).
+- **Counting:** release 2.0: 12 of 26 FOOD tickets done (FOOD-026 added 2026-10-07; FOOD-003 with the owner's review still open counts as done), the epic EPIC-FOOD-001 done. Maintenance: MAINT-001 – 004 done (device checks of MAINT-002 and MAINT-004 open). Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets (REPORTING-001/002, BACKLOG-001 – 003, CLEANUP-001, RELEASE-001); owner inputs in `docs/release-1.0/human/` and planning files with other names are not counted. Debt levels are an assessment for this dashboard.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).

@@ -12,6 +12,7 @@ import { NoIntentHandler, OverdueIntentHandler, SuggestIntentHandler, TodayInten
 import { SessionEndedRequestHandler } from "./handlers/sessionEnded.js";
 import { SpeakerIntentHandler } from "./handlers/speaker.js";
 import { StopIntentHandler } from "./handlers/stop.js";
+import { AplRuntimeErrorHandler, DataStoreErrorHandler, UnknownSystemRequestHandler, touchSessionInterceptor } from "./handlers/system.js";
 import { TouchCompleteHandler } from "./handlers/touch.js";
 import { OpenDashboardHandler, WidgetInstalledHandler, WidgetLifecycleHandler } from "./handlers/widget.js";
 import { logResponse, startTimer } from "./requestLog.js";
@@ -23,7 +24,7 @@ import { linkInterceptor } from "./session.js";
  */
 export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globalThis.fetch): Skill {
   const builder = SkillBuilders.custom()
-    .addRequestInterceptors(startTimer, linkInterceptor(config, fetchImpl))
+    .addRequestInterceptors(startTimer, touchSessionInterceptor, linkInterceptor(config, fetchImpl))
     .addResponseInterceptors(logResponse)
     .addRequestHandlers(
       LaunchRequestHandler,
@@ -34,6 +35,10 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
       OpenDashboardHandler,
       WidgetInstalledHandler,
       WidgetLifecycleHandler,
+      AplRuntimeErrorHandler,
+      DataStoreErrorHandler,
+      // Other system messages before the intent handlers, which read the session (MAINT-004).
+      UnknownSystemRequestHandler,
       // Answers to open completion questions come before the general handlers of the same intents.
       CompletedByAnswerHandler,
       ConfirmYesHandler,
