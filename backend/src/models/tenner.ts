@@ -35,6 +35,11 @@ export interface Tenner {
   readonly lastCompleted: string | null;
   /** Calendar date (YYYY-MM-DD) when the Tenner is due next. */
   readonly nextDue: string;
+  /**
+   * HOTFIX-006: first day the Tenner is active (YYYY-MM-DD, household-local); it is due on that day at the earliest.
+   * Absent on Tenners created before HOTFIX-006: their start is the creation date (see startDateOf).
+   */
+  readonly startDate?: string | undefined;
   /** Date the Tenner was postponed to (SCHEDULING-003), or null. Cleared by the next completion. */
   readonly snoozedUntil: string | null;
   /** Start of an individual pause (UTC timestamp, SCHEDULING-005), or null. */
@@ -53,3 +58,6 @@ export interface Tenner {
   /** Authenticated user of the last write (SECURITY-004); null for records last written before authentication. */
   readonly updatedBy: UserId | null;
 }
+
+/** HOTFIX-006: the start date; Tenners created before it start on their creation date (UTC date of createdAt). */
+export const startDateOf = (tenner: Pick<Tenner, "startDate" | "createdAt">): string => tenner.startDate ?? tenner.createdAt.slice(0, 10);

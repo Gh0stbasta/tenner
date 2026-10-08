@@ -11,7 +11,6 @@ import { FoodProfileSettings } from "../meals/FoodProfileSettings";
 import { MealCatalogSettings } from "../meals/MealCatalogSettings";
 import { AlexaSettings } from "./AlexaSettings";
 import { CategoriesSettings } from "./CategoriesSettings";
-import { DashboardSettings } from "./DashboardSettings";
 import { HouseholdSettings } from "./HouseholdSettings";
 import { InstallAppSettings } from "../install/InstallAppSettings";
 import { PersonalSettings } from "./PersonalSettings";
@@ -36,7 +35,6 @@ export function SettingsPage() {
       <PersonalSettings />
       <NotificationSettings />
       <InstallAppSettings />
-      <DashboardSettings />
       <Typography variant="overline" component="h2" color="text.secondary" sx={{ display: "block", mt: 3 }}>
         Für den ganzen Haushalt
       </Typography>

@@ -26,6 +26,8 @@ export const tennerSchema = z.object({
   originalAssignee: z.string().nullable().default(null),
   lastCompleted: z.string().nullable(),
   nextDue: z.string(),
+  /** HOTFIX-006: first active day; missing in data cached before HOTFIX-006. */
+  startDate: z.string().optional(),
   /** SCHEDULING-003: postponed-to date, cleared by the next completion. */
   snoozedUntil: z.string().nullable(),
   /** SCHEDULING-005: individual pause; a vacation pause comes from the household settings. */

@@ -170,6 +170,16 @@ export function TennerForm({ form, showActive = false, disabled = false }: Tenne
           slotProps={{ htmlInput: { min: 1, max: 480, inputMode: "numeric" } }}
           {...register("estimatedMinutes", { valueAsNumber: true })}
         />
+        <TextField
+          label="Startdatum"
+          type="date"
+          required
+          disabled={disabled}
+          error={errors.startDate !== undefined}
+          helperText={errors.startDate?.message ?? "Vorher ist die Aufgabe nicht fällig und nicht sichtbar."}
+          slotProps={{ inputLabel: { shrink: true } }}
+          {...register("startDate")}
+        />
       </Box>
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
         <TextField

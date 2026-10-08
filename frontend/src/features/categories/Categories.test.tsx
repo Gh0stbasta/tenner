@@ -3,10 +3,9 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { dashboard, tenner } from "../../tests/fixtures";
+import { tenner } from "../../tests/fixtures";
 import { DEFAULT_CATEGORIES, fail, mockFetch, ok } from "../../tests/fetchMock";
 import { renderWithProviders } from "../../tests/render";
-import { DashboardPage } from "../dashboard/DashboardPage";
 import { SettingsPage } from "../settings/SettingsPage";
 import { CreateTennerDialog } from "../tenners/CreateTennerDialog";
 import { EditTennerDialog } from "../tenners/EditTennerDialog";
@@ -45,20 +44,6 @@ describe("categories in pickers", () => {
     expect(suggestCategory("Steuererklärung machen", ["HOUSEHOLD"])).toBeUndefined();
   });
 
-  it("names new categories in the workload summary", async () => {
-    mockFetch({
-      "GET /categories": ok([...DEFAULT_CATEGORIES, GARDEN]),
-      "GET /dashboard": ok(
-        dashboard({
-          byCategory: { GARDEN: { count: 1, estimatedMinutes: 30 }, PETS: { count: 1, estimatedMinutes: 5 } },
-        }),
-      ),
-    });
-    renderWithProviders(<DashboardPage />);
-    const card = within(await screen.findByRole("region", { name: "Nach Kategorie" }));
-    expect(await card.findByText("Garten")).toBeInTheDocument();
-    expect(card.getByText("Pets")).toBeInTheDocument();
-  });
 });
 
 describe("categories settings", () => {

@@ -10,7 +10,7 @@ import { toUtcTimestamp, type Clock } from "../../utils/clock.js";
 import { itemKey } from "../keys.js";
 import type { ResolvedIngredient } from "../models/ingredient.js";
 import type { MealsStore } from "../repositories/meals-store.js";
-import { applyOperations, generateItems, mergeRefresh, signatureOf, type ShoppingItem, type ShoppingOperation, type ShoppingRange, type StoredShoppingList } from "../shopping/shopping-list.js";
+import { applyOperations, generateItems, mergeRefresh, normalizeItem, signatureOf, type ShoppingItem, type ShoppingOperation, type ShoppingRange, type StoredShoppingList } from "../shopping/shopping-list.js";
 import type { MealPlanService, PlanWeek, WeekReference } from "./meal-plan.service.js";
 
 /** Parallel changes from two phones: retries against the newest version before giving up with 409. */
@@ -121,11 +121,15 @@ export class ShoppingListService {
 
 /** Stored list; the store holds only values written by this service. */
 function toStoredList(data: Record<string, unknown>): StoredShoppingList {
+  const raw = Array.isArray(data.items) ? (data.items as ShoppingItem[]) : [];
+  const items = raw.map(normalizeItem);
+  // FOOD-028: a list stored with grams gets the signature of its counts, so it is not shown as outdated.
+  const converted = items.some((item, index) => item !== raw[index]);
   return {
     weekStart: String(data.weekStart),
     range: data.range === "WEEK" ? "WEEK" : "REST",
     generatedAt: String(data.generatedAt),
-    signature: String(data.signature),
-    items: Array.isArray(data.items) ? (data.items as ShoppingItem[]) : [],
+    signature: converted ? signatureOf(items) : String(data.signature),
+    items,
   };
 }

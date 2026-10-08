@@ -8,6 +8,8 @@ export const WIDGET_NAMESPACE = "tenner";
 export const WIDGET_KEY = "status";
 /** Meal widget object (FOOD-018). */
 export const MEALS_KEY = "meals";
+/** Shopping list widget object (FOOD-026). */
+export const SHOPPING_KEY = "shopping";
 const TIMEOUT_MS = 5000;
 
 export type PushOutcome = { readonly ok: true } | { readonly ok: false; readonly status: number | undefined; readonly userGone: boolean };

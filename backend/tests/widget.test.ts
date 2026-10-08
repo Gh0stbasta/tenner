@@ -1,11 +1,12 @@
 /** ALEXA-007: Echo Show widget — LWA tokens, Data Store push, summary, debounce, day start, routing. */
 
 import { describe, expect, it, vi } from "vitest";
-import { DATASTORE_SCOPE, LWA_TOKEN_URL, LwaError, WidgetPushService, createDataStoreClient, createLwaTokenClient, mealDay, mealWidget, widgetSummary, type DataStoreClient, type DayMeal } from "../src/alexa/index.js";
+import { DATASTORE_SCOPE, LWA_TOKEN_URL, LwaError, WidgetPushService, createDataStoreClient, createLwaTokenClient, mealDay, mealWidget, shoppingWidget, widgetSummary, type DataStoreClient, type DayMeal, type ShoppingListEntry } from "../src/alexa/index.js";
 import { loadConfig } from "../src/config.js";
 import type { DashboardResponse } from "../src/dto/index.js";
 import { SEED_MEMBERS } from "../src/models/index.js";
-import { createNotifierRuntime, handleNotifierEvent, mealsOn, type NotifierRuntime } from "../src/notifier.js";
+import { createNotifierRuntime, handleNotifierEvent, mealsOn, shoppingListOf, type NotifierRuntime } from "../src/notifier.js";
+import { NotFoundError } from "../src/exceptions/index.js";
 import { memoryDeliveryLog } from "./mocks/delivery-log.js";
 import { mockLogger, testConfig } from "./mocks/index.js";
 
@@ -104,7 +105,7 @@ describe("widgetSummary (Summary Payload Mapping)", () => {
   });
 });
 
-function pushSetup(options: { users?: string[]; dataStore?: DataStoreClient; mealsOn?: (tenantId: string, date: string) => Promise<readonly DayMeal[]> } = {}) {
+function pushSetup(options: { users?: string[]; dataStore?: DataStoreClient; mealsOn?: (tenantId: string, date: string) => Promise<readonly DayMeal[]>; shoppingList?: (tenantId: string) => Promise<readonly ShoppingListEntry[]> } = {}) {
   const clock = { now: new Date("2026-10-06T07:00:00Z") };
   const { log, records } = memoryDeliveryLog();
   const dataStore = options.dataStore ?? { putObjects: vi.fn(async () => ({ ok: true as const })) };
@@ -118,6 +119,7 @@ function pushSetup(options: { users?: string[]; dataStore?: DataStoreClient; mea
     members: async () => SEED_MEMBERS,
     timezoneOf: async () => "Europe/Berlin",
     ...(options.mealsOn ? { mealsOn: options.mealsOn } : {}),
+    ...(options.shoppingList ? { shoppingList: options.shoppingList } : {}),
     lwa,
     dataStore,
     log,
@@ -251,6 +253,45 @@ describe("meal widget (FOOD-018)", () => {
     expect(getPlan).toHaveBeenCalledTimes(1);
     expect(await mealsOn(plans, "default", "2026-10-12")).toEqual([{ date: "2026-10-12", slot: "LUNCH", dish: null }]);
     expect(await mealsOn(plans, "default", "2026-10-30")).toEqual([]);
+  });
+});
+
+describe("shopping list widget (FOOD-026)", () => {
+  const entry = (name: string, extra: Partial<ShoppingListEntry> = {}): ShoppingListEntry => ({ name, quantity: 1, unit: "Stück", checked: false, pantry: false, ...extra });
+
+  it("shows open items in order with counts, without pantry and ticked items", () => {
+    const now = new Date("2026-10-06T07:00:00Z");
+    expect(shoppingWidget([entry("Nudeln", { quantity: 2 }), entry("Salz", { pantry: true }), entry("Eier", { checked: true }), entry("Klopapier", { quantity: null, unit: null })], now)).toEqual({
+      open: 2,
+      items: ["2× Nudeln", "Klopapier"],
+      more: 0,
+      updatedAt: "2026-10-06T07:00:00.000Z",
+    });
+    const many = shoppingWidget(Array.from({ length: 9 }, (_, index) => entry(`Ding ${index}`)), now);
+    expect(many).toMatchObject({ open: 9, more: 3 });
+    expect(many.items).toHaveLength(6);
+  });
+
+  it("pushes the list with the other widgets and isolates failures", async () => {
+    const w = pushSetup({ shoppingList: async () => [entry("Milch")] });
+    await w.service.onChange("default");
+    const objects = (w.dataStore.putObjects as ReturnType<typeof vi.fn>).mock.calls[0]?.[2] as { key: string; content: unknown }[];
+    expect(objects.map((object) => object.key)).toEqual(["status", "shopping"]);
+    expect(objects[1]?.content).toMatchObject({ open: 1, items: ["Milch"] });
+    const broken = pushSetup({ shoppingList: async () => Promise.reject(new TypeError("boom")) });
+    await broken.service.onChange("default");
+    expect((broken.dataStore.putObjects as ReturnType<typeof vi.fn>).mock.calls[0]?.[2]).toHaveLength(1);
+    expect(broken.logger.warn).toHaveBeenCalledWith("Shopping widget data unavailable", { event: "ShoppingWidgetFailed", error: "TypeError" });
+  });
+
+  it("reads this week's list and shows a week without a plan as empty", async () => {
+    const getList = vi.fn(async () => ({ items: [entry("Milch")] }));
+    expect(await shoppingListOf({ getList } as unknown as Parameters<typeof shoppingListOf>[0], "default")).toEqual([entry("Milch")]);
+    expect(getList).toHaveBeenCalledWith("default", "current");
+    getList.mockRejectedValueOnce(new NotFoundError("No meal plan."));
+    expect(await shoppingListOf({ getList } as unknown as Parameters<typeof shoppingListOf>[0], "default")).toEqual([]);
+    getList.mockRejectedValueOnce(new TypeError("boom"));
+    await expect(shoppingListOf({ getList } as unknown as Parameters<typeof shoppingListOf>[0], "default")).rejects.toThrow("boom");
   });
 });
 

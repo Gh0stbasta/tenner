@@ -42,6 +42,7 @@ export function toTenner(item: TennerItem): Tenner {
     originalAssignee: typeof item.originalAssignee === "string" && USER_ID_PATTERN.test(item.originalAssignee) ? item.originalAssignee : null,
     lastCompleted: typeof item.lastCompleted === "string" ? item.lastCompleted : null,
     nextDue: String(item.nextDue),
+    ...(typeof item.startDate === "string" ? { startDate: item.startDate } : {}),
     snoozedUntil: typeof item.snoozedUntil === "string" ? item.snoozedUntil : null,
     pausedAt: typeof item.pausedAt === "string" ? item.pausedAt : null,
     pausedUntil: typeof item.pausedAt === "string" && typeof item.pausedUntil === "string" ? item.pausedUntil : null,

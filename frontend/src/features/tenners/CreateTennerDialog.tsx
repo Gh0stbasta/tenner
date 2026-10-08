@@ -21,6 +21,7 @@ import { applyServerErrors } from "./applyServerErrors";
 import { TennerForm } from "./TennerForm";
 import { assignmentForApi, tennerFormSchema, weekdaysForApi, type TennerFormValues } from "./tennerForm.schema";
 import { useAssignees } from "../members/useAssignees";
+import { useToday } from "../household/api";
 
 export interface CreateTennerDialogProps {
   readonly open: boolean;
@@ -35,6 +36,7 @@ const FIELDS = [
   "frequencyInterval",
   "frequencyUnit",
   "weekdays",
+  "startDate",
 ] as const;
 
 export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
@@ -45,6 +47,7 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
   const defaults = useNewTennerDefaults();
   const create = useCreateTenner();
   const memberOrder = useAssignees().map((member) => member.userId);
+  const today = useToday();
 
   const form = useForm<TennerFormValues>({
     resolver: zodResolver(tennerFormSchema),
@@ -60,6 +63,7 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
       rotating: false,
       rotation: [],
       active: true,
+      startDate: today,
     },
   });
 
@@ -71,7 +75,7 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
   };
 
   const submit = form.handleSubmit((values) => {
-    const { title, category, assignedTo, estimatedMinutes, frequencyUnit, frequencyInterval } = values;
+    const { title, category, assignedTo, estimatedMinutes, frequencyUnit, frequencyInterval, startDate } = values;
     create.mutate(
       {
         title,
@@ -82,6 +86,7 @@ export function CreateTennerDialog({ open, onClose }: CreateTennerDialogProps) {
         frequencyInterval,
         weekdays: weekdaysForApi(values),
         ...assignmentForApi(values, memberOrder),
+        startDate,
       },
       {
         onSuccess: (created) => {

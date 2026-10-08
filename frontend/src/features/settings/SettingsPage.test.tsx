@@ -38,7 +38,6 @@ describe("SettingsPage", () => {
     for (const name of [
       "Profil",
       "Persönlich",
-      "Dashboard",
       "Haushalt",
       "Standardwerte für neue Aufgaben",
       "Haushaltsmitglieder",
@@ -189,13 +188,9 @@ describe("SettingsPage", () => {
     expect(fetchMock.calls().some((call) => call.key === "PUT /household")).toBe(false);
   });
 
-  it("dashboard preference change", async () => {
+  it("has no dashboard section any more (UI-001: the dashboard shows only the day)", () => {
     renderWithProviders(<SettingsPage />);
-    const upcoming = screen.getByRole("switch", { name: "Demnächst fällige Aufgaben" });
-    expect(upcoming).toBeChecked();
-    await userEvent.click(upcoming);
-    expect(upcoming).not.toBeChecked();
-    expect(loadPreferences().showUpcoming).toBe(false);
+    expect(screen.queryByRole("region", { name: "Dashboard" })).not.toBeInTheDocument();
   });
 
   it("theme change applies immediately without reload", async () => {
@@ -269,17 +264,16 @@ describe("SettingsPage", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "Auf Standardwerte zurücksetzen" }));
     await userEvent.click(await screen.findByRole("button", { name: "Abbrechen" }));
-    expect(await screen.findByRole("switch", { name: "Demnächst fällige Aufgaben" })).not.toBeChecked();
+    expect(await screen.findByRole("combobox", { name: "Zuständig für neue Aufgaben" })).toHaveTextContent("Julia");
 
     await userEvent.click(screen.getByRole("button", { name: "Auf Standardwerte zurücksetzen" }));
     expect(
       await screen.findByText("Alle Einstellungen auf diesem Gerät werden auf die Standardwerte zurückgesetzt."),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Zurücksetzen" }));
-    await waitFor(async () =>
-      expect(await screen.findByRole("switch", { name: "Demnächst fällige Aufgaben" })).toBeChecked(),
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Zuständig für neue Aufgaben" })).toHaveTextContent("Ich selbst"),
     );
-    expect(screen.getByRole("combobox", { name: "Zuständig für neue Aufgaben" })).toHaveTextContent("Ich selbst");
     expect(loadPreferences()).toEqual(DEFAULT_PREFERENCES);
     // Two dialogs on the full settings page (incl. the meal sections) take ~3.5 s alone, more in the full run.
   }, 15_000);

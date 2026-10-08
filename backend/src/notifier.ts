@@ -12,9 +12,11 @@ import {
   createSkillMessagingClient,
   WidgetPushService,
   type DayMeal,
+  type ShoppingListEntry,
 } from "./alexa/index.js";
 import { getDocumentClient } from "./clients/dynamodb.js";
-import { createMealServices, type MealPlanService } from "./meals/index.js";
+import { createMealServices, type MealPlanService, type ShoppingListService } from "./meals/index.js";
+import { NotFoundError } from "./exceptions/index.js";
 import { getSsmClient } from "./clients/ssm.js";
 import { loadConfig, type AppConfig } from "./config.js";
 import type { DashboardRequest } from "./dto/index.js";
@@ -98,7 +100,7 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
   };
 
   // FOOD-006: the current and the next week always have a meal plan (notifications and Alexa read it).
-  const mealPlans = config.mealsTable
+  const mealServices = config.mealsTable
     ? createMealServices({
         client,
         tableName: config.mealsTable,
@@ -106,8 +108,9 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
         settingsOf: (tenantId) => householdService.settingsOf(tenantId),
         clock: systemClock,
         ids: uuidGenerator,
-      }).plans
+      })
     : undefined;
+  const mealPlans = mealServices?.plans;
   const alexaApi = config.alexaApi;
   let widget: WidgetPushService | undefined;
   const channels: NotificationChannel[] = [new LogChannel(logger)];
@@ -126,6 +129,7 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
       members: membersOf,
       timezoneOf,
       ...(mealPlans ? { mealsOn: (tenantId: string, date: string) => mealsOn(mealPlans, tenantId, date) } : {}),
+      ...(mealServices ? { shoppingList: (tenantId: string) => shoppingListOf(mealServices.shopping, tenantId) } : {}),
       lwa,
       dataStore: createDataStoreClient(alexaApi.endpoint, fetchImpl),
       log,
@@ -186,6 +190,16 @@ export async function mealsOn(mealPlans: Pick<MealPlanService, "getPlan">, tenan
     if (slots.length > 0) return slots;
   }
   return [];
+}
+
+/** FOOD-026: this week's shopping list for the widget; a week without a plan has no list (404) and shows empty. */
+export async function shoppingListOf(shopping: Pick<ShoppingListService, "getList">, tenantId: string): Promise<readonly ShoppingListEntry[]> {
+  try {
+    return (await shopping.getList(tenantId, "current")).items;
+  } catch (error) {
+    if (error instanceof NotFoundError) return [];
+    throw error;
+  }
 }
 
 /** EventBridge input: a scheduled event or a HouseholdChanged event from the API. */

@@ -111,6 +111,8 @@ interface TennerFields {
   /** HOUSEHOLD-001; omitted = FIXED. */
   readonly assignmentMode?: "FIXED" | "ROTATING";
   readonly rotation?: readonly UserId[] | null;
+  /** HOTFIX-006: first active day (YYYY-MM-DD); omitted = today. */
+  readonly startDate?: string;
 }
 
 /** Calendar frequency (SCHEDULING-001). */

@@ -89,13 +89,13 @@ Features own their components, hooks and API functions, so `components/` stays s
 
 | Route                       | Feature                                                                                                                                                                                                                                                     | Ticket       |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `/dashboard`                | Today (shared Tenners marked "Gemeinsam", counted per person, HOUSEHOLD-002): summary cards, due today, overdue (highlighted), upcoming, workload per person and category, one-click completion, "Pausiert" section (SCHEDULING-005), snooze menu on due/overdue items (Morgen, In 3 Tagen, Nächstes Wochenende, Datum wählen; SCHEDULING-003; "Diesmal überspringen" with optional reason, SCHEDULING-004) and a "Verschoben bis" badge                                                                                                                                    | FRONTEND-002 |
+| `/dashboard`                | The family's day (UI-001): „Heute essen wir“ (largest card, lunch and dinner), „Heute erledigen wir“ (completed today shown ticked, open Aufgaben with complete button, swipe, snooze and skip), „Für morgen einkaufen“ (open shopping list items for tomorrow's meals, from next week's list on the last day of a week). No counts, workload, upcoming or Quick Add any more | UI-001 |
 | `/tenners`                  | Management: live title search (300 ms debounce), filters (status active/archived/all, person, category), sorting, complete, archive (with confirmation), restore                                                                                            | FRONTEND-003 |
 | `/tenners` → "Neuer Tenner" | Create dialog: shared `TennerForm` (React Hook Form + Zod, limits mirror the backend), rotating assignment ("Abwechselnd zuständig" with member chips, HOUSEHOLD-001; lists show "Abwechselnd, danach …"), frequency as interval + unit (Tage/Wochen/Monate/Jahre) with presets Täglich, Wöchentlich, Alle 2 Wochen, Monatlich, Vierteljährlich, Jährlich (SCHEDULING-001) and weekday chips Mo–So for weekly frequencies (SCHEDULING-002), inline and server-side validation messages, full screen on phones                                                                                 | FRONTEND-004 |
 | `/tenners` → "Bearbeiten"   | Edit dialog: same form plus Active switch and read-only facts, sends only changed fields (`PUT`), asks before discarding unsaved changes                                                                                                                    | FRONTEND-005 |
-| `/dashboard`, `/tenners`    | Quick Add: type a title and press Enter; defaults from the settings (initially Haushalt, current user, 10 min, every 14 days), keyword-based category suggestion, warning for similar titles                                                                                            | FRONTEND-006 |
+| `/tenners`                  | Quick Add (on the dashboard until UI-001): type a title and press Enter; defaults from the settings (initially Haushalt, current user, 10 min, every 14 days), keyword-based category suggestion, warning for similar titles                                                                                            | FRONTEND-006 |
 | everywhere                  | Completion: one click, optimistic dashboard update with a subtle collapse, snackbar with 10-second "Rückgängig", retries with the same `Idempotency-Key`; "Zuletzt erledigt" (last 10, relative time); "Ich bin" selector in the header                     | FRONTEND-007 |
-| `/settings`                 | Settings in two groups. Personal (this browser): profile (signed-in person, read-only, logout), default assignee ("Ich selbst" or a member), theme, dashboard sections, reset. Household (server-side, HOUSEHOLD-ADMIN-003): name, timezone (SCHEDULING-008), week start, workdays, vacation (SCHEDULING-005), defaults for new Tenners (category, minutes, frequency; one-time offer to upload defaults stored on this device), members (HOUSEHOLD-ADMIN-001; deactivate with reassignment and reactivate, HOUSEHOLD-ADMIN-004; hand over a member's Tenners until a date with a preview and end it early, HOUSEHOLD-004 — cards then show "Julia (für Stefan)"), categories (HOUSEHOLD-ADMIN-002) | FRONTEND-008 |
+| `/settings`                 | Settings in two groups. Personal (this browser): profile (signed-in person, read-only, logout), default assignee ("Ich selbst" or a member), theme, reset (the dashboard sections were removed by UI-001). Household (server-side, HOUSEHOLD-ADMIN-003): name, timezone (SCHEDULING-008), week start, workdays, vacation (SCHEDULING-005), defaults for new Tenners (category, minutes, frequency; one-time offer to upload defaults stored on this device), members (HOUSEHOLD-ADMIN-001; deactivate with reassignment and reactivate, HOUSEHOLD-ADMIN-004; hand over a member's Tenners until a date with a preview and end it early, HOUSEHOLD-004 — cards then show "Julia (für Stefan)"), categories (HOUSEHOLD-ADMIN-002) | FRONTEND-008 |
 | `/tenners/:tennerId`        | Detail: header with status and actions (complete, snooze when due/overdue, pause/resume, edit, archive/restore), schedule, consistency (completions in 90 days, average interval vs. frequency), history newest first with "Mehr anzeigen"; not-found page. Titles on dashboard and list link here | FRONTEND-009 |
 | `/analytics`                | Analytics (ANALYTICS-009): period Woche / Monat / Quartal / Jahr / eigener Zeitraum in the URL (`?period=` or `?from=&to=`); key figures, trend columns, life areas with health, household balance (stacked shares in member-list order, no ranking), time investment, neglected Tenners and habits (tables linking to the Tenner). Each section loads and fails on its own, sections whose endpoint is missing are hidden, every chart has a table view. Charts are small HTML components (no chart library) with a validated palette (`chartColors.ts`) | ANALYTICS-009 |
 
@@ -149,14 +149,14 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   and which future meals stay (locked, chosen by hand, cooked, past — `isKept`, same rule as the backend); the
   snackbar offers „Rückgängig“, which sends the previous dishes of the changed meals as `restore`.
 - **Navigation:** „Essen“ between Tenner and Auswertung (side and bottom navigation).
-- **Dashboard:** „Heute essen wir“ (`TodayMealsCard`) with today's meals, hidden while there is no plan.
+- **Dashboard:** „Heute essen wir“ (`TodayMealsCard`) with today's meals; since UI-001 the largest dashboard card, „Für heute ist noch nichts geplant.“ without a plan.
 - **Offline:** plans use the query root `mealPlans` and are kept in the offline cache; the food profile is not.
 
 ## Shopping List (FOOD-014)
 
 - **Page `/einkaufsliste`** (`src/features/meals/ShoppingListPage.tsx`; own navigation entry „Einkaufsliste“ after
   „Essen“, „Einkauf“ in the bottom navigation, since FOOD-027; `/essen/einkaufsliste` redirects; button on the plan page): the week's items in the household's own order with quantity
-  („1,5 kg“) and meals („für Mo Abend, Do Mittag“); „Ab heute“ / „Ganze Woche“; „Eigener Eintrag“; „Teilen“ (Web Share
+  („2×“, counts only since FOOD-028) and meals („für Mo Abend, Do Mittag“); „Ab heute“ / „Ganze Woche“; „Eigener Eintrag“; „Teilen“ (Web Share
   API, otherwise copied as text).
 - **Own order:** drag handle per item (`@dnd-kit`: mouse, touch with a short press, keyboard with Space and arrow
   keys); a drop is sent as `{ type: "move", key, afterKey }`.
@@ -174,8 +174,8 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   `localStorage` key `tenner.preferences`; invalid fields fall back to defaults individually; blocked storage
   is tolerated). `SettingsProvider` (in `AppProviders`, above the theme) loads once and persists every change;
   hooks `useSettings()`, `useThemePreference()`, `useNewTennerDefaults()`.
-- Consumers: Quick Add and the create dialog use the defaults; the dashboard hides upcoming, per-person,
-  per-category and recent-activity sections when switched off (due today and overdue always show).
+- Consumers: Quick Add and the create dialog use the defaults. The dashboard section switches (upcoming,
+  per-person, per-category, recent activity) have no effect since UI-001 and are no longer shown (TD-043).
 - The current user is **not** selectable: it comes from the Google login (SECURITY-003/004).
 - **Essen: Familienprofil** (FOOD-004, `src/features/meals/FoodProfileSettings.tsx`): household-wide, stored on the
   server (`GET/PUT /meals/profile`). People with adult/child, portion, vegetarian with exceptions, allergies (⚠),
@@ -189,7 +189,7 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 Tenner is a Progressive Web App: it can be added to the home screen and starts without browser UI.
 
 - `public/manifest.json`: name, `start_url` `/dashboard`, `display: standalone`, theme colors, icons (192, 512,
-  maskable 512) and the shortcuts "Neuer Tenner" (`/dashboard?quickAdd=1`, focuses Quick Add) and "Heute".
+  maskable 512) and the shortcuts "Neue Aufgabe" (`/tenners?quickAdd=1`, focuses Quick Add, UI-001) and "Heute".
 - `index.html`: manifest link, Apple touch icon and the iOS home-screen meta tags.
 - Settings → "App": "App installieren" where the browser offers installation (Chrome, Edge, Android; the
   `beforeinstallprompt` event is captured at startup in `src/features/install/installPrompt.ts`), step-by-step

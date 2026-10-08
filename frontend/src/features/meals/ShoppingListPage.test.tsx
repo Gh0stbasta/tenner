@@ -11,8 +11,8 @@ const item = (key: string, name: string, overrides: Partial<ShoppingItem> = {}):
   key,
   ingredientId: key,
   name,
-  quantity: 500,
-  unit: "g",
+  quantity: 2,
+  unit: "Stück",
   section: "TROCKENWAREN",
   pantry: false,
   checked: false,
@@ -28,9 +28,9 @@ const LIST: ShoppingList = {
   stale: false,
   items: [
     item("pasta", "Nudeln"),
-    item("carrot", "Karotten", { quantity: 300, section: "GEMUESE_OBST" }),
-    item("milk", "Milch", { quantity: 1000, unit: "ml", section: "KUEHLREGAL" }),
-    item("salt", "Salz", { quantity: 10, pantry: true, section: "GEWUERZE" }),
+    item("carrot", "Karotten", { quantity: 3, section: "GEMUESE_OBST" }),
+    item("milk", "Milch", { quantity: 1, section: "KUEHLREGAL" }),
+    item("salt", "Salz", { quantity: 1, pantry: true, section: "GEWUERZE" }),
   ],
 };
 
@@ -77,7 +77,7 @@ describe("ShoppingListPage (FOOD-014)", () => {
       "Karotten",
       "Milch",
     ]);
-    expect(open.getByText("1 l Milch")).toBeInTheDocument();
+    expect(open.getByText("1× Milch")).toBeInTheDocument();
     expect(open.getAllByText("für Mi Abend")).toHaveLength(3);
     expect(open.getByRole("button", { name: "Verschieben: Nudeln" })).toBeInTheDocument();
     expect(screen.getByText("Vorrat prüfen (1)")).toBeInTheDocument();
@@ -88,15 +88,15 @@ describe("ShoppingListPage (FOOD-014)", () => {
     renderWithProviders(<ShoppingListPage />);
     await userEvent.click(within(await openList()).getByRole("checkbox", { name: "Nudeln" }));
     const done = within(await screen.findByRole("list", { name: "Erledigt" }));
-    expect(done.getByText("500 g Nudeln").closest(".MuiListItemText-root")).toHaveStyle({
+    expect(done.getByText("2× Nudeln").closest(".MuiListItemText-root")).toHaveStyle({
       textDecoration: "line-through",
     });
-    expect(within(await openList()).queryByText("500 g Nudeln")).not.toBeInTheDocument();
+    expect(within(await openList()).queryByText("2× Nudeln")).not.toBeInTheDocument();
     await vi.waitFor(() =>
       expect(changes()).toEqual([{ operations: [{ type: "check", key: "pasta", checked: true }] }]),
     );
     await userEvent.click(done.getByRole("checkbox", { name: "Nudeln" }));
-    expect(await within(await openList()).findByText("500 g Nudeln")).toBeInTheDocument();
+    expect(await within(await openList()).findByText("2× Nudeln")).toBeInTheDocument();
   });
 
   it("adds and removes own items", async () => {
@@ -123,7 +123,7 @@ describe("ShoppingListPage (FOOD-014)", () => {
     expect(
       await screen.findByText("Offline: Änderungen werden übertragen, sobald du wieder online bist."),
     ).toBeInTheDocument();
-    expect(within(screen.getByRole("list", { name: "Erledigt" })).getByText("1 l Milch")).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Erledigt" })).getByText("1× Milch")).toBeInTheDocument();
     expect(changes()).toEqual([]);
     setOnline(true);
     await vi.waitFor(() =>
@@ -178,7 +178,7 @@ describe("ShoppingListPage (FOOD-014)", () => {
     await openList();
     await userEvent.click(screen.getByRole("button", { name: "Teilen" }));
     expect(await screen.findByText("Einkaufsliste kopiert.")).toBeInTheDocument();
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("- 500 g Nudeln\n- 300 g Karotten\n- 1 l Milch"));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("- 2× Nudeln\n- 3× Karotten\n- 1× Milch"));
   });
 
   it("points to the meal plan while the week has none", async () => {

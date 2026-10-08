@@ -102,7 +102,7 @@ function BottomNavigationBar() {
   );
 }
 
-/** Quick Add within thumb reach: focuses the Quick Add input, or opens the dashboard with it focused. */
+/** Quick Add within thumb reach: focuses the Quick Add input, or opens „Aufgaben“ with it focused (UI-001). */
 function QuickAddFab() {
   const navigate = useNavigate();
   const onClick = () => {
@@ -111,7 +111,7 @@ function QuickAddFab() {
       input.focus();
       input.scrollIntoView({ block: "center", behavior: "smooth" });
     } else {
-      void navigate("/dashboard?quickAdd=1");
+      void navigate("/tenners?quickAdd=1");
     }
   };
   return (

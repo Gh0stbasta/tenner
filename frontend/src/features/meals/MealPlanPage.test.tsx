@@ -287,17 +287,17 @@ describe("TodayMealsCard (FOOD-009)", () => {
     mockFetch({ "GET /meals/plans/current": ok(mealPlanFixture()) });
     renderWithProviders(<TodayMealsCard />);
     const card = within(await screen.findByRole("region", { name: "Heute essen wir" }));
-    expect(card.getByText("Mittag: Linseneintopf")).toBeInTheDocument();
-    expect(card.getByText("Abend: Käsespätzle mit Röstzwiebeln")).toBeInTheDocument();
+    expect(await card.findByText("Linseneintopf")).toBeInTheDocument();
+    expect(card.getByText("Mittag")).toBeInTheDocument();
+    expect(card.getByText("Käsespätzle mit Röstzwiebeln")).toBeInTheDocument();
+    expect(card.getByText("Abend")).toBeInTheDocument();
     expect(card.getByRole("link", { name: "Zum Essensplan" })).toHaveAttribute("href", "/essen");
   });
 
-  it("stays hidden while there is no plan", async () => {
-    const fetchMock = mockFetch({});
+  it("says so while there is no plan (UI-001: the card is always the dashboard's main element)", async () => {
+    mockFetch({});
     renderWithProviders(<TodayMealsCard />);
-    await vi.waitFor(() =>
-      expect(fetchMock.calls().some((call) => call.key === "GET /meals/plans/current")).toBe(true),
-    );
-    expect(screen.queryByRole("region", { name: "Heute essen wir" })).not.toBeInTheDocument();
+    const card = within(screen.getByRole("region", { name: "Heute essen wir" }));
+    expect(await card.findByText("Für heute ist noch nichts geplant.")).toBeInTheDocument();
   });
 });

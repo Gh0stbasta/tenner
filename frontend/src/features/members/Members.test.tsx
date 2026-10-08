@@ -3,10 +3,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { dashboard } from "../../tests/fixtures";
 import { DEFAULT_MEMBERS, fail, mockFetch, ok } from "../../tests/fetchMock";
 import { renderWithProviders } from "../../tests/render";
-import { DashboardPage } from "../dashboard/DashboardPage";
 import { SettingsPage } from "../settings/SettingsPage";
 import { CreateTennerDialog } from "../tenners/CreateTennerDialog";
 import { fallbackName } from "./api";
@@ -38,18 +36,6 @@ describe("members in pickers and summaries", () => {
     expect(fetchMock.calls().some((call) => call.key === "GET /users")).toBe(true);
   });
 
-  it("names new members in the workload summary", async () => {
-    mockFetch({
-      "GET /users": ok([...DEFAULT_MEMBERS, LENA]),
-      "GET /dashboard": ok(
-        dashboard({ byUser: { LENA: { count: 2, estimatedMinutes: 20 }, KIM: { count: 1, estimatedMinutes: 5 } } }),
-      ),
-    });
-    renderWithProviders(<DashboardPage />);
-    const card = within(await screen.findByRole("region", { name: "Nach Person" }));
-    expect(await card.findByText("Lena")).toBeInTheDocument();
-    expect(card.getByText("Kim")).toBeInTheDocument();
-  });
 });
 
 describe("members settings", () => {

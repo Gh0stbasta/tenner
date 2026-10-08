@@ -1216,3 +1216,35 @@ copy, a new Cognito domain prefix and a new skill package.
 ### Related Work
 
 REC-002, README.md, docs/architecture.md.
+
+## TD-043: Dashboard leftovers after the redesign (UI-001)
+
+### Description
+
+Since UI-001 some parts are no longer used in the app:
+
+- `RecentActivityWidget` and `NoDashboardData`.
+- The dashboard card variants „overdue“ and „upcoming“ of `DashboardTennerCard`.
+- The preferences `showUpcoming`, `showUserSummary`, `showCategorySummary` and `showRecentActivity`.
+
+The API still returns the dashboard counts, upcoming items and workload.
+
+The checklist „Heute erledigen wir“ takes the Aufgaben completed today from the last 10 completions of the
+household. On a day with more completions, older ones are missing from the ticked part.
+
+### Reason
+
+UI-001 was kept to the visible change. The API stays the same for Alexa, the widgets and the notifications.
+
+### Impact
+
+Dead frontend code and settings fields; a small gap in the „done today“ list on very busy days. There is no cost or
+security impact.
+
+### Suggested Improvement
+
+Remove the unused components and preference fields. Load „done today“ with a history query for today's date.
+
+### Related Work
+
+UI-001 (`docs/hotfix/redesignDashboard.md`), FRONTEND-002, FRONTEND-007, FRONTEND-008, MOBILE-005.

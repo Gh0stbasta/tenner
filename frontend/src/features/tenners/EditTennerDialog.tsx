@@ -41,6 +41,7 @@ const FIELDS = [
   "frequencyUnit",
   "weekdays",
   "active",
+  "startDate",
 ] as const;
 
 function toFormValues(tenner: Tenner): TennerFormValues {
@@ -56,6 +57,7 @@ function toFormValues(tenner: Tenner): TennerFormValues {
     rotating: tenner.assignmentMode === "ROTATING",
     rotation: [...(tenner.rotation ?? [])],
     active,
+    startDate: tenner.startDate ?? tenner.createdAt.slice(0, 10),
   };
 }
 

@@ -46,7 +46,7 @@ describe("web app manifest", () => {
   });
 
   it("offers the shortcuts Quick Add and Today", () => {
-    expect(manifest.shortcuts.map((s) => s.url)).toEqual(["/dashboard?quickAdd=1", "/dashboard"]);
+    expect(manifest.shortcuts.map((s) => s.url)).toEqual(["/tenners?quickAdd=1", "/dashboard"]);
   });
 
   it("is linked from index.html together with the iOS tags", () => {
@@ -133,7 +133,7 @@ describe("platform detection", () => {
 describe("Quick Add shortcut", () => {
   it("focuses the Quick Add input when opened with ?quickAdd=1", async () => {
     mockFetch({ "GET /household": { status: 200, body: { success: true, data: { timezone: "Europe/Berlin" } } } });
-    renderWithProviders(<QuickAddTenner />, { route: "/dashboard?quickAdd=1" });
+    renderWithProviders(<QuickAddTenner />, { route: "/tenners?quickAdd=1" });
     expect(await screen.findByRole("textbox", { name: "Was soll eine Aufgabe werden?" })).toHaveFocus();
   });
 

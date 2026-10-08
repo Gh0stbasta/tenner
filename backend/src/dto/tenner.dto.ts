@@ -1,6 +1,6 @@
 /** API contracts for Tenners. Requests are produced by validators (see validators/). */
 
-import type { AssignmentMode, Category, FrequencyUnit, Tenner, UserId, Weekday } from "../models/index.js";
+import { startDateOf, type AssignmentMode, type Category, type FrequencyUnit, type Tenner, type UserId, type Weekday } from "../models/index.js";
 
 /**
  * Validated create request. The frequency is normalized by the validator (SCHEDULING-001): clients send either
@@ -19,6 +19,8 @@ export interface CreateTennerRequest {
   /** HOUSEHOLD-001: normalized by the validator (FIXED + null by default). */
   readonly assignmentMode: AssignmentMode;
   readonly rotation: readonly UserId[] | null;
+  /** HOTFIX-006: first active day (YYYY-MM-DD); default today. The Tenner is first due on that day. */
+  readonly startDate?: string | undefined;
 }
 
 /**
@@ -48,6 +50,8 @@ export interface TennerResponse {
   readonly originalAssignee: UserId | null;
   readonly lastCompleted: string | null;
   readonly nextDue: string;
+  /** HOTFIX-006: first active day; the creation date for Tenners created before. */
+  readonly startDate: string;
   readonly snoozedUntil: string | null;
   /** Individual pause (SCHEDULING-005); a vacation pause is derived from GET /household. */
   readonly pausedAt: string | null;
@@ -95,6 +99,7 @@ export function toTennerResponse(tenner: Tenner): TennerResponse {
     originalAssignee: tenner.originalAssignee,
     lastCompleted: tenner.lastCompleted,
     nextDue: tenner.nextDue,
+    startDate: startDateOf(tenner),
     snoozedUntil: tenner.snoozedUntil,
     pausedAt: tenner.pausedAt,
     pausedUntil: tenner.pausedUntil,

@@ -1,0 +1,93 @@
+{
+  "type": "APL",
+  "version": "2023.2",
+  "theme": "dark",
+  "description": "Zentrale shopping list widget (FOOD-026): open items in the household's order, counts only (FOOD-028). Bound to the Data Store object tenner/shopping (ShoppingWidget in backend/src/alexa/widget.ts). No tap action (MAINT-006).",
+  "extensions": [
+    {
+      "name": "DataStore",
+      "uri": "alexaext:datastore:10"
+    }
+  ],
+  "settings": {
+    "DataStore": {
+      "dataBindings": [
+        {
+          "namespace": "tenner",
+          "key": "shopping",
+          "dataBindingName": "shopping",
+          "dataType": "OBJECT"
+        }
+      ]
+    }
+  },
+  "resources": [
+    {
+      "colors": {
+        "background": "#1c1f24",
+        "text": "#ffffff",
+        "muted": "#b8bec6",
+        "primary": "#1976d2"
+      },
+      "dimensions": {
+        "titleSize": "28dp",
+        "itemSize": "24dp",
+        "pad": "16dp"
+      }
+    }
+  ],
+  "mainTemplate": {
+    "parameters": [
+      "payload"
+    ],
+    "items": [
+      {
+        "type": "Container",
+        "width": "100%",
+        "height": "100%",
+        "backgroundColor": "@background",
+        "paddingLeft": "@pad",
+        "paddingRight": "@pad",
+        "paddingTop": "@pad",
+        "items": [
+          {
+            "type": "Text",
+            "text": "${shopping.open == null ? 'Einkaufsliste' : 'Einkaufsliste (' + shopping.open + ')'}",
+            "fontSize": "@titleSize",
+            "fontWeight": "bold",
+            "color": "@primary"
+          },
+          {
+            "type": "Text",
+            "text": "${shopping.open == 0 ? 'Alles eingekauft.' : ''}",
+            "display": "${shopping.open == 0 ? 'normal' : 'none'}",
+            "fontSize": "@itemSize",
+            "color": "@muted",
+            "paddingTop": "8dp"
+          },
+          {
+            "type": "Container",
+            "paddingTop": "8dp",
+            "data": "${shopping.items}",
+            "items": [
+              {
+                "type": "Text",
+                "text": "• ${data}",
+                "fontSize": "@itemSize",
+                "color": "@text",
+                "maxLines": 1
+              }
+            ]
+          },
+          {
+            "type": "Text",
+            "text": "${shopping.more > 0 ? '+ ' + shopping.more + ' weitere' : ''}",
+            "display": "${shopping.more > 0 ? 'normal' : 'none'}",
+            "fontSize": "@itemSize",
+            "color": "@muted"
+          }
+        ]
+      }
+    ]
+  }
+}

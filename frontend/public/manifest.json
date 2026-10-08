@@ -19,7 +19,7 @@
       "name": "Neue Aufgabe",
       "short_name": "Neu",
       "description": "Schnell eine Aufgabe anlegen",
-      "url": "/dashboard?quickAdd=1",
+      "url": "/tenners?quickAdd=1",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {

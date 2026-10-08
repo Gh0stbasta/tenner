@@ -67,6 +67,8 @@ const tennerFields = {
   assignedTo: userIdSchema,
   assignmentMode: z.enum(ASSIGNMENT_MODES).optional(),
   rotation: z.array(userIdSchema).max(20).nullable().optional(),
+  /** HOTFIX-006 */
+  startDate: isoDateSchema.optional(),
 };
 
 interface FrequencyInput {

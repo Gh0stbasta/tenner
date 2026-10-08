@@ -56,12 +56,13 @@ ALEXA-001 – 006 (skill, account linking, APL)
 ```
 
 - Uses the current week's list; creates it if missing (same rules as FOOD-014).
-- Spoken quantities only when helpful („500 Gramm Hackfleisch“).
+- Spoken counts only above one („2 mal Nudeln“, FOOD-028).
 
 ## Echo Show
 
-- APL view „Einkaufsliste“: open items in the list's order, checked items struck through at the end; touch to tick
-  off.
+- ~~APL view „Einkaufsliste“ with touch~~: the skill shows no views since MAINT-006. Instead (owner request
+  2026-10-08), a home-screen widget „Zentrale Einkaufsliste“ shows the open items in the list's order (max. 6, then
+  „+ n weitere“), pushed by the notifier like the other widgets.
 
 ---
 
@@ -96,25 +97,33 @@ cd alexa && npm run lint && npm run typecheck && npm test
 
 # Acceptance Criteria
 
-- [ ] Items can be added, read and ticked off by voice
-- [ ] Echo Show shows the list
-- [ ] Changes appear in the app at once (same list as FOOD-014)
-- [ ] Tests passing
+- [x] Items can be added, read and ticked off by voice (tested)
+- [x] Echo Show shows the list as widget (package and data tested; device check open)
+- [x] Changes appear in the app at once (same list and API as FOOD-014)
+- [x] Tests passing
+- [ ] Device check: voice phrases and widget on the Echo Show 21 (owner)
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented (TD-036 covers the unverified device behavior)
+- [x] Acceptance criteria verified (device check open)
+- [x] Git commit created
 
 ---
 
 # Assumptions
+
+- Item names are taken as spoken (`AMAZON.SearchQuery`, first letter capitalized, max. 40 characters). An item that
+  is already open with the same name is not added again.
+- The Alexa request ID is the item key, so Alexa's retries add an item only once.
+- Ticking off uses the Tenner matching rules (ALEXA-004): close candidates are named back, nothing is guessed.
+- A week without a meal plan has no list. Voice answers that; the widget shows „Alles eingekauft.“ only once the list
+  exists.
 
 - „Alexa, setz Milch auf die Einkaufsliste“ without „Familien Zentrale“ still goes to Amazon's own list; Tenner cannot
   redirect it.
@@ -124,3 +133,24 @@ cd alexa && npm run lint && npm run typecheck && npm test
 # Out of Scope
 
 - Syncing with the Alexa shopping list or other list apps (API switched off by Amazon, see Background).
+
+---
+
+# Implementation Status
+
+Done (2026-10-08); the device check is open.
+
+- Alexa:
+  - `alexa/src/shopping.ts`: API calls, answers, matching.
+  - `alexa/src/handlers/shopping.ts`: `AddShoppingItemIntent`, `ReadShoppingListIntent`, `ShoppingItemBoughtIntent`.
+  - Interaction model with samples („setz {item} auf die einkaufsliste“, „was steht auf der einkaufsliste“, „ich habe
+    {item} gekauft“). The help text names the list.
+- Widget:
+  - Package `alexa/skill-package/dataStorePackages/shopping-list/`, bound to `tenner/shopping`, declared in
+    `skill.json`.
+  - Preview image `frontend/public/alexa/shopping-widget-preview.png`.
+- Backend:
+  - `backend/src/alexa/widget.ts`: `shoppingWidget`; the shopping list is pushed with the other widgets, and
+    `ShoppingWidgetFailed` is isolated.
+  - `backend/src/notifier.ts`: `shoppingListOf`. Shopping list changes already publish HouseholdChanged.
+- Tests: `alexa/tests/shopping.test.ts`, `alexa/tests/widget.test.ts`, `backend/tests/widget.test.ts`.

@@ -83,14 +83,13 @@ export function moveOperation(
   return { type: "move", key: activeKey, afterKey: before ? before.key : null };
 }
 
-const NUMBER = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
-
-/** „500 g“, „1,5 kg“, „2 Stück“; own items have no quantity. */
+/**
+ * FOOD-028: counts only, „2×“; never grams. Items cached before FOOD-028 with "g"/"ml" show no quantity until the
+ * list is loaded again (the API returns counts). Own items have no quantity.
+ */
 export function formatQuantity(item: Pick<ShoppingItem, "quantity" | "unit">): string {
-  if (item.quantity === null || item.unit === null) return "";
-  if (item.unit === "g" && item.quantity >= 1000) return `${NUMBER.format(item.quantity / 1000)} kg`;
-  if (item.unit === "ml" && item.quantity >= 1000) return `${NUMBER.format(item.quantity / 1000)} l`;
-  return `${NUMBER.format(item.quantity)} ${item.unit}`;
+  if (item.quantity === null || item.unit !== "Stück") return "";
+  return `${item.quantity}×`;
 }
 
 const WEEKDAY = new Intl.DateTimeFormat("de-DE", { weekday: "short", timeZone: "UTC" });
@@ -116,4 +115,9 @@ export function shareText(title: string, items: readonly ShoppingItem[]): string
     ...open.map(itemLine),
     ...(pantry.length > 0 ? ["", "Vorrat prüfen:", ...pantry.map(itemLine)] : []),
   ].join("\n");
+}
+
+/** Open items needed for a meal on `date` (UI-001: „Für morgen einkaufen“). */
+export function itemsFor(items: readonly ShoppingItem[], date: string): ShoppingItem[] {
+  return items.filter((item) => !item.checked && item.usedFor.some((slotId) => slotId.startsWith(`${date}#`)));
 }

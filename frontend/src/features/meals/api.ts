@@ -328,11 +328,12 @@ export type ShoppingOperation =
 const shoppingPath = (week: string) => `/meals/plans/${week}/shopping-list`;
 
 /** The week's list (FOOD-014); kept in the offline cache, so it is readable in the shop without a connection. */
-export function useShoppingList(week: WeekChoice) {
+export function useShoppingList(week: WeekChoice, enabled = true) {
   return useQuery({
     queryKey: queryKeys.shoppingList(week),
     queryFn: () => apiClient.get(shoppingPath(week), { schema: shoppingListSchema }),
     staleTime: 30_000,
+    enabled,
   });
 }
 

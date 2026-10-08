@@ -11,7 +11,7 @@ import type {
   DashboardSummaryResponse,
   DashboardTennerResponse,
 } from "../dto/index.js";
-import { SEED_MEMBERS, SHARED_ASSIGNEE, type Tenner } from "../models/index.js";
+import { SEED_MEMBERS, SHARED_ASSIGNEE, startDateOf, type Tenner } from "../models/index.js";
 import type { MemberSource } from "./member.service.js";
 import type { TennerRepository } from "../repositories/index.js";
 import { addDays, type Clock } from "../utils/clock.js";
@@ -58,7 +58,9 @@ export class DashboardService {
       t.deletedAt === null &&
       // A member filter includes shared Tenners (HOUSEHOLD-002).
       (request.assignedTo === undefined || t.assignedTo === request.assignedTo || t.assignedTo === SHARED_ASSIGNEE) &&
-      (request.category === undefined || t.category === request.category);
+      (request.category === undefined || t.category === request.category) &&
+      // HOTFIX-006: not before its start date (also not as „upcoming“).
+      startDateOf(t) <= referenceDate;
     // Paused Tenners (SCHEDULING-005) leave every section and summary and get their own list.
     const candidates = (await this.repository.getDashboardCandidates(tenantId, endDate)).filter(
       (t) => matches(t) && !isPaused(t, vacation, referenceDate),

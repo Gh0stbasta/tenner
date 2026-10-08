@@ -10,7 +10,7 @@ deterministic (no AI).
 |---|---|
 | **Status** | In progress. Foundation done (FOOD-001, 021, 002, 004, 003; FOOD-021 before 002 because dishes reference ingredients). Planning done (FOOD-005, 006, 009, 007, 022, 008): first usable version. Next: kitchen block, FOOD-014 |
 | **Epic** | [EPIC-FOOD-001](metaticket.md): vision, household rules R1 – R13, dish catalog, owner decisions (answered) |
-| **Backlog** | [`backlog/food/`](backlog/food/): FOOD-001 – FOOD-027 |
+| **Backlog** | [`backlog/food/`](backlog/food/): FOOD-001 – FOOD-028 |
 | **Previous release** | [Tenner 1.0](../release-1.0/README.md) |
 
 ---
@@ -67,6 +67,7 @@ flowchart LR
 | [FOOD-025](backlog/food/ticket025.md) | Release Tenner 2.0 | High | 2.0 Release |
 | [FOOD-026](backlog/food/ticket026.md) | Shopping List via Alexa | Medium | 2.0 Extended |
 | [FOOD-027](backlog/food/ticket027.md) | Shopping List as Its Own Navigation Entry | High | 2.0 Core |
+| [FOOD-028](backlog/food/ticket028.md) | Shopping List Shows Counts Instead of Weights | High | 2.0 Core |
 
 **Phases:** *2.0 Core* = the plan works every day (incl. shopping list) · *2.0 Extended* = everywhere and more
 comfortable · *Long-Term* = evaluations, not part of 2.0 · *2.0 Release* = version and release notes.

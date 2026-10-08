@@ -1,47 +1,32 @@
-/** Dashboard (FRONTEND-002): what should I do today? */
+/**
+ * Dashboard (FRONTEND-002, redesigned by UI-001): the family's day — what we eat today, what we do today and what
+ * to buy for tomorrow. Reporting (counts, workload, upcoming) lives in „Aufgaben“ and „Auswertung“; Aufgaben are
+ * created in „Aufgaben“.
+ */
 
-import Grid from "@mui/material/Grid";
-import { errorMessage } from "../../api/errorMessages";
-import { ErrorAlert } from "../../components/ErrorAlert";
-import { NoDashboardData } from "../../components/EmptyState";
-import { PageLoading } from "../../components/LoadingState";
-import { TodayMealsCard } from "../meals/TodayMealsCard";
-import { PageHeader } from "../../components/PageHeader";
-import { formatLongDate, formatMinutes, formatTennerCount } from "../../utils/format";
-import { RecentActivityWidget } from "../completions/RecentActivityWidget";
-import { useSettings } from "../settings/SettingsProvider";
-import { QuickAddTenner } from "../tenners/QuickAddTenner";
 import { useQueryClient } from "@tanstack/react-query";
+import { errorMessage } from "../../api/errorMessages";
 import { queryKeys } from "../../api/queryKeys";
+import { ErrorAlert } from "../../components/ErrorAlert";
+import { PageLoading } from "../../components/LoadingState";
+import { PageHeader } from "../../components/PageHeader";
+import { formatLongDate } from "../../utils/format";
+import { TodayMealsCard } from "../meals/TodayMealsCard";
 import { PullToRefresh } from "../mobile/PullToRefresh";
-import { useDashboard, type Dashboard } from "./api";
-import { DueTodayList } from "./DueTodayList";
-import { OverdueList } from "./OverdueList";
-import { PausedList } from "./PausedList";
-import { SummaryCards } from "./SummaryCards";
-import { UpcomingList } from "./UpcomingList";
-import { CategorySummaryCard, UserSummaryCard } from "./WorkloadCards";
-
-function headerSubtitle(dashboard: Dashboard): string {
-  const { summary } = dashboard;
-  const parts = [
-    formatLongDate(dashboard.referenceDate),
-    formatTennerCount(summary.totalActionableCount),
-    formatMinutes(summary.totalActionableMinutes),
-  ];
-  if (summary.overdueCount > 0) parts.push(`${summary.overdueCount} überfällig`);
-  return parts.join(" · ");
-}
+import { useDashboard } from "./api";
+import { ShoppingTomorrowCard } from "./ShoppingTomorrowCard";
+import { TodayTasksCard } from "./TodayTasksCard";
 
 export function DashboardPage() {
   const dashboard = useDashboard();
-  const { preferences } = useSettings();
   const queryClient = useQueryClient();
   // Pull-to-refresh (MOBILE-005) reloads everything the dashboard shows.
   const refresh = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard }),
       queryClient.invalidateQueries({ queryKey: queryKeys.recentActivity }),
+      queryClient.invalidateQueries({ queryKey: ["mealPlans"] }),
+      queryClient.invalidateQueries({ queryKey: ["shoppingLists"] }),
     ]);
 
   if (dashboard.isPending) return <PageLoading label="Dashboard wird geladen" />;
@@ -59,30 +44,12 @@ export function DashboardPage() {
   }
 
   const data = dashboard.data;
-  // FRONTEND-008: sections can be hidden in the settings; without a side column the main column uses the full width.
-  const sideColumn = preferences.showUserSummary || preferences.showCategorySummary;
   return (
     <PullToRefresh onRefresh={refresh}>
-      <PageHeader title="Heute" subtitle={headerSubtitle(data)} />
-      <QuickAddTenner />
-      <SummaryCards summary={data.summary} />
+      <PageHeader title="Heute" subtitle={formatLongDate(data.referenceDate)} />
       <TodayMealsCard />
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: sideColumn ? 8 : 12 }}>
-          {data.summary.totalActionableCount === 0 && <NoDashboardData />}
-          <DueTodayList tenners={data.dueToday} />
-          <OverdueList tenners={data.overdue} />
-          {preferences.showUpcoming && <UpcomingList tenners={data.upcoming} />}
-          <PausedList tenners={data.paused} />
-          {preferences.showRecentActivity && <RecentActivityWidget />}
-        </Grid>
-        {sideColumn && (
-          <Grid size={{ xs: 12, md: 4 }}>
-            {preferences.showUserSummary && <UserSummaryCard byUser={data.byUser} />}
-            {preferences.showCategorySummary && <CategorySummaryCard byCategory={data.byCategory} />}
-          </Grid>
-        )}
-      </Grid>
+      <TodayTasksCard open={[...data.overdue, ...data.dueToday]} />
+      <ShoppingTomorrowCard />
     </PullToRefresh>
   );
 }

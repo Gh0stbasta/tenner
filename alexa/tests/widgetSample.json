@@ -34,5 +34,14 @@
     "lunch": "Onigiri",
     "dinner": "Lasagne",
     "updatedAt": "2026-10-06T07:00:00.000Z"
+  },
+  "shopping": {
+    "open": 2,
+    "items": [
+      "2× Nudeln",
+      "Milch"
+    ],
+    "more": 0,
+    "updatedAt": "2026-10-06T07:00:00.000Z"
   }
 }

@@ -14,8 +14,8 @@ const item = (key: string, overrides: Partial<ShoppingItem> = {}): ShoppingItem 
   key,
   ingredientId: key,
   name: key,
-  quantity: 100,
-  unit: "g",
+  quantity: 1,
+  unit: "Stück",
   section: "TROCKENWAREN",
   pantry: false,
   checked: false,
@@ -61,20 +61,20 @@ describe("shopping list helpers (FOOD-014)", () => {
   });
 
   it("formats quantities, meals and the share text", () => {
-    expect(formatQuantity(item("a", { quantity: 1500, unit: "g" }))).toBe("1,5 kg");
-    expect(formatQuantity(item("a", { quantity: 2000, unit: "ml" }))).toBe("2 l");
-    expect(formatQuantity(item("a", { quantity: 2, unit: "Stück" }))).toBe("2 Stück");
+    // FOOD-028: counts only; grams from an old cached list are not shown.
+    expect(formatQuantity(item("a", { quantity: 2, unit: "Stück" }))).toBe("2×");
+    expect(formatQuantity(item("a", { quantity: 1500, unit: "g" }))).toBe("");
     expect(formatQuantity(item("a", { quantity: null, unit: null }))).toBe("");
     expect(usedForLabel(["2026-10-12#DINNER", "2026-10-15#LUNCH"])).toBe("für Mo Abend, Do Mittag");
     expect(usedForLabel([])).toBe("");
     expect(
       shareText("Einkaufsliste", [
-        item("pasta", { name: "Nudeln", quantity: 500 }),
+        item("pasta", { name: "Nudeln", quantity: 2 }),
         item("m", { name: "Klopapier", quantity: null, unit: null, manual: true }),
         item("x", { name: "Erledigt", checked: true }),
-        item("salt", { name: "Salz", pantry: true, quantity: 10 }),
+        item("salt", { name: "Salz", pantry: true }),
       ]),
-    ).toBe("Einkaufsliste\n\n- 500 g Nudeln\n- Klopapier\n\nVorrat prüfen:\n- 10 g Salz");
+    ).toBe("Einkaufsliste\n\n- 2× Nudeln\n- Klopapier\n\nVorrat prüfen:\n- 1× Salz");
   });
 });
 

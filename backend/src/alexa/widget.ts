@@ -1,6 +1,6 @@
 /**
- * Echo Show home-screen widgets (ALEXA-007, FOOD-018): a small household summary (`tenner/status`) and today's meals
- * (`tenner/meals`, „Morgen“ from 20:00 household time) pushed with the Data Store API after every change (debounced to
+ * Echo Show home-screen widgets (ALEXA-007, FOOD-018, FOOD-026): a small household summary (`tenner/status`), today's
+ * meals (`tenner/meals`, „Morgen“ from 20:00 household time) and the open shopping list (`tenner/shopping`) pushed with the Data Store API after every change (debounced to
  * one push per minute), at the start of each household day and at 20:00. The widgets render from the pushed data only;
  * they never call the skill.
  */
@@ -11,7 +11,7 @@ import type { HouseholdMember } from "../models/index.js";
 import { deliveryRecord, type DeliveryLog } from "../notifications/delivery.js";
 import { localTime } from "../notifications/schedule.js";
 import type { Logger } from "../utils/logger.js";
-import { DATASTORE_SCOPE, MEALS_KEY, WIDGET_KEY, type DataStoreClient, type DataStoreObject } from "./datastore-client.js";
+import { DATASTORE_SCOPE, MEALS_KEY, SHOPPING_KEY, WIDGET_KEY, type DataStoreClient, type DataStoreObject } from "./datastore-client.js";
 import type { LwaTokenClient } from "./lwa-client.js";
 
 export const DEBOUNCE_MS = 60_000;
@@ -84,6 +84,35 @@ const phaseOf = (now: Date, timezone: string): string => {
   return `${local.date}#${local.minutes < MEAL_WIDGET_EVENING_HOUR * 60 ? "DAY" : "EVENING"}`;
 };
 
+/** Shopping list widget (FOOD-026): items shown at once, the rest is counted. */
+export const SHOPPING_WIDGET_ITEMS = 6;
+
+/** What the widget needs of a shopping list item (FOOD-014, counts since FOOD-028). */
+export interface ShoppingListEntry {
+  readonly name: string;
+  readonly quantity: number | null;
+  readonly unit: string | null;
+  readonly checked: boolean;
+  readonly pantry: boolean;
+}
+
+export interface ShoppingWidget {
+  /** Open items without the pantry (salt, oil). */
+  readonly open: number;
+  /** „2× Nudeln“, „Milch“ in the list's order. */
+  readonly items: readonly string[];
+  readonly more: number;
+  readonly updatedAt: string;
+}
+
+/** Payload for the shopping list widget: open items in the household's order, counts only (FOOD-028). */
+export function shoppingWidget(entries: readonly ShoppingListEntry[], now: Date): ShoppingWidget {
+  const open = entries.filter((entry) => !entry.checked && !entry.pantry);
+  const line = (entry: ShoppingListEntry) => (entry.quantity !== null && entry.quantity > 1 && entry.unit === "Stück" ? `${entry.quantity}× ${entry.name}` : entry.name);
+  const items = open.slice(0, SHOPPING_WIDGET_ITEMS).map(line);
+  return { open: open.length, items, more: open.length - items.length, updatedAt: now.toISOString() };
+}
+
 export interface WidgetPushDependencies {
   readonly alexaUsers: (tenantId: string) => Promise<readonly string[]>;
   readonly removeAlexaUser: (tenantId: string, alexaUserId: string) => Promise<void>;
@@ -92,6 +121,8 @@ export interface WidgetPushDependencies {
   readonly timezoneOf: (tenantId: string) => Promise<string>;
   /** FOOD-018: the meals of one household date; undefined without meal planning (only the status is pushed). */
   readonly mealsOn?: ((tenantId: string, date: string) => Promise<readonly DayMeal[]>) | undefined;
+  /** FOOD-026: this week's shopping list (empty without a plan); undefined without meal planning. */
+  readonly shoppingList?: ((tenantId: string) => Promise<readonly ShoppingListEntry[]>) | undefined;
   readonly lwa: LwaTokenClient;
   readonly dataStore: DataStoreClient;
   readonly log: Pick<DeliveryLog, "get" | "mark">;
@@ -139,6 +170,8 @@ export class WidgetPushService {
     const objects: DataStoreObject[] = [{ key: WIDGET_KEY, content: widgetSummary(dashboard, members, now) }];
     const meals = await this.meals(tenantId, now);
     if (meals !== undefined) objects.push({ key: MEALS_KEY, content: meals });
+    const shopping = await this.shopping(tenantId, now);
+    if (shopping !== undefined) objects.push({ key: SHOPPING_KEY, content: shopping });
     const token = await this.deps.lwa.token(DATASTORE_SCOPE);
     let pushed = 0;
     for (const alexaUserId of users) {
@@ -165,6 +198,17 @@ export class WidgetPushService {
       return mealWidget(day, await this.deps.mealsOn(tenantId, day.date), now);
     } catch (error) {
       this.deps.logger.warn("Meal widget data unavailable", { event: "MealWidgetFailed", error: error instanceof Error ? error.name : "UnknownError" });
+      return undefined;
+    }
+  }
+
+  /** FOOD-026: like the meal widget, a failure never blocks the other widgets. */
+  private async shopping(tenantId: string, now: Date): Promise<ShoppingWidget | undefined> {
+    if (this.deps.shoppingList === undefined) return undefined;
+    try {
+      return shoppingWidget(await this.deps.shoppingList(tenantId), now);
+    } catch (error) {
+      this.deps.logger.warn("Shopping widget data unavailable", { event: "ShoppingWidgetFailed", error: error instanceof Error ? error.name : "UnknownError" });
       return undefined;
     }
   }

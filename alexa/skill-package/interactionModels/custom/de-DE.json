@@ -136,6 +136,58 @@
           ]
         },
         {
+          "name": "AddShoppingItemIntent",
+          "slots": [
+            {
+              "name": "item",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "setz {item} auf die einkaufsliste",
+            "setze {item} auf die einkaufsliste",
+            "schreib {item} auf die einkaufsliste",
+            "schreibe {item} auf die einkaufsliste",
+            "füge {item} zur einkaufsliste hinzu",
+            "pack {item} auf die einkaufsliste",
+            "{item} auf die einkaufsliste",
+            "wir brauchen {item}",
+            "ich brauche {item}"
+          ]
+        },
+        {
+          "name": "ReadShoppingListIntent",
+          "slots": [],
+          "samples": [
+            "was steht auf der einkaufsliste",
+            "was ist auf der einkaufsliste",
+            "lies die einkaufsliste vor",
+            "lies mir die einkaufsliste vor",
+            "was muss ich einkaufen",
+            "was müssen wir einkaufen",
+            "einkaufsliste"
+          ]
+        },
+        {
+          "name": "ShoppingItemBoughtIntent",
+          "slots": [
+            {
+              "name": "item",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "ich habe {item} gekauft",
+            "ich hab {item} gekauft",
+            "wir haben {item} gekauft",
+            "{item} ist gekauft",
+            "{item} gekauft",
+            "streich {item} von der einkaufsliste",
+            "streiche {item} von der einkaufsliste",
+            "nimm {item} von der einkaufsliste"
+          ]
+        },
+        {
           "name": "AMAZON.YesIntent",
           "samples": []
         },

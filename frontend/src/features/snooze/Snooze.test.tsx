@@ -34,8 +34,9 @@ function snoozed(until: string) {
   };
 }
 
+/** UI-001: today's open Aufgaben are in „Heute erledigen wir“. */
 function dueToday() {
-  return within(screen.getByRole("region", { name: /^Heute fällig/ }));
+  return within(screen.getByRole("region", { name: "Heute erledigen wir" }));
 }
 
 describe("snoozeOptions", () => {
@@ -145,12 +146,9 @@ describe("Snooze on the dashboard", () => {
     renderWithProviders(<DashboardPage />);
     await screen.findByRole("heading", { level: 1, name: "Heute" });
     expect(dueToday().getByText("Verschoben bis Fr., 2. Okt.")).toBeInTheDocument();
-    expect(
-      within(screen.getByRole("region", { name: /^Demnächst/ })).getByText("Verschoben bis Mo., 5. Okt."),
-    ).toBeInTheDocument();
-    expect(
-      within(screen.getByRole("region", { name: /^Überfällig/ })).queryByText(/Verschoben bis/),
-    ).not.toBeInTheDocument();
+    // The passed snooze of the overdue Aufgabe shows no badge; upcoming Aufgaben are not on the dashboard (UI-001).
+    expect(dueToday().getAllByText(/Verschoben bis/)).toHaveLength(1);
+    expect(screen.queryByText("Auto waschen")).not.toBeInTheDocument();
   });
 });
 

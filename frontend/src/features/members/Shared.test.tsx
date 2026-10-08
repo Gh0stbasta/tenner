@@ -1,6 +1,6 @@
 /** HOUSEHOLD-002: shared Tenners in the frontend. */
 
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dashboard, dashboardTenner, tenner } from "../../tests/fixtures";
@@ -30,7 +30,7 @@ describe("shared Tenners", () => {
     });
   });
 
-  it("are marked on the dashboard and counted per person", async () => {
+  it("are marked on the dashboard (UI-001: no per-person summary any more)", async () => {
     mockFetch({
       "GET /dashboard": ok(
         dashboard({
@@ -44,8 +44,6 @@ describe("shared Tenners", () => {
     });
     renderWithProviders(<DashboardPage />);
     expect(await screen.findByText("Gemeinsam · 10 Min.")).toBeInTheDocument();
-    const byPerson = within(screen.getByRole("region", { name: "Nach Person" }));
-    expect(await byPerson.findByText("2 Aufgaben (davon 1 gemeinsam) · 15 Min.")).toBeInTheDocument();
   });
 
   it("can be filtered on the Tenners page", async () => {

@@ -10,6 +10,7 @@ import { LaunchRequestHandler } from "./handlers/launch.js";
 import { EnableRemindersIntentHandler, PermissionResponseHandler, messageReceivedHandler } from "./handlers/messaging.js";
 import { NoIntentHandler, OverdueIntentHandler, SuggestIntentHandler, TodayIntentHandler, WorkLeftIntentHandler, YesIntentHandler } from "./handlers/questions.js";
 import { SessionEndedRequestHandler } from "./handlers/sessionEnded.js";
+import { AddShoppingItemIntentHandler, ReadShoppingListIntentHandler, ShoppingItemBoughtIntentHandler } from "./handlers/shopping.js";
 import { SpeakerIntentHandler } from "./handlers/speaker.js";
 import { StopIntentHandler } from "./handlers/stop.js";
 import { AplRuntimeErrorHandler, DataStoreErrorHandler, SystemExceptionHandler, UnknownSystemRequestHandler, touchSessionInterceptor } from "./handlers/system.js";
@@ -44,6 +45,10 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
       CompleteIntentHandler,
       UndoIntentHandler,
       SpeakerIntentHandler,
+      // FOOD-026: shopping list by voice.
+      AddShoppingItemIntentHandler,
+      ReadShoppingListIntentHandler,
+      ShoppingItemBoughtIntentHandler,
       BriefingIntentHandler,
       BriefingYesHandler,
       BriefingNoHandler,

@@ -124,7 +124,7 @@ describe("offline completion (MOBILE-004)", () => {
     });
     renderDashboard();
     expect(await screen.findByText(/1 Offline-Erledigung wartet/)).toBeInTheDocument();
-    await screen.findByRole("region", { name: "Übersicht" });
+    await screen.findByRole("region", { name: "Heute erledigen wir" });
     expect(screen.queryByRole("button", { name: "„Büro saugen“ erledigen" })).not.toBeInTheDocument();
   });
 

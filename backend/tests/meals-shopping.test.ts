@@ -9,7 +9,8 @@ import {
   foodProfileSchema,
   generateItems,
   mergeRefresh,
-  roundUp,
+  countOf,
+  normalizeItem,
   type DishResponse,
   type ResolvedIngredient,
   type ShoppingItem,
@@ -57,11 +58,12 @@ describe("shopping list generation (FOOD-014)", () => {
     });
     // Wednesday lunch: adults only (2 portions); Saturday dinner: 2.5 portions; Monday is before „from“.
     const pastaItem = items.find((item) => item.key === "pasta");
-    expect(pastaItem).toMatchObject({ quantity: 500, unit: "g", usedFor: ["2026-10-14#LUNCH", "2026-10-17#DINNER"], manual: false, checked: false });
-    expect(items.find((item) => item.key === "beef-mince")?.quantity).toBe(200);
+    // FOOD-028: counts only — pasta is needed for two meals, mince for one.
+    expect(pastaItem).toMatchObject({ quantity: 2, unit: "Stück", usedFor: ["2026-10-14#LUNCH", "2026-10-17#DINNER"], manual: false, checked: false });
+    expect(items.find((item) => item.key === "beef-mince")?.quantity).toBe(1);
     expect(items.some((item) => item.key === "parmesan")).toBe(false);
     const oil = items.find((item) => item.key === "olive-oil");
-    expect(oil).toMatchObject({ pantry: true, quantity: 30 });
+    expect(oil).toMatchObject({ pantry: true, quantity: 1 });
     expect(items.at(-1)?.pantry).toBe(true);
   });
 
@@ -78,13 +80,18 @@ describe("shopping list generation (FOOD-014)", () => {
     expect(generateItems({ weekStart: "2026-10-12", slots: [slot("2026-10-14#DINNER", "pasta")], dishes, ingredients, profile: { ...profile, eaters: [] }, from: "2026-10-12" })).toEqual([]);
   });
 
-  it("rounds to steps a shop sells", () => {
-    expect(roundUp(31, "g")).toBe(40);
-    expect(roundUp(120, "g")).toBe(150);
-    expect(roundUp(1010, "ml")).toBe(1100);
-    expect(roundUp(1.2, "Stück")).toBe(2);
-    expect(roundUp(0.3, "Stück")).toBe(1);
-    expect(roundUp(250, "g")).toBe(250);
+  it("counts pieces and meals instead of weights (FOOD-028)", () => {
+    expect(countOf(1.2, "Stück", 1)).toBe(2);
+    expect(countOf(0.3, "Stück", 3)).toBe(1);
+    expect(countOf(450, "g", 2)).toBe(2);
+    expect(countOf(1000, "ml", 0)).toBe(1);
+  });
+
+  it("shows lists stored with grams as counts", () => {
+    const old = { key: "pasta", ingredientId: "pasta", name: "Nudeln", quantity: 500, unit: "g" as const, section: "TROCKENWAREN" as const, pantry: false, checked: true, manual: false, usedFor: ["a", "b", "c"] };
+    expect(normalizeItem(old)).toEqual({ ...old, quantity: 3, unit: "Stück" });
+    const own = { ...old, key: "manual-1", quantity: null, unit: null, manual: true };
+    expect(normalizeItem(own)).toBe(own);
   });
 });
 
@@ -198,6 +205,22 @@ describe("ShoppingListService (FOOD-014)", () => {
     const kept = refreshed.items.find((entry) => entry.key === first.key);
     if (kept) expect(kept.checked).toBe(true);
     expect(refreshed.items.some((entry) => entry.usedFor.some((slotId) => slotId < "2026-10-14"))).toBe(true);
+  });
+
+  it("shows a list stored with grams as counts without marking it outdated (FOOD-028)", async () => {
+    const { services, meals } = await ready();
+    await services.plans.getPlan("default", "current");
+    const list = await services.shopping.getList("default", "current");
+    const stored = meals.items.get("default|LIST#2026-10-12") as { items: ShoppingItem[]; signature: string };
+    // Before FOOD-028 weighed ingredients were stored in grams; pieces were already counts.
+    const weighed = (entry: ShoppingItem) => CATALOG_INGREDIENTS_BY_ID.get(entry.ingredientId ?? "")?.unit !== "Stück";
+    stored.items = stored.items.map((entry) => (weighed(entry) ? { ...entry, quantity: 500, unit: "g" } : entry));
+    stored.signature = "before FOOD-028";
+    const shown = await services.shopping.getList("default", "current");
+    expect(shown.stale).toBe(false);
+    expect(shown.items.every((entry) => entry.unit === "Stück")).toBe(true);
+    expect(shown.items.filter(weighed).every((entry) => entry.quantity === Math.max(1, entry.usedFor.length))).toBe(true);
+    expect(shown.items.map((entry) => entry.key)).toEqual(list.items.map((entry) => entry.key));
   });
 
   it("merges a parallel change from the other phone instead of failing", async () => {

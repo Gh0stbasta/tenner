@@ -1500,7 +1500,7 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   done by the client with the same endpoints (regenerate: `restore` with the previous dishes), no server-side history.
 - **Shopping list** (FOOD-014, `shopping/shopping-list.ts`, `services/shopping-list.service.ts`): `LIST#<weekStart>`
   made from the plan on first read; quantities per adult portion × portion factors of the eaters at each meal, summed
-  per ingredient, rounded up. Items keep the household's order (drag and drop) and ticks; changes are idempotent
+  per ingredient and shown as counts (FOOD-028: pieces rounded up, weighed ingredients once per meal; no grams). Items keep the household's order (drag and drop) and ticks; changes are idempotent
   operations (`check`, `add`, `remove`, `move`) sent as a batch, so an offline queue on the phone can replay them and
   two phones merge by retrying on the newest version. `stale` compares the stored fingerprint with a fresh
   calculation. Syncing with the Alexa shopping list is not possible (Amazon switched the List Management API off on

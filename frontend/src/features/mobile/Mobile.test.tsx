@@ -134,7 +134,7 @@ describe("mobile navigation", () => {
     return renderWithProviders(
       <Routes>
         <Route element={<AppLayout />}>
-          <Route path="dashboard" element={<input id="quick-add-input" aria-label="Quick Add" />} />
+          <Route path="tenners" element={<input id="quick-add-input" aria-label="Quick Add" />} />
           <Route path="settings" element={<h1>Einstellungen</h1>} />
         </Route>
       </Routes>,
@@ -154,15 +154,15 @@ describe("mobile navigation", () => {
     expect(within(bottom).getByRole("link", { name: "Einstellungen" })).toHaveClass("Mui-selected");
   });
 
-  it("the Quick Add button focuses the Quick Add input or opens the dashboard with it", async () => {
+  it("the Quick Add button focuses the Quick Add input or opens „Aufgaben“ with it (UI-001)", async () => {
     mockFetch({});
-    renderLayout("/dashboard");
+    renderLayout("/tenners");
     Element.prototype.scrollIntoView = vi.fn();
     await userEvent.click(screen.getByRole("button", { name: "Aufgabe schnell anlegen" }));
     expect(screen.getByRole("textbox", { name: "Quick Add" })).toHaveFocus();
   });
 
-  it("navigates to the dashboard Quick Add from other pages", async () => {
+  it("navigates to the Quick Add on „Aufgaben“ from other pages", async () => {
     mockFetch({});
     renderLayout("/settings");
     await userEvent.click(screen.getByRole("button", { name: "Aufgabe schnell anlegen" }));

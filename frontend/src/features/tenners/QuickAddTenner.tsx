@@ -10,7 +10,7 @@ import { useQuickAddTenner } from "./useQuickAddTenner";
 
 export function QuickAddTenner() {
   const quickAdd = useQuickAddTenner();
-  // The home-screen shortcut "Neuer Tenner" opens /dashboard?quickAdd=1 (MOBILE-001).
+  // The home-screen shortcut "Neue Aufgabe" opens /tenners?quickAdd=1 (MOBILE-001; on „Aufgaben“ since UI-001).
   const [params] = useSearchParams();
   const { defaults } = quickAdd;
   const categoryName = useCategoryName();

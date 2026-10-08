@@ -186,6 +186,7 @@ time, ingredients) is done in FOOD-003.
 | [FOOD-025](backlog/food/ticket025.md) | Release Tenner 2.0 | High | 2.0 Release |
 | [FOOD-026](backlog/food/ticket026.md) | Shopping List via Alexa (added 2026-10-07) | Medium | 2.0 Extended |
 | [FOOD-027](backlog/food/ticket027.md) | Shopping List as Its Own Navigation Entry (added 2026-10-08) | High | 2.0 Core |
+| [FOOD-028](backlog/food/ticket028.md) | Shopping List Shows Counts Instead of Weights (added 2026-10-08) | High | 2.0 Core |
 
 Added to the owner's breakdown:
 
