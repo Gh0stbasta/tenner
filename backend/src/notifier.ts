@@ -33,7 +33,7 @@ import {
 import { signActionToken, WebPushChannel } from "./push/index.js";
 import { DynamoDbDeliveryLog, DynamoDbHouseholdRepository, DynamoDbTennerRepository } from "./repositories/index.js";
 import { createSecretLoader } from "./secrets/index.js";
-import { AlexaSpeakerService, DashboardService, HouseholdService, MemberService, NotificationPreferencesService, PushSnoozeService, PushSubscriptionService } from "./services/index.js";
+import { AlexaSpeakerService, DashboardService, HouseholdService, MemberService, MissedTennerService, NotificationPreferencesService, PushSnoozeService, PushSubscriptionService } from "./services/index.js";
 import { systemClock, uuidGenerator } from "./utils/clock.js";
 import { createLogger, type Logger } from "./utils/logger.js";
 
@@ -56,6 +56,8 @@ export interface NotifierRuntime {
   readonly widget: WidgetPushService | undefined;
   /** Meal plans prepared ahead (FOOD-006); undefined without the meals table. */
   readonly mealPlans?: MealPlanService | undefined;
+  /** REC-001: moves Tenners not completed on their day; undefined in tests that do not need it. */
+  readonly missedTenners?: Pick<MissedTennerService, "moveMissed"> | undefined;
 }
 
 export function createNotifierRuntime(config: AppConfig = loadConfig(), extensions?: NotifierExtensions, fetchImpl: typeof fetch = globalThis.fetch): NotifierRuntime {
@@ -173,7 +175,8 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
         }),
       ]
     : notifier.jobs;
-  return { notifier: { ...notifier, jobs: allJobs, channels: extensions?.channels ?? channels }, widget, mealPlans };
+  const missedTenners = new MissedTennerService(tenners, systemClock, uuidGenerator, timezoneOf, (tenantId) => householdService.vacationOf(tenantId), logger);
+  return { notifier: { ...notifier, jobs: allJobs, channels: extensions?.channels ?? channels }, widget, mealPlans, missedTenners };
 }
 
 /** FOOD-018: the meals of one date from the current or the next week's plan (tomorrow can be in the next week). */
@@ -196,6 +199,8 @@ export interface NotifierResult {
   readonly widget: "PUSHED_OR_SKIPPED" | "FAILED" | "DISABLED";
   /** FOOD-006: plans created in this run, or why none were checked. */
   readonly mealPlans?: number | "FAILED" | "DISABLED";
+  /** REC-001: Tenners moved on because nobody completed them on their day. */
+  readonly missedTenners?: number | "FAILED" | "DISABLED";
 }
 
 /** Route one invocation; widget failures are logged and never fail the scheduled notification run. */
@@ -205,9 +210,24 @@ export async function handleNotifierEvent(runtime: NotifierRuntime, event: Notif
     const tenantId = typeof event.detail?.tenantId === "string" ? event.detail.tenantId : notifier.tenantId;
     return { widget: await safely(notifier.logger, widget, (service) => service.onChange(tenantId)) };
   }
+  // REC-001 first: digests, alerts and the widget then show the day without yesterday's leftovers.
+  const missedTenners = await moveMissedTenners(notifier.logger, runtime.missedTenners, notifier.tenantId);
   const mealPlans = await prepareMealPlans(notifier.logger, runtime.mealPlans, notifier.tenantId);
   const run = await runNotifier(notifier);
-  return { run, widget: await safely(notifier.logger, widget, (service) => service.onSchedule(notifier.tenantId)), mealPlans };
+  return { run, widget: await safely(notifier.logger, widget, (service) => service.onSchedule(notifier.tenantId)), mealPlans, missedTenners };
+}
+
+/** REC-001: failures are logged and never stop the notifications; the next run (15 minutes) tries again. */
+async function moveMissedTenners(logger: Logger, service: NotifierRuntime["missedTenners"], tenantId: string): Promise<NonNullable<NotifierResult["missedTenners"]>> {
+  if (!service) return "DISABLED";
+  try {
+    const moved = await service.moveMissed(tenantId);
+    if (moved > 0) logger.info("Missed Tenners moved", { event: "MissedTennersMoved", moved });
+    return moved;
+  } catch (error) {
+    logger.error("Moving missed Tenners failed", { event: "MissedTennersFailed", error: error instanceof Error ? error.name : "UnknownError" });
+    return "FAILED";
+  }
 }
 
 /** FOOD-006: create missing plans before the jobs run; failures are logged and never stop the notifications. */

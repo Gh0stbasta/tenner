@@ -298,6 +298,30 @@ describe("notifier event routing", () => {
     expect(createNotifierRuntime(testConfig({ notificationsTable: "n", mealsTable: undefined })).mealPlans).toBeUndefined();
   });
 
+  it("moves missed Tenners before the jobs and never fails the run because of them (REC-001)", async () => {
+    const r = runtime();
+    const order: string[] = [];
+    const moveMissed = vi.fn(async () => {
+      order.push("missed");
+      return 2;
+    });
+    const ensurePlans = vi.fn(async () => {
+      order.push("plans");
+      return 0;
+    });
+    const withMissed = { ...r, missedTenners: { moveMissed }, mealPlans: { ensurePlans } as unknown as NonNullable<NotifierRuntime["mealPlans"]> };
+    expect((await handleNotifierEvent(withMissed, {})).missedTenners).toBe(2);
+    expect(order).toEqual(["missed", "plans"]);
+    expect(r.notifier.logger.info).toHaveBeenCalledWith("Missed Tenners moved", { event: "MissedTennersMoved", moved: 2 });
+    moveMissed.mockRejectedValueOnce(new TypeError("boom"));
+    const failed = await handleNotifierEvent(withMissed, {});
+    expect(failed.missedTenners).toBe("FAILED");
+    expect(failed.run?.recipients).toBe(0);
+    expect((await handleNotifierEvent(runtime(), {})).missedTenners).toBe("DISABLED");
+    expect((await handleNotifierEvent(withMissed, { "detail-type": "HouseholdChanged", detail: {} })).missedTenners).toBeUndefined();
+    expect(createNotifierRuntime(testConfig({ notificationsTable: "n" })).missedTenners).toBeDefined();
+  });
+
   it("creates the widget service only with Alexa API configuration", () => {
     const alexaApi = { endpoint: "https://api.eu.amazonalexa.com", clientIdParameter: "/tenner/prod/alexa/lwa-client-id", clientSecretParameter: "/tenner/prod/alexa/lwa-client-secret", skillStage: "development" as const };
     expect(createNotifierRuntime(testConfig({ notificationsTable: "n", alexaApi })).widget).toBeInstanceOf(WidgetPushService);

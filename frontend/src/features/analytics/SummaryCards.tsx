@@ -1,4 +1,4 @@
-/** Completions | Minutes | On-time rate | Overdue now (ANALYTICS-009, from GET /analytics/summary). */
+/** Completions | Minutes | On-time rate | Not done (ANALYTICS-009, REC-001; from GET /analytics/summary). */
 
 import { Alert, Card, CardContent, Skeleton, Typography } from "@mui/material";
 import Grid from "@mui/material/Grid";
@@ -30,7 +30,8 @@ export function SummaryCards({ selection }: { readonly selection: PeriodSelectio
             ? `aus ${data.onTimeSamples} Erledigungen`
             : undefined,
     },
-    { label: "Jetzt überfällig", value: data?.overdueNow.toLocaleString("de-DE") },
+    // REC-001: Tenners no longer stay overdue; missed occurrences of the period are shown instead.
+    { label: "Nicht erledigt", value: data?.missed.toLocaleString("de-DE"), hint: data ? "am Tag verpasst" : undefined },
   ];
   return (
     <Grid container spacing={2} component="section" aria-label="Kennzahlen" sx={{ mb: 3 }}>

@@ -61,4 +61,6 @@ and a changelog entry on top of that.
 
 ### Recommendations
 
-None yet.
+| Ticket | Title | Decision | Status |
+|---|---|---|---|
+| [REC-001](recommendations/ticket001.md) | Missed Tenners disappear and count as not done | Accepted (2026-10-08) | Done |

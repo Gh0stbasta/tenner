@@ -108,6 +108,11 @@ run "notifier_reads_tenners_for_the_digest" {
     condition     = toset(flatten([for statement in data.aws_iam_policy_document.notifier[0].statement : tolist(statement.actions) if statement.sid == "MealPlans"])) == toset(["dynamodb:GetItem", "dynamodb:Query", "dynamodb:PutItem"])
     error_message = "Meal plan access must stay limited to reading and writing items (no delete, no scan)."
   }
+
+  assert {
+    condition     = toset(flatten([for statement in data.aws_iam_policy_document.notifier[0].statement : tolist(statement.actions) if statement.sid == "MoveMissedTenners"])) == toset(["dynamodb:UpdateItem", "dynamodb:PutItem"])
+    error_message = "Moving missed Tenners (REC-001) needs only UpdateItem on Tenners and PutItem of the history event."
+  }
 }
 
 run "delivery_log_expires_after_ttl" {

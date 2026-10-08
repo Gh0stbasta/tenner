@@ -432,7 +432,9 @@ when the GitHub **variable** `NOTIFICATIONS_ENABLED` is `true`. Before setting i
 - CloudWatch Logs: `/tenner/notifier`
 
 Content: the daily digest (NOTIFICATION-003) at each member's time (default 08:00) and overdue alerts
-(NOTIFICATION-004) at each member's evening time (default 18:00, NOTIFICATION-010). Push sends one notification per
+(NOTIFICATION-004) at each member's evening time (default 18:00, NOTIFICATION-010). Since REC-001 a Tenner is no
+longer overdue the day after: each run first moves Tenners not completed on their day to their next occurrence and
+records them as not done („Nicht erledigt“ in the analytics). Push sends one notification per
 Tenner („🏠 Tenner · Heute: … · Geschätzter Aufwand: … Minuten“). Until a real channel is connected it is
 written to the notifier log only (`NotificationLogged`).
 

@@ -23,6 +23,8 @@ const summarySchema = z.object({
   activeTenners: z.number(),
   distinctTennersCompleted: z.number(),
   overdueNow: z.number(),
+  /** REC-001: occurrences nobody completed on their day; 0 from an API before REC-001. */
+  missed: z.number().default(0),
   onTimeRate: nullableNumber,
   onTimeSamples: z.number(),
 });
