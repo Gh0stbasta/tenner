@@ -40,10 +40,14 @@ alexa/
 
 ## Echo Show Widgets (ALEXA-007, FOOD-018)
 
-**Tenner Essen** (`skill-package/dataStorePackages/meal-today/`, FOOD-018) shows lunch and dinner of today, from
+**Zentrale Essen** (`skill-package/dataStorePackages/meal-today/`, FOOD-018) shows lunch and dinner of today, from
 20:00 household time those of tomorrow („Morgen“), „–“ for an empty meal. It is bound to the Data Store object
 `tenner/meals`, which the notifier pushes together with `tenner/status` (same triggers, plus one push at 20:00). No
-tap action; until the first push it shows „Essen“ with „–“. Add it like the status widget („Tenner Essen“).
+tap action; until the first push it shows „Essen“ with „–“. Add it like the status widget („Zentrale Essen“).
+
+**Zentrale Einkaufsliste** (`skill-package/dataStorePackages/shopping-list/`, FOOD-026) shows the open items of this
+week's shopping list in the household's order (counts only, max. 6, then „+ n weitere“), bound to `tenner/shopping`;
+pushed with the other widgets after every list change. No tap action.
 
 **Tenner (status):**
 
@@ -163,6 +167,18 @@ retries never complete twice. Logs carry match outcome, score and Tenner ID only
 
 One-shot questions end the session after the answer; inside an open session Tenner asks „Was möchtest du noch
 wissen?“. Every answer also appears as a card in the Alexa app.
+
+
+### Shopping list (FOOD-026)
+
+| Wish | Examples | Answer |
+|---|---|---|
+| Add | „setz Milch auf die Einkaufsliste“, „wir brauchen Klopapier“ | „Okay, Milch steht auf der Einkaufsliste.“ (not added twice) |
+| Read | „was steht auf der Einkaufsliste“ | open items in the list's order, max. 10, counts above one („2 mal Nudeln“) |
+| Tick off | „ich habe Milch gekauft“ | „Okay, Milch ist abgehakt.“; close names are named back, nothing is guessed |
+
+One-shot: „Alexa, sag Familien Zentrale, setz Milch auf die Einkaufsliste“. „Alexa, setz Milch auf die Einkaufsliste“
+without „Familien Zentrale“ goes to Amazon's own list (Amazon offers no way to redirect it).
 
 ## Development
 

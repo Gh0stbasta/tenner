@@ -21,7 +21,7 @@ export const SPEECH = {
   welcomeReprompt: "Was möchtest du wissen? Du kannst zum Beispiel fragen: Was ist heute fällig?",
   help:
     "Mit der Zentrale behältst du die kleinen Aufgaben im Haushalt im Blick. " +
-    "Frag zum Beispiel: Was ist heute fällig? Oder sag: Stopp, um die Zentrale zu beenden.",
+    "Frag zum Beispiel: Was ist heute fällig? Oder sag: Setz Milch auf die Einkaufsliste. Mit Stopp beendest du die Zentrale.",
   helpReprompt: "Was möchtest du wissen?",
   goodbye: "Bis bald.",
   fallback: `Das habe ich leider nicht verstanden. ${EXAMPLE}`,
