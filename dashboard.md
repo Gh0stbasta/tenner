@@ -6,21 +6,21 @@
 
 | | |
 |---|---|
-| **Project health** | 🟢 **Live**: widgets on the Echo Show work; all 1,789 automated tests pass (backend 1,078, frontend 445, alexa 141, Terraform 77, scripts 48) |
+| **Project health** | 🟢 **Live**; all 1,805 automated tests pass (backend 1,083, frontend 445, alexa 152, Terraform 77, scripts 48) |
 | **Current phase** | **Release 2.0 — Family Meal Planning, in progress.** Release 1.0 is in maintenance |
-| **Current focus** | This pull request: owner hotfixes — shopping list as its own menu entry (FOOD-027), missed tasks disappear and count as „nicht erledigt“ (REC-001), rename to „Zentrale“ / „Aufgaben“ (REC-002) |
+| **Current focus** | This pull request: shopping list with counts instead of grams (FOOD-028), by voice („Alexa, sag Familien Zentrale, setz Milch auf die Einkaufsliste“) and as Echo Show widget (FOOD-026) |
 | **Biggest blocker** | None |
-| **Recommended next action** | Merge, then say „Alexa, öffne Familien Zentrale“ and check the widgets update their names |
+| **Recommended next action** | Merge, then add the widget „Zentrale Einkaufsliste“ and try the voice phrases on the Echo Show |
 
 ## 📈 Progress
 
 ```text
 Release 1.0  ████████████████████ 100%  104 / 104 tickets done (tag v1.0.0 still to set)
-Release 2.0  ██████████░░░░░░░░░░  52%   14 /  27 FOOD tickets (foundation, planning, shopping list, meal widget)
+Release 2.0  ███████████░░░░░░░░░  57%   16 /  28 FOOD tickets (foundation, planning, shopping list incl. voice and widget, meal widget)
 Maintenance   6 done (MAINT-001 – 006; device checks open) · REC 2 accepted and done (REC-001, 002)
 ```
 
-✅ Completed: **127** (104 + EPIC-FOOD-001 + 14 FOOD + 6 MAINT + 2 REC) · 🚧 In progress: **0** · 📋 Open: **13** (release 2.0)
+✅ Completed: **129** (104 + EPIC-FOOD-001 + 16 FOOD + 6 MAINT + 2 REC) · 🚧 In progress: **0** · 📋 Open: **12** (release 2.0)
 
 ## 🧩 Feature Status
 
@@ -28,8 +28,8 @@ Maintenance   6 done (MAINT-001 – 006; device checks open) · REC 2 accepted a
 |---|---|
 | ✅ Google login, one household, private data | ✅ Foundation: meals table, 105 ingredients, dishes, family profile and rules, 61-dish catalog (FOOD-001 – 004, 021) |
 | ✅ Aufgaben (formerly Tenner), scheduling, household, task catalog, analytics — 🆕 missed ones disappear and count as „Nicht erledigt“ (REC-001) | ✅ Weekly plan with rules R1 – R13, made automatically; replace, choose, swap, lock, regenerate (FOOD-005 – 009, 022) |
-| ✅ Phone app with offline use | ✅ Shopping list: own order by drag and drop, ticked items struck through, offline in the shop (FOOD-014), 🆕 own menu entry (FOOD-027) · 🔲 dish editor, nutrition, cost, photos (FOOD-010 – 013) |
-| ✅ Push per Tenner with „Erledigt“/„Später“ | ✅ Meal widget „Zentrale Essen“: today's lunch and dinner, from 20:00 tomorrow's (FOOD-018) · 🔲 morning push, „Was gibt es heute?“, shopping list via Alexa, calendar feed (FOOD-016, 017, 026, 015) |
+| ✅ Phone app with offline use | ✅ Shopping list: own order by drag and drop, ticked items struck through, offline in the shop (FOOD-014), own menu entry (FOOD-027), 🆕 counts instead of grams (FOOD-028), 🆕 by voice and as Echo Show widget (FOOD-026) · 🔲 dish editor, nutrition, cost, photos (FOOD-010 – 013) |
+| ✅ Push per Tenner with „Erledigt“/„Später“ | ✅ Meal widget „Zentrale Essen“: today's lunch and dinner, from 20:00 tomorrow's (FOOD-018) · 🔲 morning push, „Was gibt es heute?“, calendar feed (FOOD-016, 017, 015) |
 | ✅ Alexa by voice, widget on the Echo Show, no screen views (MAINT-006) — 🆕 „Alexa, öffne Familien Zentrale“ (REC-002) | 🔲 History, feedback, food analytics (FOOD-023, 019); release (FOOD-025) |
 
 Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Release 2.0 plan: [`docs/release-2.0/README.md`](docs/release-2.0/README.md) · AI stays out of 2.0 (FOOD-020, FOOD-024 are evaluations).
@@ -72,7 +72,7 @@ Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Relea
 
 ## 🎯 Recommended Next Actions
 
-1. **Merge this PR**, then: „Alexa, öffne Familien Zentrale“; the widgets should be called „Zentrale“ and „Zentrale Essen“ after their update (otherwise remove and add them); install the phone app again if its name stays „Tenner“.
+1. **Merge this PR**, then on the Echo Show: add the widget „Zentrale Einkaufsliste“; say „Alexa, sag Familien Zentrale, setz Milch auf die Einkaufsliste“, „… was steht auf der Einkaufsliste“, „… ich habe Milch gekauft“; check the list in the app shows „2×“ instead of grams.
 2. **Your step:** rename the app in the Google sign-in screen (Google Auth Platform → Branding → app name „Zentrale“).
 3. **Tomorrow morning:** yesterday's undone tasks should be gone; „Auswertung“ shows them under „Nicht erledigt“.
 4. **Next:** rest of the kitchen block (FOOD-010 dish editor → 012 nutrition → 013 cost → 011 photos).
@@ -82,6 +82,6 @@ Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Relea
 
 ## ℹ About this dashboard
 
-- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (maintenance; a ticket counts as done when it has an "Implementation Status" section), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (38 deploy runs; runs 34, 35, 37 and 38 green, run 36 cancelled by the next push).
-- **Counting:** release 2.0: 14 of 27 FOOD tickets done (FOOD-026 added 2026-10-07; FOOD-003 with the owner's review still open counts as done), the epic EPIC-FOOD-001 done. Maintenance: MAINT-001 – 006 done (device checks of MAINT-002, 005 and 006 open); recommendations REC-001 and REC-002 accepted and done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets (REPORTING-001/002, BACKLOG-001 – 003, CLEANUP-001, RELEASE-001); owner inputs in `docs/release-1.0/human/` and planning files with other names are not counted. Debt levels are an assessment for this dashboard.
+- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (maintenance; a ticket counts as done when it has an "Implementation Status" section), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (39 deploy runs; runs 34, 35 and 37 – 39 green, run 36 cancelled by the next push).
+- **Counting:** release 2.0: 16 of 28 FOOD tickets done (FOOD-026 added 2026-10-07; FOOD-003 with the owner's review still open counts as done), the epic EPIC-FOOD-001 done. Maintenance: MAINT-001 – 006 done (device checks of MAINT-002, 005 and 006 open); recommendations REC-001 and REC-002 accepted and done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets (REPORTING-001/002, BACKLOG-001 – 003, CLEANUP-001, RELEASE-001); owner inputs in `docs/release-1.0/human/` and planning files with other names are not counted. Debt levels are an assessment for this dashboard.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).
