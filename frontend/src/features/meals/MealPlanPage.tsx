@@ -88,7 +88,7 @@ function SetupHint({ plan }: { readonly plan: MealPlan }) {
         </Button>
       }
     >
-      Der Essensplan entsteht, sobald Tenner {missing.join(" und ")} kennt.
+      Der Essensplan entsteht, sobald die Zentrale {missing.join(" und ")} kennt.
     </Alert>
   );
 }
@@ -297,7 +297,7 @@ export function MealPlanPage() {
       actions={
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>
           {plan.data?.ready && (
-            <Button component={RouterLink} to="/essen/einkaufsliste" variant="outlined" size="small">
+            <Button component={RouterLink} to="/einkaufsliste" variant="outlined" size="small">
               Einkaufsliste
             </Button>
           )}

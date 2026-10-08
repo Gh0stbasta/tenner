@@ -66,7 +66,7 @@ function formatTimestamp(value: string | null): string {
 
 function ReadOnlyFacts({ tenner }: { readonly tenner: Tenner }) {
   const facts: [string, string][] = [
-    ["Tenner-ID", tenner.tennerId],
+    ["Aufgaben-ID", tenner.tennerId],
     ["Erstellt", formatTimestamp(tenner.createdAt)],
     ["Zuletzt erledigt", formatTimestamp(tenner.lastCompleted)],
     ["Nächste Fälligkeit", formatShortDate(tenner.nextDue)],
@@ -134,7 +134,7 @@ function EditTennerForm({ tenner, onClose }: { readonly tenner: Tenner; readonly
       { tennerId: tenner.tennerId, update: changes as TennerUpdate },
       {
         onSuccess: () => {
-          notify({ message: "✅ Tenner aktualisiert." });
+          notify({ message: "✅ Aufgabe aktualisiert." });
           onClose();
         },
         onError: (error) => applyServerErrors(error, FIELDS, form.setError),
@@ -146,7 +146,7 @@ function EditTennerForm({ tenner, onClose }: { readonly tenner: Tenner; readonly
     <>
       <Dialog open onClose={requestClose} fullScreen={fullScreen} fullWidth maxWidth="sm" aria-labelledby={titleId}>
         <form onSubmit={(event) => void submit(event)} noValidate>
-          <DialogTitle id={titleId}>Tenner bearbeiten</DialogTitle>
+          <DialogTitle id={titleId}>Aufgabe bearbeiten</DialogTitle>
           <DialogContent>
             {update.isError && (
               <Alert severity="error" sx={{ mb: 2 }}>

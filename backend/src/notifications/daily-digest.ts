@@ -38,7 +38,7 @@ export function renderDigest(dashboard: DashboardResponse, recipient: Recipient,
   if (overdue.length > 0) {
     lines.push(`Überfällig (${overdue.length})`, ...bulletList(overdue.map((tenner) => `${tenner.title} — ${daysText(tenner.overdueDays ?? 1)}`), DIGEST_ITEM_LIMIT), "");
   }
-  if (appUrl !== undefined) lines.push(`Tenner öffnen → ${appUrl}`);
+  if (appUrl !== undefined) lines.push(`Zentrale öffnen → ${appUrl}`);
   return {
     type: "DAILY_DIGEST",
     userId: recipient.userId,

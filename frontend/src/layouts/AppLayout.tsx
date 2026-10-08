@@ -8,6 +8,7 @@ import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";
 import ListAltOutlinedIcon from "@mui/icons-material/ListAltOutlined";
 import RestaurantOutlinedIcon from "@mui/icons-material/RestaurantOutlined";
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import {
@@ -39,6 +40,7 @@ const ICONS: Readonly<Record<string, ReactNode>> = {
   "/dashboard": <DashboardOutlinedIcon />,
   "/tenners": <ListAltOutlinedIcon />,
   "/essen": <RestaurantOutlinedIcon />,
+  "/einkaufsliste": <ShoppingCartOutlinedIcon />,
   "/analytics": <InsightsOutlinedIcon />,
   "/settings": <SettingsOutlinedIcon />,
 };
@@ -89,7 +91,8 @@ function BottomNavigationBar() {
             component={NavLink}
             to={item.path}
             value={item.path}
-            label={item.label}
+            label={item.shortLabel ?? item.label}
+            aria-label={item.label}
             icon={ICONS[item.path]}
             sx={{ minWidth: 0 }}
           />
@@ -114,7 +117,7 @@ function QuickAddFab() {
   return (
     <Fab
       color="primary"
-      aria-label="Tenner schnell anlegen"
+      aria-label="Aufgabe schnell anlegen"
       onClick={onClick}
       sx={{
         display: { xs: "flex", md: "none" },
@@ -144,7 +147,7 @@ export function AppLayout({ headerActions }: AppLayoutProps) {
       >
         <Toolbar>
           <Typography variant="h6" component="p" sx={{ flexGrow: 1, fontWeight: 700 }}>
-            Tenner
+            Aufgaben
           </Typography>
           {headerActions}
         </Toolbar>

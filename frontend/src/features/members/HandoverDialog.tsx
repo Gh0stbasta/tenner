@@ -78,10 +78,10 @@ export function HandoverDialog({ member, onClose }: HandoverDialogProps) {
 
   return (
     <Dialog open onClose={start.isPending ? undefined : onClose} aria-labelledby={titleId} fullWidth maxWidth="xs">
-      <DialogTitle id={titleId}>Tenner von {member.displayName} übergeben</DialogTitle>
+      <DialogTitle id={titleId}>Aufgaben von {member.displayName} übergeben</DialogTitle>
       <DialogContent>
         <DialogContentText sx={{ mb: 2 }}>
-          Zum Beispiel bei Dienstreise oder Krankheit. Nach dem letzten Tag kommen die Tenner automatisch zurück.
+          Zum Beispiel bei Dienstreise oder Krankheit. Nach dem letzten Tag kommen die Aufgaben automatisch zurück.
         </DialogContentText>
         {start.isError && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -139,11 +139,11 @@ export function HandoverDialog({ member, onClose }: HandoverDialogProps) {
               </Stack>
             </Box>
             {assigned.isError ? (
-              <Alert severity="error">Zugeordnete Tenner konnten nicht geladen werden.</Alert>
+              <Alert severity="error">Zugeordnete Aufgaben konnten nicht geladen werden.</Alert>
             ) : (
               <Alert severity="info" role="status">
                 {assigned.isPending
-                  ? "Tenner werden gezählt …"
+                  ? "Aufgaben werden gezählt …"
                   : `${formatTennerCount(moving.length)} ${moving.length === 1 ? "geht" : "gehen"}${
                       until === "" ? "" : ` bis ${formatShortDate(until)}`
                     } an ${target?.displayName ?? ""}.`}

@@ -39,7 +39,7 @@ export function CategoriesSettings() {
   return (
     <SettingsSection
       title="Kategorien"
-      description="Gilt für alle im Haushalt. Archivierte Kategorien bleiben an bestehenden Tennern, sind für neue aber nicht wählbar."
+      description="Gilt für alle im Haushalt. Archivierte Kategorien bleiben an bestehenden Aufgaben, sind für neue aber nicht wählbar."
     >
       {categories.isError && (
         <Alert severity="error">Kategorien konnten nicht geladen werden. {errorMessage(categories.error)}</Alert>

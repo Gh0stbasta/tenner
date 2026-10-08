@@ -72,6 +72,7 @@ export function toSkipItem(event: SkipEvent): Record<string, unknown> {
     skippedDue: event.skippedDue,
     nextDue: event.nextDue,
     reason: event.reason,
+    ...(event.missed ? { missed: true, missedCount: event.missedCount ?? 1 } : {}),
   };
 }
 
@@ -118,5 +119,6 @@ export function toSkipEvent(item: Record<string, unknown>): SkipEvent {
     skippedDue: String(item.skippedDue),
     nextDue: String(item.nextDue),
     reason: stringOrNull(item.reason),
+    ...(item.missed === true ? { missed: true, missedCount: typeof item.missedCount === "number" ? item.missedCount : 1 } : {}),
   };
 }

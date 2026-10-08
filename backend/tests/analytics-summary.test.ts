@@ -83,6 +83,7 @@ describe("summarize", () => {
       activeTenners: 3,
       distinctTennersCompleted: 2,
       overdueNow: 1,
+      missed: 0,
       onTimeRate: 0.5,
       onTimeSamples: 2,
     });
@@ -91,6 +92,12 @@ describe("summarize", () => {
   it("handles an empty period and missing due data", () => {
     expect(summarize([], [], period(TODAY, TODAY), context)).toMatchObject({ completions: 0, totalActualMinutes: 0, onTimeRate: null, onTimeSamples: 0 });
     expect(summarize([done()], [], period(TODAY, TODAY), context).onTimeRate).toBeNull();
+  });
+
+  it("counts missed occurrences in the period, not deliberate skips (REC-001)", () => {
+    const skip = (skippedDue: string, extra: Record<string, unknown> = {}) => ({ tenantId: "default", skipId: skippedDue, tennerId: "a", skippedBy: "STEFAN", skippedAt: `${skippedDue}T22:00:00Z`, skippedDue, nextDue: TODAY, reason: null, ...extra });
+    const skips = [skip("2026-10-01", { missed: true, missedCount: 3 }), skip("2026-10-02", { missed: true, missedCount: 1 }), skip("2026-10-03"), skip("2026-08-01", { missed: true, missedCount: 5 })];
+    expect(summarize([], [], period("2026-09-08", TODAY), context, skips).missed).toBe(4);
   });
 
   it("does not count overdue Tenners paused by the vacation", () => {

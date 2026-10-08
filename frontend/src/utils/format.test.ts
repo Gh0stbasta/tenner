@@ -13,7 +13,7 @@ import {
 
 describe("format", () => {
   it("formats counts and durations", () => {
-    expect(formatTennerCount(1)).toBe("1 Tenner");
+    expect(formatTennerCount(1)).toBe("1 Aufgabe");
     expect(formatMinutes(10)).toBe("10 Min.");
     expect(formatDays(1)).toBe("1 Tag");
     expect(formatDays(14)).toBe("14 Tage");

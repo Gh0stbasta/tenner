@@ -9,11 +9,11 @@ import { joinAlternatives } from "./speech.js";
 
 export const LIST_PAGE_SIZE = 3;
 
-const NUMBER_WORDS = ["null", "ein", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn", "elf", "zwölf"];
+const NUMBER_WORDS = ["null", "eine", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn", "elf", "zwölf"];
 
-/** „ein Tenner“, „drei Tenner“, „15 Tenner“. */
+/** „eine Aufgabe“, „drei Aufgaben“, „15 Aufgaben“ (REC-002). */
 export function tennerCount(count: number): string {
-  return `${NUMBER_WORDS[count] ?? String(count)} Tenner`;
+  return `${NUMBER_WORDS[count] ?? String(count)} ${count === 1 ? "Aufgabe" : "Aufgaben"}`;
 }
 
 /** „eine Minute“, „25 Minuten“. */
@@ -64,7 +64,7 @@ function listing(intro: string, items: readonly string[]): Answer {
 }
 
 export function continuationQuestion(remaining: number): string {
-  return remaining === 1 ? "Soll ich den letzten auch vorlesen?" : `Soll ich die restlichen ${NUMBER_WORDS[remaining] ?? remaining} vorlesen?`;
+  return remaining === 1 ? "Soll ich die letzte auch vorlesen?" : `Soll ich die restlichen ${NUMBER_WORDS[remaining] ?? remaining} vorlesen?`;
 }
 
 /** Next page of a listing started earlier. */

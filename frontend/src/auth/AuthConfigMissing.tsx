@@ -7,7 +7,7 @@ export function AuthConfigMissing() {
     <Box sx={{ p: 3, maxWidth: 560, mx: "auto" }}>
       <ErrorAlert
         title="Anmeldung nicht eingerichtet"
-        message="Diese Version von Tenner kennt keine Anmeldedaten (VITE_COGNITO_*). Bitte über die Deploy-Pipeline bauen."
+        message="Diese Version der Zentrale kennt keine Anmeldedaten (VITE_COGNITO_*). Bitte über die Deploy-Pipeline bauen."
       />
     </Box>
   );

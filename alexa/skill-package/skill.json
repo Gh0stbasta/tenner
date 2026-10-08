@@ -4,13 +4,13 @@
     "publishingInformation": {
       "locales": {
         "de-DE": {
-          "name": "Tenner",
+          "name": "Zentrale",
           "summary": "Die kleinen Aufgaben im Haushalt im Blick.",
-          "description": "Tenner sagt dir, welche kleinen Haushaltsaufgaben heute fällig sind.",
+          "description": "Die Zentrale sagt dir, welche kleinen Haushaltsaufgaben heute fällig sind.",
           "examplePhrases": [
-            "Alexa, öffne Tenner Board",
-            "Alexa, frag Tenner Board, was heute fällig ist",
-            "Alexa, sag Tenner Board, starte meinen Tag"
+            "Alexa, öffne Familien Zentrale",
+            "Alexa, frag Familien Zentrale, was heute fällig ist",
+            "Alexa, sag Familien Zentrale, starte meinen Tag"
           ],
           "keywords": [
             "Haushalt",

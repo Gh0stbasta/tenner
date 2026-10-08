@@ -82,8 +82,8 @@ export function TennerDefaultsSettings() {
 
   return (
     <SettingsSection
-      title="Standardwerte für neue Tenner"
-      description="Gilt für „Schnell anlegen“ und den Dialog „Neuer Tenner“ – für alle im Haushalt."
+      title="Standardwerte für neue Aufgaben"
+      description="Gilt für „Schnell anlegen“ und den Dialog „Neue Aufgabe“ – für alle im Haushalt."
     >
       {household.isSuccess && household.data.defaultsSource === "DEFAULT" && (
         <LegacyDefaultsOffer

@@ -36,7 +36,7 @@ describe("RecentActivityWidget", () => {
     const rows = within(list).getAllByRole("listitem");
     expect(rows[0]).toHaveTextContent("Haustür putzen");
     expect(rows[0]).toHaveTextContent("Erledigt von Julia · vor 2 Minuten");
-    expect(rows[1]).toHaveTextContent("Gelöschter Tenner");
+    expect(rows[1]).toHaveTextContent("Gelöschte Aufgabe");
     expect(fetchMock.calls()[0]?.key).toBe("GET /history?limit=10");
   });
 

@@ -30,7 +30,7 @@ function renderDetail(handlers: Parameters<typeof mockFetch>[0], route = "/tenne
   const fetchMock = mockFetch(handlers);
   const result = renderWithProviders(
     <Routes>
-      <Route path="/tenners" element={<p>Tenner-Liste</p>} />
+      <Route path="/tenners" element={<p>Aufgabenliste</p>} />
       <Route path="/tenners/:tennerId" element={<TennerDetailPage />} />
     </Routes>,
     { route },
@@ -47,9 +47,9 @@ describe("TennerDetailPage", () => {
   it("shows header, schedule, consistency and history newest first", async () => {
     const { fetchMock } = renderDetail({ "GET /tenners/t-1": ok(TENNER), "GET /tenners/t-1/history": historyHandler });
 
-    expect(screen.getByRole("status", { name: "Tenner wird geladen" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Aufgabe wird geladen" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { level: 1, name: "Büro saugen" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Alle Tenner" })).toHaveAttribute("href", "/tenners");
+    expect(screen.getByRole("link", { name: "Alle Aufgaben" })).toHaveAttribute("href", "/tenners");
     expect(fetchMock.calls()[0]?.key).toBe("GET /tenners/t-1?includeDeleted=true");
 
     const schedule = screen.getByRole("region", { name: "Zeitplan" });
@@ -90,8 +90,8 @@ describe("TennerDetailPage", () => {
 
   it("shows a not-found page for unknown Tenners", async () => {
     renderDetail({ "GET /tenners/t-1": fail(404, "NOT_FOUND") });
-    expect(await screen.findByText("Tenner nicht gefunden")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Zu allen Tennern" })).toHaveAttribute("href", "/tenners");
+    expect(await screen.findByText("Aufgabe nicht gefunden")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Zu allen Aufgaben" })).toHaveAttribute("href", "/tenners");
   });
 
   it("offers retry for network errors in tenner and history", async () => {
@@ -102,7 +102,7 @@ describe("TennerDetailPage", () => {
       "GET /tenners/t-1/history": (request) =>
         ++historyCount === 1 ? fail(503, "SERVICE_UNAVAILABLE") : historyHandler(request),
     });
-    expect(await screen.findByText("Tenner konnte nicht geladen werden")).toBeInTheDocument();
+    expect(await screen.findByText("Aufgabe konnte nicht geladen werden")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Büro saugen" })).toBeInTheDocument();
     expect(await screen.findByText("Verlauf konnte nicht geladen werden")).toBeInTheDocument();
@@ -132,7 +132,7 @@ describe("TennerDetailPage", () => {
   it("opens the edit dialog", async () => {
     renderDetail({ "GET /tenners/t-1": ok(TENNER), "GET /tenners/t-1/history": historyHandler });
     await userEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
-    expect(screen.getByRole("dialog", { name: "Tenner bearbeiten" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Aufgabe bearbeiten" })).toBeInTheDocument();
   });
 
   it("archives after confirmation and returns to the list", async () => {
@@ -143,9 +143,9 @@ describe("TennerDetailPage", () => {
     });
     await userEvent.click(await screen.findByRole("button", { name: "Archivieren" }));
     await userEvent.click(
-      within(screen.getByRole("dialog", { name: "Tenner archivieren?" })).getByRole("button", { name: "Archivieren" }),
+      within(screen.getByRole("dialog", { name: "Aufgabe archivieren?" })).getByRole("button", { name: "Archivieren" }),
     );
-    expect(await screen.findByText("Tenner-Liste")).toBeInTheDocument();
+    expect(await screen.findByText("Aufgabenliste")).toBeInTheDocument();
     expect(fetchMock.calls().some((call) => call.key === "DELETE /tenners/t-1")).toBe(true);
   });
 

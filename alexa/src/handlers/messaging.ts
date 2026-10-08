@@ -58,7 +58,7 @@ export function messageReceivedHandler(fetchImpl: typeof fetch): RequestHandler 
   };
 }
 
-export const ENABLE_REMINDERS_SPEECH = "Damit ich dich an Tenner erinnern kann, brauche ich deine Erlaubnis.";
+export const ENABLE_REMINDERS_SPEECH = "Damit ich dich an deine Aufgaben erinnern kann, brauche ich deine Erlaubnis.";
 
 /** „aktiviere Erinnerungen“ → AskFor permission (voice consent). */
 export const EnableRemindersIntentHandler: RequestHandler = {
@@ -84,7 +84,7 @@ export const PermissionResponseHandler: RequestHandler = {
     const payload = (input.requestEnvelope.request as interfaces.connections.ConnectionsResponse).payload as { status?: string } | undefined;
     const granted = payload?.status === "ACCEPTED";
     return input.responseBuilder
-      .speak(granted ? "Danke. Ab jetzt kann ich dich an deinen Tenner-Tag erinnern." : "Okay, dann erinnere ich dich nicht. Du kannst das in der Alexa-App jederzeit ändern.")
+      .speak(granted ? "Danke. Ab jetzt kann ich dich an deine Aufgaben erinnern." : "Okay, dann erinnere ich dich nicht. Du kannst das in der Alexa-App jederzeit ändern.")
       .withShouldEndSession(true)
       .getResponse();
   },

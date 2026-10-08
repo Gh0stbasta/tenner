@@ -1,7 +1,7 @@
 {
   "manifest": {
     "id": "tenner-status",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "installStateChanges": "INFORM",
     "updateStateChanges": "INFORM",
     "presentationDefinitions": [
@@ -20,10 +20,10 @@
         {
           "targetViewport": "WIDGET_M",
           "metadata": {
-            "name": "Tenner",
-            "description": "Heute fällige Tenner, offene Minuten und Überfälliges auf einen Blick.",
+            "name": "Zentrale",
+            "description": "Heute fällige Aufgaben, offene Minuten und Überfälliges auf einen Blick.",
             "keywords": [
-              "tenner",
+              "zentrale",
               "haushalt",
               "aufgaben"
             ],

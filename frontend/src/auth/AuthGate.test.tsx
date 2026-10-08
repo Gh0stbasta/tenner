@@ -107,7 +107,7 @@ describe("AuthGate", () => {
     });
     setAuth({ isAuthenticated: true, user: { profile: {} } });
     const onLogout = renderGate();
-    expect(await screen.findByRole("heading", { name: "Willkommen bei Tenner" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Willkommen in der Zentrale" })).toBeInTheDocument();
     expect(screen.queryByText(/Geschützt/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Abmelden" }));
     expect(onLogout).toHaveBeenCalledOnce();

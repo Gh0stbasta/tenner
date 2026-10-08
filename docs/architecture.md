@@ -2,7 +2,11 @@
 
 ## Project
 
-**Tenner** is a lightweight serverless web application that helps individuals and families stay on top of recurring responsibilities through small, manageable tasks.
+> **Name (REC-002, 2026-10-08):** the app is called **Zentrale**, the recurring tasks are called **Aufgaben** in the
+> UI, in Alexa („Alexa, öffne Familien Zentrale“) and in notifications. „Tenner“ remains the internal name: repository,
+> code (`tenner`, `tennerId`), AWS resources (`tenner-*`), API routes (`/tenners`) and the older documents.
+
+**Tenner** (in the UI: **Zentrale**) is a lightweight serverless web application that helps individuals and families stay on top of recurring responsibilities through small, manageable tasks.
 
 The idea is simple:
 
@@ -1319,6 +1323,14 @@ index.ts (routing, correlation, error mapping)
 - **Dashboard read model (TICKET-016):** `GET /dashboard` returns due today, overdue, upcoming (next 7 days),
   a summary and actionable workload per user and category in one response. It is backed by one `nextDue-index`
   Query (`nextDue <= reference + 7`, active and not deleted). The reference date is "today" in the household timezone, or the `date` parameter.
+- **Missed occurrences (REC-001, owner decision 2026-10-08):** a Tenner not completed on its due day does not stay
+  overdue. The notifier (every 15 minutes, before its jobs) moves every active, not paused Tenner with
+  `nextDue < today` to its first occurrence on or after today and writes a SKIP history event with `missed: true`
+  and `missedCount` in the same transaction (`skipTenner`, locked on `updatedAt`, so a parallel completion wins).
+  Analytics treat deliberate skips as excused and missed occurrences as not done (`summary.missed`). This replaces
+  the "no scheduler" stance for due dates: the notifier already runs on a schedule, so no new infrastructure is
+  needed, only `UpdateItem`/`PutItem` on the Tenner and history tables. Considered: computing the effective due date
+  at read time in every reader (dashboard, Alexa, notifications, analytics), rejected as duplicated logic.
 - **Time and IDs:** services receive a `Clock` and an `IdGenerator` (`utils/clock.ts`), so tests are deterministic.
   Calendar dates are household-local (see "Date Semantics").
 - **Date semantics (SCHEDULING-008):** `nextDue` is a calendar date (`YYYY-MM-DD`) in the **household timezone**.

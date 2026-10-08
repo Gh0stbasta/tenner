@@ -9,6 +9,7 @@ import type { DeliveryResult, NotificationChannel, NotificationMessage, Recipien
 import type { LwaTokenClient } from "./lwa-client.js";
 import { PROACTIVE_EVENTS_SCOPE, type AlexaApiOutcome, type ProactiveEventsClient } from "./proactive-events.js";
 import { SKILL_MESSAGING_SCOPE, type SkillMessagingClient } from "./skill-messaging.js";
+import { tenners } from "../notifications/text.js";
 
 export interface AlexaChannelDependencies {
   readonly alexaUsers: (tenantId: string) => Promise<readonly string[]>;
@@ -24,8 +25,8 @@ export function reminderText(message: NotificationMessage): string {
   const due = Number(message.facts?.dueToday ?? 0);
   const minutes = Number(message.facts?.minutes ?? 0);
   const overdue = Number(message.facts?.overdue ?? 0);
-  const parts = [`Heute ${due} Tenner, ${minutes} Minuten`, ...(overdue > 0 ? [`${overdue} überfällig`] : [])];
-  return `Tenner: ${parts.join(", ")}. Sag: Alexa, sag Tenner Board, starte meinen Tag, für Details.`;
+  const parts = [`Heute ${tenners(due)}, ${minutes} Minuten`, ...(overdue > 0 ? [`${overdue} überfällig`] : [])];
+  return `Zentrale: ${parts.join(", ")}. Sag: Alexa, sag Familien Zentrale, starte meinen Tag, für Details.`;
 }
 
 export class AlexaChannel implements NotificationChannel {

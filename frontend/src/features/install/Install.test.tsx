@@ -28,8 +28,8 @@ const indexHtml = readFileSync("index.html", "utf8");
 describe("web app manifest", () => {
   it("has the fields browsers require for installation", () => {
     expect(manifest).toMatchObject({
-      name: "Tenner",
-      short_name: "Tenner",
+      name: "Zentrale",
+      short_name: "Zentrale",
       start_url: "/dashboard",
       scope: "/",
       display: "standalone",
@@ -98,7 +98,7 @@ describe("install entry in the settings", () => {
     act(() => {
       window.dispatchEvent(new Event("appinstalled"));
     });
-    expect(screen.getByText("Tenner ist auf diesem Gerät als App installiert.")).toBeInTheDocument();
+    expect(screen.getByText("Die Zentrale ist auf diesem Gerät als App installiert.")).toBeInTheDocument();
   });
 
   it("explains Add to Home Screen on iOS", () => {
@@ -134,12 +134,12 @@ describe("Quick Add shortcut", () => {
   it("focuses the Quick Add input when opened with ?quickAdd=1", async () => {
     mockFetch({ "GET /household": { status: 200, body: { success: true, data: { timezone: "Europe/Berlin" } } } });
     renderWithProviders(<QuickAddTenner />, { route: "/dashboard?quickAdd=1" });
-    expect(await screen.findByRole("textbox", { name: "Was soll ein Tenner werden?" })).toHaveFocus();
+    expect(await screen.findByRole("textbox", { name: "Was soll eine Aufgabe werden?" })).toHaveFocus();
   });
 
   it("does not grab the focus otherwise", async () => {
     mockFetch({});
     renderWithProviders(<QuickAddTenner />, { route: "/dashboard" });
-    expect(await screen.findByRole("textbox", { name: "Was soll ein Tenner werden?" })).not.toHaveFocus();
+    expect(await screen.findByRole("textbox", { name: "Was soll eine Aufgabe werden?" })).not.toHaveFocus();
   });
 });

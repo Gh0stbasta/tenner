@@ -25,28 +25,28 @@ describe("TodayIntent", () => {
     const { skill, api } = setup({ "GET /household/alexa": juliaContext, "GET /dashboard?assignedTo=JULIA": { data: dashboard() } });
     const response = await skill.invoke(intentRequest("TodayIntent", {}, julia));
     expect(dashboardCalls(api.calls)).toEqual([`${API_BASE}/dashboard?assignedTo=JULIA`]);
-    expect(ssml(response)).toBe("<speak>Ein Tenner für dich heute, zusammen 10 Minuten: Büro saugen (10 Minuten).</speak>");
-    expect(response.response.card).toMatchObject({ type: "Simple", title: "Tenner" });
+    expect(ssml(response)).toBe("<speak>Eine Aufgabe für dich heute, zusammen 10 Minuten: Büro saugen (10 Minuten).</speak>");
+    expect(response.response.card).toMatchObject({ type: "Simple", title: "Zentrale" });
   });
 
   it("answers household-wide without a recognized speaker (Today For Unknown Speaker)", async () => {
     const { skill, api } = setup();
     const response = await skill.invoke(intentRequest("TodayIntent"));
     expect(dashboardCalls(api.calls)).toEqual([`${API_BASE}/dashboard`]);
-    expect(ssml(response)).toMatch(/^<speak>Vier Tenner heute/);
+    expect(ssml(response)).toMatch(/^<speak>Vier Aufgaben heute/);
   });
 
   it("filters by a named member („für Julia“)", async () => {
     const { skill, api } = setup({ "GET /dashboard?assignedTo=JULIA": { data: dashboard() } });
     const response = await skill.invoke(intentRequest("TodayIntent", { member: { value: "julia", id: "JULIA" } }));
     expect(dashboardCalls(api.calls)).toEqual([`${API_BASE}/dashboard?assignedTo=JULIA`]);
-    expect(ssml(response)).toMatch(/^<speak>Ein Tenner für Julia heute/);
+    expect(ssml(response)).toMatch(/^<speak>Eine Aufgabe für Julia heute/);
   });
 
   it("treats the speaker's own name as „für dich“", async () => {
     const { skill } = setup({ "GET /household/alexa": juliaContext, "GET /dashboard?assignedTo=JULIA": { data: dashboard() } });
     const response = await skill.invoke(intentRequest("TodayIntent", { member: { value: "Julia" } }, julia));
-    expect(ssml(response)).toMatch(/^<speak>Ein Tenner für dich heute/);
+    expect(ssml(response)).toMatch(/^<speak>Eine Aufgabe für dich heute/);
   });
 
   it("does not call the dashboard for an unknown name", async () => {
@@ -111,7 +111,7 @@ describe("other questions", () => {
   it("OverdueIntent reads the longest overdue first", async () => {
     const { skill } = setup();
     expect(ssml(await skill.invoke(intentRequest("OverdueIntent")))).toBe(
-      "<speak>Zwei Tenner sind überfällig: Haustür putzen (seit 4 Tagen) und Fenster putzen (seit gestern).</speak>",
+      "<speak>Zwei Aufgaben sind überfällig: Haustür putzen (seit 4 Tagen) und Fenster putzen (seit gestern).</speak>",
     );
   });
 

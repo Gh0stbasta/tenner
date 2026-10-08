@@ -23,7 +23,7 @@ function memoryStorage(): CacheStorage & { readonly data: Map<string, string> } 
 const NOW = Date.parse("2026-10-06T12:00:00Z");
 
 function item(n: number, completedAt = "2026-10-06T11:00:00.000Z"): QueuedCompletion {
-  return { tennerId: `t-${n}`, title: `Tenner ${n}`, completedBy: "STEFAN", completedAt, idempotencyKey: `k-${n}` };
+  return { tennerId: `t-${n}`, title: `Aufgaben ${n}`, completedBy: "STEFAN", completedAt, idempotencyKey: `k-${n}` };
 }
 
 function queueWith(...items: QueuedCompletion[]) {
@@ -131,9 +131,9 @@ describe("syncQueue (MOBILE-004)", () => {
     expect(report.synced).toEqual([item(5)]);
     expect(report.remaining).toBe(0);
     expect(report.dropped.map((entry) => entry.message)).toEqual([
-      "Der Tenner wurde inzwischen gelöscht oder archiviert.",
-      "Der Tenner wurde inzwischen gelöscht oder archiviert.",
-      "Der Tenner wurde inzwischen schon erledigt.",
+      "Die Aufgabe wurde inzwischen gelöscht oder archiviert.",
+      "Die Aufgabe wurde inzwischen gelöscht oder archiviert.",
+      "Die Aufgabe wurde inzwischen schon erledigt.",
       "Diese Aktion wurde bereits mit anderen Daten ausgeführt. Bitte lade neu.",
     ]);
   });

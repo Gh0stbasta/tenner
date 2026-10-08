@@ -15,15 +15,15 @@ const brief = (overrides: Partial<Parameters<typeof buildBriefing>[0]> = {}) =>
 describe("buildBriefing", () => {
   it("follows the fixed order for a known speaker (Full Briefing Order)", () => {
     expect(brief().text).toBe(
-      "Guten Morgen, Stefan. Heute stehen drei Tenner an, zusammen etwa 45 Minuten: Auto waschen, Altglas und Spülmaschine ausräumen. " +
-        "Im Haushalt sind heute insgesamt 6 offen; Julia hat 4. Soll ich dir den ersten Tenner nennen?",
+      "Guten Morgen, Stefan. Heute stehen drei Aufgaben an, zusammen etwa 45 Minuten: Auto waschen, Altglas und Spülmaschine ausräumen. " +
+        "Im Haushalt sind heute insgesamt 6 offen; Julia hat 4. Soll ich dir die erste Aufgabe nennen?",
     );
     expect(brief().suggestion?.title).toBe("Altglas");
   });
 
   it("is household-wide without a speaker, e.g. from a routine (Known vs Unknown Speaker)", () => {
     const text = brief({ speaker: undefined }).text;
-    expect(text).toMatch(/^Guten Morgen\. Heute stehen vier Tenner an, zusammen etwa 55 Minuten: Auto waschen, Altglas, Pflanzen gießen und ein weiterer\./);
+    expect(text).toMatch(/^Guten Morgen\. Heute stehen vier Aufgaben an, zusammen etwa 55 Minuten: Auto waschen, Altglas, Pflanzen gießen und eine weitere\./);
     expect(text).toContain("Zwei sind überfällig, am längsten Haustür putzen seit 4 Tagen.");
     expect(text).toContain("Im Haushalt sind heute insgesamt 6 offen; Stefan hat 3 und Julia hat 4.");
     expect(brief({ speaker: undefined }).suggestion?.title).toBe("Haustür putzen");
@@ -31,7 +31,7 @@ describe("buildBriefing", () => {
 
   it("names a single overdue Tenner", () => {
     const one = dashboard({ overdue: [dashboardTenner({ title: "Fenster putzen", overdueDays: 5 })] }) as BriefingDashboard;
-    expect(brief({ dashboard: one }).text).toContain("Ein Tenner ist überfällig: Fenster putzen, seit 5 Tagen.");
+    expect(brief({ dashboard: one }).text).toContain("Eine Aufgabe ist überfällig: Fenster putzen, seit 5 Tagen.");
   });
 
   it("handles an empty day without a closing question (Empty Day)", () => {
@@ -92,7 +92,7 @@ describe("BriefingIntent", () => {
   it("speaks the briefing with one household-wide dashboard call and offers the first Tenner", async () => {
     const { skill, api } = setup();
     const response = await skill.invoke(intentRequest("BriefingIntent", {}, { person: { personId: PERSON_ID } }));
-    expect(ssml(response)).toMatch(/^<speak>Guten Morgen, Stefan\. Heute stehen drei Tenner an/);
+    expect(ssml(response)).toMatch(/^<speak>Guten Morgen, Stefan\. Heute stehen drei Aufgaben an/);
     expect(api.calls.filter(([url]) => url.includes("/dashboard")).map(([url]) => url)).toEqual([`${API_BASE}/dashboard`]);
     expect(response.response.shouldEndSession).toBe(false);
 

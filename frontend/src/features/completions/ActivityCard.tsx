@@ -13,7 +13,7 @@ export function ActivityCard({ item, now }: { readonly item: HistoryItem; readon
         <CheckCircleOutlineOutlinedIcon aria-hidden />
       </ListItemIcon>
       <ListItemText
-        primary={item.tennerTitle ?? "Gelöschter Tenner"}
+        primary={item.tennerTitle ?? "Gelöschte Aufgabe"}
         secondary={
           <>
             Erledigt von {memberName(item.completedBy)} ·{" "}

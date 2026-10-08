@@ -31,7 +31,7 @@ function summary(tenners: readonly Tenner[], today: string): string {
   const active = tenners.filter((t) => t.active && t.deletedAt === null);
   const overdue = active.filter((t) => t.nextDue < today).length;
   const minutes = active.reduce((sum, t) => sum + t.estimatedMinutes, 0);
-  return `${active.length} aktive Tenner · ${overdue} überfällig · ${formatMinutes(minutes)} geschätzt`;
+  return `${active.length} ${active.length === 1 ? "aktive Aufgabe" : "aktive Aufgaben"} · ${overdue} überfällig · ${formatMinutes(minutes)} geschätzt`;
 }
 
 export function TennersPage() {
@@ -69,11 +69,11 @@ export function TennersPage() {
   return (
     <>
       <PageHeader
-        title="Tenner"
+        title="Aufgaben"
         subtitle={tenners.data ? summary(tenners.data, today) : undefined}
         actions={
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
-            Neuer Tenner
+            Neue Aufgabe
           </Button>
         }
       />
@@ -90,17 +90,17 @@ export function TennersPage() {
       )}
 
       {tenners.isPending ? (
-        <SkeletonList count={4} label="Tenner werden geladen" />
+        <SkeletonList count={4} label="Aufgaben werden geladen" />
       ) : tenners.isError ? (
         <ErrorAlert
-          title="Tenner konnten nicht geladen werden"
+          title="Aufgaben konnten nicht geladen werden"
           message={errorMessage(tenners.error)}
           onRetry={() => void tenners.refetch()}
         />
       ) : visible.length === 0 ? (
         <NoTennersFound />
       ) : (
-        <Grid container spacing={2} component="ul" sx={{ p: 0, m: 0 }} aria-label="Tenner-Liste">
+        <Grid container spacing={2} component="ul" sx={{ p: 0, m: 0 }} aria-label="Aufgabenliste">
           {visible.map((tenner) => (
             <Grid
               key={tenner.tennerId}

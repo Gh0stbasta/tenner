@@ -42,7 +42,7 @@ describe("MealCatalogSettings (FOOD-003)", () => {
     renderWithProviders(<MealCatalogSettings />);
     await userEvent.click(section().getByRole("button", { name: "Katalog prüfen" }));
     expect(
-      await section().findByText("Tenner ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal."),
+      await section().findByText("Die Zentrale ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal."),
     ).toBeInTheDocument();
   });
 });

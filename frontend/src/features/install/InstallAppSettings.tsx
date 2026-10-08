@@ -10,8 +10,8 @@ export function InstallAppSettings() {
   const status = useInstallStatus();
   if (status === "unsupported") return null;
   return (
-    <SettingsSection title="App" description="Tenner auf dem Startbildschirm, ohne Browserleiste.">
-      {status === "installed" && <Alert severity="success">Tenner ist auf diesem Gerät als App installiert.</Alert>}
+    <SettingsSection title="App" description="Die Zentrale auf dem Startbildschirm, ohne Browserleiste.">
+      {status === "installed" && <Alert severity="success">Die Zentrale ist auf diesem Gerät als App installiert.</Alert>}
       {status === "available" && (
         <Button variant="contained" startIcon={<GetAppOutlinedIcon />} onClick={() => void promptInstall()}>
           App installieren

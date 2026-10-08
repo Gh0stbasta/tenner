@@ -150,7 +150,7 @@ cd frontend && npm run lint && npm run build && npm test
 - **Range:** default „Ab heute“ (meals from today on); „Ganze Woche“ switches it with a refresh. Optional ingredients
   are always left out (no „chosen“ state yet); cooked and skipped meals too.
 - **Navigation:** the bottom navigation already has five entries; the list lives at `/essen/einkaufsliste` with a
-  button on the plan page („Essen“ stays highlighted).
+  button on the plan page („Essen“ stays highlighted). Changed by FOOD-027: own entry, address `/einkaufsliste`.
 - **Offline queue:** in localStorage (`tenner.shoppingQueue`), sent when online; dropped on logout without a question
   (a lost tick is harmless, unlike a lost completion in MOBILE-004).
 - **Remove:** the page offers it for own items; planned items are ticked off (a removed planned item would come back

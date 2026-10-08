@@ -28,7 +28,7 @@ export function AlexaSettings() {
   return (
     <SettingsSection
       title="Alexa"
-      description="Stimmen, die der Tenner-Skill auf euren Echo-Geräten erkennt. Eine Zuordnung entsteht, wenn jemand auf „Wer spricht gerade?“ antwortet."
+      description="Stimmen, die der Alexa-Skill auf euren Echo-Geräten erkennt. Eine Zuordnung entsteht, wenn jemand auf „Wer spricht gerade?“ antwortet."
     >
       {alexa.isError && (
         <Alert severity="error">Alexa-Zuordnungen konnten nicht geladen werden. {errorMessage(alexa.error)}</Alert>

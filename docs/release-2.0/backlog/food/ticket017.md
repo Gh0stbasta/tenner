@@ -20,14 +20,14 @@ High
 
 ## Goal
 
-Anyone in the kitchen asks „Alexa, frag Tenner Board, was es heute gibt“ and hears today's lunch and dinner; the
+Anyone in the kitchen asks „Alexa, frag Familien Zentrale, was es heute gibt“ and hears today's lunch and dinner; the
 daily briefing and the Echo Show dashboard include the meals.
 
 ---
 
 # Background
 
-Owner breakdown FOOD-017. The private German skill „Tenner Board“ (ALEXA-001 – 010) calls the Tenner API with the
+Owner breakdown FOOD-017. The private German skill „Familien Zentrale“ (ALEXA-001 – 010) calls the Tenner API with the
 linked user's token; it never reads DynamoDB.
 
 ---
@@ -128,7 +128,7 @@ scripts/check_alexa_simulation.py   (deploy health check, extended with one meal
 
 # Assumptions
 
-- The skill invocation stays „Tenner Board“; a one-shot phrase („Alexa, frag Tenner Board, …“) is the supported
+- The skill invocation stays „Familien Zentrale“; a one-shot phrase („Alexa, frag Familien Zentrale, …“) is the supported
   form. „Alexa, was gibt es heute?“ without the invocation name would need a name-free intent, which private skills
   do not get.
 

@@ -16,7 +16,8 @@ const summary = {
   totalActualMinutes: 2380,
   activeTenners: 42,
   distinctTennersCompleted: 37,
-  overdueNow: 4,
+  overdueNow: 0,
+  missed: 6,
   onTimeRate: 0.86,
   onTimeSamples: 120,
 };
@@ -136,6 +137,7 @@ describe("AnalyticsPage", () => {
     expect(await kpis.findByText("214")).toBeInTheDocument();
     expect(kpis.getByText("86 %")).toBeInTheDocument();
     expect(kpis.getByText("aus 120 Erledigungen")).toBeInTheDocument();
+    expect(kpis.getByText("Nicht erledigt").parentElement).toHaveTextContent("6am Tag verpasst");
 
     const trend = await section("Verlauf");
     expect(
@@ -153,7 +155,7 @@ describe("AnalyticsPage", () => {
     expect(within(share.getByRole("list", { name: "Legende" })).getAllByRole("listitem")).toHaveLength(2);
     expect(share.getByText("Ausgewogenheit: 92 % (100 % = alle gleich viel)")).toBeInTheDocument();
 
-    const neglect = await section("Vernachlässigte Tenner");
+    const neglect = await section("Vernachlässigte Aufgaben");
     expect(await neglect.findByRole("link", { name: "Fensterbänke putzen" })).toHaveAttribute("href", "/tenners/t-12");
     expect(neglect.getByText("2 / 6")).toBeInTheDocument();
 

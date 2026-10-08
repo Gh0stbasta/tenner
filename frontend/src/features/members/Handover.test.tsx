@@ -38,8 +38,8 @@ function setup(routes: Parameters<typeof mockFetch>[0] = {}) {
 const members = async () => within(await screen.findByRole("list", { name: "Mitglieder" }));
 
 async function openDialog() {
-  await userEvent.click(await (await members()).findByRole("button", { name: "Tenner von Stefan übergeben" }));
-  return within(await screen.findByRole("dialog", { name: "Tenner von Stefan übergeben" }));
+  await userEvent.click(await (await members()).findByRole("button", { name: "Aufgaben von Stefan übergeben" }));
+  return within(await screen.findByRole("dialog", { name: "Aufgaben von Stefan übergeben" }));
 }
 
 describe("handover dialog", () => {
@@ -51,14 +51,14 @@ describe("handover dialog", () => {
       ),
     });
     const dialog = await openDialog();
-    expect(await dialog.findByRole("status")).toHaveTextContent("3 Tenner gehen an Julia.");
+    expect(await dialog.findByRole("status")).toHaveTextContent("3 Aufgaben gehen an Julia.");
     await userEvent.click(dialog.getByRole("combobox", { name: "Übernimmt" }));
     await userEvent.click(await screen.findByRole("option", { name: "Lena" }));
     expect(dialog.getByRole("button", { name: "Übergeben" })).toBeDisabled();
     await userEvent.type(dialog.getByLabelText("Bis einschließlich"), UNTIL);
-    expect(dialog.getByRole("status")).toHaveTextContent(/^3 Tenner gehen bis .+ an Lena\.$/);
+    expect(dialog.getByRole("status")).toHaveTextContent(/^3 Aufgaben gehen bis .+ an Lena\.$/);
     await userEvent.click(dialog.getByRole("button", { name: "Übergeben" }));
-    expect(await screen.findByText("3 Tenner an Lena übergeben.")).toBeInTheDocument();
+    expect(await screen.findByText("3 Aufgaben an Lena übergeben.")).toBeInTheDocument();
     expect(fetchMock.calls().find((call) => call.key === "POST /users/STEFAN/handover")?.body).toEqual({
       to: "LENA",
       until: UNTIL,
@@ -74,12 +74,12 @@ describe("handover dialog", () => {
       ),
     });
     const dialog = await openDialog();
-    await dialog.findByText("3 Tenner gehen an Julia.");
+    await dialog.findByText("3 Aufgaben gehen an Julia.");
     await userEvent.click(dialog.getByRole("button", { name: "Haus & Garten" }));
-    expect(dialog.getByRole("status")).toHaveTextContent("2 Tenner gehen an Julia.");
+    expect(dialog.getByRole("status")).toHaveTextContent("2 Aufgaben gehen an Julia.");
     await userEvent.type(dialog.getByLabelText("Bis einschließlich"), UNTIL);
     await userEvent.click(dialog.getByRole("button", { name: "Übergeben" }));
-    await screen.findByText("2 Tenner an Julia übergeben.");
+    await screen.findByText("2 Aufgaben an Julia übergeben.");
     expect(fetchMock.calls().find((call) => call.key === "POST /users/STEFAN/handover")?.body).toEqual({
       to: "JULIA",
       until: UNTIL,
@@ -125,9 +125,9 @@ describe("running handovers", () => {
     });
     const list = await members();
     expect(await list.findByText(/^STEFAN · Vertreten von Julia bis /)).toBeInTheDocument();
-    expect(list.queryByRole("button", { name: "Tenner von Stefan übergeben" })).not.toBeInTheDocument();
+    expect(list.queryByRole("button", { name: "Aufgaben von Stefan übergeben" })).not.toBeInTheDocument();
     await userEvent.click(list.getByRole("button", { name: "Vertretung für Stefan beenden" }));
-    expect(await screen.findByText("Vertretung beendet. 2 Tenner zurück an Stefan.")).toBeInTheDocument();
+    expect(await screen.findByText("Vertretung beendet. 2 Aufgaben zurück an Stefan.")).toBeInTheDocument();
     expect(fetchMock.calls().some((call) => call.key === "DELETE /users/STEFAN/handover")).toBe(true);
   });
 

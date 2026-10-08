@@ -40,7 +40,7 @@ describe("SettingsPage", () => {
       "Persönlich",
       "Dashboard",
       "Haushalt",
-      "Standardwerte für neue Tenner",
+      "Standardwerte für neue Aufgaben",
       "Haushaltsmitglieder",
       "Kategorien",
       "Alexa",
@@ -63,7 +63,7 @@ describe("SettingsPage", () => {
 
   it("keeps the default assignee on this device (personal)", async () => {
     renderWithProviders(<SettingsPage />);
-    await choose("Zuständig für neue Tenner", "Julia");
+    await choose("Zuständig für neue Aufgaben", "Julia");
     expect(loadPreferences().defaultAssignedTo).toBe("JULIA");
   });
 
@@ -191,7 +191,7 @@ describe("SettingsPage", () => {
 
   it("dashboard preference change", async () => {
     renderWithProviders(<SettingsPage />);
-    const upcoming = screen.getByRole("switch", { name: "Demnächst fällige Tenner" });
+    const upcoming = screen.getByRole("switch", { name: "Demnächst fällige Aufgaben" });
     expect(upcoming).toBeChecked();
     await userEvent.click(upcoming);
     expect(upcoming).not.toBeChecked();
@@ -269,7 +269,7 @@ describe("SettingsPage", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "Auf Standardwerte zurücksetzen" }));
     await userEvent.click(await screen.findByRole("button", { name: "Abbrechen" }));
-    expect(await screen.findByRole("switch", { name: "Demnächst fällige Tenner" })).not.toBeChecked();
+    expect(await screen.findByRole("switch", { name: "Demnächst fällige Aufgaben" })).not.toBeChecked();
 
     await userEvent.click(screen.getByRole("button", { name: "Auf Standardwerte zurücksetzen" }));
     expect(
@@ -277,9 +277,9 @@ describe("SettingsPage", () => {
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Zurücksetzen" }));
     await waitFor(async () =>
-      expect(await screen.findByRole("switch", { name: "Demnächst fällige Tenner" })).toBeChecked(),
+      expect(await screen.findByRole("switch", { name: "Demnächst fällige Aufgaben" })).toBeChecked(),
     );
-    expect(screen.getByRole("combobox", { name: "Zuständig für neue Tenner" })).toHaveTextContent("Ich selbst");
+    expect(screen.getByRole("combobox", { name: "Zuständig für neue Aufgaben" })).toHaveTextContent("Ich selbst");
     expect(loadPreferences()).toEqual(DEFAULT_PREFERENCES);
     // Two dialogs on the full settings page (incl. the meal sections) take ~3.5 s alone, more in the full run.
   }, 15_000);

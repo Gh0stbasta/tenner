@@ -2,12 +2,12 @@
  * Pure analytics aggregations (ANALYTICS-001 ff.): no I/O, no clock. Metric definitions: docs/analytics.md.
  */
 
-import { SHARED_ASSIGNEE, type Category, type HouseholdCategory, type HouseholdMember, type Tenner, type UserId, type Vacation, type WeekStart } from "../models/index.js";
+import { SHARED_ASSIGNEE, type Category, type HouseholdCategory, type HouseholdMember, type SkipEvent, type Tenner, type UserId, type Vacation, type WeekStart } from "../models/index.js";
 import { addDays } from "../utils/clock.js";
 import { addMonths } from "../utils/schedule.js";
 import { isPaused } from "../utils/pause.js";
 import type { AnalyticsCompletion } from "./historyLoader.js";
-import { startOfMonth, startOfWeek, type Period } from "./period.js";
+import { inPeriod, startOfMonth, startOfWeek, type Period } from "./period.js";
 
 /** Facts every aggregation may need besides the data. */
 export interface AnalyticsContext {
@@ -23,6 +23,8 @@ export interface SummaryMetrics {
   readonly activeTenners: number;
   readonly distinctTennersCompleted: number;
   readonly overdueNow: number;
+  /** REC-001: occurrences in the period nobody completed on their day (the notifier moved them on). */
+  readonly missed: number;
   /** Share of completions on or before their due date; null without completions that recorded the due date. */
   readonly onTimeRate: number | null;
   /** Completions the on-time rate is based on. */
@@ -44,7 +46,7 @@ export function ratio(numerator: number, denominator: number): number | null {
 }
 
 /** GET /analytics/summary. `completions` are already limited to the period. */
-export function summarize(completions: readonly AnalyticsCompletion[], tenners: readonly Tenner[], period: Period, context: AnalyticsContext): SummaryMetrics {
+export function summarize(completions: readonly AnalyticsCompletion[], tenners: readonly Tenner[], period: Period, context: AnalyticsContext, skips: readonly SkipEvent[] = []): SummaryMetrics {
   const timed = completions.filter((completion) => completion.previousNextDue !== undefined);
   const onTime = timed.filter((completion) => completion.date <= (completion.previousNextDue ?? "")).length;
   return {
@@ -54,6 +56,7 @@ export function summarize(completions: readonly AnalyticsCompletion[], tenners: 
     activeTenners: tenners.filter(isActiveTenner).length,
     distinctTennersCompleted: new Set(completions.map((completion) => completion.tennerId)).size,
     overdueNow: tenners.filter((tenner) => isOverdue(tenner, context)).length,
+    missed: skips.filter((skip) => skip.missed && inPeriod(skip.skippedDue, period)).reduce((sum, skip) => sum + (skip.missedCount ?? 1), 0),
     onTimeRate: ratio(onTime, timed.length),
     onTimeSamples: timed.length,
   };

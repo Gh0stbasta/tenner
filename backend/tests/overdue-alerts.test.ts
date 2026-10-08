@@ -69,14 +69,14 @@ describe("overdue alerts", () => {
     expect(below.alerts()).toEqual([]);
     const reached = setup(() => [overdue("Fenster", 2)]);
     await reached.run(AT_1800(6));
-    expect(reached.alerts()).toEqual(["Überfällig: 1 Tenner"]);
+    expect(reached.alerts()).toEqual(["Überfällig: 1 Aufgabe"]);
     expect(reached.dashboard).toHaveBeenCalledWith("default", { assignedTo: "STEFAN" });
   });
 
   it("bundles several Tenners into one message per day (Bundling Multiple Tenners)", async () => {
     const { run, alerts } = setup(() => [overdue("Fenster", 3), overdue("Altglas", 5)]);
     await run(AT_1800(6));
-    expect(alerts()).toEqual(["Überfällig: 2 Tenner"]);
+    expect(alerts()).toEqual(["Überfällig: 2 Aufgaben"]);
   });
 
   it("alerts a Tenner only once per cycle (Once Per Cycle)", async () => {
@@ -85,7 +85,7 @@ describe("overdue alerts", () => {
     await run(AT_1800(6));
     days = 4;
     await run(AT_1800(7));
-    expect(alerts()).toEqual(["Überfällig: 1 Tenner"]);
+    expect(alerts()).toEqual(["Überfällig: 1 Aufgabe"]);
     expect(records.has(cycleKey(RECIPIENT, { tennerId: "Fenster", nextDue: "2026-10-01" }))).toBe(true);
   });
 
@@ -97,7 +97,7 @@ describe("overdue alerts", () => {
     await run(AT_1800(17));
     days = 20;
     await run(AT_1800(23));
-    expect(alerts()).toEqual(["Überfällig: 1 Tenner", "Überfällig: 1 Tenner"]);
+    expect(alerts()).toEqual(["Überfällig: 1 Aufgabe", "Überfällig: 1 Aufgabe"]);
   });
 
   it("starts a new cycle after completion (Completion Resets Cycle)", async () => {
@@ -125,9 +125,9 @@ describe("overdue alerts", () => {
 
   it("renders the bundle with days, reminder label and link", () => {
     const message = renderAlert([{ tenner: overdue("Fenster", 1), escalation: false }, { tenner: overdue("Altglas", 14), escalation: true }], RECIPIENT, "https://tenner.example");
-    expect(message.textBody).toBe(["Stefan, 2 Tenner sind überfällig:", "• Fenster — 1 Tag", "• Altglas — 14 Tage (Erinnerung)", "", "Tenner öffnen → https://tenner.example"].join("\n"));
+    expect(message.textBody).toBe(["Stefan, 2 Aufgaben sind überfällig:", "• Fenster — 1 Tag", "• Altglas — 14 Tage (Erinnerung)", "", "Zentrale öffnen → https://tenner.example"].join("\n"));
     expect(message.facts).toEqual({ overdue: 2, oldestDays: 14 });
-    expect(renderAlert([{ tenner: overdue("Fenster", 3), escalation: false }], RECIPIENT, undefined).textBody).toBe("Stefan, ein Tenner ist überfällig:\n• Fenster — 3 Tage");
+    expect(renderAlert([{ tenner: overdue("Fenster", 3), escalation: false }], RECIPIENT, undefined).textBody).toBe("Stefan, eine Aufgabe ist überfällig:\n• Fenster — 3 Tage");
   });
 });
 

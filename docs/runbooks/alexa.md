@@ -38,7 +38,7 @@ days: start a new beta test in the developer console (Distribution → Beta Test
    `WidgetPushFailed` (status) / `WidgetUpdateFailed`. Meal widget (FOOD-018): `MealWidgetFailed` means the meal
    plan could not be read; the status widget is still pushed, the meal widget keeps its last data.
 2. `secret unavailable` → set `/tenner/prod/alexa/lwa-client-id` and `…/lwa-client-secret` (README → "Secrets").
-3. `targets: 0` → no Alexa account registered yet: open the skill once („Alexa, öffne Tenner Board“).
+3. `targets: 0` → no Alexa account registered yet: open the skill once („Alexa, öffne Familien Zentrale“).
 4. Status 401/403 → wrong LWA client or missing Data Store permission in the console; 404/410 → the account was
    removed as target (skill disabled), open the skill again.
 5. Remove and re-add the widget on the Echo Show. Request shapes are unverified until the spike (TD-036).
@@ -47,7 +47,7 @@ days: start a new beta test in the developer console (Distribution → Beta Test
 
 1. Web app → Benachrichtigungen: Alexa chosen for the type, not inside quiet hours; digest at its time, overdue
    alerts at the evening time (default 18:00).
-2. Alexa app → Tenner → Berechtigungen: Erinnerungen allowed, Benachrichtigungen on (or „Alexa, sag Tenner Board,
+2. Alexa app → Tenner → Berechtigungen: Erinnerungen allowed, Benachrichtigungen on (or „Alexa, sag Familien Zentrale,
    aktiviere Erinnerungen“).
 3. Notifier logs `NotificationDelivery` with `channel ALEXA`: `ALEXA_HTTP_403` = permission or schema rejected;
    skill logs `reminder_permission_missing` for reminders.
@@ -68,10 +68,10 @@ days: start a new beta test in the developer console (Distribution → Beta Test
 
 ## Deploy warning "Alexa health check skipped"
 
-The post-deploy health check simulates „öffne tenner board“ through Amazon's SMAPI simulator. That service sometimes
+The post-deploy health check simulates „öffne familien zentrale“ through Amazon's SMAPI simulator. That service sometimes
 fails before it reaches the skill (`simulation status 'FAILED': An unexpected error occurred.`), even though the
 skill works on devices and in the console. The check retries three times. If the simulator never answers, the deploy
-stays green with this warning (HOTFIX-006). Check by hand: developer console → Test → `öffne tenner board`, or ask
+stays green with this warning (HOTFIX-006). Check by hand: developer console → Test → `öffne familien zentrale`, or ask
 an Echo. A wrong answer or a skill error still fails the deploy.
 
 ## Alexa+ behaves differently than classic Alexa

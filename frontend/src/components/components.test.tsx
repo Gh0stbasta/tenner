@@ -44,7 +44,7 @@ describe("EmptyState", () => {
         <NoAnalyticsAvailable />
       </>,
     );
-    expect(screen.getByText("Keine Tenner gefunden")).toBeInTheDocument();
+    expect(screen.getByText("Keine Aufgaben gefunden")).toBeInTheDocument();
     expect(screen.getByText("🎉 Alles erledigt.")).toBeInTheDocument();
     expect(screen.getByText("Noch keine Auswertung")).toBeInTheDocument();
   });
@@ -56,19 +56,19 @@ describe("Loading components", () => {
       <>
         <PageLoading />
         <SectionLoading />
-        <SkeletonList count={2} label="Tenner werden geladen" />
+        <SkeletonList count={2} label="Aufgaben werden geladen" />
       </>,
     );
     expect(screen.getByRole("status", { name: "Seite wird geladen" })).toHaveAttribute("aria-busy", "true");
     expect(screen.getByRole("status", { name: "Bereich wird geladen" })).toBeInTheDocument();
-    expect(screen.getByRole("status", { name: "Tenner werden geladen" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Aufgaben werden geladen" })).toBeInTheDocument();
   });
 });
 
 describe("PageHeader", () => {
   it("renders a level-1 heading, subtitle and actions", () => {
-    renderWithProviders(<PageHeader title="Tenner" subtitle="3 aktiv" actions={<button>Neu</button>} />);
-    expect(screen.getByRole("heading", { level: 1, name: "Tenner" })).toBeInTheDocument();
+    renderWithProviders(<PageHeader title="Aufgaben" subtitle="3 aktiv" actions={<button>Neu</button>} />);
+    expect(screen.getByRole("heading", { level: 1, name: "Aufgaben" })).toBeInTheDocument();
     expect(screen.getByText("3 aktiv")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Neu" })).toBeInTheDocument();
   });

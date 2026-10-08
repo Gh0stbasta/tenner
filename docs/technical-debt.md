@@ -1163,3 +1163,56 @@ Keep changes small and roll back with a revert commit. If changes become riskier
 ### Related Work
 
 BACKLOG-003, TICKET-021 (removed), TD-011, TD-015, `.github/workflows/deploy.yml`.
+
+## TD-041: Overdue features remain although Tenners no longer stay overdue
+
+### Description
+
+Since REC-001 the notifier moves Tenners not completed on their day. The dashboard section „Überfällig“, the overdue
+alerts (NOTIFICATION-004, with their setting), the Alexa question „was ist überfällig“ and the widget's overdue line
+are still there, but are normally empty. They only show something between midnight and the next notifier run, or
+when the move fails.
+
+### Reason
+
+REC-001 was kept small: the move changes the data, and all readers keep working unchanged.
+
+### Impact
+
+Settings and voice answers that are now rarely useful; slightly confusing for the household. No cost or security
+impact.
+
+### Suggested Improvement
+
+A maintenance ticket that removes the overdue sections, alerts and intent, or renames them to „Gestern verpasst“
+based on the missed history events.
+
+### Related Work
+
+REC-001, NOTIFICATION-004, ALEXA-003, `backend/src/services/missed-tenner.service.ts`.
+
+## TD-042: Internal name „Tenner“ differs from the product name „Zentrale“
+
+### Description
+
+Since REC-002 the household sees „Zentrale“ and „Aufgaben“. The repository, code identifiers, AWS resources
+(`tenner-*`), API routes (`/tenners`), the Alexa widget package IDs and most documents still say „Tenner“.
+
+### Reason
+
+Renaming the AWS resources would recreate the DynamoDB tables (data loss) and change the domain and sign-in
+configuration. Renaming the package IDs would orphan installed widgets. Renaming every identifier would be a large
+change with no benefit for the household.
+
+### Impact
+
+New contributors need the naming note in README and architecture. There is no runtime, cost or security impact.
+
+### Suggested Improvement
+
+Keep the internal name. If a full rename is ever wanted, do it as a planned migration ticket: new tables with data
+copy, a new Cognito domain prefix and a new skill package.
+
+### Related Work
+
+REC-002, README.md, docs/architecture.md.

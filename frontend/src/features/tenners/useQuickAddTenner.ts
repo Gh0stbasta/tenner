@@ -49,7 +49,7 @@ export function useQuickAddTenner() {
           setTitle("");
           notify({ message: `✅ „${created.title}“ angelegt.` });
         },
-        onError: (failure) => setError(`Tenner konnte nicht angelegt werden. ${errorMessage(failure)}`),
+        onError: (failure) => setError(`Aufgabe konnte nicht angelegt werden. ${errorMessage(failure)}`),
       },
     );
   };

@@ -4,7 +4,7 @@
  */
 
 import type { AnalyticsPeriodRequest, AnalyticsSummaryResponse, AnalyticsTrendsRequest, AnalyticsTrendsResponse, AnalyticsUsersResponse, AnalyticsCategoriesResponse, AnalyticsNeglectedRequest, AnalyticsNeglectedResponse, AnalyticsBalanceResponse, AnalyticsHabitResponse, AnalyticsHabitsResponse, AnalyticsTimeResponse, HouseholdResponse } from "../dto/index.js";
-import { SEED_CATEGORIES, SEED_MEMBERS, type HouseholdCategory, type HouseholdMember, type Tenner } from "../models/index.js";
+import { SEED_CATEGORIES, SEED_MEMBERS, type HouseholdCategory, type HouseholdMember, type SkipEvent, type Tenner } from "../models/index.js";
 import type { CompletionRepository, TennerRepository } from "../repositories/index.js";
 import { addDays, type Clock } from "../utils/clock.js";
 import { NotFoundError } from "../exceptions/index.js";
@@ -14,6 +14,9 @@ import { loadCompletions } from "./historyLoader.js";
 import { habitDetail, habits, STREAK_WINDOW_DAYS, type HabitInput } from "./habits.js";
 import { DEFAULT_NEGLECTED_LIMIT, neglectedTenners } from "./neglect.js";
 import { inPeriod, previousPeriod, resolvePeriod, type Period, type PeriodShortcut } from "./period.js";
+
+/** Deliberate skips excuse an occurrence; missed occurrences (REC-001) count as not done. */
+const excused = (skips: readonly SkipEvent[]): SkipEvent[] => skips.filter((skip) => !skip.missed);
 
 /** Effective household settings (timezone, week start, vacation). */
 export type HouseholdSettingsSource = (tenantId: string) => Promise<HouseholdResponse>;
@@ -36,11 +39,12 @@ export class AnalyticsService {
 
   async summary(tenantId: string, request: AnalyticsPeriodRequest): Promise<AnalyticsSummaryResponse> {
     const { settings, period, context } = await this.scope(tenantId, request);
-    const [completions, tenners] = await Promise.all([
+    const [completions, tenners, skips] = await Promise.all([
       loadCompletions(this.completions, tenantId, period, settings.timezone),
       this.tenners.list(tenantId),
+      this.completions.listSkips(tenantId, period.from, period.to),
     ]);
-    return summarize(completions, tenners, period, context);
+    return summarize(completions, tenners, period, context, skips);
   }
 
   /** Buckets for the period and the comparison with the previous one; one history query covers both. */
@@ -94,7 +98,7 @@ export class AnalyticsService {
     ]);
     return {
       period: { from: period.from, to: period.to },
-      items: neglectedTenners(completions, skips, tenners, period, context, settings.timezone, request.limit ?? DEFAULT_NEGLECTED_LIMIT),
+      items: neglectedTenners(completions, excused(skips), tenners, period, context, settings.timezone, request.limit ?? DEFAULT_NEGLECTED_LIMIT),
     };
   }
 
@@ -139,7 +143,7 @@ export class AnalyticsService {
       loadCompletions(this.completions, tenantId, { from: previous.from < streakStart ? previous.from : streakStart, to: context.today }, settings.timezone),
       this.completions.listSkips(tenantId, previous.from, period.to),
     ]);
-    return { completions, skips, period, previousPeriod: previous, context, timezone: settings.timezone };
+    return { completions, skips: excused(skips), period, previousPeriod: previous, context, timezone: settings.timezone };
   }
 
   /** Settings, today and the resolved period (400 for invalid periods). */

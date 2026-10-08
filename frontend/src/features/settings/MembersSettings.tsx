@@ -21,6 +21,7 @@ import { DeactivateMemberDialog } from "../members/DeactivateMemberDialog";
 import { HandoverDialog } from "../members/HandoverDialog";
 import { ColorSwatch, MemberDialog } from "../members/MemberDialog";
 import { SettingsSection } from "./SettingsSection";
+import { formatTennerCount } from "../../utils/format";
 
 export function MembersSettings() {
   const members = useMembers();
@@ -48,7 +49,7 @@ export function MembersSettings() {
   const end = (member: Member) =>
     endHandover.mutate(member.userId, {
       onSuccess: (result) =>
-        notify({ message: `Vertretung beendet. ${result.returned} Tenner zurück an ${member.displayName}.` }),
+        notify({ message: `Vertretung beendet. ${formatTennerCount(result.returned)} zurück an ${member.displayName}.` }),
       onError: (error) =>
         notify({ message: `Vertretung beenden fehlgeschlagen. ${errorMessage(error)}`, severity: "error" }),
     });
@@ -81,7 +82,7 @@ export function MembersSettings() {
                 ) : (
                   activeCount > 1 && (
                     <IconButton
-                      aria-label={`Tenner von ${member.displayName} übergeben`}
+                      aria-label={`Aufgaben von ${member.displayName} übergeben`}
                       onClick={() => setHandingOver(member)}
                     >
                       <SwapHorizOutlinedIcon />

@@ -13,7 +13,7 @@ export function ConfirmArchiveDialog({ tenner, busy = false, onConfirm, onCancel
   return (
     <ConfirmDialog
       open={tenner !== null}
-      title="Tenner archivieren?"
+      title="Aufgabe archivieren?"
       message={
         tenner
           ? `„${tenner.title}“ wird archiviert und erscheint nicht mehr im Dashboard. Du kannst ihn später wiederherstellen.`

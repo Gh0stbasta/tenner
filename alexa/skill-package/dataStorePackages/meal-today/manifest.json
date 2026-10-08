@@ -1,7 +1,7 @@
 {
   "manifest": {
     "id": "meal-today",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "installStateChanges": "INFORM",
     "updateStateChanges": "INFORM",
     "presentationDefinitions": [
@@ -20,10 +20,10 @@
         {
           "targetViewport": "WIDGET_M",
           "metadata": {
-            "name": "Tenner Essen",
+            "name": "Zentrale Essen",
             "description": "Mittag- und Abendessen von heute, ab 20 Uhr von morgen.",
             "keywords": [
-              "tenner",
+              "zentrale",
               "essen",
               "essensplan"
             ],

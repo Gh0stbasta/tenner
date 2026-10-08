@@ -32,7 +32,7 @@ the List Management REST API for skills and apps on 2024-07-01; skills can no lo
 shopping and to-do lists (Amazon developer docs, „Deprecated Features“). The only unofficial way (reading the list
 with the Amazon account's login cookies) would put Amazon credentials into AWS, breaks the terms of use and breaks
 with every Amazon change; rejected. Owner decision: the list stays in Tenner (app and browser, FOOD-014); Alexa uses
-it through the existing „Tenner Board“ skill (ADR 0005), like other list apps do since 2024.
+it through the existing „Familien Zentrale“ skill (ADR 0005), like other list apps do since 2024.
 
 ---
 
@@ -50,9 +50,9 @@ ALEXA-001 – 006 (skill, account linking, APL)
 ## Voice (German)
 
 ```text
-„Alexa, sag Tenner Board, setz Milch auf die Einkaufsliste“      → manual item (FOOD-014 PATCH add)
-„Alexa, frag Tenner Board, was auf der Einkaufsliste steht“      → open items in the list's order (max. 10, then count)
-„Alexa, sag Tenner Board, ich habe Milch gekauft“                → tick off by name (fuzzy match; asks when ambiguous)
+„Alexa, sag Familien Zentrale, setz Milch auf die Einkaufsliste“      → manual item (FOOD-014 PATCH add)
+„Alexa, frag Familien Zentrale, was auf der Einkaufsliste steht“      → open items in the list's order (max. 10, then count)
+„Alexa, sag Familien Zentrale, ich habe Milch gekauft“                → tick off by name (fuzzy match; asks when ambiguous)
 ```
 
 - Uses the current week's list; creates it if missing (same rules as FOOD-014).
@@ -116,7 +116,7 @@ cd alexa && npm run lint && npm run typecheck && npm test
 
 # Assumptions
 
-- „Alexa, setz Milch auf die Einkaufsliste“ without „Tenner Board“ still goes to Amazon's own list; Tenner cannot
+- „Alexa, setz Milch auf die Einkaufsliste“ without „Familien Zentrale“ still goes to Amazon's own list; Tenner cannot
   redirect it.
 
 ---

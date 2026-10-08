@@ -58,7 +58,7 @@ export function AssignmentPage({ onAssigned, onLogout }: AssignmentPageProps) {
     return (
       <Box sx={{ p: 3, maxWidth: 560, mx: "auto" }}>
         <ErrorAlert
-          title="Tenner ist gerade nicht erreichbar"
+          title="Die Zentrale ist gerade nicht erreichbar"
           message={errorMessage(onboarding.error)}
           onRetry={() => void onboarding.refetch()}
         />
@@ -97,7 +97,7 @@ export function AssignmentPage({ onAssigned, onLogout }: AssignmentPageProps) {
     return (
       <EmptyState
         title="Kein freier Platz"
-        description="Alle Personen in diesem Haushalt sind bereits mit einem Konto verknüpft. Wende dich an die Person, die Tenner verwaltet."
+        description="Alle Personen in diesem Haushalt sind bereits mit einem Konto verknüpft. Wende dich an die Person, die die Zentrale verwaltet."
         action={logout}
       />
     );
@@ -107,7 +107,7 @@ export function AssignmentPage({ onAssigned, onLogout }: AssignmentPageProps) {
   return (
     <Box component="main" sx={{ p: { xs: 2, sm: 3 }, maxWidth: 560, mx: "auto" }}>
       <Typography variant="h1" sx={{ mb: 1 }}>
-        Willkommen bei Tenner
+        Willkommen in der Zentrale
       </Typography>
       <Typography sx={{ mb: 3 }} color="text.secondary">
         Dein Google-Konto ist noch keiner Person im Haushalt zugeordnet. Bitte wähle aus, wer du bist. Die Auswahl gilt

@@ -162,7 +162,7 @@ export const UndoIntentHandler: RequestHandler = {
     const latest = await latestCompletion(apiOf(input), household.speaker?.userId);
     const today = dateIn(household.context.timezone);
     if (latest === undefined || dateIn(household.context.timezone, new Date(latest.completedAt)) !== today) return answer(input, SPEECH.nothingToUndo);
-    const title = latest.tennerTitle ?? "dieser Tenner";
+    const title = latest.tennerTitle ?? "diese Aufgabe";
     const by = household.speaker === undefined ? household.context.members.find((member) => member.userId === latest.completedBy)?.displayName : undefined;
     setPending(input, { kind: "confirmUndo", tenner: { tennerId: latest.tennerId, title, warning: null } });
     return ask(input, SPEECH.confirmUndo(title, by));

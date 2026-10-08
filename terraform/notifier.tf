@@ -95,6 +95,14 @@ data "aws_iam_policy_document" "notifier" {
     resources = [aws_dynamodb_table.tenners.arn, "${aws_dynamodb_table.tenners.arn}/index/*"]
   }
 
+  # REC-001: a Tenner not completed on its day moves to its next occurrence; the miss is written to tenner-history
+  # in the same transaction (UpdateItem on the Tenner, PutItem of the SKIP event).
+  statement {
+    sid       = "MoveMissedTenners"
+    actions   = ["dynamodb:UpdateItem", "dynamodb:PutItem"]
+    resources = [aws_dynamodb_table.tenners.arn, aws_dynamodb_table.history.arn]
+  }
+
   # FOOD-006: the notifier prepares the current and next week's meal plan (reads dishes and profile, writes plans).
   statement {
     sid       = "MealPlans"

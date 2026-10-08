@@ -1,6 +1,10 @@
-# Tenner
+# Zentrale (formerly Tenner)
 
-Tenner is a small serverless web app that helps individuals and families keep up with
+> **Name (REC-002, 2026-10-08):** the app is called **Zentrale**, the recurring tasks are called **Aufgaben** in the
+> UI, in Alexa („Alexa, öffne Familien Zentrale“) and in notifications. „Tenner“ remains the internal name: repository,
+> code (`tenner`, `tennerId`), AWS resources (`tenner-*`), API routes (`/tenners`) and the older documents.
+
+Zentrale is a small serverless web app that helps individuals and families keep up with
 recurring responsibilities through small, ten-minute tasks ("Tenners").
 
 > If something can be improved in 10 minutes, do a Tenner.
@@ -414,7 +418,7 @@ for `GitHubActionsDeployRole`: `cloudwatch:PutDashboard`, `GetDashboard`, `Delet
 `tenner-alarms` in eu-west-1, confirm that subscription too), widget push or Alexa notification failures
 (eu-central-1); metrics from log lines (namespace `Tenner/Alexa`); dashboard section with requests per intent and
 outcome; runbook [`docs/runbooks/alexa.md`](docs/runbooks/alexa.md). Every deploy with `ALEXA_SKILL_ID` ends with
-a simulated „öffne tenner board“ (`scripts/alexa-health-check.sh`). Up to 11 alarms in total: about 0.10 USD per month
+a simulated „öffne familien zentrale“ (`scripts/alexa-health-check.sh`). Up to 11 alarms in total: about 0.10 USD per month
 beyond the free 10.
 
 ### Notifications (NOTIFICATION-001)
@@ -432,7 +436,9 @@ when the GitHub **variable** `NOTIFICATIONS_ENABLED` is `true`. Before setting i
 - CloudWatch Logs: `/tenner/notifier`
 
 Content: the daily digest (NOTIFICATION-003) at each member's time (default 08:00) and overdue alerts
-(NOTIFICATION-004) at each member's evening time (default 18:00, NOTIFICATION-010). Push sends one notification per
+(NOTIFICATION-004) at each member's evening time (default 18:00, NOTIFICATION-010). Since REC-001 a Tenner is no
+longer overdue the day after: each run first moves Tenners not completed on their day to their next occurrence and
+records them as not done („Nicht erledigt“ in the analytics). Push sends one notification per
 Tenner („🏠 Tenner · Heute: … · Geschätzter Aufwand: … Minuten“). Until a real channel is connected it is
 written to the notifier log only (`NotificationLogged`).
 

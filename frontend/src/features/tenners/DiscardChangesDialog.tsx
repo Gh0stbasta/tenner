@@ -12,7 +12,7 @@ export function DiscardChangesDialog({ open, onDiscard, onContinue }: DiscardCha
     <ConfirmDialog
       open={open}
       title="Ungespeicherte Änderungen verwerfen?"
-      message="Deine Änderungen an diesem Tenner gehen verloren."
+      message="Deine Änderungen an dieser Aufgabe gehen verloren."
       confirmLabel="Verwerfen"
       cancelLabel="Weiter bearbeiten"
       destructive

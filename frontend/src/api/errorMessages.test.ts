@@ -5,15 +5,15 @@ import { DEFAULT_ERROR_MESSAGE, errorMessage, UNREACHABLE_MESSAGE } from "./erro
 describe("errorMessage", () => {
   it.each([
     ["VALIDATION_ERROR", 400, "Bitte prüfe die markierten Eingaben."],
-    ["NOT_FOUND", 404, "Dieser Tenner existiert nicht mehr."],
+    ["NOT_FOUND", 404, "Diese Aufgabe existiert nicht mehr."],
     [
       "CONCURRENT_MODIFICATION",
       409,
-      "Jemand anderes hat diesen Tenner geändert. Lade neu, um den aktuellen Stand zu sehen.",
+      "Jemand anderes hat diese Aufgabe geändert. Lade neu, um den aktuellen Stand zu sehen.",
     ],
-    ["TENNER_INACTIVE", 409, "Dieser Tenner ist inaktiv."],
+    ["TENNER_INACTIVE", 409, "Diese Aufgabe ist inaktiv."],
     ["NO_COMPLETION_TO_UNDO", 409, "Es gibt keine Erledigung, die zurückgenommen werden kann."],
-    ["TENNER_NOT_DELETED", 409, "Dieser Tenner ist nicht archiviert."],
+    ["TENNER_NOT_DELETED", 409, "Diese Aufgabe ist nicht archiviert."],
     ["IDEMPOTENCY_KEY_REUSED", 409, "Diese Aktion wurde bereits mit anderen Daten ausgeführt. Bitte lade neu."],
     ["API_NOT_CONFIGURED", 0, "Die App ist nicht richtig eingerichtet: die API-Adresse fehlt."],
     ["INVALID_RESPONSE", 200, "Unerwartete Antwort vom Server. Bitte lade die Seite neu."],

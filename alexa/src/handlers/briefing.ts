@@ -32,7 +32,7 @@ export const BriefingIntentHandler: RequestHandler = {
     const dashboard = (await fetchDashboard(apiOf(input), undefined)) as BriefingDashboard;
     const briefing = buildBriefing({ dashboard, members: household.context.members, speaker: household.speaker, now: new Date(), timeZone: household.context.timezone });
     setOffer(input, briefing.suggestion);
-    return briefing.suggestion ? answer(input, briefing.text, "Soll ich dir den ersten Tenner nennen?") : answer(input, briefing.text);
+    return briefing.suggestion ? answer(input, briefing.text, "Soll ich dir die erste Aufgabe nennen?") : answer(input, briefing.text);
   },
 };
 

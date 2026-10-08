@@ -101,7 +101,7 @@ function Health({ score }: { readonly score: number | null }) {
 }
 
 const healthText = (score: number | null) =>
-  score === null ? "keine aktiven Tenner" : score >= 0.8 ? "Gut" : score >= 0.5 ? "Achtung" : "Kritisch";
+  score === null ? "keine aktiven Aufgaben" : score >= 0.8 ? "Gut" : score >= 0.5 ? "Achtung" : "Kritisch";
 
 export function CategoryChart({ selection }: { readonly selection: PeriodSelection }) {
   const query = useAnalyticsCategories(selection);
@@ -114,7 +114,7 @@ export function CategoryChart({ selection }: { readonly selection: PeriodSelecti
       table={(data) => (
         <DataTable
           caption="Lebensbereiche als Tabelle"
-          head={["Kategorie", "Minuten", "Anteil", "Erledigungen", "Aktive Tenner", "Überfällig", "Zustand"]}
+          head={["Kategorie", "Minuten", "Anteil", "Erledigungen", "Aktive Aufgaben", "Überfällig", "Zustand"]}
           rows={data.categories.map((c) => [
             c.name,
             c.actualMinutes,
@@ -227,7 +227,7 @@ export function NeglectedTable({ selection }: { readonly selection: PeriodSelect
   const memberName = useMemberName();
   return (
     <ChartSection
-      title="Vernachlässigte Tenner"
+      title="Vernachlässigte Aufgaben"
       description="Was bleibt hinter seinem Rhythmus zurück? (Top 10)"
       query={query}
     >
@@ -238,8 +238,8 @@ export function NeglectedTable({ selection }: { readonly selection: PeriodSelect
           </Typography>
         ) : (
           <DataTable
-            caption="Vernachlässigte Tenner"
-            head={["Tenner", "Zuständig", "Überfällig", "Erledigt / erwartet", "Vernachlässigung"]}
+            caption="Vernachlässigte Aufgaben"
+            head={["Aufgaben", "Zuständig", "Überfällig", "Erledigt / erwartet", "Vernachlässigung"]}
             rows={data.items.map((item) => [
               <TennerLink key="link" tennerId={item.tennerId}>
                 {item.title}
@@ -276,7 +276,7 @@ function Trend({ trend }: { readonly trend: HabitTrend }) {
 export function HabitsTable({ selection }: { readonly selection: PeriodSelection }) {
   const query = useAnalyticsHabits(selection);
   return (
-    <ChartSection title="Gewohnheiten" description="Beständigkeit im eigenen Rhythmus jedes Tenners" query={query}>
+    <ChartSection title="Gewohnheiten" description="Beständigkeit im eigenen Rhythmus jeder Aufgabe" query={query}>
       {(data) => (
         <>
           <Typography variant="body2" sx={{ mb: 1 }}>
@@ -284,12 +284,12 @@ export function HabitsTable({ selection }: { readonly selection: PeriodSelection
           </Typography>
           {data.items.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              Noch keine aktiven Tenner.
+              Noch keine aktiven Aufgaben.
             </Typography>
           ) : (
             <DataTable
               caption="Gewohnheiten"
-              head={["Tenner", "Serie", "Längste Serie", "Beständigkeit", "Trend"]}
+              head={["Aufgaben", "Serie", "Längste Serie", "Beständigkeit", "Trend"]}
               rows={data.items.map((item) => [
                 <TennerLink key="link" tennerId={item.tennerId}>
                   {item.title}
@@ -310,7 +310,7 @@ export function HabitsTable({ selection }: { readonly selection: PeriodSelection
 export function TimeInvestmentCard({ selection }: { readonly selection: PeriodSelection }) {
   const query = useAnalyticsTime(selection);
   return (
-    <ChartSection title="Zeitaufwand" description="Wie viel Zeit brauchen die Tenner wirklich?" query={query}>
+    <ChartSection title="Zeitaufwand" description="Wie viel Zeit brauchen die Aufgaben wirklich?" query={query}>
       {(data) => (
         <Stack spacing={1}>
           <Typography variant="body2">
@@ -320,11 +320,11 @@ export function TimeInvestmentCard({ selection }: { readonly selection: PeriodSe
             Tatsächlich im Schnitt pro Woche: <strong>{formatMinutes(data.averageMinutesPerWeek)}</strong>
           </Typography>
           <Typography variant="body2">
-            Tenner über 10 Minuten: <strong>{data.tennersExceedingTenMinutes}</strong>
+            Aufgaben über 10 Minuten: <strong>{data.tennersExceedingTenMinutes}</strong>
           </Typography>
           {data.tennersExceedingEstimate.length > 0 && (
             <DataTable
-              caption="Tenner, die länger dauern als geschätzt"
+              caption="Aufgaben, die länger dauern als geschätzt"
               head={["Länger als geschätzt", "Geschätzt", "Tatsächlich (Median)"]}
               rows={data.tennersExceedingEstimate.map((item) => [
                 <TennerLink key="link" tennerId={item.tennerId}>

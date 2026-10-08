@@ -21,7 +21,7 @@ const ACTIVE = [
   }),
 ];
 const INACTIVE = [tenner({ tennerId: "t-3", title: "Rad ölen", active: false, category: "FITNESS" })];
-const ARCHIVED = [tenner({ tennerId: "t-4", title: "Alter Tenner", active: false, deletedAt: "2026-09-01T00:00:00Z" })];
+const ARCHIVED = [tenner({ tennerId: "t-4", title: "Alter Aufgaben", active: false, deletedAt: "2026-09-01T00:00:00Z" })];
 
 function listHandler({ url }: { url: URL }) {
   if (url.searchParams.get("deleted") === "true") return ok(ARCHIVED);
@@ -48,11 +48,11 @@ describe("TennersPage", () => {
   it("shows skeletons while loading, then cards with details and a summary", async () => {
     mockFetch({ "GET /tenners": listHandler });
     renderWithProviders(<TennersPage />);
-    expect(screen.getByRole("status", { name: "Tenner werden geladen" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Aufgaben werden geladen" })).toBeInTheDocument();
 
-    const list = await screen.findByRole("list", { name: "Tenner-Liste" });
+    const list = await screen.findByRole("list", { name: "Aufgabenliste" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
-    expect(screen.getByText("2 aktive Tenner · 1 überfällig · 40 Min. geschätzt")).toBeInTheDocument();
+    expect(screen.getByText("2 aktive Aufgaben · 1 überfällig · 40 Min. geschätzt")).toBeInTheDocument();
     expect(within(list).getByText("Heute fällig")).toBeInTheDocument();
     expect(within(list).getByText(/überfällig$/)).toBeInTheDocument();
     expect(within(list).getAllByText(/^Alle 14 Tage · Fällig:/)).toHaveLength(2);
@@ -107,11 +107,11 @@ describe("TennersPage", () => {
     await screen.findByText("Büro saugen");
     await choose("Status", "Archiviert");
 
-    expect(await screen.findByText("Alter Tenner")).toBeInTheDocument();
+    expect(await screen.findByText("Alter Aufgaben")).toBeInTheDocument();
     expect(listCalls(fetchMock).at(-1)?.get("deleted")).toBe("true");
-    expect(screen.queryByRole("button", { name: "„Alter Tenner“ archivieren" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "„Alter Aufgaben“ archivieren" })).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "„Alter Tenner“ wiederherstellen" }));
+    await userEvent.click(screen.getByRole("button", { name: "„Alter Aufgaben“ wiederherstellen" }));
     await waitFor(() => expect(fetchMock.calls().some((c) => c.key === "POST /tenners/t-4/restore")).toBe(true));
     expect(fetchMock.calls().find((c) => c.key === "POST /tenners/t-4/restore")?.body).toEqual({
       restoredBy: "STEFAN",
@@ -125,7 +125,7 @@ describe("TennersPage", () => {
     await choose("Status", "Alle");
 
     expect(await screen.findByText("Rad ölen")).toBeInTheDocument();
-    expect(screen.getByText("Alter Tenner")).toBeInTheDocument();
+    expect(screen.getByText("Alter Aufgaben")).toBeInTheDocument();
     expect(screen.getByText("Inaktiv")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "„Rad ölen“ erledigen" })).toBeDisabled();
     expect(listCalls(fetchMock).length).toBe(4);
@@ -134,15 +134,15 @@ describe("TennersPage", () => {
   it("shows an empty state when nothing matches", async () => {
     mockFetch({ "GET /tenners": ok([]) });
     renderWithProviders(<TennersPage />);
-    expect(await screen.findByText("Keine Tenner gefunden")).toBeInTheDocument();
-    expect(screen.getByText("Passe die Filter an oder lege deinen ersten Tenner an.")).toBeInTheDocument();
+    expect(await screen.findByText("Keine Aufgaben gefunden")).toBeInTheDocument();
+    expect(screen.getByText("Passe die Filter an oder lege deine erste Aufgabe an.")).toBeInTheDocument();
   });
 
   it("shows an error with retry", async () => {
     let calls = 0;
     mockFetch({ "GET /tenners": () => (++calls === 1 ? fail(500, "INTERNAL_ERROR") : ok(ACTIVE)) });
     renderWithProviders(<TennersPage />);
-    expect(await screen.findByText("Tenner konnten nicht geladen werden")).toBeInTheDocument();
+    expect(await screen.findByText("Aufgaben konnten nicht geladen werden")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
     expect(await screen.findByText("Büro saugen")).toBeInTheDocument();
   });
@@ -172,7 +172,7 @@ describe("TennersPage", () => {
     renderWithProviders(<TennersPage />);
     await userEvent.click(await screen.findByRole("button", { name: "„Fenster putzen“ archivieren" }));
 
-    const dialog = screen.getByRole("dialog", { name: "Tenner archivieren?" });
+    const dialog = screen.getByRole("dialog", { name: "Aufgabe archivieren?" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Abbrechen" }));
     expect(fetchMock.calls().some((c) => c.key === "DELETE /tenners/t-2")).toBe(false);
 
@@ -189,7 +189,7 @@ describe("TennersPage", () => {
     await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Archivieren" }));
     expect(
       await screen.findByText(
-        "Die Aktion ist fehlgeschlagen. Jemand anderes hat diesen Tenner geändert. Lade neu, um den aktuellen Stand zu sehen.",
+        "Die Aktion ist fehlgeschlagen. Jemand anderes hat diese Aufgabe geändert. Lade neu, um den aktuellen Stand zu sehen.",
       ),
     ).toBeInTheDocument();
   });
@@ -200,7 +200,7 @@ describe("TennersPage", () => {
     await userEvent.click(await screen.findByRole("button", { name: "„Büro saugen“ erledigen" }));
     expect(
       await screen.findByText(
-        "„Büro saugen“ konnte nicht erledigt werden. Jemand anderes hat diesen Tenner geändert. Lade neu, um den aktuellen Stand zu sehen.",
+        "„Büro saugen“ konnte nicht erledigt werden. Jemand anderes hat diese Aufgabe geändert. Lade neu, um den aktuellen Stand zu sehen.",
       ),
     ).toBeInTheDocument();
   });
@@ -209,15 +209,15 @@ describe("TennersPage", () => {
     mockFetch({ "GET /tenners": listHandler });
     renderWithProviders(<TennersPage />);
     await userEvent.click(await screen.findByRole("button", { name: "„Büro saugen“ bearbeiten" }));
-    expect(screen.getByRole("dialog", { name: "Tenner bearbeiten" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Aufgabe bearbeiten" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Titel" })).toHaveValue("Büro saugen");
   });
 
   it("opens the create dialog from the header", async () => {
     mockFetch({ "GET /tenners": listHandler });
     renderWithProviders(<TennersPage />);
-    await userEvent.click(screen.getByRole("button", { name: "Neuer Tenner" }));
-    expect(screen.getByRole("dialog", { name: "Tenner anlegen" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Neue Aufgabe" }));
+    expect(screen.getByRole("dialog", { name: "Aufgabe anlegen" })).toBeInTheDocument();
   });
 
   it("collapses secondary actions into a menu on phones", async () => {
@@ -234,11 +234,11 @@ describe("TennersPage", () => {
     renderWithProviders(<TennersPage />);
     await userEvent.click(await screen.findByRole("button", { name: "Weitere Aktionen für „Büro saugen“" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Bearbeiten" }));
-    expect(screen.getByRole("dialog", { name: "Tenner bearbeiten" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Aufgabe bearbeiten" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
     await userEvent.click(await screen.findByRole("button", { name: "Weitere Aktionen für „Büro saugen“" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Archivieren" }));
-    expect(screen.getByRole("dialog", { name: "Tenner archivieren?" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Aufgabe archivieren?" })).toBeInTheDocument();
   });
 
   it("logs telemetry for filter changes", async () => {

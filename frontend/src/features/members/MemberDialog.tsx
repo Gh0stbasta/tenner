@@ -123,7 +123,7 @@ export function MemberDialog({ member, onClose }: MemberDialogProps) {
                 label="Ohne Anmeldung (z. B. Haushaltshilfe)"
               />
               <Box component="p" sx={{ m: 0, color: "text.secondary", typography: "body2" }}>
-                Bekommt Tenner zugewiesen, meldet sich aber nie an. Niemand kann diesen Platz übernehmen. Später nicht
+                Bekommt Aufgaben zugewiesen, meldet sich aber nie an. Niemand kann diesen Platz übernehmen. Später nicht
                 änderbar.
               </Box>
             </>

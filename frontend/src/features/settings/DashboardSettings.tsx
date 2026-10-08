@@ -8,7 +8,7 @@ import { useSettings } from "./SettingsProvider";
 type DashboardToggle = "showUpcoming" | "showCategorySummary" | "showUserSummary" | "showRecentActivity";
 
 const TOGGLES: readonly { readonly key: DashboardToggle; readonly label: string }[] = [
-  { key: "showUpcoming", label: "Demnächst fällige Tenner" },
+  { key: "showUpcoming", label: "Demnächst fällige Aufgaben" },
   { key: "showUserSummary", label: "Übersicht nach Person" },
   { key: "showCategorySummary", label: "Übersicht nach Kategorie" },
   { key: "showRecentActivity", label: "Letzte Erledigungen" },
@@ -17,7 +17,7 @@ const TOGGLES: readonly { readonly key: DashboardToggle; readonly label: string 
 export function DashboardSettings() {
   const { preferences, update } = useSettings();
   return (
-    <SettingsSection title="Dashboard" description="Heute fällige und überfällige Tenner werden immer angezeigt.">
+    <SettingsSection title="Dashboard" description="Heute fällige und überfällige Aufgaben werden immer angezeigt.">
       <FormGroup>
         {TOGGLES.map(({ key, label }) => (
           <FormControlLabel

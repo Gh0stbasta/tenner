@@ -99,9 +99,9 @@ function rejection(error: unknown): string | undefined {
   if (!isApiError(error) || error.isTransient || error.status === 401) return undefined;
   if (error.code === "CONCURRENT_MODIFICATION") return undefined;
   if (error.status === 404 || error.code === "TENNER_INACTIVE")
-    return "Der Tenner wurde inzwischen gelöscht oder archiviert.";
+    return "Die Aufgabe wurde inzwischen gelöscht oder archiviert.";
   if (error.details.some((detail) => detail.field === "completedAt")) {
-    return "Der Tenner wurde inzwischen schon erledigt.";
+    return "Die Aufgabe wurde inzwischen schon erledigt.";
   }
   return errorMessage(error);
 }
