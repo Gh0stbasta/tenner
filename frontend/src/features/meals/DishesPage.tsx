@@ -1,0 +1,249 @@
+/**
+ * „Gerichte“ (FOOD-010) at /essen/gerichte: the household's dishes, searchable and filterable, with the editor and
+ * archive/restore (with „Rückgängig“). Archived dishes are no longer planned (FOOD-002).
+ */
+
+import AddIcon from "@mui/icons-material/Add";
+import {
+  Button,
+  Card,
+  CardActions,
+  CardContent,
+  Chip,
+  FormControlLabel,
+  MenuItem,
+  Stack,
+  Switch,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from "@mui/material";
+import Grid from "@mui/material/Grid";
+import { useMemo, useState } from "react";
+import { Link as RouterLink } from "react-router";
+import { errorMessage } from "../../api/errorMessages";
+import { isApiError } from "../../api/errors";
+import { ErrorAlert } from "../../components/ErrorAlert";
+import { SkeletonList } from "../../components/LoadingState";
+import { useNotify } from "../../components/NotificationProvider";
+import { PageHeader } from "../../components/PageHeader";
+import { DishEditorDialog } from "./DishEditorDialog";
+import {
+  DISH_CATEGORIES,
+  DISH_CATEGORY_LABELS,
+  dishSummaryLine,
+  filterDishes,
+  useArchiveDish,
+  useDishes,
+  type Dish,
+  type DishFilter,
+} from "./dishes";
+import { TAG_LABELS, type IngredientTag } from "./labels";
+
+/** Editor state: closed, new dish, or the dish being edited. */
+type Editing = { readonly dish: Dish | null } | null;
+
+function DishCard({
+  dish,
+  onEdit,
+  onArchive,
+}: {
+  readonly dish: Dish;
+  readonly onEdit: () => void;
+  readonly onArchive: () => void;
+}) {
+  return (
+    <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <CardContent sx={{ flexGrow: 1 }}>
+        <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
+          {dish.name}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {DISH_CATEGORY_LABELS[dish.category]}
+          {dish.group ? ` · ${dish.group}` : ""}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {dishSummaryLine(dish)}
+        </Typography>
+        <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5, mt: 1 }}>
+          {(dish.isVegetarian || dish.vegetarianVariant) && (
+            <Chip size="small" color="success" label={dish.isVegetarian ? "vegetarisch" : "vegetarische Variante"} />
+          )}
+          {dish.tags
+            .filter((tag) => !["MEAT", "POULTRY", "PORK", "BEEF", "FISH"].includes(tag) || !dish.isVegetarian)
+            .slice(0, 5)
+            .map((tag) => (
+              <Chip key={tag} size="small" variant="outlined" label={TAG_LABELS[tag as IngredientTag] ?? tag} />
+            ))}
+          {dish.unknownIngredients.length > 0 && <Chip size="small" color="warning" label="Zutat fehlt" />}
+        </Stack>
+      </CardContent>
+      <CardActions>
+        {!dish.archived && (
+          <Button size="small" onClick={onEdit} aria-label={`${dish.name} bearbeiten`}>
+            Bearbeiten
+          </Button>
+        )}
+        <Button
+          size="small"
+          color={dish.archived ? "primary" : "inherit"}
+          onClick={onArchive}
+          aria-label={`${dish.name} ${dish.archived ? "wiederherstellen" : "archivieren"}`}
+        >
+          {dish.archived ? "Wiederherstellen" : "Archivieren"}
+        </Button>
+      </CardActions>
+    </Card>
+  );
+}
+
+export function DishesPage() {
+  const notify = useNotify();
+  const [archived, setArchived] = useState(false);
+  const dishes = useDishes(archived);
+  const active = useDishes(false);
+  const archive = useArchiveDish();
+  const [editing, setEditing] = useState<Editing>(null);
+  const [filter, setFilter] = useState<DishFilter>({ search: "", slot: "ALL", vegetarianOnly: false, category: "ALL" });
+
+  const shown = useMemo(() => filterDishes(dishes.data ?? [], filter), [dishes.data, filter]);
+  const groups = useMemo(
+    () =>
+      [...new Set((active.data ?? []).flatMap((dish) => (dish.group ? [dish.group] : [])))].sort((a, b) =>
+        a.localeCompare(b, "de"),
+      ),
+    [active.data],
+  );
+
+  const toggleArchived = (dish: Dish, undo = false) => {
+    const target = !dish.archived;
+    archive.mutate(
+      { dishId: dish.dishId, archived: target },
+      {
+        onSuccess: (changed) => {
+          if (undo) return;
+          notify({
+            message: target
+              ? `„${changed.name}“ archiviert. Es wird nicht mehr geplant.`
+              : `„${changed.name}“ wiederhergestellt.`,
+            action: { label: "Rückgängig", onClick: () => toggleArchived(changed, true) },
+            durationMs: 10_000,
+          });
+        },
+        onError: (error) =>
+          notify({
+            severity: "error",
+            message:
+              isApiError(error) && error.code === "DISH_NAME_TAKEN"
+                ? `Es gibt schon ein aktives Gericht „${dish.name}“.`
+                : `Nicht geändert. ${errorMessage(error)}`,
+          }),
+      },
+    );
+  };
+
+  return (
+    <>
+      <PageHeader
+        title="Gerichte"
+        subtitle={dishes.data ? `${dishes.data.length} ${archived ? "archiviert" : "Gerichte"}` : undefined}
+        actions={
+          <Stack direction="row" spacing={1}>
+            <Button component={RouterLink} to="/essen" size="small">
+              Zum Essensplan
+            </Button>
+            <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => setEditing({ dish: null })}>
+              Neues Gericht
+            </Button>
+          </Stack>
+        }
+      />
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={2}
+        sx={{ mb: 3, alignItems: { md: "center" }, flexWrap: "wrap", rowGap: 2 }}
+      >
+        <TextField
+          label="Suchen"
+          size="small"
+          value={filter.search}
+          onChange={(event) => setFilter({ ...filter, search: event.target.value })}
+          sx={{ minWidth: 220 }}
+        />
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={filter.slot}
+          onChange={(_event, value: DishFilter["slot"] | null) => value && setFilter({ ...filter, slot: value })}
+          aria-label="Mahlzeit"
+        >
+          <ToggleButton value="ALL">Alle</ToggleButton>
+          <ToggleButton value="LUNCH">Mittag</ToggleButton>
+          <ToggleButton value="DINNER">Abend</ToggleButton>
+        </ToggleButtonGroup>
+        <TextField
+          select
+          label="Kategorie"
+          size="small"
+          value={filter.category}
+          onChange={(event) => setFilter({ ...filter, category: event.target.value as DishFilter["category"] })}
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value="ALL">Alle Kategorien</MenuItem>
+          {DISH_CATEGORIES.map((category) => (
+            <MenuItem key={category} value={category}>
+              {DISH_CATEGORY_LABELS[category]}
+            </MenuItem>
+          ))}
+        </TextField>
+        <FormControlLabel
+          label="Vegetarisch"
+          control={
+            <Switch
+              checked={filter.vegetarianOnly}
+              onChange={(event) => setFilter({ ...filter, vegetarianOnly: event.target.checked })}
+            />
+          }
+        />
+        <FormControlLabel
+          label="Archivierte zeigen"
+          control={<Switch checked={archived} onChange={(event) => setArchived(event.target.checked)} />}
+        />
+      </Stack>
+      {dishes.isPending ? (
+        <SkeletonList count={4} label="Gerichte werden geladen" />
+      ) : dishes.isError ? (
+        <ErrorAlert
+          title="Gerichte konnten nicht geladen werden"
+          message={errorMessage(dishes.error)}
+          onRetry={() => void dishes.refetch()}
+        />
+      ) : shown.length === 0 ? (
+        <Typography color="text.secondary">
+          {(dishes.data ?? []).length === 0
+            ? archived
+              ? "Keine archivierten Gerichte."
+              : "Noch keine Gerichte. Legt das erste an oder importiert den Gerichtekatalog in den Einstellungen."
+            : "Kein Gericht passt zu den Filtern."}
+        </Typography>
+      ) : (
+        <Grid container spacing={2} component="ul" sx={{ p: 0, m: 0 }} aria-label="Gerichte">
+          {shown.map((dish) => (
+            <Grid key={dish.dishId} component="li" size={{ xs: 12, sm: 6, lg: 4 }} sx={{ listStyle: "none" }}>
+              <DishCard dish={dish} onEdit={() => setEditing({ dish })} onArchive={() => toggleArchived(dish)} />
+            </Grid>
+          ))}
+        </Grid>
+      )}
+      {editing && (
+        <DishEditorDialog
+          key={editing.dish?.dishId ?? "new"}
+          dish={editing.dish}
+          groups={groups}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </>
+  );
+}

@@ -8,7 +8,7 @@ deterministic (no AI).
 
 | | |
 |---|---|
-| **Status** | In progress. Foundation done (FOOD-001, 021, 002, 004, 003; FOOD-021 before 002 because dishes reference ingredients). Planning done (FOOD-005, 006, 009, 007, 022, 008): first usable version. Next: kitchen block, FOOD-014 |
+| **Status** | In progress. Foundation done (FOOD-001, 021, 002, 004, 003; FOOD-021 before 002 because dishes reference ingredients). Planning done (FOOD-005, 006, 009, 007, 022, 008): first usable version. Kitchen: FOOD-014 and FOOD-010 (dish editor) done; next FOOD-012 |
 | **Epic** | [EPIC-FOOD-001](metaticket.md): vision, household rules R1 – R13, dish catalog, owner decisions (answered) |
 | **Backlog** | [`backlog/food/`](backlog/food/): FOOD-001 – FOOD-028 |
 | **Previous release** | [Tenner 1.0](../release-1.0/README.md) |

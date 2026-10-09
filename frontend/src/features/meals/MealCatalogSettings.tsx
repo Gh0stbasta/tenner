@@ -8,6 +8,7 @@ import { errorMessage } from "../../api/errorMessages";
 import { useNotify } from "../../components/NotificationProvider";
 import { SettingsSection } from "../settings/SettingsSection";
 import { useImportMealCatalog, useMealCatalogPreview, type MealCatalogImport } from "./api";
+import { Link as RouterLink } from "react-router";
 
 function summary(preview: MealCatalogImport): string {
   const parts = [`${preview.dishesCreated.length} neue Gerichte`];
@@ -46,6 +47,9 @@ export function MealCatalogSettings() {
         </Alert>
       )}
       <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+        <Button component={RouterLink} to="/essen/gerichte" variant="outlined">
+          Gerichte verwalten
+        </Button>
         {!result || nothingToDo ? (
           <Button variant="outlined" onClick={() => preview.mutate()} disabled={preview.isPending}>
             Katalog prüfen

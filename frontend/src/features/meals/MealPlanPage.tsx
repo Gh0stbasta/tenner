@@ -296,6 +296,9 @@ export function MealPlanPage() {
       }
       actions={
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>
+          <Button component={RouterLink} to="/essen/gerichte" variant="outlined" size="small">
+            Gerichte
+          </Button>
           {plan.data?.ready && (
             <Button component={RouterLink} to="/einkaufsliste" variant="outlined" size="small">
               Einkaufsliste
