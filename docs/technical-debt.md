@@ -1248,3 +1248,30 @@ Remove the unused components and preference fields. Load „done today“ with a
 ### Related Work
 
 UI-001 (`docs/hotfix/redesignDashboard.md`), FRONTEND-002, FRONTEND-007, FRONTEND-008, MOBILE-005.
+
+## TD-044: Dish derivation and rule hints exist in the backend and the frontend
+
+### Description
+
+The dish editor (FOOD-010) derives vegetarian, tags, protein source and base ingredient, and the eater and household
+hints, in `frontend/src/features/meals/dishes.ts`. The same logic lives in the backend (`deriveDish`, rules engine).
+
+### Reason
+
+The editor shows the effect while typing, before the dish is saved. The API has no endpoint to evaluate a draft.
+
+### Impact
+
+A rule change in the backend needs the same change in the frontend; otherwise the editor shows outdated hints. The
+saved dish and the planner stay correct, because the server is the source of truth. There is no cost or security
+impact.
+
+### Suggested Improvement
+
+Add a dry-run endpoint (for example `POST /meals/dishes/preview`) that returns the derived values and rule hints, or
+move the shared logic to a package used by both sides.
+
+### Related Work
+
+FOOD-010, FOOD-002, FOOD-005; `frontend/src/features/meals/dishes.ts`, `backend/src/meals/models/dish.ts`.
+

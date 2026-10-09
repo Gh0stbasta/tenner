@@ -152,6 +152,22 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 - **Dashboard:** „Heute essen wir“ (`TodayMealsCard`) with today's meals; since UI-001 the largest dashboard card, „Für heute ist noch nichts geplant.“ without a plan.
 - **Offline:** plans use the query root `mealPlans` and are kept in the offline cache; the food profile is not.
 
+## Dishes (FOOD-010)
+
+- **Page `/essen/gerichte`** (`src/features/meals/DishesPage.tsx`, button „Gerichte“ on the plan page, „Gerichte
+  verwalten“ in Settings → Essen): the household's dishes with search (name and group) and the filters Mittag/Abend,
+  Kategorie, Vegetarisch and „Archivierte zeigen“. „Archivieren“ / „Wiederherstellen“ with „Rückgängig“; archived
+  dishes are no longer planned.
+- **Editor** (`DishEditorDialog.tsx`): name, group (suggestions), category, Mittag/Abend, leicht/sättigend, warm/kalt,
+  ingredients per adult portion (catalog picker; quantity; g/ml or EL/TL, Stück for counted ingredients; „optional“),
+  active and total minutes, vegetarian variant, family-friendly, burger. „Neue Zutat „…“ anlegen“ opens
+  `NewIngredientDialog.tsx` (`POST /meals/ingredients`).
+- **„Was das Gericht bedeutet“:** derived live in `dishes.ts` (`deriveDraft`, `ruleHints`, a mirror of the backend's
+  `deriveDish` and rules): vegetarian, protein source, base ingredient, tags, and which eaters and household rules
+  exclude or limit the dish. Validation follows the backend limits; server errors (`DISH_NAME_TAKEN`,
+  `VALIDATION_ERROR`, `CONCURRENT_MODIFICATION`) are shown at the fields or as a hint.
+- **Cache:** dishes use the query key `meals/dishes/active|archived`; saving invalidates `meals` and `mealPlans`.
+
 ## Shopping List (FOOD-014)
 
 - **Page `/einkaufsliste`** (`src/features/meals/ShoppingListPage.tsx`; own navigation entry „Einkaufsliste“ after

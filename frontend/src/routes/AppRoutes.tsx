@@ -13,6 +13,7 @@ import { AnalyticsPage } from "../features/analytics/AnalyticsPage";
 import { MealPlanPage } from "../features/meals/MealPlanPage";
 import { ShoppingListPage } from "../features/meals/ShoppingListPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
+import { DishesPage } from "../features/meals/DishesPage";
 
 export interface AppRoutesProps {
   /** Ends the session (SECURITY-003). */
@@ -35,6 +36,7 @@ export function AppRoutes({ onLogout }: AppRoutesProps) {
         <Route path="tenners" element={<TennersPage />} />
         <Route path="tenners/:tennerId" element={<TennerDetailPage />} />
         <Route path="essen" element={<MealPlanPage />} />
+        <Route path="essen/gerichte" element={<DishesPage />} />
         <Route path="einkaufsliste" element={<ShoppingListPage />} />
         {/* FOOD-027: old address of the shopping list (bookmarks, installed app). */}
         <Route path="essen/einkaufsliste" element={<Navigate to="/einkaufsliste" replace />} />
