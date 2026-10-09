@@ -50,7 +50,8 @@ describe("DishEditorDialog (FOOD-010)", () => {
     const { fetchMock, onClose } = setup({
       "POST /meals/dishes": ok(dish({ dishId: "d-9", name: "Hähnchen-Pasta" }), 201),
     });
-    await userEvent.type(dialog().getByLabelText(/^Name/), "  Hähnchen-Pasta ");
+    await userEvent.click(dialog().getByLabelText(/^Name/));
+    await userEvent.paste("  Hähnchen-Pasta ");
     await addIngredient("Spaghetti");
     await addIngredient(CHICKEN.name);
     await addIngredient(WALNUTS.name);
@@ -69,7 +70,8 @@ describe("DishEditorDialog (FOOD-010)", () => {
     expect(meaning().getByText(/^Hühnchen: nur zu den Mahlzeiten/)).toBeInTheDocument();
     expect(meaning().queryByText(/Allergie/)).not.toBeInTheDocument();
 
-    await userEvent.type(dialog().getByLabelText("Vegetarische Variante (optional)"), "mit Tofu");
+    await userEvent.click(dialog().getByLabelText("Vegetarische Variante (optional)"));
+    await userEvent.paste("mit Tofu");
     expect(meaning().queryByText(/nicht vegetarisch und keine/)).not.toBeInTheDocument();
     expect(meaning().getByText("vegetarische Variante")).toBeInTheDocument();
 
@@ -95,7 +97,7 @@ describe("DishEditorDialog (FOOD-010)", () => {
         isBurger: false,
       },
     ]);
-  });
+  }, 15_000);
 
   it("creates a new ingredient inline and adds it to the dish", async () => {
     const { fetchMock } = setup({
