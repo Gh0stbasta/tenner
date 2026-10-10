@@ -59,6 +59,7 @@ and a changelog entry on top of that.
 | [MAINT-005](maintenance/ticket005.md) | Widget tap rejected by Alexa (interaction mode) | Done (device check open) |
 | [MAINT-006](maintenance/ticket006.md) | Alexa skill without Echo Show views (widget only) | Done (device check open) |
 | [MAINT-007](maintenance/ticket007.md) | Meal plan always Monday to Sunday | Done |
+| [MAINT-008](maintenance/ticket008.md) | Plus button creates a task or a dish depending on the page | Done |
 
 ### Owner hotfix tickets (`../hotfix/`)
 

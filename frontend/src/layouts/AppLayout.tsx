@@ -29,6 +29,7 @@ import type { ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { ConnectivityBanner } from "../components/ConnectivityBanner";
 import { PendingSyncIndicator } from "../features/offline/PendingSyncIndicator";
+import { isDishPage, NEW_DISH_PATH } from "../features/meals/newDish";
 import { QUICK_ADD_INPUT_ID } from "../features/tenners/quickAdd";
 import { NAVIGATION_ITEMS } from "./navigation";
 
@@ -102,10 +103,18 @@ function BottomNavigationBar() {
   );
 }
 
-/** Quick Add within thumb reach: focuses the Quick Add input, or opens „Aufgaben“ with it focused (UI-001). */
+/**
+ * Quick Add within thumb reach. On the meal pages it opens the editor for a new dish (MAINT-008); elsewhere it focuses
+ * the Quick Add input, or opens „Aufgaben“ with it focused (UI-001).
+ */
 function QuickAddFab() {
   const navigate = useNavigate();
+  const createsDish = isDishPage(useLocation().pathname);
   const onClick = () => {
+    if (createsDish) {
+      void navigate(NEW_DISH_PATH);
+      return;
+    }
     const input = document.getElementById(QUICK_ADD_INPUT_ID);
     if (input) {
       input.focus();
@@ -117,7 +126,7 @@ function QuickAddFab() {
   return (
     <Fab
       color="primary"
-      aria-label="Aufgabe schnell anlegen"
+      aria-label={createsDish ? "Gericht anlegen" : "Aufgabe schnell anlegen"}
       onClick={onClick}
       sx={{
         display: { xs: "flex", md: "none" },

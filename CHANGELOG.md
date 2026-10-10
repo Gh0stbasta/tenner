@@ -8,6 +8,11 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ## [Unreleased]
 
+### Changed
+
+- **Plus button by page:** on „Essen“ the plus button on the phone opens the editor for a new dish; elsewhere it
+  still creates an Aufgabe (MAINT-008).
+
 ### Fixed
 
 - **Meal plan order:** the days always run Monday – Sunday; today stays highlighted in its place instead of moving

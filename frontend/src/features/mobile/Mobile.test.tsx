@@ -3,7 +3,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { readFileSync } from "node:fs";
-import { Route, Routes } from "react-router";
+import { Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch, ok } from "../../tests/fetchMock";
 import { completeResponse, dashboard, dashboardTenner } from "../../tests/fixtures";
@@ -129,6 +129,10 @@ describe("pull to refresh", () => {
   });
 });
 
+function SearchProbe() {
+  return <span data-testid="search">{useLocation().search}</span>;
+}
+
 describe("mobile navigation", () => {
   function renderLayout(route: string) {
     return renderWithProviders(
@@ -136,6 +140,9 @@ describe("mobile navigation", () => {
         <Route element={<AppLayout />}>
           <Route path="tenners" element={<input id="quick-add-input" aria-label="Quick Add" />} />
           <Route path="settings" element={<h1>Einstellungen</h1>} />
+          <Route path="essen" element={<h1>Essensplan</h1>} />
+          <Route path="essen/gerichte" element={<SearchProbe />} />
+          <Route path="einkaufsliste" element={<h1>Einkaufsliste</h1>} />
         </Route>
       </Routes>,
       { route },
@@ -165,6 +172,21 @@ describe("mobile navigation", () => {
   it("navigates to the Quick Add on „Aufgaben“ from other pages", async () => {
     mockFetch({});
     renderLayout("/settings");
+    await userEvent.click(screen.getByRole("button", { name: "Aufgabe schnell anlegen" }));
+    expect(await screen.findByRole("textbox", { name: "Quick Add" })).toBeInTheDocument();
+  });
+
+  it.each(["/essen", "/essen/gerichte"])("creates a dish instead of an Aufgabe on %s (MAINT-008)", async (route) => {
+    mockFetch({});
+    renderLayout(route);
+    expect(screen.queryByRole("button", { name: "Aufgabe schnell anlegen" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Gericht anlegen" }));
+    expect(await screen.findByTestId("search")).toHaveTextContent("?new=1");
+  });
+
+  it("keeps the Aufgabe on the shopping list (MAINT-008)", async () => {
+    mockFetch({});
+    renderLayout("/einkaufsliste");
     await userEvent.click(screen.getByRole("button", { name: "Aufgabe schnell anlegen" }));
     expect(await screen.findByRole("textbox", { name: "Quick Add" })).toBeInTheDocument();
   });
