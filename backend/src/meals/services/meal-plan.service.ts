@@ -51,6 +51,15 @@ export interface PlanData {
   readonly profile: FoodProfile;
 }
 
+/** FOOD-017: meals of today and the next day in household time. */
+export interface MealDaysResponse {
+  readonly today: string;
+  readonly days: readonly {
+    readonly date: string;
+    readonly meals: readonly { readonly slot: PlanSlotResponse["slot"]; readonly status: PlanSlotResponse["status"]; readonly dish: PlanSlotResponse["dish"] }[];
+  }[];
+}
+
 export class MealPlanService {
   constructor(private readonly deps: MealPlanServiceDependencies) {}
 
@@ -76,6 +85,25 @@ export class MealPlanService {
     if (!isReady(data)) return this.toResponse(resolved.weekStart, null, data);
     const created = await this.create(resolved, data);
     return this.toResponse(resolved.weekStart, created, data);
+  }
+
+  /**
+   * FOOD-017: today and the following days (1–2) in household time, for Alexa and other clients that do not know
+   * the week. Days of the next week come from its plan.
+   */
+  async mealsAhead(tenantId: string, days: number): Promise<MealDaysResponse> {
+    const current = await this.getPlan(tenantId, "current");
+    const today = (await this.resolveWeek(tenantId, "current")).today;
+    const dates = Array.from({ length: days }, (_, index) => addDays(today, index));
+    const next = dates.some((date) => date > current.weekEnd) ? await this.getPlan(tenantId, "next") : undefined;
+    const slots = [...current.slots, ...(next?.slots ?? [])];
+    return {
+      today,
+      days: dates.map((date) => ({
+        date,
+        meals: slots.filter((slot) => slot.date === date).map((slot) => ({ slot: slot.slot, status: slot.status, dish: slot.dish })),
+      })),
+    };
   }
 
   /** Notifier: make sure the current and the next week have a plan (idempotent, cheap when they exist). */

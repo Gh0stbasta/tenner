@@ -169,6 +169,40 @@
           ]
         },
         {
+          "name": "MealTodayIntent",
+          "slots": [
+            {
+              "name": "day",
+              "type": "AMAZON.DATE"
+            },
+            {
+              "name": "meal",
+              "type": "MealSlot"
+            }
+          ],
+          "samples": [
+            "was es heute gibt",
+            "was gibt es heute",
+            "was gibt es heute zu essen",
+            "was gibt's heute",
+            "was gibt's heute zu essen",
+            "was gibt es zu essen",
+            "was es {day} gibt",
+            "was gibt es {day}",
+            "was gibt es {day} zu essen",
+            "was es {day} zu essen gibt",
+            "was gibt es {day} {meal}",
+            "was es {day} {meal} gibt",
+            "was essen wir {day}",
+            "was essen wir {day} {meal}",
+            "was wir {day} {meal} essen",
+            "was kochen wir {day}",
+            "was kochen wir {day} {meal}",
+            "was gibt es zum {meal}",
+            "was gibt es {meal}"
+          ]
+        },
+        {
           "name": "ShoppingItemBoughtIntent",
           "slots": [
             {
@@ -257,6 +291,35 @@
               "name": {
                 "value": "aufgabe",
                 "synonyms": []
+              }
+            }
+          ]
+        },
+        {
+          "name": "MealSlot",
+          "values": [
+            {
+              "id": "LUNCH",
+              "name": {
+                "value": "mittag",
+                "synonyms": [
+                  "mittags",
+                  "mittagessen",
+                  "zu mittag",
+                  "heute mittag"
+                ]
+              }
+            },
+            {
+              "id": "DINNER",
+              "name": {
+                "value": "abend",
+                "synonyms": [
+                  "abends",
+                  "abendessen",
+                  "zu abend",
+                  "abendbrot"
+                ]
               }
             }
           ]

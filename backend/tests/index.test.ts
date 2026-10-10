@@ -165,6 +165,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     restoreDish: vi.fn(async () => DISH),
     createDishImageUpload: vi.fn(async () => ({ imageKey: "images/meals/default/d/k.jpg", uploadUrl: "https://s3.test/put", headers: { "Content-Type": "image/jpeg" }, expiresInSeconds: 300 })),
     setDishImage: vi.fn(async () => DISH),
+    getMealsAhead: vi.fn(async () => ({ today: "2026-10-14", days: [{ date: "2026-10-14", meals: [] }] })),
     removeDishImage: vi.fn(async () => DISH),
     getFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
     updateFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
@@ -538,6 +539,15 @@ describe("dish routes (FOOD-002)", () => {
     expect((await route(withDish("DELETE /meals/dishes/{dishId}"), d)).statusCode).toBe(200);
     expect((await route(withDish("POST /meals/dishes/{dishId}/restore"), d)).statusCode).toBe(200);
     expect(d.restoreDish).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID);
+  });
+
+  it("returns today's and tomorrow's meals with a validated day count (FOOD-017)", async () => {
+    const d = deps();
+    expect((await route(event("GET /meals/today", {}, undefined, { days: "2" }), d)).statusCode).toBe(200);
+    expect(d.getMealsAhead).toHaveBeenCalledWith("default", 2);
+    expect((await route(event("GET /meals/today"), d)).statusCode).toBe(200);
+    expect(d.getMealsAhead).toHaveBeenLastCalledWith("default", 1);
+    expect((await route(event("GET /meals/today", {}, undefined, { days: "3" }), d)).statusCode).toBe(400);
   });
 
   it("issues photo uploads, sets and removes photos with validated bodies (FOOD-011)", async () => {

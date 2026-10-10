@@ -37,6 +37,8 @@ import {
   listDishesHandler,
   restoreDishHandler,
   dishImageUploadHandler,
+  mealsTodayHandler,
+  type GetMealsAhead,
   setDishImageHandler,
   removeDishImageHandler,
   createImageStorage,
@@ -241,6 +243,7 @@ export interface Dependencies {
   readonly archiveDish: ArchiveDish;
   readonly restoreDish: ArchiveDish;
   readonly createDishImageUpload: CreateDishImageUpload;
+  readonly getMealsAhead: GetMealsAhead;
   readonly setDishImage: SetDishImage;
   readonly removeDishImage: ArchiveDish;
   readonly getFoodProfile: GetFoodProfile;
@@ -355,6 +358,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "PUT /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => updateDishHandler(event, identity, deps.updateDish, logger),
   "DELETE /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => archiveDishHandler(event, identity, deps.archiveDish, logger),
   "POST /meals/dishes/{dishId}/restore": ({ event, deps, logger, identity }) => restoreDishHandler(event, identity, deps.restoreDish, logger),
+  "GET /meals/today": ({ event, deps, identity }) => mealsTodayHandler(event, identity.tenantId, deps.getMealsAhead),
   "POST /meals/dishes/{dishId}/image-upload": ({ event, deps, logger, identity }) => dishImageUploadHandler(event, identity, deps.createDishImageUpload, logger),
   "PUT /meals/dishes/{dishId}/image": ({ event, deps, logger, identity }) => setDishImageHandler(event, identity, deps.setDishImage, logger),
   "DELETE /meals/dishes/{dishId}/image": ({ event, deps, logger, identity }) => removeDishImageHandler(event, identity, deps.removeDishImage, logger),
@@ -568,6 +572,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     setDishImage: dishImageService ? (identity, dishId, request) => dishImageService.setImage(identity, dishId, request) : notConfigured,
     removeDishImage: dishImageService ? (identity, dishId) => dishImageService.removeImage(identity, dishId) : notConfigured,
     getMealPlan: mealPlanService ? (tenantId, week) => mealPlanService.getPlan(tenantId, week) : notConfigured,
+    getMealsAhead: mealPlanService ? (tenantId, days) => mealPlanService.mealsAhead(tenantId, days) : notConfigured,
     replaceMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.replaceMeal(identity, week, slotId, request) : notConfigured,
     mealOptions: mealPlanService ? (tenantId, week, slotId) => mealPlanService.mealOptions(tenantId, week, slotId) : notConfigured,
     chooseMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.chooseMeal(identity, week, slotId, request) : notConfigured,

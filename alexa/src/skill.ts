@@ -11,6 +11,7 @@ import { EnableRemindersIntentHandler, PermissionResponseHandler, messageReceive
 import { NoIntentHandler, OverdueIntentHandler, SuggestIntentHandler, TodayIntentHandler, WorkLeftIntentHandler, YesIntentHandler } from "./handlers/questions.js";
 import { SessionEndedRequestHandler } from "./handlers/sessionEnded.js";
 import { AddShoppingItemIntentHandler, ReadShoppingListIntentHandler, ShoppingItemBoughtIntentHandler } from "./handlers/shopping.js";
+import { MealTodayIntentHandler } from "./handlers/meals.js";
 import { SpeakerIntentHandler } from "./handlers/speaker.js";
 import { StopIntentHandler } from "./handlers/stop.js";
 import { AplRuntimeErrorHandler, DataStoreErrorHandler, SystemExceptionHandler, UnknownSystemRequestHandler, touchSessionInterceptor } from "./handlers/system.js";
@@ -49,6 +50,7 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
       AddShoppingItemIntentHandler,
       ReadShoppingListIntentHandler,
       ShoppingItemBoughtIntentHandler,
+      MealTodayIntentHandler,
       BriefingIntentHandler,
       BriefingYesHandler,
       BriefingNoHandler,

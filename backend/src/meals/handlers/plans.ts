@@ -7,9 +7,18 @@ import { successResponse } from "../../utils/http.js";
 import type { Logger } from "../../utils/logger.js";
 import { parseJsonBody, validate } from "../../validators/index.js";
 import type { MealPlanResponse } from "../models/plan.js";
-import type { ChooseMealRequest, MealOption, RegeneratedPlanResponse, RegenerateWeekRequest, ReplaceMealRequest, SwapMealsRequest } from "../services/meal-plan.service.js";
+import type { ChooseMealRequest, MealDaysResponse, MealOption, RegeneratedPlanResponse, RegenerateWeekRequest, ReplaceMealRequest, SwapMealsRequest } from "../services/meal-plan.service.js";
 
 export type GetMealPlan = (tenantId: string, week: string) => Promise<MealPlanResponse>;
+export type GetMealsAhead = (tenantId: string, days: number) => Promise<MealDaysResponse>;
+
+const mealsTodayQuerySchema = z.object({ days: z.enum(["1", "2"]).transform(Number).default(1) }).strict();
+
+/** FOOD-017: GET /meals/today?days=1|2 — today (and tomorrow) in household time. */
+export async function mealsTodayHandler(event: ApiEvent, tenantId: string, mealsAhead: GetMealsAhead): Promise<ApiResult> {
+  const { days } = validate(mealsTodayQuerySchema, event.queryStringParameters ?? {});
+  return successResponse(200, await mealsAhead(tenantId, days));
+}
 export type ReplaceMeal = (identity: Identity, week: string, slotId: string, request: ReplaceMealRequest) => Promise<MealPlanResponse>;
 
 export type MealOptions = (tenantId: string, week: string, slotId: string) => Promise<MealOption[]>;

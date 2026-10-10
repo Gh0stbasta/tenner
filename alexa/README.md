@@ -102,6 +102,7 @@ Alexa is a notification channel of the notifier (NOTIFICATION-001) for every Ale
 | Tenner notification | On Alexa |
 |---|---|
 | Overdue alert (NOTIFICATION-004, member's evening time, default 18:00) | notification indicator (Proactive Event `AMAZON.MessageAlert.Activated`, count only — schemas allow no titles) |
+| Meals of the day (FOOD-016, member's meal time, default 07:30) | spoken reminder „Zentrale: Heute gibt es mittags Onigiri und abends Linseneintopf.“ (Skill Messaging, like the digest) |
 | Daily digest (NOTIFICATION-003, member's time) | spoken reminder 60 s later: „Tenner: Heute 4 Tenner, 40 Minuten, 1 überfällig. Sag: Alexa, sag Familien Zentrale, starte meinen Tag, für Details.“ — created by the skill from a Skill Messaging message (only way to create reminders out of session) |
 
 Setup (owner, after the widget prerequisites — LWA client in Parameter Store):
@@ -123,7 +124,8 @@ the household timezone („Guten Morgen, Stefan.“), today's Tenners of the spe
 without a recognized speaker) with up to three titles, overdue ones (longest first), the household total and the
 other members' counts (only with more than one member), a vacation notice, and „Soll ich dir den ersten Tenner
 nennen?“ („ja“ → suggestion, then „erledigt“ completes it). At most about 100 words (≈ 40 s): titles are dropped
-first, then the household sentence. On an Echo Show the dashboard is shown while speaking.
+first, then the household sentence. Since FOOD-017 today's meals follow the Tenners („Heute gibt es mittags … und
+abends ….“); without a plan or when the meal call fails the sentence is left out. No screen view since MAINT-006.
 
 **Every morning automatically (Alexa routine, owner):** Alexa app → Mehr → Routinen → „+“ → Wenn: Zeitplan, z. B.
 7:00 an Werktagen → Aktion hinzufügen: „Benutzerdefiniert“ → „sag Familien Zentrale, starte meinen Tag“ (or Skills → Tenner)
@@ -179,6 +181,19 @@ wissen?“. Every answer also appears as a card in the Alexa app.
 
 One-shot: „Alexa, sag Familien Zentrale, setz Milch auf die Einkaufsliste“. „Alexa, setz Milch auf die Einkaufsliste“
 without „Familien Zentrale“ goes to Amazon's own list (Amazon offers no way to redirect it).
+
+### Meals (FOOD-017)
+
+| Wish | Examples | Answer |
+|---|---|---|
+| Today | „was gibt es heute“, „was gibt's heute zu essen“, „was kochen wir heute“ | „Heute gibt es mittags Onigiri und abends Burger, für Vegetarier mit Veggie-Patty.“ |
+| Tomorrow / one meal | „was gibt es morgen mittag“, „was essen wir heute abend“ | „Heute Abend gibt es Linseneintopf.“; empty: „Für heute Abend ist noch nichts geplant.“ |
+| Later days | „was gibt es am Freitag“ | „Ich kenne nur das Essen für heute und morgen.“ |
+
+Intent `MealTodayIntent` (slots `day`: AMAZON.DATE, `meal`: `MealSlot` Mittag/Abend) reads `GET /meals/today?days=2`
+(today and tomorrow in household time, one call). One-shot: „Alexa, frag Familien Zentrale, was es heute gibt“.
+„Alexa, was gibt es heute?“ without the name is not possible for a private skill. No Echo Show view (MAINT-006); the
+meals are on the home-screen widget (FOOD-018).
 
 ## Development
 

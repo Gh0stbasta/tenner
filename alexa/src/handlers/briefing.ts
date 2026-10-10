@@ -5,6 +5,9 @@ import type { Response } from "ask-sdk-model";
 import { suggestionAnswer } from "../answers.js";
 import { buildBriefing, type BriefingDashboard } from "../briefing.js";
 import { fetchDashboard, type DashboardTenner } from "../dashboard.js";
+import { logEvent } from "../log.js";
+import { fetchMealDays, mealSentence } from "../meals.js";
+import { TennerApiError } from "../tennerApi.js";
 import { apiOf, loadHousehold } from "../session.js";
 import { isIntent } from "./intentRequest.js";
 import { answer } from "./respond.js";
@@ -22,6 +25,16 @@ function setOffer(input: HandlerInput, tenner: DashboardTenner | undefined, sugg
   });
 }
 
+/** FOOD-017: the meal sentence must never break the briefing; without a plan or on errors it is left out. */
+async function mealsOrNothing(input: HandlerInput): Promise<string | undefined> {
+  try {
+    return mealSentence(await fetchMealDays(apiOf(input)));
+  } catch (error) {
+    logEvent("info", "briefing_meals_skipped", { requestId: input.requestEnvelope.request.requestId, kind: error instanceof TennerApiError ? error.kind : "UNKNOWN" });
+    return undefined;
+  }
+}
+
 const offerOf = (input: HandlerInput): DashboardTenner | undefined => input.attributesManager.getSessionAttributes()[OFFER_ATTRIBUTE] as DashboardTenner | undefined;
 
 export const BriefingIntentHandler: RequestHandler = {
@@ -30,7 +43,14 @@ export const BriefingIntentHandler: RequestHandler = {
     const household = await loadHousehold(input);
     // One household-wide dashboard: personal parts are filtered from it, the household part uses its totals.
     const dashboard = (await fetchDashboard(apiOf(input), undefined)) as BriefingDashboard;
-    const briefing = buildBriefing({ dashboard, members: household.context.members, speaker: household.speaker, now: new Date(), timeZone: household.context.timezone });
+    const briefing = buildBriefing({
+      dashboard,
+      members: household.context.members,
+      speaker: household.speaker,
+      now: new Date(),
+      timeZone: household.context.timezone,
+      meals: await mealsOrNothing(input),
+    });
     setOffer(input, briefing.suggestion);
     return briefing.suggestion ? answer(input, briefing.text, "Soll ich dir die erste Aufgabe nennen?") : answer(input, briefing.text);
   },

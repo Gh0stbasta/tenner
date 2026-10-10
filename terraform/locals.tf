@@ -105,6 +105,7 @@ locals {
     "PUT /meals/profile",                                   # FOOD-004
     "POST /meals/catalog",                                  # FOOD-003
     "GET /meals/plans/{weekStart}",                         # FOOD-006
+    "GET /meals/today",                                     # FOOD-017 (Alexa)
     "POST /meals/plans/{weekStart}/slots/{slotId}/replace", # FOOD-007
     "GET /meals/plans/{weekStart}/slots/{slotId}/options",  # FOOD-022
     "PUT /meals/plans/{weekStart}/slots/{slotId}",          # FOOD-022
