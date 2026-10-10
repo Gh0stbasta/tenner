@@ -55,6 +55,22 @@ function routes(extra: Record<string, MockResponse | (() => MockResponse)> = {})
   };
 }
 
+/** The fixture plan moved one week ahead (Monday 19 October); dishes are keyed by the fixture's dates. */
+function nextWeekPlan(dishes: Record<string, string | null>) {
+  const plan = mealPlanFixture({ dishes });
+  const later = (date: string) => {
+    const value = new Date(`${date}T00:00:00Z`);
+    value.setUTCDate(value.getUTCDate() + 7);
+    return value.toISOString().slice(0, 10);
+  };
+  return {
+    ...plan,
+    weekStart: later(plan.weekStart),
+    weekEnd: later(plan.weekEnd),
+    slots: plan.slots.map((slot) => ({ ...slot, date: later(slot.date), slotId: `${later(slot.date)}#${slot.slot}` })),
+  };
+}
+
 const region = async (name: string) => within(await screen.findByRole("region", { name }));
 
 describe("DashboardPage (UI-001)", () => {
@@ -86,6 +102,7 @@ describe("DashboardPage (UI-001)", () => {
     expect(tasks.queryByText("Gestern")).not.toBeInTheDocument();
 
     const shopping = await region("Für morgen einkaufen");
+    expect(await shopping.findByText("Mittag: Eierreis mit Gemüse · Abend: Burger")).toBeInTheDocument();
     expect(await shopping.findByText("1× Milch")).toBeInTheDocument();
     expect(shopping.getByText("2× Spaghetti")).toBeInTheDocument();
     expect(shopping.queryByText("Eier")).not.toBeInTheDocument();
@@ -127,7 +144,9 @@ describe("DashboardPage (UI-001)", () => {
     );
     renderWithProviders(<DashboardPage />);
     expect(await (await region("Heute erledigen wir")).findByText("Heute steht nichts an.")).toBeInTheDocument();
-    expect(await (await region("Für morgen einkaufen")).findByText("Keine Einkäufe notwendig")).toBeInTheDocument();
+    const shopping = await region("Für morgen einkaufen");
+    expect(await shopping.findByText("Keine Einkäufe notwendig")).toBeInTheDocument();
+    expect(shopping.queryByText(/Mittag:|Abend:/)).not.toBeInTheDocument();
     expect(await (await region("Heute essen wir")).findByText("Für heute ist noch nichts geplant.")).toBeInTheDocument();
   });
 
@@ -136,10 +155,13 @@ describe("DashboardPage (UI-001)", () => {
     const fetchMock = mockFetch(
       routes({
         "GET /meals/plans/next/shopping-list": ok({ ...SHOPPING, weekStart: "2026-10-19", items: [item("bread", "Brot", ["2026-10-19#LUNCH"])] }),
+        "GET /meals/plans/next": ok(nextWeekPlan({ "2026-10-12#DINNER": null })),
       }),
     );
     renderWithProviders(<DashboardPage />);
-    expect(await (await region("Für morgen einkaufen")).findByText("1× Brot")).toBeInTheDocument();
+    const shopping = await region("Für morgen einkaufen");
+    expect(await shopping.findByText("1× Brot")).toBeInTheDocument();
+    expect(await shopping.findByText("Mittag: Onigiri")).toBeInTheDocument();
     expect(fetchMock.calls().some((call) => call.key === "GET /meals/plans/next/shopping-list")).toBe(true);
   });
 
