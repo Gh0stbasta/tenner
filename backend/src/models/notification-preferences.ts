@@ -20,11 +20,16 @@ export interface NotificationPreferences {
   readonly quietHours: { readonly start: string; readonly end: string } | null;
   /** What „Später“ in a push notification does (NOTIFICATION-011). */
   readonly pushSnooze: PushSnoozeOption;
+  /** „Essensplan am Morgen“: today's lunch and dinner (FOOD-016). */
+  readonly mealToday: { readonly enabled: boolean; readonly time: string; readonly channels: readonly UserChannel[] };
 }
 
 /** NOTIFICATION-010 (docs/human/mobileReminder.md): morning reminder 08:00, evening reminder for overdue Tenners 18:00. */
 export const DEFAULT_DIGEST_TIME = "08:00";
 export const DEFAULT_OVERDUE_ALERT_TIME = "18:00";
+/** FOOD-016: early enough to thaw or buy something. */
+export const DEFAULT_MEAL_TODAY_TIME = "07:30";
+export const DEFAULT_MEAL_TODAY: NotificationPreferences["mealToday"] = { enabled: true, time: DEFAULT_MEAL_TODAY_TIME, channels: [] };
 
 /** Defaults: most members never change them ("Simplicity First"). Channels stay empty until one is connected. */
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -34,14 +39,16 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   weeklySummary: { enabled: false, dayOfWeek: "SUN", time: "18:00", channels: [] },
   quietHours: { start: "21:30", end: "07:00" },
   pushSnooze: "1H",
+  mealToday: DEFAULT_MEAL_TODAY,
 };
 
-/** Stored preferences from before NOTIFICATION-010/011 lack the evening time and the snooze option: defaults apply. */
+/** Stored preferences from before NOTIFICATION-010/011 and FOOD-016 lack the evening time and the snooze option: defaults apply. */
 export function withPreferenceDefaults(preferences: NotificationPreferences): NotificationPreferences {
   return {
     ...preferences,
     overdueAlerts: { ...preferences.overdueAlerts, time: preferences.overdueAlerts.time ?? DEFAULT_OVERDUE_ALERT_TIME },
     pushSnooze: preferences.pushSnooze ?? "1H",
+    mealToday: preferences.mealToday ?? DEFAULT_MEAL_TODAY,
   };
 }
 

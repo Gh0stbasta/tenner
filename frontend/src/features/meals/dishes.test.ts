@@ -30,6 +30,7 @@ const draft = (fields: Partial<DishInput> = {}): DishInput => ({
   vegetarianVariant: null,
   familyFriendly: true,
   isBurger: false,
+  nutritionOverride: null,
   ...fields,
 });
 
@@ -174,5 +175,16 @@ describe("dishes (FOOD-010)", () => {
   it("summarises slots and times", () => {
     expect(dishSummaryLine(dish())).toBe("Mittag, Abend · 20 Min. aktiv (40 Min. gesamt)");
     expect(dishSummaryLine(dish({ slots: ["DINNER"], totalMinutes: 20 }))).toBe("Abend · 20 Min.");
+  });
+
+  it("validates own nutrition values (FOOD-012)", () => {
+    expect(validateDraft(draft({ nutritionOverride: { kcal: 1250, protein: 55, carbs: 90, fat: 70 } }))).toEqual({});
+    expect(
+      validateDraft(draft({ nutritionOverride: { kcal: 3500, protein: Number.NaN, carbs: 90, fat: 600 } })),
+    ).toEqual({
+      "nutritionOverride.kcal": "Zwischen 0 und 3000.",
+      "nutritionOverride.protein": "Zwischen 0 und 500.",
+      "nutritionOverride.fat": "Zwischen 0 und 500.",
+    });
   });
 });

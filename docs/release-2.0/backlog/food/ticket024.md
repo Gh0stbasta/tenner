@@ -93,3 +93,15 @@ Follow-up ticket if go
 # Out of Scope
 
 - Implementation.
+
+---
+
+# Evaluation Status
+
+Prepared (2026-10-10), **waiting for the owner's decision**.
+
+- Options A (placeholders, built in FOOD-011), B (stock images) and C (AI images via Bedrock) compared on licence,
+  privacy, cost and effort in [ADR 0008](../../../decisions/0008-dish-image-sources.md) (status Proposed).
+- Recommendation: A now; C later if many dishes still have no photo.
+- Remaining: the owner's decision; if B or C, the follow-up ticket. The acceptance criteria „Decision documented“ and
+  „If go: follow-up ticket created“ are open until then.

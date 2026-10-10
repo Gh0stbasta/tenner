@@ -103,30 +103,52 @@ cd frontend && npm run lint && npm run build && npm test
 
 # Acceptance Criteria
 
-- [ ] Protein sources, vegetarian share, favorites and cost shown
-- [ ] Variety and plan adherence visible
-- [ ] Periods 4 weeks, 12 weeks, 1 year
-- [ ] Tests passing
+- [x] Protein sources, vegetarian share, favorites and cost shown
+- [x] Variety and plan adherence visible
+- [x] Periods 4 weeks, 12 weeks, 1 year
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated (docs/analytics.md)
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated (docs/analytics.md)
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
 # Assumptions
 
 - At most 52 plans per year: on-the-fly aggregation is enough.
+- „Replaced“ = meals chosen or swapped by hand (`source: MANUAL`); „Anderes Gericht“ (FOOD-007) keeps the planner's
+  source and counts as planned.
+- Cost per week is shown as columns (one per week from one baseline) instead of a line: few weeks for 4 and 12 weeks,
+  and the existing chart primitives have no line chart; the table view lists every week.
+- The tab keeps its own period buttons (4 Wochen, 12 Wochen, 1 Jahr); the Aufgaben period selector stays unchanged.
+- Visual check in a real browser is left to the owner (tests render the tab with fixtures in jsdom).
 
 ---
 
 # Out of Scope
 
 - Nutrition analytics over time, comparisons between households.
+
+---
+
+# Implementation Status
+
+Done (2026-10-10).
+
+- Backend: `src/meals/analytics.ts` (`computeFoodAnalytics`), `MealPlanService.analytics`, route
+  `GET /meals/analytics` (Terraform); meal records carry the slot source.
+- Frontend: `features/analytics/FoodAnalytics.tsx`, tabs „Aufgaben“ / „Essen“ on the analytics page,
+  `useFoodAnalytics`.
+- Tests: `backend/tests/meals-analytics.test.ts` (every metric on fixed plans, portions, periods, empty history),
+  route test; frontend `FoodAnalytics.test.tsx` (tiles, charts, table toggle, period change, empty state).
+- Validation: backend lint, typecheck, 1,145 tests; frontend lint, typecheck, build, 498 tests; Terraform api tests.
+- Technical debt: none new (aggregation pattern as TD-033).
+

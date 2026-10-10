@@ -9,14 +9,14 @@ recurring responsibilities through small, ten-minute tasks ("Tenners").
 
 > If something can be improved in 10 minutes, do a Tenner.
 
-> **Release 1.0.0 (2026-10-07) is live and in maintenance. Release 2.0 (family meal planning) is planned:**
-> [`docs/release-2.0/README.md`](docs/release-2.0/README.md).
+> **Release 2.0.0 (2026-10-10): family meal planning** — weekly plan, shopping list, calendar, Alexa and Echo Show.
+> Overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md). Release 1.0: [`docs/release-1.0/README.md`](docs/release-1.0/README.md).
 
 - **Release 1.0 overview:** [`docs/release-1.0/README.md`](docs/release-1.0/README.md) · Changelog:
   [`CHANGELOG.md`](CHANGELOG.md)
 - **Project status at a glance:** [`dashboard.md`](dashboard.md)
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
-- Roadmap: [`docs/roadmap.md`](docs/roadmap.md) · release 2.0 backlog: [`docs/release-2.0/`](docs/release-2.0/README.md)
+- Roadmap: [`docs/roadmap.md`](docs/roadmap.md) · release 2.0: [`docs/release-2.0/`](docs/release-2.0/README.md)
 - Maintenance backlog: [`docs/backlog/README.md`](docs/backlog/README.md) · release 1.0 tickets:
   [`docs/release-1.0/`](docs/release-1.0/)
 - Technical debt: [`docs/technical-debt.md`](docs/technical-debt.md)
@@ -37,6 +37,7 @@ The repository contains:
 - the German web app in [`frontend/`](frontend/README.md) (FRONTEND-001 – 007, FRONTEND-009, UX-005): dashboard,
   Tenner management with search and filters, create/edit dialogs, Quick Add, complete with undo, recent activity,
   Tenner detail with history, central error handling. It is published to CloudFront by `deploy.yml`.
+- meal planning (release 2.0, [ADR 0007](docs/decisions/0007-meal-planning.md)): table `tenner-meals`, image bucket `tenner-meal-images-<env>`, routes `/meals/*` (dishes, ingredients, profile, plans, shopping list, calendar, analytics), web app pages `/essen`, `/essen/gerichte`, `/einkaufsliste`; setup steps in [`docs/release-2.0/README.md`](docs/release-2.0/README.md) („Getting Started“)
 - the Alexa skill foundation in [`alexa/`](alexa/README.md) (ALEXA-001, [ADR 0005](docs/decisions/0005-alexa-platform.md)): German skill skeleton, skill Lambda `tenner-alexa-skill` in eu-west-1 (created once the GitHub variable `ALEXA_SKILL_ID` is set)
 - the project documentation
 
@@ -83,6 +84,7 @@ For the managed resources so far:
 - API Gateway (`apigateway:*` on `tenner-api-gateway`)
 - DynamoDB tables `tenner-tenners`, `tenner-history`, `tenner-households` and `tenner-meals` (create, update, tag, PITR, TTL, deletion protection; SCHEDULING-008 added `tenner-households`, FOOD-001 `tenner-meals`)
 - S3 bucket `tenner-frontend-<env>` (bucket configuration, policy) and CloudFront (distribution, origin access control, response headers policy)
+- S3 bucket `tenner-meal-images-<env>` for dish photos (FOOD-011): the same bucket configuration rights as the frontend bucket (create, versioning, encryption, public access block, ownership controls, lifecycle, **CORS**, policy, tags); `iam:PutRolePolicy`/`DeleteRolePolicy` already cover the new inline policy `tenner-api-role-meal-images`
 - Frontend publishing (TICKET-018):
   - `s3:ListBucket` on `arn:aws:s3:::tenner-frontend-<env>`
   - `s3:PutObject` and `s3:DeleteObject` on `arn:aws:s3:::tenner-frontend-<env>/*`

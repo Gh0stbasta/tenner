@@ -36,6 +36,28 @@ import {
   getDishHandler,
   listDishesHandler,
   restoreDishHandler,
+  dishImageUploadHandler,
+  mealsTodayHandler,
+  setMealStatusHandler,
+  dishHistoryHandler,
+  foodAnalyticsHandler,
+  type GetFoodAnalytics,
+  type SetMealStatus,
+  type GetDishHistory,
+  calendarFeedHandler,
+  calendarStatusHandler,
+  createCalendarTokenHandler,
+  revokeCalendarTokenHandler,
+  type CalendarFeed,
+  type CalendarStatus,
+  type CreateCalendarToken,
+  type RevokeCalendarToken,
+  type GetMealsAhead,
+  setDishImageHandler,
+  removeDishImageHandler,
+  createImageStorage,
+  type CreateDishImageUpload,
+  type SetDishImage,
   updateDishHandler,
   type ArchiveDish,
   type CreateDish,
@@ -76,6 +98,7 @@ import { clientOf, householdGroupName, identityFromEvent, principalFromEvent, ty
 import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
 import { getSsmClient } from "./clients/ssm.js";
+import { getS3Client } from "./clients/s3.js";
 import { createSecretLoader } from "./secrets/index.js";
 import { getEventBridgeClient } from "./clients/eventbridge.js";
 import { changesHousehold, createHouseholdChangePublisher, type HouseholdChangePublisher } from "./events/household-events.js";
@@ -233,6 +256,17 @@ export interface Dependencies {
   readonly updateDish: UpdateDish;
   readonly archiveDish: ArchiveDish;
   readonly restoreDish: ArchiveDish;
+  readonly createDishImageUpload: CreateDishImageUpload;
+  readonly getMealsAhead: GetMealsAhead;
+  readonly setMealStatus: SetMealStatus;
+  readonly dishHistory: GetDishHistory;
+  readonly foodAnalytics: GetFoodAnalytics;
+  readonly calendarStatus: CalendarStatus;
+  readonly createCalendarToken: CreateCalendarToken;
+  readonly revokeCalendarToken: RevokeCalendarToken;
+  readonly calendarFeed: CalendarFeed;
+  readonly setDishImage: SetDishImage;
+  readonly removeDishImage: ArchiveDish;
   readonly getFoodProfile: GetFoodProfile;
   readonly updateFoodProfile: UpdateFoodProfile;
   readonly importMealCatalog: ImportMealCatalog;
@@ -274,6 +308,8 @@ const PUBLIC_ROUTES: Readonly<Record<string, PublicRouteHandler>> = {
   "GET /health": ({ deps, logger }) => health(deps.config, deps.probeDatabase, logger),
   // NOTIFICATION-011: authorized by the signed token in the body, not by a login.
   "POST /push-actions": ({ event, deps, logger }) => pushActionHandler(event, deps.handlePushAction, logger),
+  // FOOD-015: authorized by the secret token in the path (hash compared), not by a login.
+  "GET /meals/calendar/{token}": ({ event, deps }) => calendarFeedHandler(event, deps.calendarFeed),
 };
 
 /** Signed-in users without a household may call these to pick their household member (HOTFIX-001). */
@@ -345,6 +381,16 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "PUT /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => updateDishHandler(event, identity, deps.updateDish, logger),
   "DELETE /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => archiveDishHandler(event, identity, deps.archiveDish, logger),
   "POST /meals/dishes/{dishId}/restore": ({ event, deps, logger, identity }) => restoreDishHandler(event, identity, deps.restoreDish, logger),
+  "GET /meals/calendar": ({ deps, identity }) => calendarStatusHandler(identity.tenantId, deps.calendarStatus),
+  "POST /meals/calendar": ({ deps, logger, identity }) => createCalendarTokenHandler(identity, deps.createCalendarToken, logger),
+  "DELETE /meals/calendar": ({ deps, logger, identity }) => revokeCalendarTokenHandler(identity, deps.revokeCalendarToken, deps.calendarStatus, logger),
+  "GET /meals/analytics": ({ event, deps, identity }) => foodAnalyticsHandler(event, identity.tenantId, deps.foodAnalytics),
+  "GET /meals/history": ({ deps, identity }) => dishHistoryHandler(identity.tenantId, deps.dishHistory),
+  "PUT /meals/plans/{weekStart}/slots/{slotId}/status": ({ event, deps, logger, identity }) => setMealStatusHandler(event, identity, deps.setMealStatus, logger),
+  "GET /meals/today": ({ event, deps, identity }) => mealsTodayHandler(event, identity.tenantId, deps.getMealsAhead),
+  "POST /meals/dishes/{dishId}/image-upload": ({ event, deps, logger, identity }) => dishImageUploadHandler(event, identity, deps.createDishImageUpload, logger),
+  "PUT /meals/dishes/{dishId}/image": ({ event, deps, logger, identity }) => setDishImageHandler(event, identity, deps.setDishImage, logger),
+  "DELETE /meals/dishes/{dishId}/image": ({ event, deps, logger, identity }) => removeDishImageHandler(event, identity, deps.removeDishImage, logger),
   "GET /meals/profile": ({ deps, identity }) => getFoodProfileHandler(identity.tenantId, deps.getFoodProfile),
   "PUT /meals/profile": ({ event, deps, logger, identity }) => updateFoodProfileHandler(event, identity, deps.updateFoodProfile, logger),
   "POST /meals/catalog": ({ event, deps, logger, identity }) => importMealCatalogHandler(event, identity, deps.importMealCatalog, logger),
@@ -470,8 +516,10 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
         settingsOf: (tenantId) => settingsOf(tenantId),
         clock: systemClock,
         ids: uuidGenerator,
+        ...(config.mealImagesBucket === undefined ? {} : { imageStorage: createImageStorage({ client: getS3Client(), bucket: config.mealImagesBucket, logger }) }),
       })
     : undefined;
+  const dishImageService = meals?.images;
   const ingredientService = meals?.ingredients;
   const dishService = meals?.dishes;
   const profileService = meals?.profiles;
@@ -549,7 +597,18 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     updateDish: dishService ? (identity, dishId, request) => dishService.updateDish(identity, dishId, request) : notConfigured,
     archiveDish: dishService ? (identity, dishId) => dishService.archiveDish(identity, dishId) : notConfigured,
     restoreDish: dishService ? (identity, dishId) => dishService.restoreDish(identity, dishId) : notConfigured,
+    createDishImageUpload: dishImageService ? (identity, dishId, request) => dishImageService.createUpload(identity, dishId, request) : notConfigured,
+    setDishImage: dishImageService ? (identity, dishId, request) => dishImageService.setImage(identity, dishId, request) : notConfigured,
+    removeDishImage: dishImageService ? (identity, dishId) => dishImageService.removeImage(identity, dishId) : notConfigured,
     getMealPlan: mealPlanService ? (tenantId, week) => mealPlanService.getPlan(tenantId, week) : notConfigured,
+    calendarStatus: meals ? (tenantId) => meals.calendar.status(tenantId) : notConfigured,
+    createCalendarToken: meals ? (identity) => meals.calendar.createToken(identity) : notConfigured,
+    revokeCalendarToken: meals ? (identity) => meals.calendar.revoke(identity) : notConfigured,
+    calendarFeed: meals ? (token) => meals.calendar.feed(token) : notConfigured,
+    setMealStatus: mealPlanService ? (identity, week, slotId, request) => mealPlanService.setMealStatus(identity, week, slotId, request) : notConfigured,
+    foodAnalytics: mealPlanService ? (tenantId, period) => mealPlanService.analytics(tenantId, period) : notConfigured,
+    dishHistory: mealPlanService ? (tenantId) => mealPlanService.dishHistory(tenantId) : notConfigured,
+    getMealsAhead: mealPlanService ? (tenantId, days) => mealPlanService.mealsAhead(tenantId, days) : notConfigured,
     replaceMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.replaceMeal(identity, week, slotId, request) : notConfigured,
     mealOptions: mealPlanService ? (tenantId, week, slotId) => mealPlanService.mealOptions(tenantId, week, slotId) : notConfigured,
     chooseMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.chooseMeal(identity, week, slotId, request) : notConfigured,

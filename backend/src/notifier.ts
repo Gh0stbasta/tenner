@@ -11,11 +11,10 @@ import {
   createProactiveEventsClient,
   createSkillMessagingClient,
   WidgetPushService,
-  type DayMeal,
   type ShoppingListEntry,
 } from "./alexa/index.js";
 import { getDocumentClient } from "./clients/dynamodb.js";
-import { createMealServices, type MealPlanService, type ShoppingListService } from "./meals/index.js";
+import { createMealServices, type MealPlanService, type PlanSlotResponse, type ShoppingListService } from "./meals/index.js";
 import { NotFoundError } from "./exceptions/index.js";
 import { getSsmClient } from "./clients/ssm.js";
 import { loadConfig, type AppConfig } from "./config.js";
@@ -24,6 +23,7 @@ import { HOUSEHOLD_CHANGED } from "./events/household-events.js";
 import {
   LogChannel,
   dailyDigestJob,
+  mealTodayJob,
   overdueAlertJob,
   snoozedReminderJob,
   runNotifier,
@@ -80,25 +80,6 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
   const log = new DynamoDbDeliveryLog(client, config.notificationsTable);
   const dashboard = (tenantId: string, request: DashboardRequest) => dashboardService.getDashboard(tenantId, request);
   const content = { preferencesOf: (tenantId: string, userId: string) => preferences.preferencesOf(tenantId, userId), dashboard, appUrl: config.appUrl };
-  const jobs: NotificationJob[] = [
-    dailyDigestJob(content),
-    overdueAlertJob({
-      ...content,
-      frequencies: async (tenantId) => new Map((await tenners.list(tenantId)).map((tenner) => [tenner.tennerId, tenner.frequencyDays])),
-      log,
-    }),
-  ];
-  const notifier: NotifierDependencies = {
-    tenantId: config.householdTenantId,
-    members: membersOf,
-    timezoneOf,
-    jobs: [...jobs, ...(extensions?.jobs ?? [])],
-    channels: [],
-    log,
-    logger,
-    now: systemClock,
-  };
-
   // FOOD-006: the current and the next week always have a meal plan (notifications and Alexa read it).
   const mealServices = config.mealsTable
     ? createMealServices({
@@ -110,6 +91,38 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
         ids: uuidGenerator,
       })
     : undefined;
+  const jobs: NotificationJob[] = [
+    dailyDigestJob(content),
+    overdueAlertJob({
+      ...content,
+      frequencies: async (tenantId) => new Map((await tenners.list(tenantId)).map((tenner) => [tenner.tennerId, tenner.frequencyDays])),
+      log,
+    }),
+  ];
+  // FOOD-016: „Essensplan am Morgen“ once the meals table exists.
+  if (mealServices) {
+    jobs.push(
+      mealTodayJob({
+        preferencesOf: content.preferencesOf,
+        mealsOn: (tenantId, date) => mealsOn(mealServices.plans, tenantId, date),
+        isVegetarian: async (tenantId, userId) =>
+          (await mealServices.profiles.getProfile(tenantId)).eaters.some((eater) => eater.memberId === userId && eater.diet === "VEGETARIAN"),
+        openShoppingItems: async (tenantId) => (await shoppingListOf(mealServices.shopping, tenantId)).filter((item) => !item.checked && !item.pantry).length,
+        appUrl: config.appUrl,
+      }),
+    );
+  }
+  const notifier: NotifierDependencies = {
+    tenantId: config.householdTenantId,
+    members: membersOf,
+    timezoneOf,
+    jobs: [...jobs, ...(extensions?.jobs ?? [])],
+    channels: [],
+    log,
+    logger,
+    now: systemClock,
+  };
+
   const mealPlans = mealServices?.plans;
   const alexaApi = config.alexaApi;
   let widget: WidgetPushService | undefined;
@@ -184,7 +197,7 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
 }
 
 /** FOOD-018: the meals of one date from the current or the next week's plan (tomorrow can be in the next week). */
-export async function mealsOn(mealPlans: Pick<MealPlanService, "getPlan">, tenantId: string, date: string): Promise<readonly DayMeal[]> {
+export async function mealsOn(mealPlans: Pick<MealPlanService, "getPlan">, tenantId: string, date: string): Promise<readonly PlanSlotResponse[]> {
   for (const week of ["current", "next"] as const) {
     const slots = (await mealPlans.getPlan(tenantId, week)).slots.filter((slot) => slot.date === date);
     if (slots.length > 0) return slots;

@@ -56,6 +56,10 @@ export interface HouseholdFoodRules {
   readonly attendance: Attendance;
   /** R9. */
   readonly lightLunchOnWeekdays: boolean;
+  /** FOOD-012: weekday lunches above this estimate get a soft hint in the app. */
+  readonly lightLunchMaxKcal: number;
+  /** FOOD-013: family cost tiers in EUR: € up to cheapMax, €€ up to mediumMax, €€€ above. */
+  readonly costTiers: { readonly cheapMax: number; readonly mediumMax: number };
   /** R11. */
   readonly maxSaladLunchesPerWeek: number;
   /** R5. */
@@ -81,6 +85,8 @@ export const DEFAULT_HOUSEHOLD_FOOD_RULES: HouseholdFoodRules = {
   maxActiveMinutes: 20,
   attendance: { weekdayLunch: null, weekendLunch: null, dinner: null },
   lightLunchOnWeekdays: true,
+  lightLunchMaxKcal: 600,
+  costTiers: { cheapMax: 6, mediumMax: 10 },
   maxSaladLunchesPerWeek: 2,
   chicken: { maxPerWeek: 1, allowedSlots: ["MON#DINNER", "TUE#DINNER"] },
   maxBurgerPerWeek: 1,

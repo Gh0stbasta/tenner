@@ -144,10 +144,15 @@ run "routes_require_jwt_except_health" {
 
   assert {
     condition = alltrue([
-      for key, route in aws_apigatewayv2_route.api : route.authorization_type == "JWT" && route.authorizer_id == "auth123" if !contains(["GET /health", "POST /push-actions"], key)
+      for key, route in aws_apigatewayv2_route.api : route.authorization_type == "JWT" && route.authorizer_id == "auth123" if !contains(["GET /health", "POST /push-actions", "GET /meals/calendar/{token}"], key)
     ])
-    error_message = "All other routes must use the Cognito JWT authorizer (POST /push-actions is authorized by its signed token, NOTIFICATION-011)."
+    error_message = "All other routes must use the Cognito JWT authorizer (POST /push-actions is authorized by its signed token, NOTIFICATION-011; the meal calendar feed by its secret token, FOOD-015)."
   }
+  assert {
+    condition     = aws_apigatewayv2_route.api["GET /meals/calendar/{token}"].authorization_type == "NONE" && aws_apigatewayv2_route.api["GET /meals/calendar"].authorization_type == "JWT" && aws_apigatewayv2_route.api["POST /meals/calendar"].authorization_type == "JWT"
+    error_message = "Only the calendar feed is public (FOOD-015); managing the token needs a login."
+  }
+
 
   assert {
     condition     = aws_apigatewayv2_route.api["POST /onboarding/assignment"].authorization_type == "JWT" && aws_apigatewayv2_route.api["GET /onboarding"].authorization_type == "JWT"

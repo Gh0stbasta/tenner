@@ -2,8 +2,8 @@
 
 import type { UserId } from "../models/index.js";
 
-/** SNOOZED_REMINDER: a push reminder again after „Später“ (NOTIFICATION-011). */
-export const NOTIFICATION_TYPES = ["DAILY_DIGEST", "OVERDUE_ALERT", "WEEKLY_SUMMARY", "SNOOZED_REMINDER"] as const;
+/** SNOOZED_REMINDER: a push reminder again after „Später“ (NOTIFICATION-011); MEAL_TODAY: today's meals (FOOD-016). */
+export const NOTIFICATION_TYPES = ["DAILY_DIGEST", "OVERDUE_ALERT", "WEEKLY_SUMMARY", "SNOOZED_REMINDER", "MEAL_TODAY"] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 /** LOG is the test/dry-run channel; ALEXA is added by ALEXA-008, WEB_PUSH by NOTIFICATION-009. */

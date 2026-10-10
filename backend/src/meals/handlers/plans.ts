@@ -7,9 +7,21 @@ import { successResponse } from "../../utils/http.js";
 import type { Logger } from "../../utils/logger.js";
 import { parseJsonBody, validate } from "../../validators/index.js";
 import type { MealPlanResponse } from "../models/plan.js";
-import type { ChooseMealRequest, MealOption, RegeneratedPlanResponse, RegenerateWeekRequest, ReplaceMealRequest, SwapMealsRequest } from "../services/meal-plan.service.js";
+import type { FoodAnalytics, FoodAnalyticsPeriod } from "../analytics.js";
+import { FEEDBACK, type DishHistory } from "../history.js";
+import { SLOT_STATUSES } from "../models/plan.js";
+import type { ChooseMealRequest, MealDaysResponse, MealOption, MealStatusRequest, RegeneratedPlanResponse, RegenerateWeekRequest, ReplaceMealRequest, SwapMealsRequest } from "../services/meal-plan.service.js";
 
 export type GetMealPlan = (tenantId: string, week: string) => Promise<MealPlanResponse>;
+export type GetMealsAhead = (tenantId: string, days: number) => Promise<MealDaysResponse>;
+
+const mealsTodayQuerySchema = z.object({ days: z.enum(["1", "2"]).transform(Number).default(1) }).strict();
+
+/** FOOD-017: GET /meals/today?days=1|2 — today (and tomorrow) in household time. */
+export async function mealsTodayHandler(event: ApiEvent, tenantId: string, mealsAhead: GetMealsAhead): Promise<ApiResult> {
+  const { days } = validate(mealsTodayQuerySchema, event.queryStringParameters ?? {});
+  return successResponse(200, await mealsAhead(tenantId, days));
+}
 export type ReplaceMeal = (identity: Identity, week: string, slotId: string, request: ReplaceMealRequest) => Promise<MealPlanResponse>;
 
 export type MealOptions = (tenantId: string, week: string, slotId: string) => Promise<MealOption[]>;
@@ -101,4 +113,34 @@ export async function regenerateWeekHandler(event: ApiEvent, identity: Identity,
   const plan = await regenerateWeek(identity, week, restore ? { restore } : {});
   logger.info("Meal plan regenerated", { event: "MealPlanRegenerated", weekStart: plan.weekStart, undo: restore !== undefined, ...plan.regeneration, updatedBy: identity.userId });
   return successResponse(200, plan);
+}
+
+export type SetMealStatus = (identity: Identity, week: string, slotId: string, request: MealStatusRequest) => Promise<MealPlanResponse>;
+export type GetDishHistory = (tenantId: string) => Promise<DishHistory[]>;
+
+const mealStatusSchema = z.object({ status: z.enum(SLOT_STATUSES), feedback: z.enum(FEEDBACK).optional() }).strict();
+
+/** PUT /meals/plans/{weekStart}/slots/{slotId}/status (FOOD-023): cooked, skipped or other, with 👍/👎. */
+export async function setMealStatusHandler(event: ApiEvent, identity: Identity, setStatus: SetMealStatus, logger: Logger): Promise<ApiResult> {
+  const week = weekOf(event);
+  const slotId = slotOf(event);
+  const request = validate(mealStatusSchema, bodyOf(event));
+  const plan = await setStatus(identity, week, slotId, request);
+  logger.info("Meal status set", { event: "MealStatusSet", weekStart: plan.weekStart, slotId, status: request.status, feedback: request.feedback ?? null, updatedBy: identity.userId });
+  return successResponse(200, plan);
+}
+
+/** GET /meals/history (FOOD-023): per dish last eaten, times in 90 days and the latest feedback. */
+export async function dishHistoryHandler(tenantId: string, history: GetDishHistory): Promise<ApiResult> {
+  return successResponse(200, { dishes: await history(tenantId) });
+}
+
+export type GetFoodAnalytics = (tenantId: string, period: FoodAnalyticsPeriod) => Promise<FoodAnalytics>;
+
+const foodAnalyticsQuerySchema = z.object({ period: z.enum(["4w", "12w", "1y"]).default("4w") }).strict();
+
+/** GET /meals/analytics?period=4w|12w|1y (FOOD-019). */
+export async function foodAnalyticsHandler(event: ApiEvent, tenantId: string, analytics: GetFoodAnalytics): Promise<ApiResult> {
+  const { period } = validate(foodAnalyticsQuerySchema, event.queryStringParameters ?? {});
+  return successResponse(200, await analytics(tenantId, period));
 }

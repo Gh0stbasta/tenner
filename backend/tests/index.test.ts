@@ -4,7 +4,7 @@ import { ConflictError, NotFoundError, PersistenceError, ValidationError } from 
 import { correlationIdOf, createDependencies, handler, route as routeEvent, type Dependencies } from "../src/index.js";
 import { toTennerResponse } from "../src/dto/index.js";
 import { DEFAULT_NOTIFICATION_PREFERENCES } from "../src/models/index.js";
-import { CATALOG_INGREDIENTS, DEFAULT_HOUSEHOLD_FOOD_RULES, EMPTY_FOOD_PROFILE, type DishResponse, type ResolvedIngredient } from "../src/meals/index.js";
+import { CATALOG_INGREDIENTS, DEFAULT_HOUSEHOLD_FOOD_RULES, EMPTY_FOOD_PROFILE, type DishResponse, type ResolvedIngredient, type FoodAnalytics } from "../src/meals/index.js";
 import { ApplicationError } from "../src/exceptions/index.js";
 import { authenticatedEvent, jwtClaims, mockLogger, tennerFixture, testConfig, TEST_IDENTITY } from "./mocks/index.js";
 
@@ -65,9 +65,11 @@ const DISH = {
   baseTags: ["RICE"],
   containsPoultry: false,
   unknownIngredients: [],
+  nutrition: { kcal: 300, protein: 6, carbs: 60, fat: 1, estimated: true, source: "INGREDIENTS", complete: true, missingIngredients: [] },
+  cost: { perAdultPortion: 1.2, pantry: 0, familyOverride: null, source: "INGREDIENTS", estimated: true, complete: true, missingIngredients: [] },
 } as DishResponse;
 const EMPTY_SHOPPING_LIST = { weekStart: "2026-10-12", range: "REST" as const, generatedAt: "2026-10-12T08:00:00Z", stale: false, items: [] };
-const EMPTY_PLAN = { weekStart: "2026-10-12", weekEnd: "2026-10-18", ready: false, setup: { hasDishes: false, hasEaters: false }, generatedAt: null, slots: [], violations: [] };
+const EMPTY_PLAN = { weekStart: "2026-10-12", weekEnd: "2026-10-18", ready: false, setup: { hasDishes: false, hasEaters: false }, generatedAt: null, slots: [], violations: [], cost: { total: 0, perMeal: null, meals: 0, complete: true } };
 const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [], alexaAccounts: 0 };
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
@@ -161,6 +163,17 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     updateDish: vi.fn(async () => DISH),
     archiveDish: vi.fn(async () => DISH),
     restoreDish: vi.fn(async () => DISH),
+    createDishImageUpload: vi.fn(async () => ({ imageKey: "images/meals/default/d/k.jpg", uploadUrl: "https://s3.test/put", headers: { "Content-Type": "image/jpeg" }, expiresInSeconds: 300 })),
+    setDishImage: vi.fn(async () => DISH),
+    calendarStatus: vi.fn(async () => ({ active: true, createdAt: "2026-10-10T08:00:00Z" })),
+    createCalendarToken: vi.fn(async () => ({ token: "default.secret", createdAt: "2026-10-10T08:00:00Z" })),
+    revokeCalendarToken: vi.fn(async () => undefined),
+    calendarFeed: vi.fn(async () => "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"),
+    setMealStatus: vi.fn(async () => EMPTY_PLAN),
+    foodAnalytics: vi.fn(async () => ({ period: "4w" }) as unknown as FoodAnalytics),
+    dishHistory: vi.fn(async () => [{ dishId: DISH_ID, lastEaten: "2026-10-12", timesLast90Days: 2, feedback: "UP" as const }]),
+    getMealsAhead: vi.fn(async () => ({ today: "2026-10-14", days: [{ date: "2026-10-14", meals: [] }] })),
+    removeDishImage: vi.fn(async () => DISH),
     getFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
     updateFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
     getMealPlan: vi.fn(async () => EMPTY_PLAN),
@@ -533,6 +546,66 @@ describe("dish routes (FOOD-002)", () => {
     expect((await route(withDish("DELETE /meals/dishes/{dishId}"), d)).statusCode).toBe(200);
     expect((await route(withDish("POST /meals/dishes/{dishId}/restore"), d)).statusCode).toBe(200);
     expect(d.restoreDish).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID);
+  });
+
+  it("returns food analytics for validated periods (FOOD-019)", async () => {
+    const d = deps();
+    expect((await route(event("GET /meals/analytics", {}, undefined, { period: "12w" }), d)).statusCode).toBe(200);
+    expect(d.foodAnalytics).toHaveBeenCalledWith("default", "12w");
+    expect((await route(event("GET /meals/analytics"), d)).statusCode).toBe(200);
+    expect(d.foodAnalytics).toHaveBeenLastCalledWith("default", "4w");
+    expect((await route(event("GET /meals/analytics", {}, undefined, { period: "2y" }), d)).statusCode).toBe(400);
+  });
+
+  it("marks meals and returns the dish history (FOOD-023)", async () => {
+    const d = deps();
+    const withSlot = (body: string) => ({ ...event("PUT /meals/plans/{weekStart}/slots/{slotId}/status", {}, body), pathParameters: { weekStart: "current", slotId: "2026-10-12%23LUNCH" } }) as APIGatewayProxyEventV2;
+    expect((await route(withSlot(JSON.stringify({ status: "COOKED", feedback: "UP" })), d)).statusCode).toBe(200);
+    expect(d.setMealStatus).toHaveBeenCalledWith(TEST_IDENTITY, "current", "2026-10-12#LUNCH", { status: "COOKED", feedback: "UP" });
+    expect((await route(withSlot(JSON.stringify({ status: "EATEN" })), d)).statusCode).toBe(400);
+    expect((await route(withSlot(JSON.stringify({ status: "COOKED", feedback: "MEH" })), d)).statusCode).toBe(400);
+    const history = await route(event("GET /meals/history"), d);
+    expect(JSON.parse(String(history.body)).data.dishes[0]).toMatchObject({ timesLast90Days: 2, feedback: "UP" });
+  });
+
+  it("manages the calendar token and serves the public ICS feed (FOOD-015)", async () => {
+    const d = deps();
+    expect((await route(event("GET /meals/calendar"), d)).statusCode).toBe(200);
+    const created = await route(event("POST /meals/calendar"), d);
+    expect(created.statusCode).toBe(201);
+    expect(JSON.parse(String(created.body)).data.token).toBe("default.secret");
+    expect(JSON.stringify((d.logger.info as ReturnType<typeof vi.fn>).mock.calls)).not.toContain("secret");
+    expect((await route(event("DELETE /meals/calendar"), d)).statusCode).toBe(200);
+    expect(d.revokeCalendarToken).toHaveBeenCalledWith(TEST_IDENTITY);
+    const feed = await route({ ...event("GET /meals/calendar/{token}"), pathParameters: { token: "default.abc.ics" } } as APIGatewayProxyEventV2, d);
+    expect(feed.statusCode).toBe(200);
+    expect(feed.headers?.["content-type"]).toBe("text/calendar; charset=utf-8");
+    expect(d.calendarFeed).toHaveBeenCalledWith("default.abc");
+    (d.calendarFeed as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new NotFoundError("Calendar not found."));
+    expect((await route({ ...event("GET /meals/calendar/{token}"), pathParameters: { token: "x.ics" } } as APIGatewayProxyEventV2, d)).statusCode).toBe(404);
+  });
+
+  it("returns today's and tomorrow's meals with a validated day count (FOOD-017)", async () => {
+    const d = deps();
+    expect((await route(event("GET /meals/today", {}, undefined, { days: "2" }), d)).statusCode).toBe(200);
+    expect(d.getMealsAhead).toHaveBeenCalledWith("default", 2);
+    expect((await route(event("GET /meals/today"), d)).statusCode).toBe(200);
+    expect(d.getMealsAhead).toHaveBeenLastCalledWith("default", 1);
+    expect((await route(event("GET /meals/today", {}, undefined, { days: "3" }), d)).statusCode).toBe(400);
+  });
+
+  it("issues photo uploads, sets and removes photos with validated bodies (FOOD-011)", async () => {
+    const d = deps();
+    const upload = await route(withDish("POST /meals/dishes/{dishId}/image-upload", JSON.stringify({ contentType: "image/jpeg", size: 250_000 })), d);
+    expect(upload.statusCode).toBe(200);
+    expect(d.createDishImageUpload).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID, { contentType: "image/jpeg", size: 250_000 });
+    expect((await route(withDish("POST /meals/dishes/{dishId}/image-upload", JSON.stringify({ contentType: "image/gif", size: 1000 })), d)).statusCode).toBe(400);
+    expect((await route(withDish("POST /meals/dishes/{dishId}/image-upload", JSON.stringify({ contentType: "image/png", size: 2 * 1024 * 1024 + 1 })), d)).statusCode).toBe(400);
+    expect((await route(withDish("PUT /meals/dishes/{dishId}/image", JSON.stringify({ imageKey: "images/meals/default/x.jpg" })), d)).statusCode).toBe(200);
+    expect(d.setDishImage).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID, { imageKey: "images/meals/default/x.jpg" });
+    expect((await route(withDish("PUT /meals/dishes/{dishId}/image", JSON.stringify({ imageKey: "" })), d)).statusCode).toBe(400);
+    expect((await route(withDish("DELETE /meals/dishes/{dishId}/image"), d)).statusCode).toBe(200);
+    expect(d.removeDishImage).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID);
   });
 
   it("rejects invalid dish IDs and bodies", async () => {

@@ -191,6 +191,31 @@ export function FoodRulesDialog({ rules, eaters, pending, error, onSave, onClose
               label="Mittags unter der Woche leicht"
             />
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <NumberField
+                label="€ bis (Euro, ganze Familie)"
+                value={draft.costTiers.cheapMax}
+                min={1}
+                max={100}
+                onChange={(value) => set("costTiers", { ...draft.costTiers, cheapMax: value })}
+              />
+              <NumberField
+                label="€€ bis (Euro), darüber €€€"
+                value={draft.costTiers.mediumMax}
+                min={draft.costTiers.cheapMax + 1}
+                max={200}
+                onChange={(value) => set("costTiers", { ...draft.costTiers, mediumMax: value })}
+              />
+            </Stack>
+            {draft.lightLunchOnWeekdays && (
+              <NumberField
+                label="Leichtes Mittagessen bis (kcal, Schätzung)"
+                value={draft.lightLunchMaxKcal}
+                min={200}
+                max={2000}
+                onChange={(value) => set("lightLunchMaxKcal", value)}
+              />
+            )}
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
               <TextField
                 label="Mittagessen um"
                 type="time"

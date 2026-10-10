@@ -11,7 +11,7 @@ import { TEST_IDENTITY } from "./mocks/index.js";
 /** Wednesday 2026-10-14, 10:00 in Berlin. */
 const NOW = new Date("2026-10-14T08:00:00Z");
 
-function setup(weekStartsOn: WeekStart = "MONDAY") {
+function setup(weekStartsOn: WeekStart = "MONDAY", now: Date = NOW) {
   const meals = inMemoryMeals();
   let next = 0;
   const services = createMealServices({
@@ -19,7 +19,7 @@ function setup(weekStartsOn: WeekStart = "MONDAY") {
     tableName: "tenner-meals",
     membersOf: async () => SEED_MEMBERS,
     settingsOf: async () => ({ timezone: "Europe/Berlin", weekStartsOn }),
-    clock: () => NOW,
+    clock: () => now,
     ids: () => `00000000-0000-4000-8000-${String(++next).padStart(12, "0")}`,
   });
   return { meals, services };
@@ -351,4 +351,26 @@ describe("regenerateWeek (FOOD-008)", () => {
     };
     await expect(services.plans.regenerateWeek(TEST_IDENTITY, "current")).rejects.toMatchObject({ code: "CONCURRENT_MODIFICATION" });
   });
+
+  it("returns today and tomorrow in household time (FOOD-017)", async () => {
+    const { services } = setup();
+    await ready(services);
+    const ahead = await services.plans.mealsAhead("default", 2);
+    const current = await services.plans.getPlan("default", "current");
+    expect(ahead.today).toBe("2026-10-14");
+    expect(ahead.days.map((day) => day.date)).toEqual(["2026-10-14", "2026-10-15"]);
+    expect(ahead.days[0]?.meals.map((meal) => [meal.slot, meal.dish?.name])).toEqual(
+      current.slots.filter((slot) => slot.date === "2026-10-14").map((slot) => [slot.slot, slot.dish?.name]),
+    );
+  });
+
+  it("takes tomorrow from the next week's plan on the last day of a week (FOOD-017)", async () => {
+    const { services } = setup("MONDAY", new Date("2026-10-18T08:00:00Z"));
+    await ready(services);
+    const ahead = await services.plans.mealsAhead("default", 2);
+    expect(ahead.days.map((day) => day.date)).toEqual(["2026-10-18", "2026-10-19"]);
+    expect(ahead.days[1]?.meals).toHaveLength(2);
+    expect(ahead.days[1]?.meals.every((meal) => meal.dish !== null)).toBe(true);
+  });
 });
+

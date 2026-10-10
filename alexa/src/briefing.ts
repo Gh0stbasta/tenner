@@ -61,9 +61,11 @@ export interface BriefingInput {
   readonly speaker: AlexaMember | undefined;
   readonly now: Date;
   readonly timeZone: string;
+  /** FOOD-017: „Heute gibt es mittags … und abends ….“; undefined when nothing is planned or the plan failed. */
+  readonly meals?: string | undefined;
 }
 
-export function buildBriefing({ dashboard, members, speaker, now, timeZone }: BriefingInput): Briefing {
+export function buildBriefing({ dashboard, members, speaker, now, timeZone, meals }: BriefingInput): Briefing {
   const mine = (tenner: DashboardTenner) => speaker === undefined || tenner.assignedTo === speaker.userId || tenner.assignedTo === SHARED_ASSIGNEE;
   const due = dashboard.dueToday.filter(mine);
   const overdue = dashboard.overdue.filter(mine).sort((a, b) => (b.overdueDays ?? 0) - (a.overdueDays ?? 0));
@@ -80,6 +82,9 @@ export function buildBriefing({ dashboard, members, speaker, now, timeZone }: Br
     return `Heute ${verb} ${tennerCount(due.length)} an, zusammen etwa ${minutes(total)}${withTitles ? `: ${titles(due)}` : ""}.`;
   };
   const todayIndex = parts.push(today(true)) - 1;
+
+  // 2b. Meals of the day (FOOD-017)
+  if (meals) parts.push(meals);
 
   // 3. Overdue
   const longest = overdue[0];

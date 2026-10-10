@@ -40,6 +40,20 @@ describe("NotificationSettings (NOTIFICATION-002)", () => {
     expect(await screen.findByRole("combobox", { name: "Tag" })).toBeInTheDocument();
   });
 
+  it("switches the morning meal plan off and sends the meal preference (FOOD-016)", async () => {
+    const fetchMock = mockFetch({ "PUT /users/STEFAN/notification-preferences": echo() });
+    renderWithProviders(<NotificationSettings />);
+    const meals = await screen.findByRole("switch", { name: "Essensplan am Morgen" });
+    expect(meals).toBeChecked();
+    expect(screen.getByRole("combobox", { name: "Uhrzeit Essensplan" })).toHaveTextContent("07:30");
+    await userEvent.click(meals);
+    await waitFor(() =>
+      expect(fetchMock.calls().find((call) => call.key.startsWith("PUT"))?.body).toMatchObject({
+        mealToday: { enabled: false, time: "07:30", channels: [] },
+      }),
+    );
+  });
+
   it("changes the digest time in 15-minute steps", async () => {
     const fetchMock = mockFetch({ "PUT /users/STEFAN/notification-preferences": echo() });
     renderWithProviders(<NotificationSettings />);

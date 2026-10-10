@@ -150,6 +150,16 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   snackbar offers „Rückgängig“, which sends the previous dishes of the changed meals as `restore`.
 - **Navigation:** „Essen“ between Tenner and Auswertung (side and bottom navigation).
 - **Dashboard:** „Heute essen wir“ (`TodayMealsCard`) with today's meals; since UI-001 the largest dashboard card, „Für heute ist noch nichts geplant.“ without a plan.
+- **What was eaten** (FOOD-023, `MealStatusControls.tsx`): today's and past meals get „Gekocht“, „Ausgefallen“,
+  „Anderes gegessen“ and, when cooked, 👍 / 👎; favorites have a star (dish cards: ⭐ toggles `favorite`, plan cards
+  show it); dish cards show „Zuletzt gegessen am … · n× in 3 Monaten“ (`GET /meals/history`).
+- **Food analytics** (FOOD-019, `features/analytics/FoodAnalytics.tsx`): Auswertung → tab „Essen“ (4 Wochen, 12
+  Wochen, 1 Jahr) with tiles, protein and favorites bars, cost per week, plan adherence and rarely eaten dishes.
+- **Calendar** (FOOD-015, `MealCalendarSettings.tsx`): Settings → „Essen: Kalender“ creates a private ICS link (shown
+  once, copy button, „In Apple Kalender öffnen“ via `webcal:`), replaces it or revokes it; instructions for Google and
+  Apple; calendar apps refresh on their own schedule.
+- **Morning notification** (FOOD-016): Settings → Benachrichtigungen → „Essensplan am Morgen“ (on/off, time in
+  15-minute steps, channels push/Alexa; default on at 07:30, sent by the notifier).
 - **Offline:** plans use the query root `mealPlans` and are kept in the offline cache; the food profile is not.
 
 ## Dishes (FOOD-010)
@@ -167,6 +177,20 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   exclude or limit the dish. Validation follows the backend limits; server errors (`DISH_NAME_TAKEN`,
   `VALIDATION_ERROR`, `CONCURRENT_MODIFICATION`) are shown at the fields or as a hint.
 - **Cache:** dishes use the query key `meals/dishes/active|archived`; saving invalidates `meals` and `mealPlans`.
+- **Photos** (FOOD-011, `dishImages.ts`, `DishImage.tsx`): „Foto aufnehmen / auswählen“ in the editor (camera or
+  gallery), preview, „Foto entfernen“. The photo is shrunk in the browser (canvas, max. 1200 px, JPEG ~300 KB) and
+  uploaded after the dish is saved: presigned PUT straight to S3 (no Authorization header), then the key is attached.
+  If only the photo fails, the dish stays saved and a message says so. Photos (`/images/…`, lazy) or a placeholder per
+  category appear in the dish list, on the plan cards and in „Heute essen wir“.
+- **Nutrition** (FOOD-012, `format.ts`): „ca. 520 kcal · 24 g Eiweiß · 60 g KH · 18 g Fett“ on dish cards and in the
+  editor (server estimate as of the last save; „mind.“ when ingredient values are missing), „Nährwerte selbst
+  eintragen“ sends `nutritionOverride`. The plan shows the day total in each day header and a soft hint on weekday
+  lunches above „Leichtes Mittagessen bis (kcal)“ (rules dialog, default 600). Disclaimer: „Grobe Schätzung pro
+  Erwachsenenportion, keine Ernährungsberatung.“
+- **Cost** (FOOD-013, `format.ts`, `IngredientPricesDialog.tsx`): dish cards show „€€ · ca. 8–10 €“ for the whole
+  family (portion factors of the profile; one adult portion while no eaters exist), the plan header the week total
+  and the average per meal. Tiers are set in the rules dialog („€ bis“, „€€ bis“), prices in Settings → Essen →
+  „Preise“ (search, save per ingredient; pantry items are not listed).
 
 ## Shopping List (FOOD-014)
 

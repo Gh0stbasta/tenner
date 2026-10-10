@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiClient } from "../../api/client";
 import { queryKeys } from "../../api/queryKeys";
-import type { Eater, FoodProfile, Ingredient } from "./api";
+import { dishCostSchema, nutritionEstimateSchema, type Eater, type FoodProfile, type Ingredient } from "./api";
 import { MEAL_SLOT_LABELS, TAG_LABELS, type IngredientTag, type MealSlot, type ProteinTag } from "./labels";
 
 export const DISH_CATEGORIES = [
@@ -62,6 +62,8 @@ export const DISH_LIMITS = {
   totalMinutesMax: 600,
   variantMax: 80,
   groupMax: 60,
+  kcalMax: 3000,
+  macroMax: 500,
 } as const;
 
 /** Tags that make a dish non-vegetarian (backend NON_VEGETARIAN_TAGS). */
@@ -91,6 +93,9 @@ export const dishSchema = z.object({
   isBurger: z.boolean(),
   favorite: z.boolean(),
   imageKey: z.string().optional(),
+  nutrition: nutritionEstimateSchema.optional(),
+  cost: dishCostSchema.optional(),
+  nutritionOverride: z.object({ kcal: z.number(), protein: z.number(), carbs: z.number(), fat: z.number() }).optional(),
   archived: z.boolean(),
   isVegetarian: z.boolean(),
   tags: z.array(z.string()),
@@ -116,6 +121,15 @@ export interface DishInput {
   readonly vegetarianVariant: string | null;
   readonly familyFriendly: boolean;
   readonly isBurger: boolean;
+  /** FOOD-012: own values per adult portion instead of the estimate; null = estimate from the ingredients. */
+  readonly nutritionOverride: PortionNutrition | null;
+}
+
+export interface PortionNutrition {
+  readonly kcal: number;
+  readonly protein: number;
+  readonly carbs: number;
+  readonly fat: number;
 }
 
 export interface NewIngredientInput {
@@ -163,6 +177,16 @@ export function useSaveDish() {
   });
 }
 
+/** FOOD-023: mark or unmark a favorite (the planner prefers favorites). */
+export function useToggleFavorite() {
+  const invalidate = useInvalidateMeals();
+  return useMutation({
+    mutationFn: ({ dishId, favorite }: { readonly dishId: string; readonly favorite: boolean }) =>
+      apiClient.put(`/meals/dishes/${encodeURIComponent(dishId)}`, { schema: dishSchema, body: { favorite } }),
+    onSettled: invalidate,
+  });
+}
+
 /** Archive (DELETE) or restore. */
 export function useArchiveDish() {
   const invalidate = useInvalidateMeals();
@@ -192,11 +216,12 @@ export function useCreateIngredient() {
 /** Create leaves out empty optional fields; update sends null to remove them. */
 function withoutEmpty(input: DishInput, update: boolean): Record<string, unknown> {
   if (update) return { ...input };
-  const { group, vegetarianVariant, ...rest } = input;
+  const { group, vegetarianVariant, nutritionOverride, ...rest } = input;
   return {
     ...rest,
     ...(group === null ? {} : { group }),
     ...(vegetarianVariant === null ? {} : { vegetarianVariant }),
+    ...(nutritionOverride === null ? {} : { nutritionOverride }),
   };
 }
 
@@ -353,6 +378,15 @@ export function validateDraft(draft: DishInput): DraftErrors {
     errors.totalMinutes = "Die Gesamtzeit darf nicht kürzer als die aktive Zeit sein.";
   if ((draft.vegetarianVariant ?? "").length > DISH_LIMITS.variantMax)
     errors.vegetarianVariant = `Höchstens ${DISH_LIMITS.variantMax} Zeichen.`;
+  if (draft.nutritionOverride) {
+    const { kcal, ...macros } = draft.nutritionOverride;
+    if (!(kcal >= 0 && kcal <= DISH_LIMITS.kcalMax))
+      errors["nutritionOverride.kcal"] = `Zwischen 0 und ${DISH_LIMITS.kcalMax}.`;
+    for (const [field, value] of Object.entries(macros)) {
+      if (!(value >= 0 && value <= DISH_LIMITS.macroMax))
+        errors[`nutritionOverride.${field}`] = `Zwischen 0 und ${DISH_LIMITS.macroMax}.`;
+    }
+  }
   return errors;
 }
 

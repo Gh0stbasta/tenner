@@ -95,30 +95,55 @@ cd frontend && npm run lint && npm run build && npm test
 
 # Acceptance Criteria
 
-- [ ] Morning notification with today's lunch and dinner
-- [ ] Per member on/off, time and channel
-- [ ] Sent at most once per day
-- [ ] Tests passing
+- [x] Morning notification with today's lunch and dinner
+- [x] Per member on/off, time and channel
+- [x] Sent at most once per day
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated (architecture.md notifications)
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated (architecture.md notifications)
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
 # Assumptions
 
 - A separate message from the per-Tenner pushes (NOTIFICATION-010) keeps meals and chores apart.
+- The job lives in `backend/src/notifications/meal-today.ts` next to the other jobs (the repository has no `jobs/`
+  folder).
+- „Default on once the meal plan is used“: the preference defaults to on; without a planned meal nothing is sent, and
+  the job only exists when the meals table is configured. Channels stay empty until the member picks one (only the
+  log channel then), like the other notifications.
+- The vegetarian variant is named for a member whose eater (`memberId`) is vegetarian.
+- Alexa speaks a reminder with both dish names (Skill Messaging, like the daily digest).
 
 ---
 
 # Out of Scope
 
 - Cooking-start reminders („in 20 Minuten anfangen“), thaw reminders.
+
+---
+
+# Implementation Status
+
+Done (2026-10-10).
+
+- Backend: type `MEAL_TODAY`, job `notifications/meal-today.ts` (due time, timezone, quiet hours, content, empty
+  days skipped), preference `mealToday { enabled, time, channels }` (default on, 07:30; older stored preferences and
+  clients get the default; connected channels only), Alexa reminder text `mealReminderText`, wiring in `notifier.ts`
+  with the plan, the profile (vegetarian member) and the shopping list (open items).
+- Frontend: block „Essensplan am Morgen“ in the notification settings (switch, time, channels).
+- Tests: `backend/tests/meal-today.test.ts` (timing, timezone, quiet hours, content, variant, empty day,
+  deduplication, preference defaults and validation, Alexa text), `alexa-channel.test.ts`, `notifier.test.ts`,
+  `notification-preferences.test.ts`; frontend `NotificationSettings.test.tsx`.
+- Validation: backend lint, typecheck, 1,120 tests; frontend lint, typecheck, build, 489 tests.
+- Technical debt: none new.
+

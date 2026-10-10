@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiClient } from "../../api/client";
+import { config } from "../../config";
 import { queryKeys } from "../../api/queryKeys";
 import { INGREDIENT_TAGS, PROTEIN_TAGS, WEEK_SLOTS, type WeekSlot } from "./labels";
 
@@ -57,6 +58,10 @@ const householdRulesSchema = z.object({
   maxActiveMinutes: z.number(),
   attendance: z.object({ weekdayLunch: attendanceList, weekendLunch: attendanceList, dinner: attendanceList }),
   lightLunchOnWeekdays: z.boolean(),
+  /** FOOD-012 (default for profiles saved before). */
+  lightLunchMaxKcal: z.number().default(600),
+  /** FOOD-013 (default for profiles saved before). */
+  costTiers: z.object({ cheapMax: z.number(), mediumMax: z.number() }).default({ cheapMax: 6, mediumMax: 10 }),
   maxSaladLunchesPerWeek: z.number(),
   chicken: z.object({ maxPerWeek: z.number(), allowedSlots: z.array(weekSlotSchema) }),
   maxBurgerPerWeek: z.number(),
@@ -137,6 +142,27 @@ export function useImportMealCatalog() {
   });
 }
 
+/** Nutrition estimate per adult portion (FOOD-012). */
+export const nutritionEstimateSchema = z.object({
+  kcal: z.number(),
+  protein: z.number(),
+  carbs: z.number(),
+  fat: z.number(),
+  source: z.enum(["INGREDIENTS", "OVERRIDE"]),
+  complete: z.boolean(),
+});
+export type NutritionEstimate = z.infer<typeof nutritionEstimateSchema>;
+
+/** Cost estimate (FOOD-013): EUR per adult portion plus pantry, or the family's own amount. */
+export const dishCostSchema = z.object({
+  perAdultPortion: z.number().nullable(),
+  pantry: z.number(),
+  familyOverride: z.number().nullable(),
+  source: z.enum(["INGREDIENTS", "OVERRIDE"]),
+  complete: z.boolean(),
+});
+export type DishCost = z.infer<typeof dishCostSchema>;
+
 // Weekly plans (FOOD-006, FOOD-009)
 
 const dishSummarySchema = z.object({
@@ -150,6 +176,9 @@ const dishSummarySchema = z.object({
   isVegetarian: z.boolean(),
   vegetarianVariant: z.string().optional(),
   imageKey: z.string().optional(),
+  /** Optional: plans cached offline before FOOD-012 have none. */
+  nutrition: nutritionEstimateSchema.optional(),
+  cost: dishCostSchema.optional(),
   favorite: z.boolean(),
   archived: z.boolean(),
 });
@@ -166,6 +195,10 @@ const planSlotSchema = z.object({
   status: z.enum(["PLANNED", "COOKED", "SKIPPED", "OTHER"]),
   emptyReason: z.string().optional(),
   dish: dishSummarySchema.nullable(),
+  /** FOOD-013: EUR for the eaters of this meal. */
+  cost: z.number().nullable().optional(),
+  /** FOOD-023: 👍 / 👎 of the household for a cooked meal. */
+  feedback: z.enum(["UP", "DOWN"]).optional(),
 });
 export type PlanSlot = z.infer<typeof planSlotSchema>;
 
@@ -185,6 +218,10 @@ export const mealPlanSchema = z.object({
   generatedAt: z.string().nullable(),
   slots: z.array(planSlotSchema),
   violations: z.array(violationSchema),
+  /** FOOD-013; optional for plans cached offline before. */
+  cost: z
+    .object({ total: z.number(), perMeal: z.number().nullable(), meals: z.number(), complete: z.boolean() })
+    .optional(),
 });
 export type MealPlan = z.infer<typeof mealPlanSchema>;
 
@@ -250,6 +287,19 @@ export interface ChooseMealVariables {
 export function useChooseMeal(week: WeekChoice) {
   return usePlanChange(week, ({ slotId, ...body }: ChooseMealVariables) =>
     apiClient.put(slotPath(week, slotId), { schema: mealPlanSchema, body }),
+  );
+}
+
+export interface MealStatusVariables {
+  readonly slotId: string;
+  readonly status: PlanSlot["status"];
+  readonly feedback?: "UP" | "DOWN";
+}
+
+/** „Gekocht“ / „Ausgefallen“ / „Anderes gegessen“ and 👍 / 👎 (FOOD-023). */
+export function useSetMealStatus(week: WeekChoice) {
+  return usePlanChange(week, ({ slotId, ...body }: MealStatusVariables) =>
+    apiClient.put(`${slotPath(week, slotId)}/status`, { schema: mealPlanSchema, body }),
   );
 }
 
@@ -353,3 +403,122 @@ export function useRefreshShoppingList(week: WeekChoice) {
 /** Sends queued changes for one list (by its week start, so a queue survives the change of week). */
 export const sendShoppingOperations = (weekStart: string, operations: readonly ShoppingOperation[]) =>
   apiClient.post(`${shoppingPath(weekStart)}/changes`, { schema: shoppingListSchema, body: { operations } });
+
+/** FOOD-013: change an ingredient's price (catalog ingredients keep it as a household override). */
+export function useUpdateIngredientPrice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ingredientId, pricePerUnit }: { readonly ingredientId: string; readonly pricePerUnit: number }) =>
+      apiClient.put(`/meals/ingredients/${encodeURIComponent(ingredientId)}`, {
+        schema: ingredientSchema,
+        body: { pricePerUnit },
+      }),
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.meals }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.mealPlans }),
+      ]),
+  });
+}
+
+// Calendar subscription (FOOD-015)
+
+const calendarStatusSchema = z.object({ active: z.boolean(), createdAt: z.string().nullable() });
+export type CalendarStatus = z.infer<typeof calendarStatusSchema>;
+const calendarKey = [...queryKeys.meals, "calendar"] as const;
+
+export function useCalendarStatus() {
+  return useQuery({
+    queryKey: calendarKey,
+    queryFn: () => apiClient.get("/meals/calendar", { schema: calendarStatusSchema }),
+  });
+}
+
+export function useCreateCalendarToken() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post("/meals/calendar", { schema: z.object({ token: z.string(), createdAt: z.string() }) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: calendarKey }),
+  });
+}
+
+export function useRevokeCalendarToken() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.delete("/meals/calendar", { schema: calendarStatusSchema }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: calendarKey }),
+  });
+}
+
+/** Feed URL for a token; `webcal:` opens Apple Calendar directly. */
+export function calendarUrls(token: string, apiBaseUrl: string = config.apiBaseUrl): { https: string; webcal: string } {
+  const https = `${apiBaseUrl}/meals/calendar/${token}.ics`;
+  return { https, webcal: https.replace(/^https:/, "webcal:") };
+}
+
+// Meal history (FOOD-023)
+
+const dishHistorySchema = z.object({
+  dishes: z.array(
+    z.object({
+      dishId: z.string(),
+      lastEaten: z.string().nullable(),
+      timesLast90Days: z.number(),
+      feedback: z.enum(["UP", "DOWN"]).nullable(),
+    }),
+  ),
+});
+export type DishHistoryEntry = z.infer<typeof dishHistorySchema>["dishes"][number];
+
+export function useDishHistory() {
+  return useQuery({
+    queryKey: [...queryKeys.meals, "history"],
+    queryFn: async () =>
+      new Map(
+        (await apiClient.get("/meals/history", { schema: dishHistorySchema })).dishes.map((entry) => [
+          entry.dishId,
+          entry,
+        ]),
+      ),
+    staleTime: 5 * 60_000,
+  });
+}
+
+// Food analytics (FOOD-019)
+
+export const FOOD_PERIODS = ["4w", "12w", "1y"] as const;
+export type FoodPeriod = (typeof FOOD_PERIODS)[number];
+
+const foodAnalyticsSchema = z.object({
+  period: z.enum(FOOD_PERIODS),
+  from: z.string(),
+  to: z.string(),
+  meals: z.number(),
+  protein: z.array(z.object({ tag: z.string(), count: z.number() })),
+  vegetarianShare: z.number().nullable(),
+  favorites: z.array(
+    z.object({ dishId: z.string(), name: z.string(), count: z.number(), feedback: z.enum(["UP", "DOWN"]).nullable() }),
+  ),
+  rarelyEaten: z.array(z.object({ dishId: z.string(), name: z.string() })),
+  cost: z.object({
+    total: z.number(),
+    perMeal: z.number().nullable(),
+    weeks: z.array(z.object({ weekStart: z.string(), total: z.number() })),
+  }),
+  variety: z.object({
+    distinctDishes: z.number(),
+    meals: z.number(),
+    repeats: z.array(z.object({ dishId: z.string(), name: z.string(), count: z.number() })),
+  }),
+  adherence: z.object({ asPlanned: z.number(), replaced: z.number(), skipped: z.number(), other: z.number() }),
+});
+export type FoodAnalytics = z.infer<typeof foodAnalyticsSchema>;
+
+export function useFoodAnalytics(period: FoodPeriod) {
+  return useQuery({
+    queryKey: [...queryKeys.meals, "analytics", period],
+    queryFn: () => apiClient.get("/meals/analytics", { schema: foodAnalyticsSchema, query: { period } }),
+    staleTime: 5 * 60_000,
+  });
+}

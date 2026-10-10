@@ -164,3 +164,26 @@ Tenners only (details: any non-deleted Tenner). Constants are in `backend/src/an
 request sent `actualMinutes`, `DEFAULT` when the server used the estimate. Older records count as `DEFAULT`. The web
 app does not send minutes (it has no input for them yet), so accuracy stays `null` until minutes can be entered
 (TD-033). Estimates are the Tenners' current values.
+
+## Food — `GET /meals/analytics` (FOOD-019)
+
+Query `period` = `4w` (default), `12w` or `1y`: the last 28, 84 or 365 days up to today (household timezone). Computed
+on the fly from the stored weekly plans (about a year, at most ~57 items; same pattern as TD-033), with the effective
+meal status of FOOD-023 (a planned meal two days old counts as cooked). „Eaten“ = cooked, or planned up to today and not
+marked skipped/other.
+
+| Field | Definition |
+|---|---|
+| `meals` | eaten meals in the period |
+| `protein` | eaten meals per protein source of the dish (`NONE` = no meat or fish), most first |
+| `vegetarianShare` | share of eaten meals whose dish is vegetarian (variants not counted); `null` without meals |
+| `favorites` | top 10 dishes by times eaten, then 👍 before none before 👎 |
+| `rarelyEaten` | active dishes not eaten in the period (max. 20, by name) |
+| `cost` | estimated EUR per week (household week start) and in total, average per meal; each meal priced for its eaters (FOOD-013) |
+| `variety` | distinct dishes vs. meals, dishes eaten more than once |
+| `adherence` | past meals: as planned (auto), chosen by hand, skipped, something else |
+
+UI: Auswertung → tab „Essen“ with period buttons, tiles (meals, vegetarian, variety, cost), protein and favorites as
+bar lists, cost per week as columns, adherence as a stacked bar with legend, and „Lange nicht gegessen“. Every chart
+has a table view; colors are the validated ANALYTICS-009 palette in fixed slot order.
+

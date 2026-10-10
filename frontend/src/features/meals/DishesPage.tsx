@@ -18,6 +18,8 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  Box,
+  IconButton,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { useMemo, useState } from "react";
@@ -29,6 +31,9 @@ import { SkeletonList } from "../../components/LoadingState";
 import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
 import { DishEditorDialog } from "./DishEditorDialog";
+import { DishImage } from "./DishImage";
+import { useDishHistory, useFoodProfile, type DishHistoryEntry } from "./api";
+import { costLine, familyFactors, historyLine, NUTRITION_DISCLAIMER, nutritionLine } from "./format";
 import {
   DISH_CATEGORIES,
   DISH_CATEGORY_LABELS,
@@ -36,6 +41,7 @@ import {
   filterDishes,
   useArchiveDish,
   useDishes,
+  useToggleFavorite,
   type Dish,
   type DishFilter,
 } from "./dishes";
@@ -48,17 +54,45 @@ function DishCard({
   dish,
   onEdit,
   onArchive,
+  costLabel,
+  history,
+  onToggleFavorite,
 }: {
   readonly dish: Dish;
   readonly onEdit: () => void;
   readonly onArchive: () => void;
+  /** FOOD-013: „€€ · ca. 8–10 €“ for the family. */
+  readonly costLabel: string | null;
+  /** FOOD-023: „zuletzt gegessen am …“. */
+  readonly history: DishHistoryEntry | undefined;
+  readonly onToggleFavorite: () => void;
 }) {
   return (
     <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <DishImage
+        name={dish.name}
+        category={dish.category}
+        imageKey={dish.imageKey}
+        height={140}
+        sx={{ borderRadius: 0 }}
+      />
       <CardContent sx={{ flexGrow: 1 }}>
-        <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
-          {dish.name}
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+          <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600, flexGrow: 1 }}>
+            {dish.name}
+          </Typography>
+          {!dish.archived && (
+            <IconButton
+              size="small"
+              aria-label={`${dish.name} als Favorit`}
+              aria-pressed={dish.favorite}
+              onClick={onToggleFavorite}
+              sx={{ mt: -0.5, mr: -0.5, opacity: dish.favorite ? 1 : 0.4 }}
+            >
+              <span aria-hidden="true">⭐</span>
+            </IconButton>
+          )}
+        </Box>
         <Typography variant="body2" color="text.secondary">
           {DISH_CATEGORY_LABELS[dish.category]}
           {dish.group ? ` · ${dish.group}` : ""}
@@ -66,6 +100,21 @@ function DishCard({
         <Typography variant="body2" color="text.secondary">
           {dishSummaryLine(dish)}
         </Typography>
+        {history && (
+          <Typography variant="body2" color="text.secondary">
+            {historyLine(history)}
+          </Typography>
+        )}
+        {costLabel && (
+          <Typography variant="body2" color="text.secondary" title="Grobe Schätzung für die ganze Familie">
+            {costLabel}
+          </Typography>
+        )}
+        {dish.nutrition && (
+          <Typography variant="body2" color="text.secondary" title={NUTRITION_DISCLAIMER}>
+            {nutritionLine(dish.nutrition)}
+          </Typography>
+        )}
         <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5, mt: 1 }}>
           {(dish.isVegetarian || dish.vegetarianVariant) && (
             <Chip size="small" color="success" label={dish.isVegetarian ? "vegetarisch" : "vegetarische Variante"} />
@@ -108,6 +157,11 @@ export function DishesPage() {
   const [filter, setFilter] = useState<DishFilter>({ search: "", slot: "ALL", vegetarianOnly: false, category: "ALL" });
 
   const shown = useMemo(() => filterDishes(dishes.data ?? [], filter), [dishes.data, filter]);
+  const profile = useFoodProfile().data;
+  const history = useDishHistory();
+  const favorite = useToggleFavorite();
+  const factors = familyFactors(profile?.eaters);
+  const tiers = profile?.household.costTiers ?? { cheapMax: 6, mediumMax: 10 };
   const groups = useMemo(
     () =>
       [...new Set((active.data ?? []).flatMap((dish) => (dish.group ? [dish.group] : [])))].sort((a, b) =>
@@ -231,7 +285,22 @@ export function DishesPage() {
         <Grid container spacing={2} component="ul" sx={{ p: 0, m: 0 }} aria-label="Gerichte">
           {shown.map((dish) => (
             <Grid key={dish.dishId} component="li" size={{ xs: 12, sm: 6, lg: 4 }} sx={{ listStyle: "none" }}>
-              <DishCard dish={dish} onEdit={() => setEditing({ dish })} onArchive={() => toggleArchived(dish)} />
+              <DishCard
+                dish={dish}
+                onEdit={() => setEditing({ dish })}
+                onArchive={() => toggleArchived(dish)}
+                costLabel={dish.cost ? costLine(dish.cost, factors, tiers) : null}
+                history={history.data?.get(dish.dishId)}
+                onToggleFavorite={() =>
+                  favorite.mutate(
+                    { dishId: dish.dishId, favorite: !dish.favorite },
+                    {
+                      onError: (error) =>
+                        notify({ severity: "error", message: `Nicht gespeichert. ${errorMessage(error)}` }),
+                    },
+                  )
+                }
+              />
             </Grid>
           ))}
         </Grid>

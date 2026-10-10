@@ -1,12 +1,15 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { INGREDIENTS, dish } from "../../tests/dishFixtures";
+import { FAMILY, INGREDIENTS, dish } from "../../tests/dishFixtures";
 import { fail, mockFetch, ok } from "../../tests/fetchMock";
 import { renderWithProviders } from "../../tests/render";
 import { DishesPage } from "./DishesPage";
 
-const BOLOGNESE = dish();
+const BOLOGNESE = dish({
+  nutrition: { kcal: 640, protein: 31, carbs: 72, fat: 22, source: "INGREDIENTS", complete: true },
+  cost: { perAdultPortion: 3.2, pantry: 0.2, familyOverride: null, source: "INGREDIENTS", complete: true },
+});
 const SALAD = dish({
   dishId: "d-2",
   name: "Griechischer Salat",
@@ -43,6 +46,9 @@ describe("DishesPage (FOOD-010)", () => {
     expect(screen.getByText("2 Gerichte")).toBeInTheDocument();
     expect(list().getByText("Nudeln · Bolognese")).toBeInTheDocument();
     expect(list().getByText("Mittag, Abend · 20 Min. aktiv (40 Min. gesamt)")).toBeInTheDocument();
+    expect(list().getByText("ca. 640 kcal · 31 g Eiweiß · 72 g KH · 22 g Fett")).toBeInTheDocument();
+    // FOOD-013: one adult portion while the family profile has no eaters (3,20 € + 0,20 € pantry).
+    expect(list().getByText("€ · ca. 2–4 €")).toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText("Suchen"), "bolo");
     expect(names()).toEqual(["Spaghetti Bolognese"]);
@@ -112,5 +118,35 @@ describe("DishesPage (FOOD-010)", () => {
     setup({ "GET /meals/dishes?archived=false": fail(500, "INTERNAL_ERROR") });
     renderWithProviders(<DishesPage />);
     expect(await screen.findByText("Gerichte konnten nicht geladen werden")).toBeInTheDocument();
+  });
+
+  it("prices dishes for the whole family with the household's tiers (FOOD-013)", async () => {
+    setup({
+      "GET /meals/profile": ok({
+        ...FAMILY,
+        household: { ...FAMILY.household, costTiers: { cheapMax: 5, mediumMax: 6 } },
+      }),
+    });
+    renderWithProviders(<DishesPage />);
+    // Two adults: 2 × 3,20 € + 0,20 € = 6,60 € → above 6 €.
+    expect(await screen.findByText("€€€ · ca. 6–8 €")).toBeInTheDocument();
+  });
+
+  it("shows when a dish was last eaten and toggles favorites (FOOD-023)", async () => {
+    const fetchMock = setup({
+      "GET /meals/history": ok({
+        dishes: [{ dishId: "d-1", lastEaten: "2026-10-05", timesLast90Days: 2, feedback: "UP" }],
+      }),
+      "PUT /meals/dishes/d-1": ok({ ...BOLOGNESE, favorite: true }),
+    });
+    renderWithProviders(<DishesPage />);
+    await screen.findByRole("heading", { name: "Spaghetti Bolognese" });
+    expect(await list().findByText("Zuletzt gegessen am 5.10. · 2× in 3 Monaten · 👍")).toBeInTheDocument();
+    const star = list().getByRole("button", { name: "Spaghetti Bolognese als Favorit" });
+    expect(star).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(star);
+    await waitFor(() =>
+      expect(fetchMock.calls().find((call) => call.key === "PUT /meals/dishes/d-1")?.body).toEqual({ favorite: true }),
+    );
   });
 });

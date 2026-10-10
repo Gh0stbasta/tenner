@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { DISH_CATEGORIES, LIGHTNESS, MEAL_SLOTS, TEMPERATURES } from "./models/dish.js";
+import { IMAGE_CONTENT_TYPES, IMAGE_LIMITS } from "./models/image.js";
 import { DIETS, EATER_TYPES, WEEK_SLOTS, type WeekSlot } from "./models/profile.js";
 import { USER_ID_PATTERN } from "../models/index.js";
 import { BASE_TAGS, INGREDIENT_ID_PATTERN, INGREDIENT_TAGS, INGREDIENT_UNITS, PROTEIN_TAGS, QUANTITY_UNITS, SHOPPING_SECTIONS } from "./models/ingredient.js";
@@ -31,6 +32,10 @@ const tagsSchema = z
 
 const nutritionValue = z.number().min(0).max(MEAL_LIMITS.nutritionMax);
 const nutritionSchema = z.object({ kcal: nutritionValue, protein: nutritionValue, carbs: nutritionValue, fat: nutritionValue }).strict();
+/** FOOD-012: a dish's own values per adult portion (a portion can exceed 1000 kcal). */
+const portionNutritionSchema = z
+  .object({ kcal: z.number().min(0).max(3000), protein: z.number().min(0).max(500), carbs: z.number().min(0).max(500), fat: z.number().min(0).max(500) })
+  .strict();
 
 /** Fields every member may change on an ingredient (FOOD-021); the unit is fixed once created. */
 const editableIngredientFields = {
@@ -112,7 +117,7 @@ const dishFields = {
   isBurger: z.boolean(),
   proteinSourcesOverride: z.array(z.enum(PROTEIN_TAGS)).max(PROTEIN_TAGS.length).refine(distinct, "Protein sources must be distinct.").nullable(),
   baseTagsOverride: z.array(z.enum(BASE_TAGS)).max(BASE_TAGS.length).refine(distinct, "Base ingredients must be distinct.").nullable(),
-  nutritionOverride: nutritionSchema.nullable(),
+  nutritionOverride: portionNutritionSchema.nullable(),
   costOverride: z.number().min(0).max(MEAL_LIMITS.costMax).nullable(),
   favorite: z.boolean(),
 };
@@ -152,6 +157,21 @@ export const updateDishSchema = z
   .refine(totalNotBelowActive, { message: "Total time must not be below the active time.", path: ["totalMinutes"] });
 
 export type UpdateDishRequest = z.output<typeof updateDishSchema>;
+
+/** FOOD-011: request for a presigned photo upload. */
+export const imageUploadSchema = z
+  .object({
+    contentType: z.enum(IMAGE_CONTENT_TYPES),
+    size: z.number().int().min(1).max(IMAGE_LIMITS.maxBytes),
+  })
+  .strict();
+
+export type ImageUploadRequest = z.output<typeof imageUploadSchema>;
+
+/** FOOD-011: attach an uploaded photo (the key from the upload response). */
+export const dishImageSchema = z.object({ imageKey: z.string().min(1).max(200) }).strict();
+
+export type DishImageRequest = z.output<typeof dishImageSchema>;
 
 export const listDishesQuerySchema = z
   .object({
@@ -196,6 +216,12 @@ export const foodProfileSchema = z
         maxActiveMinutes: z.number().int().min(5).max(MEAL_LIMITS.activeMinutesMax),
         attendance: z.object({ weekdayLunch: attendanceList, weekendLunch: attendanceList, dinner: attendanceList }).strict(),
         lightLunchOnWeekdays: z.boolean(),
+        lightLunchMaxKcal: z.number().int().min(200).max(2000).default(600),
+        costTiers: z
+          .object({ cheapMax: z.number().min(1).max(100), mediumMax: z.number().min(1).max(200) })
+          .strict()
+          .refine((tiers) => tiers.mediumMax > tiers.cheapMax, { message: "The second tier must be above the first.", path: ["mediumMax"] })
+          .default({ cheapMax: 6, mediumMax: 10 }),
         maxSaladLunchesPerWeek: z.number().int().min(0).max(7),
         chicken: z
           .object({

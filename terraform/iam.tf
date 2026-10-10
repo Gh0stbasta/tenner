@@ -1,5 +1,5 @@
 # Lambda execution role for the API (TICKET-005, TICKET-007).
-# Least privilege: write logs to the API log group and access the two Tenner tables. No S3.
+# Least privilege: write logs to the API log group and access the Tenner tables. S3 only for dish photos (FOOD-011).
 
 data "aws_iam_policy_document" "api_assume_role" {
   statement {
@@ -114,4 +114,20 @@ resource "aws_iam_role_policy" "api_push_actions" {
   name   = "${local.api_role_name}-push-actions"
   role   = aws_iam_role.api.id
   policy = data.aws_iam_policy_document.api_push_actions[0].json
+}
+
+# FOOD-011: presigned photo uploads are signed with this role, so it limits them: write and delete under
+# images/meals/ of the image bucket only (the tenant and dish prefix is enforced in the API). No read, no list.
+data "aws_iam_policy_document" "api_meal_images" {
+  statement {
+    sid       = "WriteDishPhotos"
+    actions   = ["s3:PutObject", "s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.meal_images.arn}/images/meals/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "api_meal_images" {
+  name   = "${local.api_role_name}-meal-images"
+  role   = aws_iam_role.api.id
+  policy = data.aws_iam_policy_document.api_meal_images.json
 }

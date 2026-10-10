@@ -17,6 +17,7 @@ const CUSTOM: NotificationPreferences = {
   weeklySummary: { enabled: true, dayOfWeek: "SAT", time: "10:00", channels: [] },
   quietHours: { start: "22:00", end: "06:30" },
   pushSnooze: "EVENING",
+  mealToday: { enabled: false, time: "07:15", channels: [] },
 };
 
 function world(settings: Partial<HouseholdSettings> | undefined = {}, connected: string[] = []) {
@@ -105,7 +106,7 @@ describe("handlers", () => {
     const result = await updateNotificationPreferencesHandler({ ...event, body: JSON.stringify(CUSTOM) }, TEST_IDENTITY, update, logger);
     expect(result.statusCode).toBe(200);
     expect(update).toHaveBeenCalledWith(TEST_IDENTITY, "STEFAN", CUSTOM);
-    expect(logger.info).toHaveBeenCalledWith("Notification preferences changed", { event: "NotificationPreferencesChanged", userId: "STEFAN", dailyDigest: true, overdueAlerts: false, weeklySummary: true });
+    expect(logger.info).toHaveBeenCalledWith("Notification preferences changed", { event: "NotificationPreferencesChanged", userId: "STEFAN", dailyDigest: true, overdueAlerts: false, weeklySummary: true, mealToday: false });
   });
 });
 

@@ -19,6 +19,10 @@ const channelsSchema = z.array(z.enum(USER_CHANNELS));
 const preferencesSchema = z.object({
   timezone: z.string().nullable(),
   dailyDigest: z.object({ enabled: z.boolean(), time: z.string(), channels: channelsSchema }),
+  /** „Essensplan am Morgen“ (FOOD-016); default for servers before it. */
+  mealToday: z
+    .object({ enabled: z.boolean(), time: z.string(), channels: channelsSchema })
+    .default({ enabled: true, time: "07:30", channels: [] }),
   // NOTIFICATION-010: evening reminder time (default 18:00).
   overdueAlerts: z.object({
     enabled: z.boolean(),

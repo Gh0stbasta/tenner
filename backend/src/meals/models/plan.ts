@@ -3,6 +3,9 @@
 import type { Weekday } from "../../models/enums.js";
 import type { Violation } from "../planner/rules.js";
 import type { DishResponse, Lightness, MealSlot, Temperature } from "./dish.js";
+import type { DishCost } from "../cost.js";
+import type { NutritionEstimate } from "../nutrition.js";
+import type { MealFeedback } from "../history.js";
 
 export const SLOT_SOURCES = ["AUTO", "MANUAL"] as const;
 export type SlotSource = (typeof SLOT_SOURCES)[number];
@@ -19,6 +22,8 @@ export interface StoredPlanSlot {
   readonly source: SlotSource;
   readonly status: SlotStatus;
   readonly emptyReason?: string;
+  /** 👍 / 👎 of the household for a cooked meal (FOOD-023). */
+  readonly feedback?: MealFeedback;
 }
 
 export interface StoredPlan {
@@ -40,6 +45,10 @@ export interface DishSummary {
   readonly isVegetarian: boolean;
   readonly vegetarianVariant?: string;
   readonly imageKey?: string;
+  /** Per adult portion (FOOD-012). */
+  readonly nutrition: NutritionEstimate;
+  /** FOOD-013. */
+  readonly cost: DishCost;
   readonly favorite: boolean;
   readonly archived: boolean;
 }
@@ -50,6 +59,8 @@ export interface PlanSlotResponse extends StoredPlanSlot {
   readonly slot: MealSlot;
   /** null for an empty meal or a dish that no longer exists. */
   readonly dish: DishSummary | null;
+  /** FOOD-013: EUR for the eaters of this meal; null without a dish. */
+  readonly cost: number | null;
 }
 
 export interface MealPlanResponse {
@@ -62,6 +73,8 @@ export interface MealPlanResponse {
   readonly slots: readonly PlanSlotResponse[];
   /** Current rule violations of the plan (also soft ones), e.g. after a manual choice. */
   readonly violations: readonly Violation[];
+  /** FOOD-013: EUR for the planned meals of the week. */
+  readonly cost: { readonly total: number; readonly perMeal: number | null; readonly meals: number; readonly complete: boolean };
 }
 
 export function toDishSummary(dish: DishResponse): DishSummary {
@@ -76,6 +89,8 @@ export function toDishSummary(dish: DishResponse): DishSummary {
     isVegetarian: dish.isVegetarian,
     ...(dish.vegetarianVariant === undefined ? {} : { vegetarianVariant: dish.vegetarianVariant }),
     ...(dish.imageKey === undefined ? {} : { imageKey: dish.imageKey }),
+    nutrition: dish.nutrition,
+    cost: dish.cost,
     favorite: dish.favorite,
     archived: dish.archived,
   };

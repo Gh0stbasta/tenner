@@ -8,6 +8,7 @@ import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
 import { CatalogSettings } from "../catalog/CatalogSettings";
 import { FoodProfileSettings } from "../meals/FoodProfileSettings";
+import { MealCalendarSettings } from "../meals/MealCalendarSettings";
 import { MealCatalogSettings } from "../meals/MealCatalogSettings";
 import { AlexaSettings } from "./AlexaSettings";
 import { CategoriesSettings } from "./CategoriesSettings";
@@ -45,6 +46,7 @@ export function SettingsPage() {
       <CatalogSettings />
       <FoodProfileSettings />
       <MealCatalogSettings />
+      <MealCalendarSettings />
       <AlexaSettings />
       <Box
         sx={{

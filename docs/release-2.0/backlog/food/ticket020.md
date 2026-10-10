@@ -101,3 +101,14 @@ Follow-up tickets if go
 # Out of Scope
 
 - Building AI features.
+
+---
+
+# Evaluation Status
+
+Prepared (2026-10-10), **waiting for evidence** (8 weeks of use, recheck 2026-12-07) and then the owner's decision.
+
+- Evaluation plan, signals and thresholds from FOOD-023/019 data, options A (deterministic), B (Bedrock), C (external
+  API) and guardrails in [ADR 0009](../../../decisions/0009-meal-ai.md) (status Proposed).
+- Recommendation: deterministic additions (season tags, leftovers) first; AI only if the data shows a gap.
+- Remaining: collect the evidence, decide. The ticket is not done; it ships as a follow-up of release 2.0.

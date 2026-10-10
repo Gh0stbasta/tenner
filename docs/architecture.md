@@ -1425,6 +1425,12 @@ EventBridge rule rate(15 minutes) ──► Lambda tenner-notifier (backend/src/
   time, overdue threshold, weekly summary, quiet hours, channels (connected ones only), own timezone or the
   household's. Defaults apply until a member saves; `GET/PUT /users/{userId}/notification-preferences`, own member
   only; Settings → "Benachrichtigungen".
+- **Meals of the day (FOOD-016, `notifications/meal-today.ts`, type `MEAL_TODAY`):** due at the member's
+  `mealToday.time` (default 07:30, own or household timezone, not in quiet hours); today's lunch and dinner from the
+  current or next week's plan (skipped meals left out; a vegetarian member linked to an eater sees the vegetarian
+  variant), plus „Einkaufsliste: n Dinge offen“ for unchecked non-pantry items; link `/essen`. Empty days send
+  nothing; deduplication per member, channel and local date as for every job. Push: one notification; Alexa: a
+  reminder „Zentrale: Heute gibt es mittags … und abends …“. Registered only when the meals table is configured.
 - **Daily digest (NOTIFICATION-003):** due at the member's time (own timezone or the household's), not in quiet
   hours; content from `DashboardService.getDashboard(tenant, { assignedTo })` (own + shared Tenners, paused and
   vacation rules as on the dashboard), at most 10 items per section, skipped on empty days, deep link `APP_URL`.
@@ -1462,6 +1468,33 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   `INGREDIENT#<id>`; merged on read.
 - **Dishes** (FOOD-002): `DISH#<uuid>`; vegetarian, tags, protein sources and base ingredients are derived from the
   current ingredients on every read; archive instead of delete.
+- **Dish photos** (FOOD-011): private bucket `tenner-meal-images-<env>` as a second origin of the frontend
+  distribution (`/images/*`, same OAC). The browser shrinks a photo to 1200 px / ~300 KB JPEG, asks
+  `POST /meals/dishes/{id}/image-upload` for a 5-minute presigned PUT (type, exact size ≤ 2 MB and key signed), uploads
+  straight to S3 and attaches the key with `PUT /meals/dishes/{id}/image`; replacing or removing deletes the old object
+  (failures are only logged). Keys: `images/meals/<tenantId>/<dishId>/<uuid>.<ext>`, built by the API only. The API
+  receives the bucket as `MEAL_IMAGES_BUCKET`; without it the photo routes answer 503. Without a photo the app shows a
+  placeholder per category.
+- **Nutrition estimate** (FOOD-012, `backend/src/meals/nutrition.ts`): per adult portion from the ingredients'
+  values per 100 g (quantities converted to grams: EL 15, TL 5, pieces by weight); optional ingredients left out;
+  `nutritionOverride` wins; rounded (kcal to 10, macros to grams); `complete: false` lists ingredients without values.
+  Computed with every dish read (`deriveDish`) and passed into plan summaries; nothing is stored. The app adds day
+  totals and hints at weekday lunches above `lightLunchMaxKcal` (profile, default 600).
+- **Cost estimate** (FOOD-013, `backend/src/meals/cost.ts`): EUR per adult portion from the ingredient prices (per
+  100 g / 100 ml or per piece), pantry ingredients as a flat 0.10 € per meal, `costOverride` (whole family) wins. The
+  plan prices each meal for its eaters (sum of their portion factors; an override is scaled from the whole family)
+  and adds a week total and the average per meal. Tiers (€ / €€ / €€€) come from the profile's `costTiers`; the app
+  shows tier and a 2-euro range. Prices are corrected in Settings → Essen → „Preise“ (household overrides of the
+  catalog, FOOD-021).
+- **History and feedback** (FOOD-023, `backend/src/meals/history.ts`): slot `status` (cooked, skipped, other; a planned
+  meal two days old counts as cooked) and `feedback` (👍/👎, last one wins) live on the stored plan slots; plans are kept
+  about a year (TTL, 400 days). The planner's context comes from all stored plans: the last date each dish was eaten
+  before the week (soft R12 within 7 days, double penalty within 3 days), 👍 (+1) and 👎 (−3), plus the dish
+  `favorite` flag (+1). `GET /meals/history` gives per dish last eaten, count in 90 days and feedback.
+- **Calendar feed** (FOOD-015, `meals/calendar.ts`, `services/calendar-feed.service.ts`): public route
+  `GET /meals/calendar/{token}` (no JWT, like `POST /push-actions`); the token `<tenantId>.<secret>` names the household
+  and is checked against the stored SHA-256 hash (`CALENDAR` item, constant-time compare). The ICS is built on each
+  request from the current and next week's plans; no extra storage. Managed in Settings → „Essen: Kalender“.
 - **Family food profile** (FOOD-004): one `PROFILE` item with eaters and household rules; defaults reproduce the
   owner's rules. `eatersAt(profile, weekday, slot)` is the one place that says who eats a meal (weekday lunch: adults).
 - **Rules** (FOOD-005, `backend/src/meals/planner/rules.ts`): pure functions over a week of `PlannedMeal`s.

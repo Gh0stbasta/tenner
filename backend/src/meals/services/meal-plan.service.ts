@@ -10,14 +10,19 @@ import { ApplicationError, ConflictError, NotFoundError } from "../../exceptions
 import type { WeekStart } from "../../models/enums.js";
 import { addDays, toUtcTimestamp, type Clock } from "../../utils/clock.js";
 import { dateInTimeZone } from "../../utils/timezone.js";
-import { itemKey } from "../keys.js";
+import { computeFoodAnalytics, type FoodAnalytics, type FoodAnalyticsPeriod } from "../analytics.js";
+import { dishHistory, historyContext, type DishHistory, type MealFeedback, type MealRecord } from "../history.js";
+import { itemKey, itemKeyPrefix } from "../keys.js";
 import type { DishResponse } from "../models/dish.js";
+import type { SlotStatus } from "../models/plan.js";
 import { toDishSummary, type DishSummary, type MealPlanResponse, type PlanSlotResponse, type StoredPlan, type StoredPlanSlot } from "../models/plan.js";
 import type { FoodProfile } from "../models/profile.js";
 import { plan } from "../planner/planner.js";
-import { checkSlot, checkWeek, hasHardViolation, score, type PlannedMeal, type RuleId, type Violation } from "../planner/rules.js";
+import { checkSlot, checkWeek, hasHardViolation, score, type PlannedMeal, type RuleContext, type RuleId, type Violation } from "../planner/rules.js";
 import { DAYS_PER_WEEK, emptyWeek, parseSlotId, weekStartOf } from "../planner/week.js";
 import type { MealItem, MealsStore } from "../repositories/meals-store.js";
+import { mealCost } from "../cost.js";
+import { eatersAt } from "../models/profile.js";
 
 /** Plans are kept about a year (FOOD-023 history), then removed by the table's TTL. */
 const PLAN_RETENTION_DAYS = 400;
@@ -49,6 +54,21 @@ export interface PlanData {
   readonly profile: FoodProfile;
 }
 
+/** FOOD-023: PUT /meals/plans/{weekStart}/slots/{slotId}/status. */
+export interface MealStatusRequest {
+  readonly status: SlotStatus;
+  readonly feedback?: MealFeedback | undefined;
+}
+
+/** FOOD-017: meals of today and the next day in household time. */
+export interface MealDaysResponse {
+  readonly today: string;
+  readonly days: readonly {
+    readonly date: string;
+    readonly meals: readonly { readonly slot: PlanSlotResponse["slot"]; readonly status: PlanSlotResponse["status"]; readonly dish: PlanSlotResponse["dish"] }[];
+  }[];
+}
+
 export class MealPlanService {
   constructor(private readonly deps: MealPlanServiceDependencies) {}
 
@@ -76,6 +96,25 @@ export class MealPlanService {
     return this.toResponse(resolved.weekStart, created, data);
   }
 
+  /**
+   * FOOD-017: today and the following days (1–2) in household time, for Alexa and other clients that do not know
+   * the week. Days of the next week come from its plan.
+   */
+  async mealsAhead(tenantId: string, days: number): Promise<MealDaysResponse> {
+    const current = await this.getPlan(tenantId, "current");
+    const today = (await this.resolveWeek(tenantId, "current")).today;
+    const dates = Array.from({ length: days }, (_, index) => addDays(today, index));
+    const next = dates.some((date) => date > current.weekEnd) ? await this.getPlan(tenantId, "next") : undefined;
+    const slots = [...current.slots, ...(next?.slots ?? [])];
+    return {
+      today,
+      days: dates.map((date) => ({
+        date,
+        meals: slots.filter((slot) => slot.date === date).map((slot) => ({ slot: slot.slot, status: slot.status, dish: slot.dish })),
+      })),
+    };
+  }
+
   /** Notifier: make sure the current and the next week have a plan (idempotent, cheap when they exist). */
   async ensurePlans(tenantId: string): Promise<number> {
     let created = 0;
@@ -101,10 +140,33 @@ export class MealPlanService {
     return { dishes, byId: new Map(dishes.map((dish) => [dish.dishId, dish])), profile };
   }
 
-  /** Dishes of the previous week (rule R12, soft). */
-  async recentDishIds(tenantId: string, weekStart: string): Promise<Set<string>> {
-    const previous = await this.storedPlan(tenantId, addDays(weekStart, -DAYS_PER_WEEK));
-    return new Set(previous?.plan.slots.flatMap((slot) => (slot.dishId ? [slot.dishId] : [])) ?? []);
+  /** Every meal of the stored plans (about a year), for history, feedback and analytics (FOOD-023, FOOD-019). */
+  async records(tenantId: string): Promise<MealRecord[]> {
+    const plans = (await this.deps.store.query(tenantId, itemKeyPrefix("PLAN"))).map(toStoredPlan);
+    return plans.flatMap((stored) =>
+      stored.slots.flatMap((slot): MealRecord[] =>
+        slot.dishId
+          ? [{ slotId: slot.slotId, date: slot.slotId.slice(0, 10), dishId: slot.dishId, status: slot.status, source: slot.source, ...(slot.feedback ? { feedback: slot.feedback } : {}) }]
+          : [],
+      ),
+    );
+  }
+
+  /** History the planner uses for a week: recent repeats (R12 soft) and 👍/👎 (FOOD-023). */
+  async ruleContext(tenantId: string, weekStart: string): Promise<RuleContext> {
+    return historyContext(await this.records(tenantId), weekStart);
+  }
+
+  /** FOOD-019: food analytics of the last 4 weeks, 12 weeks or year up to today (household time). */
+  async analytics(tenantId: string, period: FoodAnalyticsPeriod): Promise<FoodAnalytics> {
+    const [records, data, settings, week] = await Promise.all([this.records(tenantId), this.load(tenantId), this.deps.settingsOf(tenantId), this.resolveWeek(tenantId, "current")]);
+    return computeFoodAnalytics({ records, dishes: data.dishes, profile: data.profile, today: week.today, weekStartsOn: settings.weekStartsOn, period });
+  }
+
+  /** FOOD-023: last eaten, how often in 90 days and the latest feedback per dish. */
+  async dishHistory(tenantId: string): Promise<DishHistory[]> {
+    const [records, week] = await Promise.all([this.records(tenantId), this.resolveWeek(tenantId, "current")]);
+    return dishHistory(records, week.today);
   }
 
   newSeed(): number {
@@ -121,7 +183,7 @@ export class MealPlanService {
       weekStart: week.weekStart,
       dishes: data.dishes.filter((dish) => !dish.archived),
       profile: data.profile,
-      context: { recentDishIds: await this.recentDishIds(week.tenantId, week.weekStart) },
+      context: await this.ruleContext(week.tenantId, week.weekStart),
       seed,
     });
     const created: StoredPlan = {
@@ -164,7 +226,7 @@ export class MealPlanService {
     } else {
       const excluded = new Set([...(request.excludeDishIds ?? []), ...(current ? [current.dishId] : [])]);
       const candidates = data.dishes.filter((dish) => !dish.archived && !excluded.has(dish.dishId) && !(current?.group && dish.group === current.group));
-      const context = { recentDishIds: await this.recentDishIds(identity.tenantId, resolved.weekStart) };
+      const context = await this.ruleContext(identity.tenantId, resolved.weekStart);
       const scored = candidates
         .filter((dish) => !hasHardViolation(checkSlot(meals, slotId, dish, data.profile, context)))
         .map((dish) => ({ dish, value: score(meals.map((meal) => (meal.slotId === slotId ? { ...meal, dish } : meal)), data.profile, context) }))
@@ -200,7 +262,7 @@ export class MealPlanService {
       weekStart: week.weekStart,
       dishes: data.dishes.filter((dish) => !dish.archived),
       profile: data.profile,
-      context: { recentDishIds: await this.recentDishIds(week.tenantId, week.weekStart) },
+      context: await this.ruleContext(week.tenantId, week.weekStart),
       fixed,
       seed,
     });
@@ -281,6 +343,28 @@ export class MealPlanService {
     return this.save(identity.tenantId, { ...stored, slots: swapped }, version, data);
   }
 
+  /**
+   * FOOD-023: what was really eaten — cooked, skipped (e.g. eating out) or something else — and 👍/👎 for a cooked
+   * meal (one per household, last one wins). Only for today and earlier; other fields of the meal stay.
+   */
+  async setMealStatus(identity: Identity, week: WeekReference, slotId: string, request: MealStatusRequest): Promise<MealPlanResponse> {
+    const resolved = await this.resolveWeek(identity.tenantId, week);
+    const { plan: stored, version } = await this.requirePlan(identity.tenantId, resolved.weekStart);
+    const parsed = parseSlotId(slotId);
+    const slot = stored.slots.find((candidate) => candidate.slotId === slotId);
+    if (!parsed || !slot) throw new NotFoundError("Meal not found in this plan.");
+    if (parsed.date > resolved.today) throw new ApplicationError("MEAL_IN_FUTURE", 400, "Only meals of today or earlier can be marked.");
+    if (!slot.dishId && request.status === "COOKED") throw new ApplicationError("VALIDATION_ERROR", 400, "Nothing was planned.", [{ field: "status", message: "The meal has no dish." }]);
+    if (request.feedback && request.status !== "COOKED") {
+      throw new ApplicationError("VALIDATION_ERROR", 400, "Feedback needs a cooked meal.", [{ field: "feedback", message: "Only for cooked meals." }]);
+    }
+    const { feedback: _previous, ...rest } = slot;
+    void _previous;
+    const next: StoredPlanSlot = { ...rest, status: request.status, ...(request.feedback ? { feedback: request.feedback } : {}) };
+    const slots = stored.slots.map((candidate) => (candidate.slotId === slotId ? next : candidate));
+    return this.save(identity.tenantId, { ...stored, slots }, version, await this.load(identity.tenantId));
+  }
+
   private assertNoHarm(violations: readonly Violation[]): void {
     const harmful = violations.filter((violation) => CONFIRM_RULES.has(violation.rule));
     if (harmful.length > 0) throw new ApplicationError(
@@ -339,10 +423,14 @@ export class MealPlanService {
       return { ...meal, dish: dishId ? (data.byId.get(dishId) ?? null) : null };
     });
     const setup = { hasDishes: data.dishes.some((dish) => !dish.archived), hasEaters: data.profile.eaters.length > 0 };
+    const allFactors = factorSum(data.profile.eaters);
     const slots: PlanSlotResponse[] = meals.map((meal) => {
       const state: StoredPlanSlot = stateOf.get(meal.slotId) ?? { slotId: meal.slotId, dishId: null, locked: false, source: "AUTO", status: "PLANNED" };
-      return { ...state, date: meal.date, weekday: meal.weekday, slot: meal.slot, dish: meal.dish ? toDishSummary(meal.dish) : null };
+      const cost = meal.dish ? mealCost(meal.dish.cost, factorSum(eatersAt(data.profile, meal.weekday, meal.slot)), allFactors) : null;
+      return { ...state, date: meal.date, weekday: meal.weekday, slot: meal.slot, dish: meal.dish ? toDishSummary(meal.dish) : null, cost };
     });
+    const planned = stored ? meals.filter((meal) => meal.dish) : [];
+    const total = Math.round(slots.reduce((sum, slot) => sum + (stored && slot.cost !== null ? slot.cost : 0), 0) * 100) / 100;
     return {
       weekStart,
       weekEnd: addDays(weekStart, DAYS_PER_WEEK - 1),
@@ -351,6 +439,12 @@ export class MealPlanService {
       generatedAt: stored?.generatedAt ?? null,
       slots,
       violations: stored ? checkWeek(meals, data.profile) : [],
+      cost: {
+        total,
+        perMeal: planned.length > 0 ? Math.round((total / planned.length) * 100) / 100 : null,
+        meals: planned.length,
+        complete: planned.every((meal) => meal.dish?.cost.complete),
+      },
     };
   }
 }
@@ -427,4 +521,9 @@ const isReady = (data: PlanData): boolean => data.dishes.some((dish) => !dish.ar
 export function toStoredPlan(item: MealItem): StoredPlan {
   const data = item.data as unknown as StoredPlan;
   return { weekStart: data.weekStart, seed: data.seed, generatedAt: data.generatedAt, slots: data.slots };
+}
+
+/** Sum of portion factors (children eat less, FOOD-004). */
+function factorSum(eaters: readonly { readonly portionFactor: number }[]): number {
+  return eaters.reduce((sum, eater) => sum + eater.portionFactor, 0);
 }

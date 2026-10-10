@@ -107,22 +107,22 @@ scripts/check_alexa_simulation.py   (deploy health check, extended with one meal
 
 # Acceptance Criteria
 
-- [ ] „Was gibt es heute?“ answered with today's meals
-- [ ] Tomorrow and single meals can be asked
-- [ ] Briefing includes meals (no Echo Show view, MAINT-006)
-- [ ] Skill stays private
-- [ ] Tests passing
+- [x] „Was gibt es heute?“ answered with today's meals
+- [x] Tomorrow and single meals can be asked
+- [x] Briefing includes meals (no Echo Show view, MAINT-006)
+- [x] Skill stays private
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated (alexa/README.md)
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated (alexa/README.md)
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
@@ -131,9 +131,35 @@ scripts/check_alexa_simulation.py   (deploy health check, extended with one meal
 - The skill invocation stays „Familien Zentrale“; a one-shot phrase („Alexa, frag Familien Zentrale, …“) is the supported
   form. „Alexa, was gibt es heute?“ without the invocation name would need a name-free intent, which private skills
   do not get.
+- `GET /meals/today` did not exist yet (FOOD-001 only planned it); it is added here as a thin read over the current and
+  next week's plan (`MealPlanService.mealsAhead`, `days` 1 or 2).
+- The day slot is `AMAZON.DATE`; only today and tomorrow are answered, other days get a short pointer to the app.
+- The deploy health check (`scripts/alexa-health-check.sh`) is not extended with a meal utterance: the simulator has
+  no linked account, so a meal question would only test the „Konto verknüpfen“ answer. The launch check stays; the meal
+  answers are covered by `alexa/tests/meals.test.ts` against the fake API.
+- The briefing makes one extra API call; a failure there never breaks the briefing (sentence left out, logged).
 
 ---
 
 # Out of Scope
 
 - Changing the plan by voice; reading the shopping list aloud (possible follow-up).
+
+---
+
+# Implementation Status
+
+Done (2026-10-10).
+
+- Backend: `GET /meals/today?days=1|2` (`mealsTodayHandler`, `MealPlanService.mealsAhead`), Terraform route.
+- Skill: `MealTodayIntent` with slots `day` (AMAZON.DATE) and `meal` (custom `MealSlot`) and 19 samples;
+  `alexa/src/meals.ts` (answers, vegetarian variant, empty slots, day index, briefing sentence),
+  `handlers/meals.ts`; the briefing adds today's meals after the Tenners. Private skill unchanged (ALEXA-010 test).
+- Tests: `alexa/tests/meals.test.ts` (answers, slots, later days, API error fallback, briefing with and without
+  meals, interaction model); backend route and service tests (`index.test.ts`, `meals-plans.test.ts`); Terraform
+  route list.
+- Validation: alexa lint, typecheck, 160 tests; backend lint, typecheck, 1,123 tests; Terraform api tests.
+- Owner step: the interaction model is deployed with the skill by the deploy workflow; nothing to do by hand. To try:
+  „Alexa, frag Familien Zentrale, was es heute gibt“.
+- Technical debt: none new.
+

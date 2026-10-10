@@ -184,4 +184,122 @@ describe("DishEditorDialog (FOOD-010)", () => {
     ).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it("takes a photo, uploads it after saving and can remove it (FOOD-011)", async () => {
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => ({ width: 3000, height: 2000, close: vi.fn() })),
+    );
+    vi.stubGlobal(
+      "URL",
+      Object.assign(URL, { createObjectURL: vi.fn(() => "blob:preview"), revokeObjectURL: vi.fn() }),
+    );
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ drawImage: vi.fn() } as never);
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation((callback) =>
+      callback(new Blob([new Uint8Array(5000)], { type: "image/jpeg" })),
+    );
+    const { fetchMock, onClose } = setup(
+      {
+        "PUT /meals/dishes/d-1": ok(dish()),
+        "POST /meals/dishes/d-1/image-upload": ok({
+          imageKey: "images/meals/default/d-1/k.jpg",
+          uploadUrl: "https://bucket.s3.test/upload",
+          headers: { "Content-Type": "image/jpeg" },
+          expiresInSeconds: 300,
+        }),
+        "PUT /upload": { status: 200 },
+        "PUT /meals/dishes/d-1/image": ok(dish({ imageKey: "images/meals/default/d-1/k.jpg" })),
+      },
+      true,
+    );
+    expect(dialog().getByRole("img", { name: "Kein Foto: Spaghetti Bolognese" })).toBeInTheDocument();
+    await userEvent.upload(
+      dialog().getByLabelText("Foto aufnehmen oder auswählen"),
+      new File(["photo"], "essen.jpg", { type: "image/jpeg" }),
+    );
+    expect(await dialog().findByRole("img", { name: "Foto: Spaghetti Bolognese" })).toHaveAttribute(
+      "src",
+      "blob:preview",
+    );
+    await userEvent.click(dialog().getByRole("button", { name: "Speichern" }));
+    expect(await screen.findByText("✅ „Spaghetti Bolognese“ gespeichert.")).toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
+    const keys = fetchMock.calls().map((call) => call.key);
+    expect(keys.filter((key) => key.startsWith("PUT") || key.startsWith("POST"))).toEqual([
+      "PUT /meals/dishes/d-1",
+      "POST /meals/dishes/d-1/image-upload",
+      "PUT /upload",
+      "PUT /meals/dishes/d-1/image",
+    ]);
+    expect(fetchMock.calls().find((call) => call.key === "POST /meals/dishes/d-1/image-upload")?.body).toEqual({
+      contentType: "image/jpeg",
+      size: 5000,
+    });
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }, 15_000);
+
+  it("removes an existing photo and keeps the dish saved when the photo step fails", async () => {
+    const fetchMock = mockFetch({
+      "GET /meals/ingredients": ok({ ingredients: INGREDIENTS }),
+      "GET /meals/profile": ok(FAMILY),
+      "PUT /meals/dishes/d-1": ok(dish({ imageKey: "images/meals/default/d-1/old.jpg" })),
+      "DELETE /meals/dishes/d-1/image": {
+        status: 503,
+        body: { success: false, error: { code: "SERVICE_UNAVAILABLE", message: "x" } },
+      },
+    });
+    const onClose = vi.fn();
+    renderWithProviders(
+      <DishEditorDialog dish={dish({ imageKey: "images/meals/default/d-1/old.jpg" })} groups={[]} onClose={onClose} />,
+    );
+    expect(dialog().getByRole("img", { name: "Foto: Spaghetti Bolognese" })).toBeInTheDocument();
+    await userEvent.click(dialog().getByRole("button", { name: "Foto entfernen" }));
+    expect(dialog().getByRole("img", { name: "Kein Foto: Spaghetti Bolognese" })).toBeInTheDocument();
+    await userEvent.click(dialog().getByRole("button", { name: "Speichern" }));
+    expect(await screen.findByText(/„Spaghetti Bolognese“ gespeichert, aber das Foto nicht\./)).toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
+    expect(fetchMock.calls().map((call) => call.key)).toContain("DELETE /meals/dishes/d-1/image");
+  });
+
+  it("explains a photo the browser cannot open", async () => {
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => Promise.reject(new Error("unsupported"))),
+    );
+    setup({}, true);
+    await userEvent.upload(
+      dialog().getByLabelText("Foto aufnehmen oder auswählen"),
+      new File(["x"], "bild.heic", { type: "image/heic" }),
+    );
+    expect(await dialog().findByText(/Dieses Bildformat kann der Browser nicht öffnen/)).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the estimate and lets the household enter its own values (FOOD-012)", async () => {
+    const estimated = { kcal: 640, protein: 31, carbs: 72, fat: 22, source: "INGREDIENTS" as const, complete: true };
+    const fetchMock = mockFetch({
+      "GET /meals/ingredients": ok({ ingredients: INGREDIENTS }),
+      "GET /meals/profile": ok(FAMILY),
+      "PUT /meals/dishes/d-1": ok(dish()),
+    });
+    renderWithProviders(<DishEditorDialog dish={dish({ nutrition: estimated })} groups={[]} onClose={vi.fn()} />);
+    expect(
+      meaning().getByText(/ca\. 640 kcal · 31 g Eiweiß · 72 g KH · 22 g Fett pro Erwachsenenportion/),
+    ).toBeInTheDocument();
+    expect(
+      meaning().getByText(/Grobe Schätzung pro Erwachsenenportion, keine Ernährungsberatung\./),
+    ).toBeInTheDocument();
+    await userEvent.click(dialog().getByRole("switch", { name: "Nährwerte selbst eintragen" }));
+    const values = within(dialog().getByRole("group", { name: "Nährwerte pro Erwachsenenportion" }));
+    expect(values.getByLabelText("kcal")).toHaveValue(640);
+    await userEvent.clear(values.getByLabelText("kcal"));
+    await userEvent.type(values.getByLabelText("kcal"), "700");
+    await userEvent.click(dialog().getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(fetchMock.calls().find((call) => call.key === "PUT /meals/dishes/d-1")?.body).toMatchObject({
+        nutritionOverride: { kcal: 700, protein: 31, carbs: 72, fat: 22 },
+      }),
+    );
+  }, 15_000);
 });

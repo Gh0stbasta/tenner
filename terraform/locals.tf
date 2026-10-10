@@ -98,13 +98,24 @@ locals {
     "PUT /meals/dishes/{dishId}",                           # FOOD-002
     "DELETE /meals/dishes/{dishId}",                        # FOOD-002 (archive)
     "POST /meals/dishes/{dishId}/restore",                  # FOOD-002
+    "POST /meals/dishes/{dishId}/image-upload",             # FOOD-011
+    "PUT /meals/dishes/{dishId}/image",                     # FOOD-011
+    "DELETE /meals/dishes/{dishId}/image",                  # FOOD-011
     "GET /meals/profile",                                   # FOOD-004
     "PUT /meals/profile",                                   # FOOD-004
     "POST /meals/catalog",                                  # FOOD-003
     "GET /meals/plans/{weekStart}",                         # FOOD-006
+    "GET /meals/today",                                     # FOOD-017 (Alexa)
+    "GET /meals/calendar",                                  # FOOD-015
+    "POST /meals/calendar",                                 # FOOD-015
+    "DELETE /meals/calendar",                               # FOOD-015
+    "GET /meals/calendar/{token}",                          # FOOD-015 (public, token in the path)
     "POST /meals/plans/{weekStart}/slots/{slotId}/replace", # FOOD-007
     "GET /meals/plans/{weekStart}/slots/{slotId}/options",  # FOOD-022
     "PUT /meals/plans/{weekStart}/slots/{slotId}",          # FOOD-022
+    "PUT /meals/plans/{weekStart}/slots/{slotId}/status",   # FOOD-023
+    "GET /meals/history",                                   # FOOD-023
+    "GET /meals/analytics",                                 # FOOD-019
     "POST /meals/plans/{weekStart}/swap",                   # FOOD-022
     "POST /meals/plans/{weekStart}/regenerate",             # FOOD-008
     "GET /meals/plans/{weekStart}/shopping-list",           # FOOD-014
@@ -114,7 +125,8 @@ locals {
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.
   # POST /push-actions (NOTIFICATION-011) is authorized by the signed token in the body instead of a login.
-  api_public_routes = ["GET /health", "POST /push-actions"]
+  # GET /meals/calendar/{token} (FOOD-015) is authorized by the secret feed token in the path (calendar apps send no login).
+  api_public_routes = ["GET /health", "POST /push-actions", "GET /meals/calendar/{token}"]
 
   # Authentication (SECURITY-002, ADR 0001). The Cognito domain prefix must be unique per region;
   # a hash of the account ID keeps it stable without exposing the account ID in the login URL.
@@ -206,6 +218,9 @@ locals {
   households_table_name = "${local.name_prefix}-households"
   # Meal planning (FOOD-001, ADR 0007): dishes, ingredients, profile, plans and shopping lists per tenant.
   meals_table_name = "${local.name_prefix}-meals"
+  # Dish photos (FOOD-011): private bucket behind the frontend distribution; the API writes under images/meals/.
+  meal_images_bucket_name = "${local.name_prefix}-meal-images-${var.environment}"
+  meal_images_host        = "${local.meal_images_bucket_name}.s3.${var.aws_region}.amazonaws.com"
 
   # Frontend hosting (TICKET-017).
   frontend_bucket_name       = "${local.name_prefix}-frontend-${var.environment}"

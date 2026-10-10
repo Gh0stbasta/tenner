@@ -1275,3 +1275,81 @@ move the shared logic to a package used by both sides.
 
 FOOD-010, FOOD-002, FOOD-005; `frontend/src/features/meals/dishes.ts`, `backend/src/meals/models/dish.ts`.
 
+## TD-045: Uploaded dish photos that are never attached stay in the bucket
+
+### Description
+
+`POST /meals/dishes/{id}/image-upload` issues an upload URL; the photo is attached in a second call. If the browser
+closes in between, or a household member uploads without attaching, the object stays in the image bucket. A photo
+URL that does not exist returns the app's `index.html` with status 200 (the distribution maps 403/404 to the SPA), so
+the `<img>` fails and the app shows the placeholder.
+
+### Reason
+
+FOOD-011 keeps the API without read or list rights on the bucket and without a cleanup job; S3 cannot expire only
+unattached current objects.
+
+### Impact
+
+A few hundred KB per abandoned upload; no security impact beyond the household's own storage (the key is unguessable
+and only household members can get upload URLs). Cost is negligible.
+
+### Suggested Improvement
+
+Upload to a `pending/` prefix with a 1-day lifecycle rule and copy on attach, or a monthly cleanup that compares the
+bucket listing with the dishes. Serve `/images/*` 404s without the SPA fallback (CloudFront function).
+
+### Related Work
+
+FOOD-011; `terraform/meal-images.tf`, `terraform/frontend-hosting.tf`, `backend/src/meals/services/dish-image.service.ts`.
+
+## TD-046: Number fields in the planning rules clamp while typing
+
+### Description
+
+`NumberField` in `frontend/src/features/meals/FoodRulesDialog.tsx` clamps every keystroke to its minimum and maximum.
+Clearing a field jumps to the minimum, and typing then appends to it (e.g. clearing „10“ and typing „12“ gives „72“
+or the maximum).
+
+### Reason
+
+The field was built for small counts (FOOD-005); FOOD-012 and FOOD-013 added fields with larger values (kcal, euro).
+
+### Impact
+
+Awkward editing on the phone: users have to select the whole value before typing. No data or security impact; the
+backend validates the ranges.
+
+### Suggested Improvement
+
+Keep the typed text in local state and clamp or validate on blur and on save, like the editor's number fields.
+
+### Related Work
+
+FOOD-005, FOOD-012, FOOD-013; `frontend/src/features/meals/FoodRulesDialog.tsx`.
+
+## TD-047: The API access log contains the meal calendar token
+
+### Description
+
+The access log of the HTTP API (`/tenner/api/access`, `terraform/api.tf`) records `$context.path`. For the public
+calendar feed (FOOD-015) the path contains the secret feed token.
+
+### Reason
+
+The log format predates FOOD-015 and also serves the other routes; changing it was out of scope.
+
+### Impact
+
+Whoever can read the account's CloudWatch logs (today only the owner) can copy a working calendar link for up to 30
+days. The feed shows dish names only. No cost impact.
+
+### Suggested Improvement
+
+Log `$context.routeKey` without `$context.path`, or move the token into a query parameter that the access log does
+not record; then revoke and recreate the calendar link once.
+
+### Related Work
+
+FOOD-015; `terraform/api.tf`, `docs/security.md` (residual risks).
+
