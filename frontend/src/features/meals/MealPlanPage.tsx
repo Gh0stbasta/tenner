@@ -43,6 +43,7 @@ import {
 import { dayNutrition, formatEuro, heavyLunchHint, isKept, localToday, NUTRITION_DISCLAIMER } from "./format";
 import { MealActions } from "./MealActions";
 import { MealCard } from "./MealCard";
+import { MealStatusControls } from "./MealStatusControls";
 import { MealPickerDialog } from "./MealPickerDialog";
 import { SwapMealDialog } from "./SwapMealDialog";
 import { MEAL_SLOT_LABELS } from "./labels";
@@ -104,6 +105,7 @@ function DayCard({
   today,
   rules,
   actionsFor,
+  footerFor,
 }: {
   date: string;
   slots: readonly PlanSlot[];
@@ -111,6 +113,7 @@ function DayCard({
   today: boolean;
   rules: HouseholdFoodRules | undefined;
   actionsFor: (slot: PlanSlot) => ReactNode;
+  footerFor: (slot: PlanSlot) => ReactNode;
 }) {
   const total = dayNutrition(slots);
   return (
@@ -133,7 +136,12 @@ function DayCard({
         {slots.map((slot, index) => (
           <Box key={slot.slotId}>
             {index > 0 && <Divider />}
-            <MealCard slot={slot} hints={hintsFor(plan, slot, rules)} actions={actionsFor(slot)} />
+            <MealCard
+              slot={slot}
+              hints={hintsFor(plan, slot, rules)}
+              actions={actionsFor(slot)}
+              footer={footerFor(slot)}
+            />
           </Box>
         ))}
       </CardContent>
@@ -290,6 +298,10 @@ export function MealPlanPage() {
     );
   };
 
+  // FOOD-023: today's and past meals can be marked as eaten, with 👍 / 👎.
+  const footerFor = (slot: PlanSlot): ReactNode =>
+    slot.dish && slot.date <= today ? <MealStatusControls slot={slot} week={week} disabled={!online} /> : null;
+
   const actionsFor = (slot: PlanSlot): ReactNode => (
     <MealActions
       label={slotLabel(slot)}
@@ -384,6 +396,7 @@ export function MealPlanPage() {
                 today={date === today}
                 rules={rules}
                 actionsFor={actionsFor}
+                footerFor={footerFor}
               />
             </Grid>
           ))}

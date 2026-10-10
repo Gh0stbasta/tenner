@@ -1,7 +1,15 @@
 /** Display helpers of the meal plan (FOOD-009). */
 
 import { formatMinutes } from "../../utils/format";
-import type { DishCost, Eater, HouseholdFoodRules, NutritionEstimate, PlanSlot, Violation } from "./api";
+import type {
+  DishCost,
+  DishHistoryEntry,
+  Eater,
+  HouseholdFoodRules,
+  NutritionEstimate,
+  PlanSlot,
+  Violation,
+} from "./api";
 
 /** Today in the device's local time (the household's timezone in practice). */
 export function localToday(now: Date = new Date()): string {
@@ -105,4 +113,16 @@ export function costRange(value: number): string {
 export function costLine(cost: DishCost, factors: number, tiers: HouseholdFoodRules["costTiers"]): string {
   const value = familyCost(cost, factors);
   return `${costTier(value, tiers)} · ${costRange(value)}${cost.complete ? "" : " (ohne fehlende Zutaten)"}`;
+}
+
+/** „Zuletzt gegessen am 12.10. · 2× in 3 Monaten · 👍“ (FOOD-023); „Noch nie gegessen“ without history. */
+export function historyLine(entry: Pick<DishHistoryEntry, "lastEaten" | "timesLast90Days" | "feedback">): string {
+  const parts: string[] = [];
+  if (entry.lastEaten) {
+    const [, month, day] = entry.lastEaten.split("-");
+    parts.push(`Zuletzt gegessen am ${Number(day)}.${Number(month)}.`);
+  } else parts.push("Noch nie gegessen");
+  if (entry.timesLast90Days > 0) parts.push(`${entry.timesLast90Days}× in 3 Monaten`);
+  if (entry.feedback) parts.push(entry.feedback === "UP" ? "👍" : "👎");
+  return parts.join(" · ");
 }

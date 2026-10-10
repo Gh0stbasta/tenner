@@ -131,4 +131,22 @@ describe("DishesPage (FOOD-010)", () => {
     // Two adults: 2 × 3,20 € + 0,20 € = 6,60 € → above 6 €.
     expect(await screen.findByText("€€€ · ca. 6–8 €")).toBeInTheDocument();
   });
+
+  it("shows when a dish was last eaten and toggles favorites (FOOD-023)", async () => {
+    const fetchMock = setup({
+      "GET /meals/history": ok({
+        dishes: [{ dishId: "d-1", lastEaten: "2026-10-05", timesLast90Days: 2, feedback: "UP" }],
+      }),
+      "PUT /meals/dishes/d-1": ok({ ...BOLOGNESE, favorite: true }),
+    });
+    renderWithProviders(<DishesPage />);
+    await screen.findByRole("heading", { name: "Spaghetti Bolognese" });
+    expect(await list().findByText("Zuletzt gegessen am 5.10. · 2× in 3 Monaten · 👍")).toBeInTheDocument();
+    const star = list().getByRole("button", { name: "Spaghetti Bolognese als Favorit" });
+    expect(star).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(star);
+    await waitFor(() =>
+      expect(fetchMock.calls().find((call) => call.key === "PUT /meals/dishes/d-1")?.body).toEqual({ favorite: true }),
+    );
+  });
 });

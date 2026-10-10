@@ -197,6 +197,8 @@ const planSlotSchema = z.object({
   dish: dishSummarySchema.nullable(),
   /** FOOD-013: EUR for the eaters of this meal. */
   cost: z.number().nullable().optional(),
+  /** FOOD-023: 👍 / 👎 of the household for a cooked meal. */
+  feedback: z.enum(["UP", "DOWN"]).optional(),
 });
 export type PlanSlot = z.infer<typeof planSlotSchema>;
 
@@ -285,6 +287,19 @@ export interface ChooseMealVariables {
 export function useChooseMeal(week: WeekChoice) {
   return usePlanChange(week, ({ slotId, ...body }: ChooseMealVariables) =>
     apiClient.put(slotPath(week, slotId), { schema: mealPlanSchema, body }),
+  );
+}
+
+export interface MealStatusVariables {
+  readonly slotId: string;
+  readonly status: PlanSlot["status"];
+  readonly feedback?: "UP" | "DOWN";
+}
+
+/** „Gekocht“ / „Ausgefallen“ / „Anderes gegessen“ and 👍 / 👎 (FOOD-023). */
+export function useSetMealStatus(week: WeekChoice) {
+  return usePlanChange(week, ({ slotId, ...body }: MealStatusVariables) =>
+    apiClient.put(`${slotPath(week, slotId)}/status`, { schema: mealPlanSchema, body }),
   );
 }
 
@@ -440,4 +455,32 @@ export function useRevokeCalendarToken() {
 export function calendarUrls(token: string, apiBaseUrl: string = config.apiBaseUrl): { https: string; webcal: string } {
   const https = `${apiBaseUrl}/meals/calendar/${token}.ics`;
   return { https, webcal: https.replace(/^https:/, "webcal:") };
+}
+
+// Meal history (FOOD-023)
+
+const dishHistorySchema = z.object({
+  dishes: z.array(
+    z.object({
+      dishId: z.string(),
+      lastEaten: z.string().nullable(),
+      timesLast90Days: z.number(),
+      feedback: z.enum(["UP", "DOWN"]).nullable(),
+    }),
+  ),
+});
+export type DishHistoryEntry = z.infer<typeof dishHistorySchema>["dishes"][number];
+
+export function useDishHistory() {
+  return useQuery({
+    queryKey: [...queryKeys.meals, "history"],
+    queryFn: async () =>
+      new Map(
+        (await apiClient.get("/meals/history", { schema: dishHistorySchema })).dishes.map((entry) => [
+          entry.dishId,
+          entry,
+        ]),
+      ),
+    staleTime: 5 * 60_000,
+  });
 }

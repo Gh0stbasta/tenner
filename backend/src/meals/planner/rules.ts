@@ -8,6 +8,7 @@ import type { Weekday } from "../../models/enums.js";
 import type { DishResponse, MealSlot } from "../models/dish.js";
 import type { ProteinTag } from "../models/ingredient.js";
 import { eatersAt, type Eater, type FoodProfile } from "../models/profile.js";
+import { daysBetween, RECENT_DAYS, VERY_RECENT_DAYS } from "../history.js";
 
 export const RULE_IDS = ["SLOT", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13"] as const;
 export type RuleId = (typeof RULE_IDS)[number];
@@ -36,6 +37,18 @@ export interface RuleContext {
   readonly recentDishIds?: ReadonlySet<string>;
   /** Dishes the household rated 👎 (FOOD-023). */
   readonly dislikedDishIds?: ReadonlySet<string>;
+  /** Dishes the household rated 👍 (FOOD-023). */
+  readonly likedDishIds?: ReadonlySet<string>;
+  /** Last date each dish was eaten before the week (FOOD-023); replaces recentDishIds when given. */
+  readonly lastEaten?: ReadonlyMap<string, string>;
+}
+
+/** Days since the dish was last eaten before this meal, if within RECENT_DAYS (FOOD-023). */
+export function recentlyEaten(meal: Pick<PlannedMeal, "date">, dishId: string, context: RuleContext): number | undefined {
+  const last = context.lastEaten?.get(dishId);
+  if (last === undefined) return undefined;
+  const days = daysBetween(last, meal.date);
+  return days > 0 && days <= RECENT_DAYS ? days : undefined;
 }
 
 const WEEKDAY_NAMES: Readonly<Record<Weekday, string>> = { MON: "Montag", TUE: "Dienstag", WED: "Mittwoch", THU: "Donnerstag", FRI: "Freitag", SAT: "Samstag", SUN: "Sonntag" };
@@ -128,7 +141,10 @@ export function weekViolations(meals: readonly PlannedMeal[], profile: Pick<Food
 
   for (const meal of planned) {
     if (meal.slot === "DINNER" && (meal.dish.temperature === "COLD" || meal.dish.lightness === "LIGHT")) violations.push(soft("R10", [meal.slotId], `${mealName(meal)} lieber warm und sättigend.`));
-    if (context.recentDishIds?.has(meal.dish.dishId)) violations.push(soft("R12", [meal.slotId], `${meal.dish.name} gab es letzte Woche schon.`));
+    if (context.lastEaten) {
+      const days = recentlyEaten(meal, meal.dish.dishId, context);
+      if (days !== undefined) violations.push(soft("R12", [meal.slotId], `${meal.dish.name} gab es vor ${days === 1 ? "einem Tag" : `${days} Tagen`} schon.`));
+    } else if (context.recentDishIds?.has(meal.dish.dishId)) violations.push(soft("R12", [meal.slotId], `${meal.dish.name} gab es letzte Woche schon.`));
   }
 
   const saladLunches = planned.filter((meal) => meal.slot === "LUNCH" && meal.dish.category === "SALAD");
@@ -169,7 +185,11 @@ export function score(meals: readonly PlannedMeal[], profile: Pick<FoodProfile, 
       continue;
     }
     if (meal.dish.favorite) total += 1;
+    if (context.likedDishIds?.has(meal.dish.dishId)) total += 1;
     if (context.dislikedDishIds?.has(meal.dish.dishId)) total -= 3;
+    // FOOD-023: within 3 days counts double (the soft R12 violation above already costs SOFT_PENALTY.R12).
+    const days = recentlyEaten(meal, meal.dish.dishId, context);
+    if (days !== undefined && days <= VERY_RECENT_DAYS) total -= SOFT_PENALTY.R12;
     for (const eater of eatersAt(profile, meal.weekday, meal.slot)) {
       if (meal.dish.ingredients.some((entry) => eater.likeIngredients.includes(entry.ingredientId))) total += 0.5;
       if (meal.dish.group && eater.likeGroups.includes(meal.dish.group)) total += 0.5;

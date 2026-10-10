@@ -169,6 +169,8 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     createCalendarToken: vi.fn(async () => ({ token: "default.secret", createdAt: "2026-10-10T08:00:00Z" })),
     revokeCalendarToken: vi.fn(async () => undefined),
     calendarFeed: vi.fn(async () => "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"),
+    setMealStatus: vi.fn(async () => EMPTY_PLAN),
+    dishHistory: vi.fn(async () => [{ dishId: DISH_ID, lastEaten: "2026-10-12", timesLast90Days: 2, feedback: "UP" as const }]),
     getMealsAhead: vi.fn(async () => ({ today: "2026-10-14", days: [{ date: "2026-10-14", meals: [] }] })),
     removeDishImage: vi.fn(async () => DISH),
     getFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
@@ -543,6 +545,17 @@ describe("dish routes (FOOD-002)", () => {
     expect((await route(withDish("DELETE /meals/dishes/{dishId}"), d)).statusCode).toBe(200);
     expect((await route(withDish("POST /meals/dishes/{dishId}/restore"), d)).statusCode).toBe(200);
     expect(d.restoreDish).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID);
+  });
+
+  it("marks meals and returns the dish history (FOOD-023)", async () => {
+    const d = deps();
+    const withSlot = (body: string) => ({ ...event("PUT /meals/plans/{weekStart}/slots/{slotId}/status", {}, body), pathParameters: { weekStart: "current", slotId: "2026-10-12%23LUNCH" } }) as APIGatewayProxyEventV2;
+    expect((await route(withSlot(JSON.stringify({ status: "COOKED", feedback: "UP" })), d)).statusCode).toBe(200);
+    expect(d.setMealStatus).toHaveBeenCalledWith(TEST_IDENTITY, "current", "2026-10-12#LUNCH", { status: "COOKED", feedback: "UP" });
+    expect((await route(withSlot(JSON.stringify({ status: "EATEN" })), d)).statusCode).toBe(400);
+    expect((await route(withSlot(JSON.stringify({ status: "COOKED", feedback: "MEH" })), d)).statusCode).toBe(400);
+    const history = await route(event("GET /meals/history"), d);
+    expect(JSON.parse(String(history.body)).data.dishes[0]).toMatchObject({ timesLast90Days: 2, feedback: "UP" });
   });
 
   it("manages the calendar token and serves the public ICS feed (FOOD-015)", async () => {

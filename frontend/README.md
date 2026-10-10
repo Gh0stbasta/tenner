@@ -150,6 +150,9 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   snackbar offers „Rückgängig“, which sends the previous dishes of the changed meals as `restore`.
 - **Navigation:** „Essen“ between Tenner and Auswertung (side and bottom navigation).
 - **Dashboard:** „Heute essen wir“ (`TodayMealsCard`) with today's meals; since UI-001 the largest dashboard card, „Für heute ist noch nichts geplant.“ without a plan.
+- **What was eaten** (FOOD-023, `MealStatusControls.tsx`): today's and past meals get „Gekocht“, „Ausgefallen“,
+  „Anderes gegessen“ and, when cooked, 👍 / 👎; favorites have a star (dish cards: ⭐ toggles `favorite`, plan cards
+  show it); dish cards show „Zuletzt gegessen am … · n× in 3 Monaten“ (`GET /meals/history`).
 - **Calendar** (FOOD-015, `MealCalendarSettings.tsx`): Settings → „Essen: Kalender“ creates a private ICS link (shown
   once, copy button, „In Apple Kalender öffnen“ via `webcal:`), replaces it or revokes it; instructions for Google and
   Apple; calendar apps refresh on their own schedule.

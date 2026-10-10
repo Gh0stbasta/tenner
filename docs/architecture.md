@@ -1486,6 +1486,11 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   and adds a week total and the average per meal. Tiers (€ / €€ / €€€) come from the profile's `costTiers`; the app
   shows tier and a 2-euro range. Prices are corrected in Settings → Essen → „Preise“ (household overrides of the
   catalog, FOOD-021).
+- **History and feedback** (FOOD-023, `backend/src/meals/history.ts`): slot `status` (cooked, skipped, other; a planned
+  meal two days old counts as cooked) and `feedback` (👍/👎, last one wins) live on the stored plan slots; plans are kept
+  about a year (TTL, 400 days). The planner's context comes from all stored plans: the last date each dish was eaten
+  before the week (soft R12 within 7 days, double penalty within 3 days), 👍 (+1) and 👎 (−3), plus the dish
+  `favorite` flag (+1). `GET /meals/history` gives per dish last eaten, count in 90 days and feedback.
 - **Calendar feed** (FOOD-015, `meals/calendar.ts`, `services/calendar-feed.service.ts`): public route
   `GET /meals/calendar/{token}` (no JWT, like `POST /push-actions`); the token `<tenantId>.<secret>` names the household
   and is checked against the stored SHA-256 hash (`CALENDAR` item, constant-time compare). The ICS is built on each

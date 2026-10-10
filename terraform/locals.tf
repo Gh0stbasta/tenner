@@ -113,6 +113,8 @@ locals {
     "POST /meals/plans/{weekStart}/slots/{slotId}/replace", # FOOD-007
     "GET /meals/plans/{weekStart}/slots/{slotId}/options",  # FOOD-022
     "PUT /meals/plans/{weekStart}/slots/{slotId}",          # FOOD-022
+    "PUT /meals/plans/{weekStart}/slots/{slotId}/status",   # FOOD-023
+    "GET /meals/history",                                   # FOOD-023
     "POST /meals/plans/{weekStart}/swap",                   # FOOD-022
     "POST /meals/plans/{weekStart}/regenerate",             # FOOD-008
     "GET /meals/plans/{weekStart}/shopping-list",           # FOOD-014

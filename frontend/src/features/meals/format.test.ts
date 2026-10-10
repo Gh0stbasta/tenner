@@ -11,6 +11,7 @@ import {
   formatEuro,
   heavyLunchHint,
   nutritionLine,
+  historyLine,
 } from "./format";
 
 const estimate = (kcal: number, complete = true) => ({
@@ -98,5 +99,17 @@ describe("cost display (FOOD-013)", () => {
     expect(costLine(fromIngredients, 2.5, TIERS)).toBe("€€ · ca. 6–8 €");
     expect(costLine({ ...fromIngredients, complete: false }, 1, TIERS)).toBe("€ · ca. 2–4 € (ohne fehlende Zutaten)");
     expect(formatEuro(4.6)).toMatch(/^4,60\s€$/);
+  });
+});
+
+describe("history line (FOOD-023)", () => {
+  it("names the last meal, the count and the feedback", () => {
+    expect(historyLine({ lastEaten: "2026-10-05", timesLast90Days: 3, feedback: "UP" })).toBe(
+      "Zuletzt gegessen am 5.10. · 3× in 3 Monaten · 👍",
+    );
+    expect(historyLine({ lastEaten: null, timesLast90Days: 0, feedback: null })).toBe("Noch nie gegessen");
+    expect(historyLine({ lastEaten: "2026-06-01", timesLast90Days: 0, feedback: "DOWN" })).toBe(
+      "Zuletzt gegessen am 1.6. · 👎",
+    );
   });
 });

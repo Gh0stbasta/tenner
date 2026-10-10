@@ -5,6 +5,7 @@ import type { Violation } from "../planner/rules.js";
 import type { DishResponse, Lightness, MealSlot, Temperature } from "./dish.js";
 import type { DishCost } from "../cost.js";
 import type { NutritionEstimate } from "../nutrition.js";
+import type { MealFeedback } from "../history.js";
 
 export const SLOT_SOURCES = ["AUTO", "MANUAL"] as const;
 export type SlotSource = (typeof SLOT_SOURCES)[number];
@@ -21,6 +22,8 @@ export interface StoredPlanSlot {
   readonly source: SlotSource;
   readonly status: SlotStatus;
   readonly emptyReason?: string;
+  /** 👍 / 👎 of the household for a cooked meal (FOOD-023). */
+  readonly feedback?: MealFeedback;
 }
 
 export interface StoredPlan {

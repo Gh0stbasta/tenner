@@ -38,6 +38,10 @@ import {
   restoreDishHandler,
   dishImageUploadHandler,
   mealsTodayHandler,
+  setMealStatusHandler,
+  dishHistoryHandler,
+  type SetMealStatus,
+  type GetDishHistory,
   calendarFeedHandler,
   calendarStatusHandler,
   createCalendarTokenHandler,
@@ -252,6 +256,8 @@ export interface Dependencies {
   readonly restoreDish: ArchiveDish;
   readonly createDishImageUpload: CreateDishImageUpload;
   readonly getMealsAhead: GetMealsAhead;
+  readonly setMealStatus: SetMealStatus;
+  readonly dishHistory: GetDishHistory;
   readonly calendarStatus: CalendarStatus;
   readonly createCalendarToken: CreateCalendarToken;
   readonly revokeCalendarToken: RevokeCalendarToken;
@@ -375,6 +381,8 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /meals/calendar": ({ deps, identity }) => calendarStatusHandler(identity.tenantId, deps.calendarStatus),
   "POST /meals/calendar": ({ deps, logger, identity }) => createCalendarTokenHandler(identity, deps.createCalendarToken, logger),
   "DELETE /meals/calendar": ({ deps, logger, identity }) => revokeCalendarTokenHandler(identity, deps.revokeCalendarToken, deps.calendarStatus, logger),
+  "GET /meals/history": ({ deps, identity }) => dishHistoryHandler(identity.tenantId, deps.dishHistory),
+  "PUT /meals/plans/{weekStart}/slots/{slotId}/status": ({ event, deps, logger, identity }) => setMealStatusHandler(event, identity, deps.setMealStatus, logger),
   "GET /meals/today": ({ event, deps, identity }) => mealsTodayHandler(event, identity.tenantId, deps.getMealsAhead),
   "POST /meals/dishes/{dishId}/image-upload": ({ event, deps, logger, identity }) => dishImageUploadHandler(event, identity, deps.createDishImageUpload, logger),
   "PUT /meals/dishes/{dishId}/image": ({ event, deps, logger, identity }) => setDishImageHandler(event, identity, deps.setDishImage, logger),
@@ -593,6 +601,8 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     createCalendarToken: meals ? (identity) => meals.calendar.createToken(identity) : notConfigured,
     revokeCalendarToken: meals ? (identity) => meals.calendar.revoke(identity) : notConfigured,
     calendarFeed: meals ? (token) => meals.calendar.feed(token) : notConfigured,
+    setMealStatus: mealPlanService ? (identity, week, slotId, request) => mealPlanService.setMealStatus(identity, week, slotId, request) : notConfigured,
+    dishHistory: mealPlanService ? (tenantId) => mealPlanService.dishHistory(tenantId) : notConfigured,
     getMealsAhead: mealPlanService ? (tenantId, days) => mealPlanService.mealsAhead(tenantId, days) : notConfigured,
     replaceMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.replaceMeal(identity, week, slotId, request) : notConfigured,
     mealOptions: mealPlanService ? (tenantId, week, slotId) => mealPlanService.mealOptions(tenantId, week, slotId) : notConfigured,

@@ -13,6 +13,7 @@ export * from "./handlers/dishes.js";
 export * from "./images.js";
 export * from "./nutrition.js";
 export * from "./calendar.js";
+export * from "./history.js";
 export * from "./services/calendar-feed.service.js";
 export * from "./handlers/calendar.js";
 export * from "./cost.js";

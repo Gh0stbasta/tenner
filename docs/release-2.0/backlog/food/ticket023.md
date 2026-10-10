@@ -99,31 +99,54 @@ cd frontend && npm run lint && npm run build && npm test
 
 # Acceptance Criteria
 
-- [ ] Meals can be marked cooked, skipped or other, with 👍 / 👎
-- [ ] Favorites can be marked
-- [ ] Planner prefers favorites and avoids recent repeats
-- [ ] History kept for 12 months
-- [ ] Tests passing
+- [x] Meals can be marked cooked, skipped or other, with 👍 / 👎
+- [x] Favorites can be marked
+- [x] Planner prefers favorites and avoids recent repeats
+- [x] History kept for 12 months
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
 # Assumptions
 
 - Feedback is per household, not per eater (simpler; children's opinions are given by the parents).
+- Status and feedback have their own route `PUT /meals/plans/{weekStart}/slots/{slotId}/status`: the existing slot PUT
+  (FOOD-022) only accepts future meals, while what was eaten is marked for today and earlier.
+- The plan TTL (400 days, FOOD-006) already covers the 12 months; nothing changed there.
+- „Recent“ counts every non-skipped meal before the week, including still planned meals of the current week (they
+  will most likely be eaten), so next week's plan avoids them too.
+- Weights: favorite +1, 👍 +1, 👎 −3, eaten within 7 days −2 (soft R12), within 3 days another −2.
 
 ---
 
 # Out of Scope
 
 - Ratings per eater, comments, photos of cooked meals.
+
+---
+
+# Implementation Status
+
+Done (2026-10-10).
+
+- Backend: `src/meals/history.ts` (effective status, history context, dish stats), `MealPlanService.records`,
+  `ruleContext`, `setMealStatus`, `dishHistory`; rules use `lastEaten` and `likedDishIds` (R12 message „… gab es vor
+  2 Tagen schon.“); routes `PUT …/slots/{slotId}/status`, `GET /meals/history` (Terraform).
+- Frontend: `MealStatusControls` under today's and past meals, ⭐ on plan cards and as toggle on dish cards, history
+  line on dish cards.
+- Tests: `backend/tests/meals-history.test.ts` (auto-cooked, context, stats, weights, seeded planner preference,
+  service transitions and errors, TTL), route tests; frontend plan page, dish list and `format.test.ts`.
+- Validation: backend lint, typecheck, 1,139 tests; frontend lint, typecheck, build, 496 tests; Terraform api tests.
+- Technical debt: none new (the history is read from up to ~57 stored plans per planning call; small and cheap).
+

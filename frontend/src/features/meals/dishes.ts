@@ -177,6 +177,16 @@ export function useSaveDish() {
   });
 }
 
+/** FOOD-023: mark or unmark a favorite (the planner prefers favorites). */
+export function useToggleFavorite() {
+  const invalidate = useInvalidateMeals();
+  return useMutation({
+    mutationFn: ({ dishId, favorite }: { readonly dishId: string; readonly favorite: boolean }) =>
+      apiClient.put(`/meals/dishes/${encodeURIComponent(dishId)}`, { schema: dishSchema, body: { favorite } }),
+    onSettled: invalidate,
+  });
+}
+
 /** Archive (DELETE) or restore. */
 export function useArchiveDish() {
   const invalidate = useInvalidateMeals();

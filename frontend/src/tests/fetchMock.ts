@@ -97,6 +97,7 @@ export function mockFetch(routes: Record<string, MockHandler>): FetchMock {
     "GET /meals/profile": ok(DEFAULT_FOOD_PROFILE),
     "GET /meals/ingredients": ok({ ingredients: [] }),
     "GET /meals/calendar": ok({ active: false, createdAt: null }),
+    "GET /meals/history": ok({ dishes: [] }),
     "GET /meals/plans/current": ok(NOT_READY_PLAN),
     "GET /meals/plans/next": ok({ ...NOT_READY_PLAN, weekStart: "2026-10-19", weekEnd: "2026-10-25" }),
     ...routes,
