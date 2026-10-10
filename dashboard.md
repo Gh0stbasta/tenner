@@ -1,48 +1,48 @@
 # 🧭 Zentrale (formerly Tenner) — Executive Dashboard
 
-> Snapshot of **2026-10-09**. Updated with every pull request (see *About this dashboard* at the end).
+> Snapshot of **2026-10-10**. Updated with every pull request (see *About this dashboard* at the end).
 
 ## 📌 Executive Summary
 
 | | |
 |---|---|
-| **Project health** | 🟢 **Live**; all 1,828 automated tests pass (backend 1,088, frontend 463, alexa 152, Terraform 77, scripts 48) |
-| **Current phase** | **Release 2.0 — Family Meal Planning, in progress.** Release 1.0 is in maintenance |
-| **Current focus** | This pull request: dish editor — create, edit, archive dishes and see which rules and family members they affect (FOOD-010) |
-| **Biggest blocker** | None |
-| **Recommended next action** | Merge, then open Essen → „Gerichte“ and create one of your own dishes |
+| **Project health** | 🟢 **Live**; all 1,933 automated tests pass (backend 1,145, frontend 498, alexa 160, Terraform 82, scripts 48) |
+| **Current phase** | **Release 2.0.0 — Family Meal Planning, ready to ship.** Release 1.0 is in maintenance |
+| **Current focus** | This pull request: the whole food block — photos, nutrition, cost, morning notification, Alexa „Was gibt es heute?“, calendar feed, history and feedback, food analytics, release 2.0.0 (FOOD-011 – 013, 015 – 017, 019, 023, 025) |
+| **Biggest blocker** | 🚨 **Before merging:** the deploy role needs rights on the new photo bucket `tenner-meal-images-prod` (README → „CI Permissions“), otherwise the deploy fails |
+| **Recommended next action** | Extend the deploy role, merge, then set tag `v2.0.0` |
 
 ## 📈 Progress
 
 ```text
 Release 1.0  ████████████████████ 100%  104 / 104 tickets done (tag v1.0.0 still to set)
-Release 2.0  ████████████░░░░░░░░  61%   17 /  28 FOOD tickets (foundation, planning, shopping list incl. voice and widget, meal widget, dish editor)
+Release 2.0  ██████████████████░░  89%   25 /  28 FOOD tickets (all features; FOOD-025 waits for the tag, FOOD-020/024 for decisions)
 Maintenance   6 done (MAINT-001 – 006; device checks open) · REC 2 done (REC-001, 002) · owner hotfixes 2 done (HOTFIX-006, UI-001)
 ```
 
-✅ Completed: **132** (104 + EPIC-FOOD-001 + 17 FOOD + 6 MAINT + 2 REC + 2 owner hotfixes) · 🚧 In progress: **0** · 📋 Open: **11** (release 2.0)
+✅ Completed: **140** (104 + EPIC-FOOD-001 + 25 FOOD + 6 MAINT + 2 REC + 2 owner hotfixes) · 🚧 In progress: **1** (FOOD-025, tag after merge) · 📋 Open: **2** (FOOD-020, FOOD-024: evaluations)
 
 ## 🧩 Feature Status
 
-| ✅ Live in 1.0 | 🔲 Release 2.0 — Essen (in order) |
+| ✅ Live in 1.0 | ✅ Release 2.0 — Essen |
 |---|---|
-| ✅ Google login, one household, private data | ✅ Foundation: meals table, 105 ingredients, dishes, family profile and rules, 61-dish catalog (FOOD-001 – 004, 021) |
-| ✅ Aufgaben (formerly Tenner), scheduling, household, task catalog, analytics — missed ones disappear and count as „Nicht erledigt“ (REC-001), start date (HOTFIX-006), dashboard shows only the day: meals, today's Aufgaben, shopping for tomorrow (UI-001) | ✅ Weekly plan with rules R1 – R13, made automatically; replace, choose, swap, lock, regenerate (FOOD-005 – 009, 022) |
-| ✅ Phone app with offline use | ✅ Shopping list: own order by drag and drop, ticked items struck through, offline in the shop (FOOD-014), own menu entry (FOOD-027), counts instead of grams (FOOD-028), by voice and as Echo Show widget (FOOD-026) · 🆕 ✅ dish editor with live rule hints (FOOD-010) · 🔲 nutrition, cost, photos (FOOD-011 – 013) |
-| ✅ Push per Tenner with „Erledigt“/„Später“ | ✅ Meal widget „Zentrale Essen“: today's lunch and dinner, from 20:00 tomorrow's (FOOD-018) · 🔲 morning push, „Was gibt es heute?“, calendar feed (FOOD-016, 017, 015) |
-| ✅ Alexa by voice, widget on the Echo Show, no screen views (MAINT-006) — „Alexa, öffne Familien Zentrale“ (REC-002) | 🔲 History, feedback, food analytics (FOOD-023, 019); release (FOOD-025) |
+| ✅ Google login, one household, private data | ✅ Dishes and ingredients: 105 ingredients, 61-dish catalog, 🆕 editor with photos, nutrition and cost (FOOD-001 – 004, 010 – 013, 021) |
+| ✅ Aufgaben (formerly Tenner), scheduling, household, task catalog, analytics; missed ones count as „Nicht erledigt“ (REC-001), start date (HOTFIX-006), dashboard shows the day (UI-001) | ✅ Weekly plan with rules R1 – R13; replace, choose, swap, lock, regenerate; 🆕 cooked / skipped, 👍 / 👎, favorites the planner learns from (FOOD-005 – 009, 022, 023) |
+| ✅ Phone app with offline use | ✅ Shopping list: own order, counts, offline, by voice and as Echo Show widget (FOOD-014, 026 – 028) |
+| ✅ Push per Aufgabe with „Erledigt“/„Später“ | ✅ Meal widget (FOOD-018) · 🆕 „Essensplan am Morgen“, „Alexa, frag Familien Zentrale, was es heute gibt“, calendar feed (FOOD-016, 017, 015) |
+| ✅ Alexa by voice, widgets on the Echo Show (MAINT-006) | ✅ 🆕 Auswertung „Essen“ (FOOD-019) · 🔲 decisions: AI (FOOD-020), stock/AI images (FOOD-024) |
 
-Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Release 2.0 plan: [`docs/release-2.0/README.md`](docs/release-2.0/README.md) · AI stays out of 2.0 (FOOD-020, FOOD-024 are evaluations).
+Release 2.0 overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md) · Changelog: [`CHANGELOG.md`](CHANGELOG.md) · AI stays out of 2.0.
 
 ## 💰 Cost Overview
 
-**AI spend:** ⚪ **Not tracked.** No token or cost data is recorded in the repository.
+**AI spend:** ⚪ **Not tracked.** No AI in the product; no token or cost data is recorded in the repository.
 
 | Users | Monthly cost | Note |
 |---|---|---|
-| 2 (today, one household) | **< $0.20** | free tiers; up to 11 alarms (~$0.10 beyond the free 10) |
+| 2 (today, one household) | **< $0.30** | free tiers; up to 11 alarms (~$0.10 beyond the free 10) |
 | 100 / 10,000 | n/a | would need multi-household support, which is not planned |
-| Release 2.0 | **+ < $0.10** | one more table, small image bucket; no AI |
+| Release 2.0 | **+ < $0.10** | one table, small photo bucket (~30 MB), no AI |
 
 🛡 Budget: **$5 / month** with e-mail alerts. Throttling caps abuse at about **$2–3 per day**.
 
@@ -51,37 +51,37 @@ Not built in 1.0: [list in the release notes](docs/release-1.0/README.md). Relea
 | Level | Count | What matters |
 |---|---|---|
 | 🚨 High | **1** | Anyone with a Google account can claim a newly added member until that person signs in (TD-020) |
-| ⚠ Medium | **13** | Backup restore never tested (TD-039) · production is the only environment (TD-040) · deploy role for PR plans · Google secret in Terraform state · global rate limit · Alexa link rights (TD-035) and unverified Amazon API shapes (TD-036) · others |
-| ✅ Low | **23** | Tidiness, bundle size, analytics simplifications, offline edge case (TD-038) · overdue features now mostly empty (TD-041) · internal name „Tenner“ vs. „Zentrale“ (TD-042) · dashboard leftovers (TD-043) · 🆕 dish rules computed twice, in app and server (TD-044) |
+| ⚠ Medium | **14** | Backup restore never tested (TD-039) · production only (TD-040) · deploy role for PR plans · Google secret in state · global rate limit · Alexa link rights (TD-035) · unverified Amazon API shapes (TD-036) · 🆕 calendar token in the API access log (TD-047) · others |
+| ✅ Low | **25** | Tidiness, bundle size, analytics simplifications · dish rules in app and server (TD-044) · 🆕 unattached photo uploads (TD-045) · 🆕 number fields in the rules dialog (TD-046) · others |
 
-37 open, 7 resolved. Each item can come back as a maintenance ticket. Details: [`docs/technical-debt.md`](docs/technical-debt.md).
+40 open, 7 resolved. Each item can come back as a maintenance ticket. Details: [`docs/technical-debt.md`](docs/technical-debt.md).
 
 ## 🔐 Security
 
-🟢 **No critical findings.** Meal and shopping list routes behind the same login; allergies and own shopping items are never logged. The Alexa skill stays private (development stage only, checked by tests). The dish editor uses the existing dish and ingredient routes; no new route, no new dependency.
+🟢 **No critical findings.** Photos in a private bucket behind CloudFront (OAC), uploads limited by signed type, size and household key; the API may only write photos. One new public route: the calendar feed, authorized by a 256-bit token stored as a hash and revocable. Allergies never leave the profile (no logs, notifications, calendar or Alexa). New dependencies: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` (Apache-2.0, pinned, 0 audit findings).
 
-⚠ Worth your attention: family details from the original meta ticket stay in the public Git history (your decision: not sensitive; current files make them unrecognizable) · open Google sign-up (TD-020) · linked Alexa account has your full rights (TD-035) · push buttons work for 24 h for whoever sees the notification · manual checks still open (S3 public-access block, throttling burst test, [`docs/security.md`](docs/security.md#manual-verifications)).
+⚠ Worth your attention: calendar link = read access to dish names for whoever has it · open Google sign-up (TD-020) · linked Alexa account has your full rights (TD-035) · manual checks still open ([`docs/security.md`](docs/security.md#manual-verifications)).
 
 ## 🏛 Architecture Health
 
 | | |
 |---|---|
-| **ADRs** | 7 accepted, **0 open** ([`docs/decisions/`](docs/decisions/)): new 0007 meal planning (one table, no new service) |
-| **Pending decisions (yours)** | 1. Keep open Google sign-up? (TD-020) · 2. Check the dish classification ([review sheet](docs/release-2.0/food-catalog-review.md); active times confirmed by you on 2026-10-07) |
-| **Open risks** | Backup restore untested (TD-039) · production only (TD-040) · Alexa widget import and Data Store shapes unverified until the device check (TD-036, narrowed) |
+| **ADRs** | 7 accepted, **2 proposed** ([`docs/decisions/`](docs/decisions/)): 0008 images for dishes without a photo, 0009 AI for meal planning |
+| **Pending decisions (yours)** | 1. ADR 0008: keep placeholders (recommended) or stock/AI images · 2. ADR 0009: recheck with 8 weeks of data on 2026-12-07 · 3. Keep open Google sign-up? (TD-020) |
+| **Open risks** | Backup restore untested (TD-039) · production only (TD-040) · new photo bucket needs deploy-role rights before the merge |
 
 ## 🎯 Recommended Next Actions
 
-1. **Merge this PR**, then open Essen → „Gerichte“: create a dish, watch „Was das Gericht bedeutet“, archive and restore one.
-2. **Your step (if not done):** rename the app in the Google sign-in screen (Google Auth Platform → Branding → app name „Zentrale“).
-3. **Next:** rest of the kitchen block (FOOD-012 nutrition → 013 cost → 011 photos).
-4. **Later:** a preview endpoint so the dish rules live only on the server (TD-044).
-5. **Still open from 1.0:** tag `v1.0.0` and GitHub release (`docs/release-1.0/hotfix/release001.md`).
+1. **Your step before merging:** give `GitHubActionsDeployRole` the bucket rights for `tenner-meal-images-prod` incl. CORS (README → „CI Permissions“).
+2. **Merge**, then follow „Getting Started“ in the release notes: catalog, profile, notification, calendar, widgets.
+3. **Tag `v2.0.0`** and the GitHub release (FOOD-025; also `v1.0.0` is still open).
+4. **Decide ADR 0008** (images); **recheck ADR 0009** on 2026-12-07 with Auswertung → Essen.
+5. **Later:** log the route key instead of the path, then renew the calendar link (TD-047).
 
 ---
 
 ## ℹ About this dashboard
 
-- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (maintenance; a ticket counts as done when it has an "Implementation Status" section), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (40 deploy runs; runs 34, 35 and 37 – 40 green, run 36 cancelled by the next push).
-- **Counting:** release 2.0: 17 of 28 FOOD tickets done (FOOD-026 added 2026-10-07; FOOD-003 with the owner's review still open counts as done), the epic EPIC-FOOD-001 done. Maintenance: MAINT-001 – 006 done (device checks of MAINT-002, 005 and 006 open); recommendations REC-001 and REC-002 accepted and done; owner hotfix tickets in `docs/hotfix/` (HOTFIX-006, UI-001) done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets (REPORTING-001/002, BACKLOG-001 – 003, CLEANUP-001, RELEASE-001); owner inputs in `docs/release-1.0/human/` and planning files with other names are not counted. Debt levels are an assessment for this dashboard.
+- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (a ticket counts as done when it has an "Implementation Status" section and its acceptance criteria are checked), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (41 deploy runs; runs 34, 35 and 37 – 41 green, run 36 cancelled by the next push).
+- **Counting:** release 2.0: 25 of 28 FOOD tickets done; FOOD-025 is prepared (status section) but counts as in progress until the tag exists; FOOD-020 and FOOD-024 have evaluation sections only. The epic EPIC-FOOD-001 is done. Maintenance: MAINT-001 – 006 done (device checks of MAINT-002, 005 and 006 open); REC-001 and REC-002 done; owner hotfix tickets HOTFIX-006 and UI-001 done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets. Debt levels are an assessment for this dashboard.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).
