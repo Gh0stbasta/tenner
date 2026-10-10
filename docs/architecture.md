@@ -1474,6 +1474,12 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   `nutritionOverride` wins; rounded (kcal to 10, macros to grams); `complete: false` lists ingredients without values.
   Computed with every dish read (`deriveDish`) and passed into plan summaries; nothing is stored. The app adds day
   totals and hints at weekday lunches above `lightLunchMaxKcal` (profile, default 600).
+- **Cost estimate** (FOOD-013, `backend/src/meals/cost.ts`): EUR per adult portion from the ingredient prices (per
+  100 g / 100 ml or per piece), pantry ingredients as a flat 0.10 € per meal, `costOverride` (whole family) wins. The
+  plan prices each meal for its eaters (sum of their portion factors; an override is scaled from the whole family)
+  and adds a week total and the average per meal. Tiers (€ / €€ / €€€) come from the profile's `costTiers`; the app
+  shows tier and a 2-euro range. Prices are corrected in Settings → Essen → „Preise“ (household overrides of the
+  catalog, FOOD-021).
 - **Family food profile** (FOOD-004): one `PROFILE` item with eaters and household rules; defaults reproduce the
   owner's rules. `eatersAt(profile, weekday, slot)` is the one place that says who eats a meal (weekday lunch: adults).
 - **Rules** (FOOD-005, `backend/src/meals/planner/rules.ts`): pure functions over a week of `PlannedMeal`s.

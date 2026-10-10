@@ -9,6 +9,8 @@ import { useNotify } from "../../components/NotificationProvider";
 import { SettingsSection } from "../settings/SettingsSection";
 import { useImportMealCatalog, useMealCatalogPreview, type MealCatalogImport } from "./api";
 import { Link as RouterLink } from "react-router";
+import { useState } from "react";
+import { IngredientPricesDialog } from "./IngredientPricesDialog";
 
 function summary(preview: MealCatalogImport): string {
   const parts = [`${preview.dishesCreated.length} neue Gerichte`];
@@ -19,6 +21,7 @@ function summary(preview: MealCatalogImport): string {
 export function MealCatalogSettings() {
   const notify = useNotify();
   const preview = useMealCatalogPreview();
+  const [prices, setPrices] = useState(false);
   const importer = useImportMealCatalog();
   const result = preview.data;
   const nothingToDo = result !== undefined && result.dishesCreated.length === 0;
@@ -50,6 +53,9 @@ export function MealCatalogSettings() {
         <Button component={RouterLink} to="/essen/gerichte" variant="outlined">
           Gerichte verwalten
         </Button>
+        <Button variant="outlined" onClick={() => setPrices(true)}>
+          Preise
+        </Button>
         {!result || nothingToDo ? (
           <Button variant="outlined" onClick={() => preview.mutate()} disabled={preview.isPending}>
             Katalog prüfen
@@ -65,6 +71,7 @@ export function MealCatalogSettings() {
           </>
         )}
       </Box>
+      {prices && <IngredientPricesDialog onClose={() => setPrices(false)} />}
     </SettingsSection>
   );
 }

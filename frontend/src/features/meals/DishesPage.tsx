@@ -30,7 +30,8 @@ import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
 import { DishEditorDialog } from "./DishEditorDialog";
 import { DishImage } from "./DishImage";
-import { NUTRITION_DISCLAIMER, nutritionLine } from "./format";
+import { useFoodProfile } from "./api";
+import { costLine, familyFactors, NUTRITION_DISCLAIMER, nutritionLine } from "./format";
 import {
   DISH_CATEGORIES,
   DISH_CATEGORY_LABELS,
@@ -50,10 +51,13 @@ function DishCard({
   dish,
   onEdit,
   onArchive,
+  costLabel,
 }: {
   readonly dish: Dish;
   readonly onEdit: () => void;
   readonly onArchive: () => void;
+  /** FOOD-013: „€€ · ca. 8–10 €“ for the family. */
+  readonly costLabel: string | null;
 }) {
   return (
     <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -75,6 +79,11 @@ function DishCard({
         <Typography variant="body2" color="text.secondary">
           {dishSummaryLine(dish)}
         </Typography>
+        {costLabel && (
+          <Typography variant="body2" color="text.secondary" title="Grobe Schätzung für die ganze Familie">
+            {costLabel}
+          </Typography>
+        )}
         {dish.nutrition && (
           <Typography variant="body2" color="text.secondary" title={NUTRITION_DISCLAIMER}>
             {nutritionLine(dish.nutrition)}
@@ -122,6 +131,9 @@ export function DishesPage() {
   const [filter, setFilter] = useState<DishFilter>({ search: "", slot: "ALL", vegetarianOnly: false, category: "ALL" });
 
   const shown = useMemo(() => filterDishes(dishes.data ?? [], filter), [dishes.data, filter]);
+  const profile = useFoodProfile().data;
+  const factors = familyFactors(profile?.eaters);
+  const tiers = profile?.household.costTiers ?? { cheapMax: 6, mediumMax: 10 };
   const groups = useMemo(
     () =>
       [...new Set((active.data ?? []).flatMap((dish) => (dish.group ? [dish.group] : [])))].sort((a, b) =>
@@ -245,7 +257,12 @@ export function DishesPage() {
         <Grid container spacing={2} component="ul" sx={{ p: 0, m: 0 }} aria-label="Gerichte">
           {shown.map((dish) => (
             <Grid key={dish.dishId} component="li" size={{ xs: 12, sm: 6, lg: 4 }} sx={{ listStyle: "none" }}>
-              <DishCard dish={dish} onEdit={() => setEditing({ dish })} onArchive={() => toggleArchived(dish)} />
+              <DishCard
+                dish={dish}
+                onEdit={() => setEditing({ dish })}
+                onArchive={() => toggleArchived(dish)}
+                costLabel={dish.cost ? costLine(dish.cost, factors, tiers) : null}
+              />
             </Grid>
           ))}
         </Grid>

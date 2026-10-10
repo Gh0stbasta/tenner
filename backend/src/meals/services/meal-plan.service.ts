@@ -18,6 +18,8 @@ import { plan } from "../planner/planner.js";
 import { checkSlot, checkWeek, hasHardViolation, score, type PlannedMeal, type RuleId, type Violation } from "../planner/rules.js";
 import { DAYS_PER_WEEK, emptyWeek, parseSlotId, weekStartOf } from "../planner/week.js";
 import type { MealItem, MealsStore } from "../repositories/meals-store.js";
+import { mealCost } from "../cost.js";
+import { eatersAt } from "../models/profile.js";
 
 /** Plans are kept about a year (FOOD-023 history), then removed by the table's TTL. */
 const PLAN_RETENTION_DAYS = 400;
@@ -339,10 +341,14 @@ export class MealPlanService {
       return { ...meal, dish: dishId ? (data.byId.get(dishId) ?? null) : null };
     });
     const setup = { hasDishes: data.dishes.some((dish) => !dish.archived), hasEaters: data.profile.eaters.length > 0 };
+    const allFactors = factorSum(data.profile.eaters);
     const slots: PlanSlotResponse[] = meals.map((meal) => {
       const state: StoredPlanSlot = stateOf.get(meal.slotId) ?? { slotId: meal.slotId, dishId: null, locked: false, source: "AUTO", status: "PLANNED" };
-      return { ...state, date: meal.date, weekday: meal.weekday, slot: meal.slot, dish: meal.dish ? toDishSummary(meal.dish) : null };
+      const cost = meal.dish ? mealCost(meal.dish.cost, factorSum(eatersAt(data.profile, meal.weekday, meal.slot)), allFactors) : null;
+      return { ...state, date: meal.date, weekday: meal.weekday, slot: meal.slot, dish: meal.dish ? toDishSummary(meal.dish) : null, cost };
     });
+    const planned = stored ? meals.filter((meal) => meal.dish) : [];
+    const total = Math.round(slots.reduce((sum, slot) => sum + (stored && slot.cost !== null ? slot.cost : 0), 0) * 100) / 100;
     return {
       weekStart,
       weekEnd: addDays(weekStart, DAYS_PER_WEEK - 1),
@@ -351,6 +357,12 @@ export class MealPlanService {
       generatedAt: stored?.generatedAt ?? null,
       slots,
       violations: stored ? checkWeek(meals, data.profile) : [],
+      cost: {
+        total,
+        perMeal: planned.length > 0 ? Math.round((total / planned.length) * 100) / 100 : null,
+        meals: planned.length,
+        complete: planned.every((meal) => meal.dish?.cost.complete),
+      },
     };
   }
 }
@@ -427,4 +439,9 @@ const isReady = (data: PlanData): boolean => data.dishes.some((dish) => !dish.ar
 export function toStoredPlan(item: MealItem): StoredPlan {
   const data = item.data as unknown as StoredPlan;
   return { weekStart: data.weekStart, seed: data.seed, generatedAt: data.generatedAt, slots: data.slots };
+}
+
+/** Sum of portion factors (children eat less, FOOD-004). */
+function factorSum(eaters: readonly { readonly portionFactor: number }[]): number {
+  return eaters.reduce((sum, eater) => sum + eater.portionFactor, 0);
 }

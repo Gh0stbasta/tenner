@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_FOOD_PROFILE, DEFAULT_FOOD_RULES, fail, mockFetch, ok } from "../../tests/fetchMock";
@@ -106,6 +106,23 @@ describe("FoodProfileSettings (FOOD-004)", () => {
     const put = fetchMock.calls().find((call) => call.key === "PUT /meals/profile");
     expect(put?.body).toMatchObject({
       household: { attendance: { weekdayLunch: ["a1"], weekendLunch: null, dinner: null } },
+    });
+  });
+
+  it("edits the cost tiers and the light lunch threshold (FOOD-012, FOOD-013)", async () => {
+    const fetchMock = mockFetch({ "GET /meals/profile": ok(FAMILY), "PUT /meals/profile": echo });
+    renderWithProviders(<FoodProfileSettings />);
+    await userEvent.click(await section().findByRole("button", { name: "Regeln bearbeiten" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Planungsregeln" }));
+    // Number fields clamp while typing; set the final value at once.
+    const overwrite = (label: string, value: string) =>
+      fireEvent.change(dialog.getByLabelText(label), { target: { value } });
+    overwrite("€€ bis (Euro), darüber €€€", "12");
+    overwrite("Leichtes Mittagessen bis (kcal, Schätzung)", "700");
+    await userEvent.click(dialog.getByRole("button", { name: "Speichern" }));
+    expect(await screen.findByText("Planungsregeln gespeichert.")).toBeInTheDocument();
+    expect(fetchMock.calls().find((call) => call.key === "PUT /meals/profile")?.body).toMatchObject({
+      household: { costTiers: { cheapMax: 6, mediumMax: 12 }, lightLunchMaxKcal: 700 },
     });
   });
 

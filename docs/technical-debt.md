@@ -1303,3 +1303,28 @@ bucket listing with the dishes. Serve `/images/*` 404s without the SPA fallback 
 
 FOOD-011; `terraform/meal-images.tf`, `terraform/frontend-hosting.tf`, `backend/src/meals/services/dish-image.service.ts`.
 
+## TD-046: Number fields in the planning rules clamp while typing
+
+### Description
+
+`NumberField` in `frontend/src/features/meals/FoodRulesDialog.tsx` clamps every keystroke to its minimum and maximum.
+Clearing a field jumps to the minimum, and typing then appends to it (e.g. clearing „10“ and typing „12“ gives „72“
+or the maximum).
+
+### Reason
+
+The field was built for small counts (FOOD-005); FOOD-012 and FOOD-013 added fields with larger values (kcal, euro).
+
+### Impact
+
+Awkward editing on the phone: users have to select the whole value before typing. No data or security impact; the
+backend validates the ranges.
+
+### Suggested Improvement
+
+Keep the typed text in local state and clamp or validate on blur and on save, like the editor's number fields.
+
+### Related Work
+
+FOOD-005, FOOD-012, FOOD-013; `frontend/src/features/meals/FoodRulesDialog.tsx`.
+

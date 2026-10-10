@@ -59,6 +59,8 @@ const householdRulesSchema = z.object({
   lightLunchOnWeekdays: z.boolean(),
   /** FOOD-012 (default for profiles saved before). */
   lightLunchMaxKcal: z.number().default(600),
+  /** FOOD-013 (default for profiles saved before). */
+  costTiers: z.object({ cheapMax: z.number(), mediumMax: z.number() }).default({ cheapMax: 6, mediumMax: 10 }),
   maxSaladLunchesPerWeek: z.number(),
   chicken: z.object({ maxPerWeek: z.number(), allowedSlots: z.array(weekSlotSchema) }),
   maxBurgerPerWeek: z.number(),
@@ -150,6 +152,16 @@ export const nutritionEstimateSchema = z.object({
 });
 export type NutritionEstimate = z.infer<typeof nutritionEstimateSchema>;
 
+/** Cost estimate (FOOD-013): EUR per adult portion plus pantry, or the family's own amount. */
+export const dishCostSchema = z.object({
+  perAdultPortion: z.number().nullable(),
+  pantry: z.number(),
+  familyOverride: z.number().nullable(),
+  source: z.enum(["INGREDIENTS", "OVERRIDE"]),
+  complete: z.boolean(),
+});
+export type DishCost = z.infer<typeof dishCostSchema>;
+
 // Weekly plans (FOOD-006, FOOD-009)
 
 const dishSummarySchema = z.object({
@@ -165,6 +177,7 @@ const dishSummarySchema = z.object({
   imageKey: z.string().optional(),
   /** Optional: plans cached offline before FOOD-012 have none. */
   nutrition: nutritionEstimateSchema.optional(),
+  cost: dishCostSchema.optional(),
   favorite: z.boolean(),
   archived: z.boolean(),
 });
@@ -181,6 +194,8 @@ const planSlotSchema = z.object({
   status: z.enum(["PLANNED", "COOKED", "SKIPPED", "OTHER"]),
   emptyReason: z.string().optional(),
   dish: dishSummarySchema.nullable(),
+  /** FOOD-013: EUR for the eaters of this meal. */
+  cost: z.number().nullable().optional(),
 });
 export type PlanSlot = z.infer<typeof planSlotSchema>;
 
@@ -200,6 +215,10 @@ export const mealPlanSchema = z.object({
   generatedAt: z.string().nullable(),
   slots: z.array(planSlotSchema),
   violations: z.array(violationSchema),
+  /** FOOD-013; optional for plans cached offline before. */
+  cost: z
+    .object({ total: z.number(), perMeal: z.number().nullable(), meals: z.number(), complete: z.boolean() })
+    .optional(),
 });
 export type MealPlan = z.infer<typeof mealPlanSchema>;
 
@@ -368,3 +387,20 @@ export function useRefreshShoppingList(week: WeekChoice) {
 /** Sends queued changes for one list (by its week start, so a queue survives the change of week). */
 export const sendShoppingOperations = (weekStart: string, operations: readonly ShoppingOperation[]) =>
   apiClient.post(`${shoppingPath(weekStart)}/changes`, { schema: shoppingListSchema, body: { operations } });
+
+/** FOOD-013: change an ingredient's price (catalog ingredients keep it as a household override). */
+export function useUpdateIngredientPrice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ingredientId, pricePerUnit }: { readonly ingredientId: string; readonly pricePerUnit: number }) =>
+      apiClient.put(`/meals/ingredients/${encodeURIComponent(ingredientId)}`, {
+        schema: ingredientSchema,
+        body: { pricePerUnit },
+      }),
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.meals }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.mealPlans }),
+      ]),
+  });
+}

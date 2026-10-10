@@ -177,6 +177,10 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   eintragen“ sends `nutritionOverride`. The plan shows the day total in each day header and a soft hint on weekday
   lunches above „Leichtes Mittagessen bis (kcal)“ (rules dialog, default 600). Disclaimer: „Grobe Schätzung pro
   Erwachsenenportion, keine Ernährungsberatung.“
+- **Cost** (FOOD-013, `format.ts`, `IngredientPricesDialog.tsx`): dish cards show „€€ · ca. 8–10 €“ for the whole
+  family (portion factors of the profile; one adult portion while no eaters exist), the plan header the week total
+  and the average per meal. Tiers are set in the rules dialog („€ bis“, „€€ bis“), prices in Settings → Essen →
+  „Preise“ (search, save per ingredient; pantry items are not listed).
 
 ## Shopping List (FOOD-014)
 

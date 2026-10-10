@@ -6,6 +6,7 @@
 
 import type { BaseTag, IngredientTag, Nutrition, ProteinTag, QuantityUnit, ResolvedIngredient } from "./ingredient.js";
 import { NON_VEGETARIAN_TAGS, toBaseQuantity } from "./ingredient.js";
+import { estimateCost, type DishCost } from "../cost.js";
 import { estimateNutrition, type NutritionEstimate } from "../nutrition.js";
 
 export const DISH_CATEGORIES = ["PASTA", "POTATO", "RICE", "BURGER_WRAP", "MEAT_FISH", "VEGETARIAN", "SALAD", "SOUP", "SWEET", "SNACK"] as const;
@@ -77,6 +78,8 @@ export interface DishDerived {
   readonly unknownIngredients: readonly string[];
   /** Per adult portion (FOOD-012). */
   readonly nutrition: NutritionEstimate;
+  /** FOOD-013. */
+  readonly cost: DishCost;
 }
 
 export type DishResponse = Dish & DishDerived;
@@ -88,6 +91,7 @@ export interface DerivableDish {
   /** `optional` may be missing (seed dishes): then the ingredient is required. */
   readonly ingredients: readonly (Pick<DishIngredient, "ingredientId" | "quantity" | "unit"> & { readonly optional?: boolean | undefined })[];
   readonly nutritionOverride?: Nutrition | null | undefined;
+  readonly costOverride?: number | null | undefined;
   readonly proteinSourcesOverride?: readonly ProteinTag[] | null | undefined;
   readonly baseTagsOverride?: readonly BaseTag[] | null | undefined;
 }
@@ -109,6 +113,7 @@ export function deriveDish(dish: DerivableDish, ingredients: ReadonlyMap<string,
     containsPoultry: tags.includes("POULTRY") || proteinSources.includes("POULTRY"),
     unknownIngredients: resolved.filter(({ ingredient }) => !ingredient).map(({ entry }) => entry.ingredientId),
     nutrition: estimateNutrition(dish, ingredients),
+    cost: estimateCost(dish, ingredients),
   };
 }
 

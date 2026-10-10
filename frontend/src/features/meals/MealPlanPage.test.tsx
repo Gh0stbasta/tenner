@@ -50,6 +50,17 @@ describe("MealPlanPage (FOOD-009)", () => {
     expect(within(screen.getByRole("region", { name: /15\. Oktober/ })).queryByText(/kcal/)).not.toBeInTheDocument();
   });
 
+  it("shows the week's cost and the average per meal (FOOD-013)", async () => {
+    mockFetch({
+      "GET /meals/plans/current": ok({
+        ...mealPlanFixture(),
+        cost: { total: 64.4, perMeal: 4.6, meals: 14, complete: true },
+      }),
+    });
+    renderWithProviders(<MealPlanPage />);
+    expect(await screen.findByText(/Woche ca\. 64,40\s€ · Ø 4,60\s€ pro Mahlzeit/)).toBeInTheDocument();
+  });
+
   it("shows the week with today first, details, empty meals and hints", async () => {
     const plan = mealPlanFixture({
       dishes: { "2026-10-16#LUNCH": null },

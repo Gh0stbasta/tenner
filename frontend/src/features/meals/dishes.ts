@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiClient } from "../../api/client";
 import { queryKeys } from "../../api/queryKeys";
-import { nutritionEstimateSchema, type Eater, type FoodProfile, type Ingredient } from "./api";
+import { dishCostSchema, nutritionEstimateSchema, type Eater, type FoodProfile, type Ingredient } from "./api";
 import { MEAL_SLOT_LABELS, TAG_LABELS, type IngredientTag, type MealSlot, type ProteinTag } from "./labels";
 
 export const DISH_CATEGORIES = [
@@ -94,6 +94,7 @@ export const dishSchema = z.object({
   favorite: z.boolean(),
   imageKey: z.string().optional(),
   nutrition: nutritionEstimateSchema.optional(),
+  cost: dishCostSchema.optional(),
   nutritionOverride: z.object({ kcal: z.number(), protein: z.number(), carbs: z.number(), fat: z.number() }).optional(),
   archived: z.boolean(),
   isVegetarian: z.boolean(),

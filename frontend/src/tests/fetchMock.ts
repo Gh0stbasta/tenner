@@ -67,6 +67,7 @@ export const DEFAULT_FOOD_RULES = {
   attendance: { weekdayLunch: null, weekendLunch: null, dinner: null },
   lightLunchOnWeekdays: true,
   lightLunchMaxKcal: 600,
+  costTiers: { cheapMax: 6, mediumMax: 10 },
   maxSaladLunchesPerWeek: 2,
   chicken: { maxPerWeek: 1, allowedSlots: ["MON#DINNER", "TUE#DINNER"] },
   maxBurgerPerWeek: 1,

@@ -217,6 +217,11 @@ export const foodProfileSchema = z
         attendance: z.object({ weekdayLunch: attendanceList, weekendLunch: attendanceList, dinner: attendanceList }).strict(),
         lightLunchOnWeekdays: z.boolean(),
         lightLunchMaxKcal: z.number().int().min(200).max(2000).default(600),
+        costTiers: z
+          .object({ cheapMax: z.number().min(1).max(100), mediumMax: z.number().min(1).max(200) })
+          .strict()
+          .refine((tiers) => tiers.mediumMax > tiers.cheapMax, { message: "The second tier must be above the first.", path: ["mediumMax"] })
+          .default({ cheapMax: 6, mediumMax: 10 }),
         maxSaladLunchesPerWeek: z.number().int().min(0).max(7),
         chicken: z
           .object({

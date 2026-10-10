@@ -40,7 +40,7 @@ import {
   type PlanSlot,
   type WeekChoice,
 } from "./api";
-import { dayNutrition, heavyLunchHint, isKept, localToday, NUTRITION_DISCLAIMER } from "./format";
+import { dayNutrition, formatEuro, heavyLunchHint, isKept, localToday, NUTRITION_DISCLAIMER } from "./format";
 import { MealActions } from "./MealActions";
 import { MealCard } from "./MealCard";
 import { MealPickerDialog } from "./MealPickerDialog";
@@ -307,7 +307,16 @@ export function MealPlanPage() {
     <PageHeader
       title="Essen"
       subtitle={
-        plan.data ? `${formatShortDate(plan.data.weekStart)} – ${formatShortDate(plan.data.weekEnd)}` : undefined
+        plan.data
+          ? [
+              `${formatShortDate(plan.data.weekStart)} – ${formatShortDate(plan.data.weekEnd)}`,
+              ...(plan.data.ready && plan.data.cost && plan.data.cost.meals > 0
+                ? [
+                    `Woche ${plan.data.cost.complete ? "ca." : "mind."} ${formatEuro(plan.data.cost.total)}${plan.data.cost.perMeal === null ? "" : ` · Ø ${formatEuro(plan.data.cost.perMeal)} pro Mahlzeit`}`,
+                  ]
+                : []),
+            ].join(" · ")
+          : undefined
       }
       actions={
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>

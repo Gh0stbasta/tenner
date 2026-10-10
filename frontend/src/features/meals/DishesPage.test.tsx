@@ -1,13 +1,14 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { INGREDIENTS, dish } from "../../tests/dishFixtures";
+import { FAMILY, INGREDIENTS, dish } from "../../tests/dishFixtures";
 import { fail, mockFetch, ok } from "../../tests/fetchMock";
 import { renderWithProviders } from "../../tests/render";
 import { DishesPage } from "./DishesPage";
 
 const BOLOGNESE = dish({
   nutrition: { kcal: 640, protein: 31, carbs: 72, fat: 22, source: "INGREDIENTS", complete: true },
+  cost: { perAdultPortion: 3.2, pantry: 0.2, familyOverride: null, source: "INGREDIENTS", complete: true },
 });
 const SALAD = dish({
   dishId: "d-2",
@@ -46,6 +47,8 @@ describe("DishesPage (FOOD-010)", () => {
     expect(list().getByText("Nudeln · Bolognese")).toBeInTheDocument();
     expect(list().getByText("Mittag, Abend · 20 Min. aktiv (40 Min. gesamt)")).toBeInTheDocument();
     expect(list().getByText("ca. 640 kcal · 31 g Eiweiß · 72 g KH · 22 g Fett")).toBeInTheDocument();
+    // FOOD-013: one adult portion while the family profile has no eaters (3,20 € + 0,20 € pantry).
+    expect(list().getByText("€ · ca. 2–4 €")).toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText("Suchen"), "bolo");
     expect(names()).toEqual(["Spaghetti Bolognese"]);
@@ -115,5 +118,17 @@ describe("DishesPage (FOOD-010)", () => {
     setup({ "GET /meals/dishes?archived=false": fail(500, "INTERNAL_ERROR") });
     renderWithProviders(<DishesPage />);
     expect(await screen.findByText("Gerichte konnten nicht geladen werden")).toBeInTheDocument();
+  });
+
+  it("prices dishes for the whole family with the household's tiers (FOOD-013)", async () => {
+    setup({
+      "GET /meals/profile": ok({
+        ...FAMILY,
+        household: { ...FAMILY.household, costTiers: { cheapMax: 5, mediumMax: 6 } },
+      }),
+    });
+    renderWithProviders(<DishesPage />);
+    // Two adults: 2 × 3,20 € + 0,20 € = 6,60 € → above 6 €.
+    expect(await screen.findByText("€€€ · ca. 6–8 €")).toBeInTheDocument();
   });
 });

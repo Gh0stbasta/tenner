@@ -66,9 +66,10 @@ const DISH = {
   containsPoultry: false,
   unknownIngredients: [],
   nutrition: { kcal: 300, protein: 6, carbs: 60, fat: 1, estimated: true, source: "INGREDIENTS", complete: true, missingIngredients: [] },
+  cost: { perAdultPortion: 1.2, pantry: 0, familyOverride: null, source: "INGREDIENTS", estimated: true, complete: true, missingIngredients: [] },
 } as DishResponse;
 const EMPTY_SHOPPING_LIST = { weekStart: "2026-10-12", range: "REST" as const, generatedAt: "2026-10-12T08:00:00Z", stale: false, items: [] };
-const EMPTY_PLAN = { weekStart: "2026-10-12", weekEnd: "2026-10-18", ready: false, setup: { hasDishes: false, hasEaters: false }, generatedAt: null, slots: [], violations: [] };
+const EMPTY_PLAN = { weekStart: "2026-10-12", weekEnd: "2026-10-18", ready: false, setup: { hasDishes: false, hasEaters: false }, generatedAt: null, slots: [], violations: [], cost: { total: 0, perMeal: null, meals: 0, complete: true } };
 const ALEXA_CONTEXT = { account: { userId: "STEFAN" }, timezone: "Europe/Berlin", members: [{ userId: "STEFAN", displayName: "Stefan" }], speakers: [], alexaAccounts: 0 };
 
 function deps(overrides: Partial<Dependencies> = {}): Dependencies {
