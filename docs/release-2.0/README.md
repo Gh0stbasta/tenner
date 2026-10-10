@@ -8,7 +8,7 @@ deterministic (no AI).
 
 | | |
 |---|---|
-| **Status** | In progress. Foundation done (FOOD-001, 021, 002, 004, 003; FOOD-021 before 002 because dishes reference ingredients). Planning done (FOOD-005, 006, 009, 007, 022, 008): first usable version. Kitchen: FOOD-014, FOOD-010 (dish editor) and FOOD-011 (photos), FOOD-012 (nutrition), FOOD-013 (cost) done; kitchen block complete. Everywhere: FOOD-016 (morning notification), FOOD-017 (Alexa „Was gibt es heute?“) done; next FOOD-015 |
+| **Status** | In progress. Foundation done (FOOD-001, 021, 002, 004, 003; FOOD-021 before 002 because dishes reference ingredients). Planning done (FOOD-005, 006, 009, 007, 022, 008): first usable version. Kitchen: FOOD-014, FOOD-010 (dish editor) and FOOD-011 (photos), FOOD-012 (nutrition), FOOD-013 (cost) done; kitchen block complete. Everywhere: FOOD-016 (morning notification), FOOD-017 (Alexa „Was gibt es heute?“), FOOD-015 (calendar feed) done. Next: FOOD-023 |
 | **Epic** | [EPIC-FOOD-001](metaticket.md): vision, household rules R1 – R13, dish catalog, owner decisions (answered) |
 | **Backlog** | [`backlog/food/`](backlog/food/): FOOD-001 – FOOD-028 |
 | **Previous release** | [Tenner 1.0](../release-1.0/README.md) |

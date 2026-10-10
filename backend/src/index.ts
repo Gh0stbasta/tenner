@@ -38,6 +38,14 @@ import {
   restoreDishHandler,
   dishImageUploadHandler,
   mealsTodayHandler,
+  calendarFeedHandler,
+  calendarStatusHandler,
+  createCalendarTokenHandler,
+  revokeCalendarTokenHandler,
+  type CalendarFeed,
+  type CalendarStatus,
+  type CreateCalendarToken,
+  type RevokeCalendarToken,
   type GetMealsAhead,
   setDishImageHandler,
   removeDishImageHandler,
@@ -244,6 +252,10 @@ export interface Dependencies {
   readonly restoreDish: ArchiveDish;
   readonly createDishImageUpload: CreateDishImageUpload;
   readonly getMealsAhead: GetMealsAhead;
+  readonly calendarStatus: CalendarStatus;
+  readonly createCalendarToken: CreateCalendarToken;
+  readonly revokeCalendarToken: RevokeCalendarToken;
+  readonly calendarFeed: CalendarFeed;
   readonly setDishImage: SetDishImage;
   readonly removeDishImage: ArchiveDish;
   readonly getFoodProfile: GetFoodProfile;
@@ -287,6 +299,8 @@ const PUBLIC_ROUTES: Readonly<Record<string, PublicRouteHandler>> = {
   "GET /health": ({ deps, logger }) => health(deps.config, deps.probeDatabase, logger),
   // NOTIFICATION-011: authorized by the signed token in the body, not by a login.
   "POST /push-actions": ({ event, deps, logger }) => pushActionHandler(event, deps.handlePushAction, logger),
+  // FOOD-015: authorized by the secret token in the path (hash compared), not by a login.
+  "GET /meals/calendar/{token}": ({ event, deps }) => calendarFeedHandler(event, deps.calendarFeed),
 };
 
 /** Signed-in users without a household may call these to pick their household member (HOTFIX-001). */
@@ -358,6 +372,9 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "PUT /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => updateDishHandler(event, identity, deps.updateDish, logger),
   "DELETE /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => archiveDishHandler(event, identity, deps.archiveDish, logger),
   "POST /meals/dishes/{dishId}/restore": ({ event, deps, logger, identity }) => restoreDishHandler(event, identity, deps.restoreDish, logger),
+  "GET /meals/calendar": ({ deps, identity }) => calendarStatusHandler(identity.tenantId, deps.calendarStatus),
+  "POST /meals/calendar": ({ deps, logger, identity }) => createCalendarTokenHandler(identity, deps.createCalendarToken, logger),
+  "DELETE /meals/calendar": ({ deps, logger, identity }) => revokeCalendarTokenHandler(identity, deps.revokeCalendarToken, deps.calendarStatus, logger),
   "GET /meals/today": ({ event, deps, identity }) => mealsTodayHandler(event, identity.tenantId, deps.getMealsAhead),
   "POST /meals/dishes/{dishId}/image-upload": ({ event, deps, logger, identity }) => dishImageUploadHandler(event, identity, deps.createDishImageUpload, logger),
   "PUT /meals/dishes/{dishId}/image": ({ event, deps, logger, identity }) => setDishImageHandler(event, identity, deps.setDishImage, logger),
@@ -572,6 +589,10 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     setDishImage: dishImageService ? (identity, dishId, request) => dishImageService.setImage(identity, dishId, request) : notConfigured,
     removeDishImage: dishImageService ? (identity, dishId) => dishImageService.removeImage(identity, dishId) : notConfigured,
     getMealPlan: mealPlanService ? (tenantId, week) => mealPlanService.getPlan(tenantId, week) : notConfigured,
+    calendarStatus: meals ? (tenantId) => meals.calendar.status(tenantId) : notConfigured,
+    createCalendarToken: meals ? (identity) => meals.calendar.createToken(identity) : notConfigured,
+    revokeCalendarToken: meals ? (identity) => meals.calendar.revoke(identity) : notConfigured,
+    calendarFeed: meals ? (token) => meals.calendar.feed(token) : notConfigured,
     getMealsAhead: mealPlanService ? (tenantId, days) => mealPlanService.mealsAhead(tenantId, days) : notConfigured,
     replaceMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.replaceMeal(identity, week, slotId, request) : notConfigured,
     mealOptions: mealPlanService ? (tenantId, week, slotId) => mealPlanService.mealOptions(tenantId, week, slotId) : notConfigured,

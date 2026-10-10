@@ -129,6 +129,7 @@ These are outside Terraform or need the live system. Run them in AWS CloudShell 
 | Offline cache: household Tenner data in `localStorage` for up to 7 days or until logout (readable on an unlocked device; same XSS exposure as the tokens) | MOBILE-003, `frontend/README.md` |
 | Offline completions carry a client-chosen `completedAt` (device clock; the backend rejects future and out-of-order times, so it can only move a completion back to the last one) | MOBILE-004 |
 | Dish photos are public to whoever knows the URL (unguessable UUID key, no signed URLs; food only, the editor asks for no people). A household member can upload files that never get attached (deleted only by hand, TD-045) | FOOD-011 |
+| Public meal calendar feed `GET /meals/calendar/{token}` (FOOD-015): whoever has the link sees the dish names of this and next week (no allergies, no eater names). 256-bit token, stored only as SHA-256 hash, compared in constant time, unknown/revoked → 404, revocable in the app, API throttling applies. The API access log records the request path and therefore the token (readable only with access to the AWS account, 30 days; TD-047) | FOOD-015 |
 | Google client secret in Terraform state | TD-021 |
 | Throttling is global, not per client | TD-016 |
 | No Lambda reserved concurrency | TD-014 |

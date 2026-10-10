@@ -1486,6 +1486,10 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   and adds a week total and the average per meal. Tiers (€ / €€ / €€€) come from the profile's `costTiers`; the app
   shows tier and a 2-euro range. Prices are corrected in Settings → Essen → „Preise“ (household overrides of the
   catalog, FOOD-021).
+- **Calendar feed** (FOOD-015, `meals/calendar.ts`, `services/calendar-feed.service.ts`): public route
+  `GET /meals/calendar/{token}` (no JWT, like `POST /push-actions`); the token `<tenantId>.<secret>` names the household
+  and is checked against the stored SHA-256 hash (`CALENDAR` item, constant-time compare). The ICS is built on each
+  request from the current and next week's plans; no extra storage. Managed in Settings → „Essen: Kalender“.
 - **Family food profile** (FOOD-004): one `PROFILE` item with eaters and household rules; defaults reproduce the
   owner's rules. `eatersAt(profile, weekday, slot)` is the one place that says who eats a meal (weekday lunch: adults).
 - **Rules** (FOOD-005, `backend/src/meals/planner/rules.ts`): pure functions over a week of `PlannedMeal`s.

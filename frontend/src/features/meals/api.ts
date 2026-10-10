@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiClient } from "../../api/client";
+import { config } from "../../config";
 import { queryKeys } from "../../api/queryKeys";
 import { INGREDIENT_TAGS, PROTEIN_TAGS, WEEK_SLOTS, type WeekSlot } from "./labels";
 
@@ -403,4 +404,40 @@ export function useUpdateIngredientPrice() {
         queryClient.invalidateQueries({ queryKey: queryKeys.mealPlans }),
       ]),
   });
+}
+
+// Calendar subscription (FOOD-015)
+
+const calendarStatusSchema = z.object({ active: z.boolean(), createdAt: z.string().nullable() });
+export type CalendarStatus = z.infer<typeof calendarStatusSchema>;
+const calendarKey = [...queryKeys.meals, "calendar"] as const;
+
+export function useCalendarStatus() {
+  return useQuery({
+    queryKey: calendarKey,
+    queryFn: () => apiClient.get("/meals/calendar", { schema: calendarStatusSchema }),
+  });
+}
+
+export function useCreateCalendarToken() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post("/meals/calendar", { schema: z.object({ token: z.string(), createdAt: z.string() }) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: calendarKey }),
+  });
+}
+
+export function useRevokeCalendarToken() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.delete("/meals/calendar", { schema: calendarStatusSchema }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: calendarKey }),
+  });
+}
+
+/** Feed URL for a token; `webcal:` opens Apple Calendar directly. */
+export function calendarUrls(token: string, apiBaseUrl: string = config.apiBaseUrl): { https: string; webcal: string } {
+  const https = `${apiBaseUrl}/meals/calendar/${token}.ics`;
+  return { https, webcal: https.replace(/^https:/, "webcal:") };
 }

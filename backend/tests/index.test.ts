@@ -165,6 +165,10 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     restoreDish: vi.fn(async () => DISH),
     createDishImageUpload: vi.fn(async () => ({ imageKey: "images/meals/default/d/k.jpg", uploadUrl: "https://s3.test/put", headers: { "Content-Type": "image/jpeg" }, expiresInSeconds: 300 })),
     setDishImage: vi.fn(async () => DISH),
+    calendarStatus: vi.fn(async () => ({ active: true, createdAt: "2026-10-10T08:00:00Z" })),
+    createCalendarToken: vi.fn(async () => ({ token: "default.secret", createdAt: "2026-10-10T08:00:00Z" })),
+    revokeCalendarToken: vi.fn(async () => undefined),
+    calendarFeed: vi.fn(async () => "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"),
     getMealsAhead: vi.fn(async () => ({ today: "2026-10-14", days: [{ date: "2026-10-14", meals: [] }] })),
     removeDishImage: vi.fn(async () => DISH),
     getFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
@@ -539,6 +543,23 @@ describe("dish routes (FOOD-002)", () => {
     expect((await route(withDish("DELETE /meals/dishes/{dishId}"), d)).statusCode).toBe(200);
     expect((await route(withDish("POST /meals/dishes/{dishId}/restore"), d)).statusCode).toBe(200);
     expect(d.restoreDish).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID);
+  });
+
+  it("manages the calendar token and serves the public ICS feed (FOOD-015)", async () => {
+    const d = deps();
+    expect((await route(event("GET /meals/calendar"), d)).statusCode).toBe(200);
+    const created = await route(event("POST /meals/calendar"), d);
+    expect(created.statusCode).toBe(201);
+    expect(JSON.parse(String(created.body)).data.token).toBe("default.secret");
+    expect(JSON.stringify((d.logger.info as ReturnType<typeof vi.fn>).mock.calls)).not.toContain("secret");
+    expect((await route(event("DELETE /meals/calendar"), d)).statusCode).toBe(200);
+    expect(d.revokeCalendarToken).toHaveBeenCalledWith(TEST_IDENTITY);
+    const feed = await route({ ...event("GET /meals/calendar/{token}"), pathParameters: { token: "default.abc.ics" } } as APIGatewayProxyEventV2, d);
+    expect(feed.statusCode).toBe(200);
+    expect(feed.headers?.["content-type"]).toBe("text/calendar; charset=utf-8");
+    expect(d.calendarFeed).toHaveBeenCalledWith("default.abc");
+    (d.calendarFeed as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new NotFoundError("Calendar not found."));
+    expect((await route({ ...event("GET /meals/calendar/{token}"), pathParameters: { token: "x.ics" } } as APIGatewayProxyEventV2, d)).statusCode).toBe(404);
   });
 
   it("returns today's and tomorrow's meals with a validated day count (FOOD-017)", async () => {

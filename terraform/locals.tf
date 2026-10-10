@@ -106,6 +106,10 @@ locals {
     "POST /meals/catalog",                                  # FOOD-003
     "GET /meals/plans/{weekStart}",                         # FOOD-006
     "GET /meals/today",                                     # FOOD-017 (Alexa)
+    "GET /meals/calendar",                                  # FOOD-015
+    "POST /meals/calendar",                                 # FOOD-015
+    "DELETE /meals/calendar",                               # FOOD-015
+    "GET /meals/calendar/{token}",                          # FOOD-015 (public, token in the path)
     "POST /meals/plans/{weekStart}/slots/{slotId}/replace", # FOOD-007
     "GET /meals/plans/{weekStart}/slots/{slotId}/options",  # FOOD-022
     "PUT /meals/plans/{weekStart}/slots/{slotId}",          # FOOD-022
@@ -118,7 +122,8 @@ locals {
 
   # Routes reachable without a token (SECURITY-002). Everything else requires a Cognito JWT.
   # POST /push-actions (NOTIFICATION-011) is authorized by the signed token in the body instead of a login.
-  api_public_routes = ["GET /health", "POST /push-actions"]
+  # GET /meals/calendar/{token} (FOOD-015) is authorized by the secret feed token in the path (calendar apps send no login).
+  api_public_routes = ["GET /health", "POST /push-actions", "GET /meals/calendar/{token}"]
 
   # Authentication (SECURITY-002, ADR 0001). The Cognito domain prefix must be unique per region;
   # a hash of the account ID keeps it stable without exposing the account ID in the login URL.

@@ -1328,3 +1328,28 @@ Keep the typed text in local state and clamp or validate on blur and on save, li
 
 FOOD-005, FOOD-012, FOOD-013; `frontend/src/features/meals/FoodRulesDialog.tsx`.
 
+## TD-047: The API access log contains the meal calendar token
+
+### Description
+
+The access log of the HTTP API (`/tenner/api/access`, `terraform/api.tf`) records `$context.path`. For the public
+calendar feed (FOOD-015) the path contains the secret feed token.
+
+### Reason
+
+The log format predates FOOD-015 and also serves the other routes; changing it was out of scope.
+
+### Impact
+
+Whoever can read the account's CloudWatch logs (today only the owner) can copy a working calendar link for up to 30
+days. The feed shows dish names only. No cost impact.
+
+### Suggested Improvement
+
+Log `$context.routeKey` without `$context.path`, or move the token into a query parameter that the access log does
+not record; then revoke and recreate the calendar link once.
+
+### Related Work
+
+FOOD-015; `terraform/api.tf`, `docs/security.md` (residual risks).
+
