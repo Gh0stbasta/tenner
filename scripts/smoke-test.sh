@@ -10,6 +10,8 @@
 #   api /health           200, "status":"ok" and "database":"connected"
 #   api /dashboard        401 without a token (the JWT authorizer protects the API, SECURITY-002)
 #   api /onboarding       401 without a token
+#   api /meals/today      401 without a token (release 2.0, FOOD-025)
+#   api /meals/calendar/x 404 for an unknown calendar token (public route, FOOD-015)
 # Signed-in requests are not tested: sign-in is Google only, so there is no non-interactive test user (TD-024).
 set -uo pipefail
 
@@ -65,6 +67,8 @@ check "frontend SPA route" "$FRONTEND/dashboard" 200 "$ROOT_ELEMENT"
 check "api health" "$API/health" 200 '"status":"ok"' '"database":"connected"'
 check "api requires login (dashboard)" "$API/dashboard" 401
 check "api requires login (onboarding)" "$API/onboarding" 401
+check "api requires login (meals today)" "$API/meals/today" 401
+check "calendar feed rejects unknown token" "$API/meals/calendar/default.unknown.ics" 404
 
 if ((failures > 0)); then
   echo "$failures smoke test(s) failed. Rollback: see $RUNBOOK" >&2

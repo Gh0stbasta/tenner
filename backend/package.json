@@ -1,6 +1,6 @@
 {
   "name": "tenner-backend",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Tenner API Lambda (TypeScript, Node.js 22).",
   "type": "module",

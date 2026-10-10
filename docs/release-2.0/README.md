@@ -1,36 +1,131 @@
-# Tenner 2.0 — Family Meal Planning (in planning)
+# Zentrale 2.0 — Familien-Essensplanung
 
-> **„Was gibt's heute?“ — Tenner weiß es schon.**
+> **„Was gibt's heute?“ — die Zentrale weiß es schon.**
 
-Release 2.0 adds meal planning to Tenner: a weekly lunch and dinner plan that follows the family's rules, a shopping
-list, and today's meals on the phone, in the calendar, by voice and on the Echo Show. The first version is
-deterministic (no AI).
+Release 2.0 bringt die Essensplanung in die Zentrale (vorher „Tenner“): ein Wochenplan für Mittag- und Abendessen,
+der die Regeln der Familie einhält, eine Einkaufsliste, und das heutige Essen auf dem Handy, im Kalender, per Stimme
+und auf dem Echo Show. Ohne KI, nachvollziehbar und offline-fähig.
 
 | | |
 |---|---|
-| **Status** | In progress. Foundation done (FOOD-001, 021, 002, 004, 003; FOOD-021 before 002 because dishes reference ingredients). Planning done (FOOD-005, 006, 009, 007, 022, 008): first usable version. Kitchen: FOOD-014, FOOD-010 (dish editor) and FOOD-011 (photos), FOOD-012 (nutrition), FOOD-013 (cost) done; kitchen block complete. Everywhere: FOOD-016 (morning notification), FOOD-017 (Alexa „Was gibt es heute?“), FOOD-015 (calendar feed) done. Insight: FOOD-023 (history and feedback), FOOD-019 (food analytics) done. Next: evaluations FOOD-020, FOOD-024, release FOOD-025 |
-| **Epic** | [EPIC-FOOD-001](metaticket.md): vision, household rules R1 – R13, dish catalog, owner decisions (answered) |
-| **Backlog** | [`backlog/food/`](backlog/food/): FOOD-001 – FOOD-028 |
-| **Previous release** | [Tenner 1.0](../release-1.0/README.md) |
+| **Version** | 2.0.0 (2026-10-10) — Changelog: [`CHANGELOG.md`](../../CHANGELOG.md#200---2026-10-10) |
+| **Status** | Fertig: 25 von 28 FOOD-Tickets. Offen: die Bewertungen FOOD-020 (KI) und FOOD-024 (Bilder) als Folgearbeit, das Release-Ticket FOOD-025 bis zum Tag `v2.0.0` |
+| **Epic** | [EPIC-FOOD-001](metaticket.md): Vision, Haushaltsregeln R1 – R13, Gerichtekatalog, Owner-Entscheidungen |
+| **Architektur** | [ADR 0007](../decisions/0007-meal-planning.md) (eine Tabelle, kein neuer Dienst) · [`docs/architecture.md`](../architecture.md) |
+| **Vorher** | [Tenner 1.0](../release-1.0/README.md) |
 
 ---
 
-## How It Fits Together
+## ✨ Highlights
+
+- **Der Plan macht sich selbst:** jede Woche Mittag und Abend für diese und nächste Woche, mit Allergien, vegetarisch,
+  Kochzeit, Hühnchen-Tagen, leichtem Mittagessen unter der Woche und Abwechslung. Ein Tipp tauscht, wählt, legt fest
+  oder plant neu.
+- **Lernt mit:** „Gekocht“, „Ausgefallen“, 👍 / 👎 und ⭐ — Lieblingsgerichte kommen öfter, gerade Gegessenes seltener.
+- **Einkaufen ohne Rechnen:** eine Liste mit Stückzahlen statt Gramm, eigene Reihenfolge, offline im Laden, per Stimme
+  („Alexa, sag Familien Zentrale, setz Milch auf die Einkaufsliste“) und als Echo-Show-Widget.
+- **Überall:** „Essensplan am Morgen“ als Push oder Alexa-Erinnerung, „Alexa, frag Familien Zentrale, was es heute gibt“,
+  Essen im Tagesbriefing, Echo-Show-Widget „Zentrale Essen“, Kalender-Abo für Google und Apple.
+- **Gerichte selbst pflegen:** Editor mit Zutaten, Foto vom Handy, Nährwert- und Kostenschätzung und Hinweisen, für
+  wen ein Gericht nicht passt.
+- **Auswertung „Essen“:** Proteinquellen, vegetarischer Anteil, Lieblingsgerichte, Kosten pro Woche, Abwechslung.
+
+---
+
+## 🗓 Ein Tag mit der Zentrale
+
+| Uhrzeit | Was passiert |
+|---|---|
+| 07:30 | Push oder Alexa: „🍽️ Heute: Mittag Onigiri · Abend Linseneintopf — Einkaufsliste: 3 Dinge offen“ |
+| 08:00 | Dashboard: „Heute essen wir“, heutige Aufgaben, „Für morgen einkaufen“ |
+| 12:00 | Kalender zeigt „🍽️ Mittag: Onigiri“ |
+| 17:30 | Küche: „Alexa, frag Familien Zentrale, was es heute abend gibt“ |
+| 19:00 | Nach dem Essen: „Gekocht“ und 👍 auf der Karte |
+| Samstag | „Woche neu planen“ für nächste Woche, Einkaufsliste im Laden abhaken |
+
+---
+
+## 🏛 Architektur auf einen Blick
 
 ```mermaid
 flowchart LR
-  P[Familienprofil<br/>FOOD-004] --> R[Regeln R1–R13<br/>FOOD-005]
-  D[Gerichte + Zutaten<br/>FOOD-002, 003, 021] --> R
-  R --> PL[Wochenplaner<br/>FOOD-006]
-  H[Verlauf + Feedback<br/>FOOD-023] --> PL
-  PL --> W[Wochenplan<br/>FOOD-009, 007, 008, 022]
-  W --> S[Einkaufsliste<br/>FOOD-014]
-  W --> N[Push + Alexa am Morgen<br/>FOOD-016]
-  W --> A[„Was gibt es heute?“<br/>FOOD-017]
-  W --> E[Echo-Show-Widget<br/>FOOD-018]
-  W --> C[Kalender-Feed<br/>FOOD-015]
-  W --> AN[Auswertung<br/>FOOD-019]
+  App[Web-App /essen<br/>Gerichte, Einkaufsliste] --> API[tenner-api<br/>Routen /meals/*]
+  Alexa[Alexa-Skill<br/>Familien Zentrale] --> API
+  Cal[Kalender-Apps] -->|ICS mit Token| API
+  API --> Meals[(DynamoDB<br/>tenner-meals)]
+  API -->|presigned PUT| Img[(S3<br/>tenner-meal-images)]
+  CF[CloudFront] -->|/images/*, OAC| Img
+  App --> CF
+  Notifier[tenner-notifier<br/>alle 15 Min.] --> Meals
+  Notifier --> Push[Push / Alexa / Echo-Show-Widgets]
 ```
+
+- **Eine Tabelle** `tenner-meals` (Gerichte, Zutaten, Profil, Pläne, Einkaufslisten, Kalender-Token) und **ein Bucket**
+  für Fotos; die Routen laufen in der vorhandenen API-Lambda. Kein neuer AWS-Dienst (ADR 0007).
+- Der **Planer** ist deterministisch (gespeicherter Seed) und nutzt Regeln R1 – R13, Verlauf und Bewertungen.
+- Details: [`docs/architecture.md`](../architecture.md) → „Meal Planning“, Sicherheit: [`docs/security.md`](../security.md),
+  Kennzahlen: [`docs/analytics.md`](../analytics.md).
+
+---
+
+## 📊 Release in Zahlen
+
+| | |
+|---|---|
+| FOOD-Tickets | 25 von 28 fertig (dazu 6 Wartungs-, 2 Empfehlungs- und 2 Hotfix-Tickets seit 1.0) |
+| API-Routen für Essen | 33 (davon eine öffentlich: der Kalender-Feed) |
+| Katalog | 105 Zutaten, 61 Gerichte der Familie |
+| Automatische Tests | 1.933 (Backend 1.145, Frontend 498, Alexa 160, Terraform 82, Skripte 48) |
+| Kosten | + < 0,10 $ pro Monat (eine Tabelle, ein kleiner Bucket, keine KI) |
+
+---
+
+## 🔐 Sicherheit und Datenschutz
+
+- Allergien und Abneigungen bleiben im Familienprofil: nie in Logs, Benachrichtigungen, Kalender oder Alexa-Antworten.
+- Fotos liegen privat in S3 und werden nur über CloudFront ausgeliefert; Uploads sind auf Typ, Größe und Schlüssel des
+  eigenen Haushalts beschränkt. Bitte nur Essen fotografieren.
+- Der Kalender-Link ist geheim (256 Bit, nur als Hash gespeichert) und jederzeit widerrufbar; wer ihn hat, sieht die
+  Gerichtsnamen. Restrisiken: [`docs/security.md`](../security.md#residual-risks).
+
+---
+
+## ⚠ Bekannte Einschränkungen
+
+- Nährwerte und Kosten sind grobe Schätzungen aus den Katalogwerten; Preise pflegt ihr unter Einstellungen → Essen →
+  „Preise“.
+- Kalender-Apps holen Änderungen selbst ab (Google bis zu 24 Stunden).
+- Der Plan reicht bis nächste Woche; Alexa kennt heute und morgen.
+- Technische Schulden aus 2.0: TD-044 (Regelhinweise doppelt in App und Server), TD-045 (nicht zugeordnete Foto-Uploads),
+  TD-046 (Zahlenfelder im Regel-Dialog), TD-047 (Kalender-Token im Zugriffslog). Liste:
+  [`docs/technical-debt.md`](../technical-debt.md).
+
+---
+
+## 🚚 Getting Started
+
+Nach dem Deploy, einmalig:
+
+1. **Gerichtekatalog importieren:** Einstellungen → „Essen: Gerichtekatalog“ → prüfen → importieren.
+2. **Familienprofil:** Einstellungen → Familienprofil: wer mitisst, Allergien, vegetarisch, Abneigungen; Planungsregeln
+   (Kochzeit, Essenszeiten, Kostenstufen).
+3. **Plan ansehen:** „Essen“ — der Plan für diese und nächste Woche entsteht beim ersten Öffnen.
+4. **Benachrichtigung:** Einstellungen → Benachrichtigungen → „Essensplan am Morgen“, Kanal Push oder Alexa.
+5. **Kalender:** Einstellungen → „Essen: Kalender“ → „Kalender abonnieren“, Link in Google oder Apple einfügen.
+6. **Echo Show:** Widgets „Zentrale Essen“ und „Zentrale Einkaufsliste“ auf dem Startbildschirm hinzufügen
+   ([`alexa/README.md`](../../alexa/README.md)).
+
+**Owner-Schritt vor dem ersten Deploy mit Fotos:** Die Deploy-Rolle braucht Rechte auf den Bucket
+`tenner-meal-images-<env>` (README → „CI Permissions“). **Nach dem Merge:** Tag `v2.0.0` und GitHub-Release (FOOD-025).
+
+---
+
+## 🔭 Folgearbeit
+
+| Was | Ticket | Nächster Schritt |
+|---|---|---|
+| Bilder für Gerichte ohne Foto | FOOD-024 | Entscheidung zu [ADR 0008](../decisions/0008-dish-image-sources.md) (Empfehlung: Platzhalter behalten) |
+| KI für Variationen, Saison, Reste | FOOD-020 | Daten 8 Wochen sammeln, Prüfung am 2026-12-07 ([ADR 0009](../decisions/0009-meal-ai.md)) |
 
 ---
 
@@ -72,7 +167,10 @@ flowchart LR
 **Phases:** *2.0 Core* = the plan works every day (incl. shopping list) · *2.0 Extended* = everywhere and more
 comfortable · *Long-Term* = evaluations, not part of 2.0 · *2.0 Release* = version and release notes.
 
-### Recommended Order
+Status: 25 of 28 done. Open: FOOD-020 and FOOD-024 (evaluations, ADR 0009 and ADR 0008 proposed, owner decision),
+FOOD-025 (this release; tag after the merge).
+
+### Recommended Order (as built)
 
 ```text
 Foundation:        FOOD-001 → 002 → 021 → 004 → 003
