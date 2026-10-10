@@ -4,6 +4,7 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { Box, Chip, Stack, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import type { PlanSlot, Violation } from "./api";
+import { DishImage } from "./DishImage";
 import { dishDetails } from "./format";
 import { MEAL_SLOT_LABELS } from "./labels";
 
@@ -25,6 +26,15 @@ export function MealCard({ slot, hints, actions }: MealCardProps) {
       <Typography variant="overline" color="text.secondary" sx={{ width: 52, flexShrink: 0, lineHeight: 2 }}>
         {label}
       </Typography>
+      {slot.dish && (
+        <DishImage
+          name={slot.dish.name}
+          category={slot.dish.category}
+          imageKey={slot.dish.imageKey}
+          width={56}
+          height={56}
+        />
+      )}
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         {slot.dish ? (
           <>

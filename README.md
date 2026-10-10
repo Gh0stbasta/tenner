@@ -83,6 +83,7 @@ For the managed resources so far:
 - API Gateway (`apigateway:*` on `tenner-api-gateway`)
 - DynamoDB tables `tenner-tenners`, `tenner-history`, `tenner-households` and `tenner-meals` (create, update, tag, PITR, TTL, deletion protection; SCHEDULING-008 added `tenner-households`, FOOD-001 `tenner-meals`)
 - S3 bucket `tenner-frontend-<env>` (bucket configuration, policy) and CloudFront (distribution, origin access control, response headers policy)
+- S3 bucket `tenner-meal-images-<env>` for dish photos (FOOD-011): the same bucket configuration rights as the frontend bucket (create, versioning, encryption, public access block, ownership controls, lifecycle, **CORS**, policy, tags); `iam:PutRolePolicy`/`DeleteRolePolicy` already cover the new inline policy `tenner-api-role-meal-images`
 - Frontend publishing (TICKET-018):
   - `s3:ListBucket` on `arn:aws:s3:::tenner-frontend-<env>`
   - `s3:PutObject` and `s3:DeleteObject` on `arn:aws:s3:::tenner-frontend-<env>/*`

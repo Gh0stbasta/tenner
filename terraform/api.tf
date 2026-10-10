@@ -27,6 +27,7 @@ resource "aws_lambda_function" "api" {
       HISTORY_TABLE        = aws_dynamodb_table.history.name
       HOUSEHOLDS_TABLE     = aws_dynamodb_table.households.name # SCHEDULING-008
       MEALS_TABLE          = aws_dynamodb_table.meals.name      # FOOD-001
+      MEAL_IMAGES_BUCKET   = aws_s3_bucket.meal_images.bucket   # FOOD-011
       APPLICATION_TIMEZONE = var.application_timezone
       COGNITO_USER_POOL_ID = aws_cognito_user_pool.users.id # HOTFIX-001 self-assignment
       HOUSEHOLD_TENANT_ID  = local.household_tenant_id

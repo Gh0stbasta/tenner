@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { DISH_CATEGORIES, LIGHTNESS, MEAL_SLOTS, TEMPERATURES } from "./models/dish.js";
+import { IMAGE_CONTENT_TYPES, IMAGE_LIMITS } from "./models/image.js";
 import { DIETS, EATER_TYPES, WEEK_SLOTS, type WeekSlot } from "./models/profile.js";
 import { USER_ID_PATTERN } from "../models/index.js";
 import { BASE_TAGS, INGREDIENT_ID_PATTERN, INGREDIENT_TAGS, INGREDIENT_UNITS, PROTEIN_TAGS, QUANTITY_UNITS, SHOPPING_SECTIONS } from "./models/ingredient.js";
@@ -152,6 +153,21 @@ export const updateDishSchema = z
   .refine(totalNotBelowActive, { message: "Total time must not be below the active time.", path: ["totalMinutes"] });
 
 export type UpdateDishRequest = z.output<typeof updateDishSchema>;
+
+/** FOOD-011: request for a presigned photo upload. */
+export const imageUploadSchema = z
+  .object({
+    contentType: z.enum(IMAGE_CONTENT_TYPES),
+    size: z.number().int().min(1).max(IMAGE_LIMITS.maxBytes),
+  })
+  .strict();
+
+export type ImageUploadRequest = z.output<typeof imageUploadSchema>;
+
+/** FOOD-011: attach an uploaded photo (the key from the upload response). */
+export const dishImageSchema = z.object({ imageKey: z.string().min(1).max(200) }).strict();
+
+export type DishImageRequest = z.output<typeof dishImageSchema>;
 
 export const listDishesQuerySchema = z
   .object({

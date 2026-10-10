@@ -50,6 +50,7 @@ GitHub Actions ──(OIDC, GitHubActionsDeployRole)──► Terraform state (S
 | Lambda | Node.js 22 (supported), no secrets in environment variables (only names and IDs), logs retained 30 days | `tests/api.tftest.hcl` |
 | DynamoDB | Encryption at rest, point-in-time recovery, deletion protection on all tables | `tests/dynamodb.tftest.hcl` |
 | S3 frontend | Private, Block Public Access, SSE-S3, versioning (30-day noncurrent retention), TLS-only policy | `tests/frontend_hosting.tftest.hcl` |
+| S3 dish photos (FOOD-011) | Private, Block Public Access, SSE-S3, versioning (30-day noncurrent retention), TLS-only policy; read only by the distribution (OAC, `AWS:SourceArn`); uploads only with 5-minute presigned PUTs whose type (JPEG/PNG/WebP), exact size (≤ 2 MB) and key are signed; keys built by the API per household and dish; CORS: PUT from the app origin only | `terraform/meal-images.tf`, `tests/meal_images.tftest.hcl`, `backend/tests/meals-dish-images.test.ts` |
 | S3 state | Private, SSE-S3, versioning, TLS-only policy; lock table encrypted with deletion protection | `tests/state_backend.tftest.hcl` |
 | CloudFront | HTTPS redirect, CSP (`script-src 'self'`), HSTS, X-Frame-Options, nosniff, referrer policy | `terraform/frontend-hosting.tf` |
 | Cognito | Deletion protection, no self sign-up with password, app client cannot write identity attributes | `tests/auth.tftest.hcl` |
@@ -75,6 +76,7 @@ no `*` action; every wildcard resource justified.
 | `-dynamodb` | `GetItem`, `PutItem`, `UpdateItem`, `Query` | all Tenner tables and their indexes | ✅ **SECURITY-005 removed `Scan` and `DeleteItem`** (never used; deletes are soft deletes). Index wildcard `/index/*` covers the GSIs only |
 | `-dynamodb` | `BatchGetItem` | `tenner-tenners` | ✅ Title lookup for history (TICKET-020) |
 | `-cognito` | `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `ListUsersInGroup`, `CreateGroup` (HOUSEHOLD-ADMIN-001) | Tenner user pool | ⚠️ IAM cannot restrict the user or group; the code only adds the caller to one free household group (TD-023) |
+| `-meal-images` (FOOD-011) | `s3:PutObject`, `s3:DeleteObject` | `tenner-meal-images-<env>/images/meals/*` | ✅ No read or list; presigned uploads inherit this scope. The household and dish prefix inside it is enforced by the API (IAM cannot see the tenant) |
 | Trust | `sts:AssumeRole` | `lambda.amazonaws.com` | ✅ |
 
 ### `GitHubActionsDeployRole` (managed outside this repository)
@@ -126,6 +128,7 @@ These are outside Terraform or need the live system. Run them in AWS CloudShell 
 | Browser push: push services (Google, Mozilla, Apple) see device endpoints and timing; payloads are end-to-end encrypted (RFC 8291) and contain only titles and estimates. The VAPID private key lives in Parameter Store; endpoints are never logged | NOTIFICATION-009 |
 | Offline cache: household Tenner data in `localStorage` for up to 7 days or until logout (readable on an unlocked device; same XSS exposure as the tokens) | MOBILE-003, `frontend/README.md` |
 | Offline completions carry a client-chosen `completedAt` (device clock; the backend rejects future and out-of-order times, so it can only move a completion back to the last one) | MOBILE-004 |
+| Dish photos are public to whoever knows the URL (unguessable UUID key, no signed URLs; food only, the editor asks for no people). A household member can upload files that never get attached (deleted only by hand, TD-045) | FOOD-011 |
 | Google client secret in Terraform state | TD-021 |
 | Throttling is global, not per client | TD-016 |
 | No Lambda reserved concurrency | TD-014 |

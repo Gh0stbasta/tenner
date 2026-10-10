@@ -1462,6 +1462,13 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   `INGREDIENT#<id>`; merged on read.
 - **Dishes** (FOOD-002): `DISH#<uuid>`; vegetarian, tags, protein sources and base ingredients are derived from the
   current ingredients on every read; archive instead of delete.
+- **Dish photos** (FOOD-011): private bucket `tenner-meal-images-<env>` as a second origin of the frontend
+  distribution (`/images/*`, same OAC). The browser shrinks a photo to 1200 px / ~300 KB JPEG, asks
+  `POST /meals/dishes/{id}/image-upload` for a 5-minute presigned PUT (type, exact size ≤ 2 MB and key signed), uploads
+  straight to S3 and attaches the key with `PUT /meals/dishes/{id}/image`; replacing or removing deletes the old object
+  (failures are only logged). Keys: `images/meals/<tenantId>/<dishId>/<uuid>.<ext>`, built by the API only. The API
+  receives the bucket as `MEAL_IMAGES_BUCKET`; without it the photo routes answer 503. Without a photo the app shows a
+  placeholder per category.
 - **Family food profile** (FOOD-004): one `PROFILE` item with eaters and household rules; defaults reproduce the
   owner's rules. `eatersAt(profile, weekday, slot)` is the one place that says who eats a meal (weekday lunch: adults).
 - **Rules** (FOOD-005, `backend/src/meals/planner/rules.ts`): pure functions over a week of `PlannedMeal`s.

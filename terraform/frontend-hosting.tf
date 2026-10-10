@@ -157,10 +157,12 @@ resource "aws_cloudfront_response_headers_policy" "frontend" {
         "default-src 'self'",
         "script-src 'self'",
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data:",
+        # blob: shows the photo preview before the upload (FOOD-011); photos come from /images/* on this origin.
+        "img-src 'self' data: blob:",
         "font-src 'self' data:",
         # Cognito: OIDC discovery/JWKS (cognito-idp) and token endpoint (managed login domain), SECURITY-002/003.
-        "connect-src 'self' https://*.execute-api.${var.aws_region}.amazonaws.com https://cognito-idp.${var.aws_region}.amazonaws.com https://${local.auth_login_domain}",
+        # FOOD-011: presigned photo uploads go straight to the image bucket.
+        "connect-src 'self' https://*.execute-api.${var.aws_region}.amazonaws.com https://cognito-idp.${var.aws_region}.amazonaws.com https://${local.auth_login_domain} https://${local.meal_images_host}",
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",
@@ -185,6 +187,13 @@ resource "aws_cloudfront_distribution" "frontend" {
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
   }
 
+  # Dish photos (FOOD-011): same OAC, objects under images/ in the image bucket.
+  origin {
+    origin_id                = "meal-images-s3"
+    domain_name              = aws_s3_bucket.meal_images.bucket_regional_domain_name
+    origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
+  }
+
   # index.html and other non-hashed files: always revalidated (no CloudFront caching).
   default_cache_behavior {
     target_origin_id           = "frontend-s3"
@@ -204,6 +213,18 @@ resource "aws_cloudfront_distribution" "frontend" {
     allowed_methods            = ["GET", "HEAD"]
     cached_methods             = ["GET", "HEAD"]
     compress                   = true
+    cache_policy_id            = local.cache_policy_caching_optimized
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend.id
+  }
+
+  # Dish photos: every photo has a new key, so long-lived caching is safe (FOOD-011).
+  ordered_cache_behavior {
+    path_pattern               = "/images/*"
+    target_origin_id           = "meal-images-s3"
+    viewer_protocol_policy     = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = false
     cache_policy_id            = local.cache_policy_caching_optimized
     response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend.id
   }

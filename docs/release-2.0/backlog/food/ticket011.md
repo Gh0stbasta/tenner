@@ -107,22 +107,22 @@ cd frontend && npm run lint && npm run build && npm test
 
 # Acceptance Criteria
 
-- [ ] Photos can be uploaded from the phone camera or gallery
-- [ ] Images are private in S3 and served via CloudFront
-- [ ] Upload limited in type, size and tenant prefix
-- [ ] Placeholders when no photo exists
-- [ ] Tests passing
+- [x] Photos can be uploaded from the phone camera or gallery
+- [x] Images are private in S3 and served via CloudFront
+- [x] Upload limited in type, size and tenant prefix
+- [x] Placeholders when no photo exists
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
@@ -131,6 +131,15 @@ cd frontend && npm run lint && npm run build && npm test
 - Images are served without signed URLs (unguessable keys); they show food, not people. Photos of people are not
   the intended content (hint in the UI).
 - Storage cost is negligible (≈ 100 images × 300 KB).
+- Attaching uses its own route `PUT /meals/dishes/{dishId}/image` instead of `imageKey` in the general dish update, so
+  the editor's save never touches the bucket and only keys issued for this dish are accepted. Removal:
+  `DELETE /meals/dishes/{dishId}/image`.
+- Keys are `images/meals/<tenantId>/<dishId>/<uuid>.<ext>`: CloudFront forwards the path, so the `/images/*` behavior
+  needs the `images/` prefix; the IAM scope is `images/meals/*`.
+- A presigned PUT cannot carry a size range, so the exact size (≤ 2 MB), type and cache header are signed instead.
+- The browser always re-encodes as JPEG (every browser can encode it). In a new dish the photo is uploaded right
+  after the first save.
+- `img-src` needed no new host (same origin); it gained `blob:` for the preview. `connect-src` gained the bucket host.
 
 ---
 
@@ -138,3 +147,32 @@ cd frontend && npm run lint && npm run build && npm test
 
 - Stock images and AI-generated images (FOOD-024).
 - Server-side image processing.
+
+---
+
+# Implementation Status
+
+Done (2026-10-10).
+
+- Infrastructure (`terraform/meal-images.tf`, `frontend-hosting.tf`, `iam.tf`, `api.tf`, `locals.tf`): private
+  bucket `tenner-meal-images-<env>` (Block Public Access, SSE-S3, versioning with 30-day noncurrent expiry, TLS-only
+  policy, read only by the distribution via OAC), CORS for PUT from the app origin, second CloudFront origin with
+  behavior `/images/*` (cached, HTTPS), CSP `img-src … blob:` and `connect-src` with the bucket host, API role policy
+  `-meal-images` (`PutObject`, `DeleteObject` on `images/meals/*`), env `MEAL_IMAGES_BUCKET`, three routes.
+- Backend: `src/meals/images.ts` (keys, presigned PUT with signed type, size and cache header, quiet delete),
+  `services/dish-image.service.ts` (upload, attach with key check per household and dish, replace deletes the old
+  object, remove), `DishService.setImageKey`, handlers and routes, `src/clients/s3.ts`. New dependencies
+  `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` 3.1145.0 (Apache-2.0, same SDK family, 0 audit findings).
+- Frontend: `dishImages.ts` (resize with canvas, upload, placeholders), `DishImage.tsx`, photo section in the editor,
+  photos on the dish list, plan cards and „Heute essen wir“.
+- Tests: `backend/tests/meals-dish-images.test.ts` and route tests; `terraform/tests/meal_images.tftest.hcl` (bucket,
+  OAC read, CORS, IAM prefix, CSP), `tests/api.tftest.hcl`; `frontend/src/features/meals/dishImages.test.ts`,
+  `DishImage.test.tsx`, editor photo tests.
+- Validation: backend lint, typecheck, 1,098 tests; frontend lint, typecheck, build, 474 tests; Terraform fmt,
+  validate and all tests passed.
+- Owner step **before merging**: if `GitHubActionsDeployRole` limits S3 rights to `tenner-frontend-<env>`, add
+  `tenner-meal-images-<env>` with the same bucket rights plus `s3:PutBucketCORS`/`GetBucketCORS` (README → "CI
+  Permissions"). Otherwise the deploy fails at the bucket. After the deploy: take a photo on the phone in „Gericht
+  bearbeiten“.
+- Technical debt: TD-045 (unattached uploads, SPA fallback for missing photos).
+

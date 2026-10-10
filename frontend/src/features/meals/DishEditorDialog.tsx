@@ -30,7 +30,7 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { errorMessage } from "../../api/errorMessages";
 import { isApiError } from "../../api/errors";
 import { useNotify } from "../../components/NotificationProvider";
@@ -59,6 +59,8 @@ import {
   type MealSlot,
   type ProteinTag,
 } from "./labels";
+import { DishImage } from "./DishImage";
+import { PhotoError, resizePhoto, useDishPhoto, type PhotoChange } from "./dishImages";
 import { NewIngredientDialog } from "./NewIngredientDialog";
 
 const NEW_INGREDIENT = "__new__";
@@ -128,6 +130,29 @@ export function DishEditorDialog({ dish, groups, onClose }: DishEditorDialogProp
   const [failure, setFailure] = useState<string | null>(null);
   const [newIngredient, setNewIngredient] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const photo = useDishPhoto();
+  const [photoChange, setPhotoChange] = useState<PhotoChange | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [preparingPhoto, setPreparingPhoto] = useState(false);
+  const previewUrl = useMemo(
+    () => (photoChange?.kind === "new" ? URL.createObjectURL(photoChange.photo) : undefined),
+    [photoChange],
+  );
+  useEffect(() => () => (previewUrl ? URL.revokeObjectURL(previewUrl) : undefined), [previewUrl]);
+  const busy = save.isPending || photo.isPending || preparingPhoto;
+
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    setPhotoError(null);
+    setPreparingPhoto(true);
+    try {
+      setPhotoChange({ kind: "new", photo: await resizePhoto(file) });
+    } catch (error) {
+      setPhotoError(error instanceof PhotoError ? error.message : "Das Foto konnte nicht verarbeitet werden.");
+    } finally {
+      setPreparingPhoto(false);
+    }
+  };
 
   const ingredients = useMemo(() => catalog.data ?? [], [catalog.data]);
   const byId = useMemo(
@@ -168,8 +193,24 @@ export function DishEditorDialog({ dish, groups, onClose }: DishEditorDialogProp
       { dishId: dish?.dishId ?? null, input },
       {
         onSuccess: (saved) => {
-          notify({ message: dish ? `✅ „${saved.name}“ gespeichert.` : `✅ „${saved.name}“ angelegt.` });
-          onClose();
+          const done = () => {
+            notify({ message: dish ? `✅ „${saved.name}“ gespeichert.` : `✅ „${saved.name}“ angelegt.` });
+            onClose();
+          };
+          if (!photoChange) return done();
+          photo.mutate(
+            { dishId: saved.dishId, change: photoChange },
+            {
+              onSuccess: done,
+              onError: (error) => {
+                notify({
+                  severity: "error",
+                  message: `„${saved.name}“ gespeichert, aber das Foto nicht. ${error instanceof PhotoError ? error.message : errorMessage(error)}`,
+                });
+                onClose();
+              },
+            },
+          );
         },
         onError: (error) => {
           const fields = serverErrors(error);
@@ -192,7 +233,7 @@ export function DishEditorDialog({ dish, groups, onClose }: DishEditorDialogProp
   return (
     <Dialog
       open
-      onClose={save.isPending ? undefined : onClose}
+      onClose={busy ? undefined : onClose}
       fullScreen={fullScreen}
       fullWidth
       maxWidth="md"
@@ -202,6 +243,50 @@ export function DishEditorDialog({ dish, groups, onClose }: DishEditorDialogProp
       <DialogContent>
         <Stack spacing={2.5} sx={{ mt: 1 }}>
           {failure && <Alert severity="error">{failure}</Alert>}
+          <Box
+            component="section"
+            aria-label="Foto"
+            sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}
+          >
+            <DishImage
+              name={draft.name || "Neues Gericht"}
+              category={draft.category}
+              imageKey={photoChange?.kind === "remove" ? undefined : dish?.imageKey}
+              previewUrl={previewUrl}
+              width={120}
+              height={90}
+            />
+            <Stack spacing={0.5} sx={{ alignItems: "flex-start" }}>
+              <Button component="label" variant="outlined" size="small" disabled={busy}>
+                {preparingPhoto ? "Foto wird vorbereitet …" : "Foto aufnehmen / auswählen"}
+                <input
+                  hidden
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  aria-label="Foto aufnehmen oder auswählen"
+                  onChange={(event) => {
+                    void pickPhoto(event.target.files?.[0]);
+                    event.target.value = "";
+                  }}
+                />
+              </Button>
+              {(photoChange?.kind === "new" || (dish?.imageKey !== undefined && photoChange?.kind !== "remove")) && (
+                <Button
+                  size="small"
+                  color="inherit"
+                  disabled={busy}
+                  onClick={() => setPhotoChange(dish?.imageKey ? { kind: "remove" } : null)}
+                >
+                  Foto entfernen
+                </Button>
+              )}
+              <Typography variant="caption" color="text.secondary">
+                Bitte nur das Essen fotografieren, keine Personen.
+              </Typography>
+              {photoError && <FormHelperText error>{photoError}</FormHelperText>}
+            </Stack>
+          </Box>
           <TextField
             label="Name"
             required
@@ -496,10 +581,10 @@ export function DishEditorDialog({ dish, groups, onClose }: DishEditorDialogProp
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={save.isPending}>
+        <Button onClick={onClose} disabled={busy}>
           Abbrechen
         </Button>
-        <Button variant="contained" onClick={submit} disabled={save.isPending}>
+        <Button variant="contained" onClick={submit} disabled={busy}>
           {dish ? "Speichern" : "Gericht anlegen"}
         </Button>
       </DialogActions>

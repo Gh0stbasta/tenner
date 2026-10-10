@@ -6,13 +6,28 @@ import { successResponse } from "../../utils/http.js";
 import type { Logger } from "../../utils/logger.js";
 import { parseJsonBody, validate } from "../../validators/index.js";
 import type { DishResponse } from "../models/dish.js";
-import { createDishSchema, dishIdSchema, listDishesQuerySchema, updateDishSchema, type CreateDishRequest, type ListDishesQuery, type UpdateDishRequest } from "../validators.js";
+import type { ImageUploadResponse } from "../services/dish-image.service.js";
+import {
+  createDishSchema,
+  dishIdSchema,
+  dishImageSchema,
+  imageUploadSchema,
+  listDishesQuerySchema,
+  updateDishSchema,
+  type CreateDishRequest,
+  type DishImageRequest,
+  type ImageUploadRequest,
+  type ListDishesQuery,
+  type UpdateDishRequest,
+} from "../validators.js";
 
 export type ListDishes = (tenantId: string, query: ListDishesQuery) => Promise<DishResponse[]>;
 export type GetDish = (tenantId: string, dishId: string) => Promise<DishResponse>;
 export type CreateDish = (identity: Identity, request: CreateDishRequest) => Promise<DishResponse>;
 export type UpdateDish = (identity: Identity, dishId: string, request: UpdateDishRequest) => Promise<DishResponse>;
 export type ArchiveDish = (identity: Identity, dishId: string) => Promise<DishResponse>;
+export type CreateDishImageUpload = (identity: Identity, dishId: string, request: ImageUploadRequest) => Promise<ImageUploadResponse>;
+export type SetDishImage = (identity: Identity, dishId: string, request: DishImageRequest) => Promise<DishResponse>;
 
 const dishIdOf = (event: ApiEvent): string => validate(dishIdSchema, event.pathParameters?.dishId);
 
@@ -51,5 +66,29 @@ export async function restoreDishHandler(event: ApiEvent, identity: Identity, re
   const dishId = dishIdOf(event);
   const dish = await restoreDish(identity, dishId);
   logger.info("Dish restored", { event: "DishRestored", dishId, updatedBy: identity.userId });
+  return successResponse(200, dish);
+}
+
+/** FOOD-011: presigned upload URL for a new photo. */
+export async function dishImageUploadHandler(event: ApiEvent, identity: Identity, createUpload: CreateDishImageUpload, logger: Logger): Promise<ApiResult> {
+  const dishId = dishIdOf(event);
+  const request = validate(imageUploadSchema, parseJsonBody(event.body, event.isBase64Encoded));
+  const upload = await createUpload(identity, dishId, request);
+  logger.info("Dish image upload issued", { event: "DishImageUploadIssued", dishId, contentType: request.contentType, size: request.size, updatedBy: identity.userId });
+  return successResponse(200, upload);
+}
+
+export async function setDishImageHandler(event: ApiEvent, identity: Identity, setImage: SetDishImage, logger: Logger): Promise<ApiResult> {
+  const dishId = dishIdOf(event);
+  const request = validate(dishImageSchema, parseJsonBody(event.body, event.isBase64Encoded));
+  const dish = await setImage(identity, dishId, request);
+  logger.info("Dish image set", { event: "DishImageSet", dishId, updatedBy: identity.userId });
+  return successResponse(200, dish);
+}
+
+export async function removeDishImageHandler(event: ApiEvent, identity: Identity, removeImage: ArchiveDish, logger: Logger): Promise<ApiResult> {
+  const dishId = dishIdOf(event);
+  const dish = await removeImage(identity, dishId);
+  logger.info("Dish image removed", { event: "DishImageRemoved", dishId, updatedBy: identity.userId });
   return successResponse(200, dish);
 }

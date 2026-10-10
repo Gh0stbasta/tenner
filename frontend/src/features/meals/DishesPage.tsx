@@ -29,6 +29,7 @@ import { SkeletonList } from "../../components/LoadingState";
 import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
 import { DishEditorDialog } from "./DishEditorDialog";
+import { DishImage } from "./DishImage";
 import {
   DISH_CATEGORIES,
   DISH_CATEGORY_LABELS,
@@ -55,6 +56,13 @@ function DishCard({
 }) {
   return (
     <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <DishImage
+        name={dish.name}
+        category={dish.category}
+        imageKey={dish.imageKey}
+        height={140}
+        sx={{ borderRadius: 0 }}
+      />
       <CardContent sx={{ flexGrow: 1 }}>
         <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
           {dish.name}

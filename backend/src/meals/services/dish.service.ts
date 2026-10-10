@@ -103,6 +103,17 @@ export class DishService {
     return { ...dish, ...deriveDish(dish, ingredients) };
   }
 
+  /** Set or remove the photo key (FOOD-011, only via DishImageService); returns the previous key. */
+  async setImageKey(identity: Identity, dishId: string, imageKey: string | null): Promise<{ readonly dish: DishResponse; readonly previousKey: string | undefined }> {
+    const stored = await this.load(identity.tenantId, dishId);
+    const previousKey = toDish(stored).imageKey;
+    const rest = Object.fromEntries(Object.entries(stored.data).filter(([key]) => key !== "imageKey"));
+    const data = { ...rest, ...(imageKey === null ? {} : { imageKey }), updatedAt: toUtcTimestamp(this.clock()), updatedBy: identity.userId };
+    const item = await this.store.put(identity.tenantId, stored.itemKey, data, stored.version);
+    const dish = toDish(item);
+    return { dish: { ...dish, ...deriveDish(dish, await this.ingredientsOf(identity.tenantId)) }, previousKey };
+  }
+
   /** Archived dishes are no longer planned; existing plans keep their reference. */
   async archiveDish(identity: Identity, dishId: string): Promise<DishResponse> {
     return this.setArchived(identity, dishId, true);

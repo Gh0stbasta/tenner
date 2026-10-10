@@ -5,6 +5,8 @@ import type { WeekStart } from "../models/enums.js";
 import type { HouseholdMember } from "../models/index.js";
 import type { Clock, IdGenerator } from "../utils/clock.js";
 import { MealsStore } from "./repositories/meals-store.js";
+import type { ImageStorage } from "./images.js";
+import { DishImageService } from "./services/dish-image.service.js";
 import { DishService } from "./services/dish.service.js";
 import { IngredientService } from "./services/ingredient.service.js";
 import { MealCatalogImportService } from "./services/meal-catalog-import.service.js";
@@ -19,6 +21,8 @@ export interface MealServices {
   readonly catalog: MealCatalogImportService;
   readonly plans: MealPlanService;
   readonly shopping: ShoppingListService;
+  /** Dish photos (FOOD-011); undefined while no image bucket is configured. */
+  readonly images: DishImageService | undefined;
 }
 
 export interface MealServicesDependencies {
@@ -28,6 +32,8 @@ export interface MealServicesDependencies {
   readonly settingsOf: (tenantId: string) => Promise<{ readonly timezone: string; readonly weekStartsOn: WeekStart }>;
   readonly clock: Clock;
   readonly ids: IdGenerator;
+  /** Image bucket access (FOOD-011); undefined = no photos. */
+  readonly imageStorage?: ImageStorage;
 }
 
 export function createMealServices(deps: MealServicesDependencies): MealServices {
@@ -45,5 +51,6 @@ export function createMealServices(deps: MealServicesDependencies): MealServices
     clock: deps.clock,
   });
   const shopping = new ShoppingListService({ store, plans, ingredientsOf, clock: deps.clock });
-  return { ingredients, dishes, profiles, catalog, plans, shopping };
+  const images = deps.imageStorage ? new DishImageService(dishes, deps.imageStorage, deps.ids) : undefined;
+  return { ingredients, dishes, profiles, catalog, plans, shopping, images };
 }

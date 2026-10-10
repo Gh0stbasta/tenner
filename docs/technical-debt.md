@@ -1275,3 +1275,31 @@ move the shared logic to a package used by both sides.
 
 FOOD-010, FOOD-002, FOOD-005; `frontend/src/features/meals/dishes.ts`, `backend/src/meals/models/dish.ts`.
 
+## TD-045: Uploaded dish photos that are never attached stay in the bucket
+
+### Description
+
+`POST /meals/dishes/{id}/image-upload` issues an upload URL; the photo is attached in a second call. If the browser
+closes in between, or a household member uploads without attaching, the object stays in the image bucket. A photo
+URL that does not exist returns the app's `index.html` with status 200 (the distribution maps 403/404 to the SPA), so
+the `<img>` fails and the app shows the placeholder.
+
+### Reason
+
+FOOD-011 keeps the API without read or list rights on the bucket and without a cleanup job; S3 cannot expire only
+unattached current objects.
+
+### Impact
+
+A few hundred KB per abandoned upload; no security impact beyond the household's own storage (the key is unguessable
+and only household members can get upload URLs). Cost is negligible.
+
+### Suggested Improvement
+
+Upload to a `pending/` prefix with a 1-day lifecycle rule and copy on attach, or a monthly cleanup that compares the
+bucket listing with the dishes. Serve `/images/*` 404s without the SPA fallback (CloudFront function).
+
+### Related Work
+
+FOOD-011; `terraform/meal-images.tf`, `terraform/frontend-hosting.tf`, `backend/src/meals/services/dish-image.service.ts`.
+

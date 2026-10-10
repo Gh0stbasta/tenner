@@ -98,6 +98,9 @@ locals {
     "PUT /meals/dishes/{dishId}",                           # FOOD-002
     "DELETE /meals/dishes/{dishId}",                        # FOOD-002 (archive)
     "POST /meals/dishes/{dishId}/restore",                  # FOOD-002
+    "POST /meals/dishes/{dishId}/image-upload",             # FOOD-011
+    "PUT /meals/dishes/{dishId}/image",                     # FOOD-011
+    "DELETE /meals/dishes/{dishId}/image",                  # FOOD-011
     "GET /meals/profile",                                   # FOOD-004
     "PUT /meals/profile",                                   # FOOD-004
     "POST /meals/catalog",                                  # FOOD-003
@@ -206,6 +209,9 @@ locals {
   households_table_name = "${local.name_prefix}-households"
   # Meal planning (FOOD-001, ADR 0007): dishes, ingredients, profile, plans and shopping lists per tenant.
   meals_table_name = "${local.name_prefix}-meals"
+  # Dish photos (FOOD-011): private bucket behind the frontend distribution; the API writes under images/meals/.
+  meal_images_bucket_name = "${local.name_prefix}-meal-images-${var.environment}"
+  meal_images_host        = "${local.meal_images_bucket_name}.s3.${var.aws_region}.amazonaws.com"
 
   # Frontend hosting (TICKET-017).
   frontend_bucket_name       = "${local.name_prefix}-frontend-${var.environment}"

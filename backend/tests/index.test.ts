@@ -161,6 +161,9 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     updateDish: vi.fn(async () => DISH),
     archiveDish: vi.fn(async () => DISH),
     restoreDish: vi.fn(async () => DISH),
+    createDishImageUpload: vi.fn(async () => ({ imageKey: "images/meals/default/d/k.jpg", uploadUrl: "https://s3.test/put", headers: { "Content-Type": "image/jpeg" }, expiresInSeconds: 300 })),
+    setDishImage: vi.fn(async () => DISH),
+    removeDishImage: vi.fn(async () => DISH),
     getFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
     updateFoodProfile: vi.fn(async () => EMPTY_FOOD_PROFILE),
     getMealPlan: vi.fn(async () => EMPTY_PLAN),
@@ -533,6 +536,20 @@ describe("dish routes (FOOD-002)", () => {
     expect((await route(withDish("DELETE /meals/dishes/{dishId}"), d)).statusCode).toBe(200);
     expect((await route(withDish("POST /meals/dishes/{dishId}/restore"), d)).statusCode).toBe(200);
     expect(d.restoreDish).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID);
+  });
+
+  it("issues photo uploads, sets and removes photos with validated bodies (FOOD-011)", async () => {
+    const d = deps();
+    const upload = await route(withDish("POST /meals/dishes/{dishId}/image-upload", JSON.stringify({ contentType: "image/jpeg", size: 250_000 })), d);
+    expect(upload.statusCode).toBe(200);
+    expect(d.createDishImageUpload).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID, { contentType: "image/jpeg", size: 250_000 });
+    expect((await route(withDish("POST /meals/dishes/{dishId}/image-upload", JSON.stringify({ contentType: "image/gif", size: 1000 })), d)).statusCode).toBe(400);
+    expect((await route(withDish("POST /meals/dishes/{dishId}/image-upload", JSON.stringify({ contentType: "image/png", size: 2 * 1024 * 1024 + 1 })), d)).statusCode).toBe(400);
+    expect((await route(withDish("PUT /meals/dishes/{dishId}/image", JSON.stringify({ imageKey: "images/meals/default/x.jpg" })), d)).statusCode).toBe(200);
+    expect(d.setDishImage).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID, { imageKey: "images/meals/default/x.jpg" });
+    expect((await route(withDish("PUT /meals/dishes/{dishId}/image", JSON.stringify({ imageKey: "" })), d)).statusCode).toBe(400);
+    expect((await route(withDish("DELETE /meals/dishes/{dishId}/image"), d)).statusCode).toBe(200);
+    expect(d.removeDishImage).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID);
   });
 
   it("rejects invalid dish IDs and bodies", async () => {

@@ -167,6 +167,11 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   exclude or limit the dish. Validation follows the backend limits; server errors (`DISH_NAME_TAKEN`,
   `VALIDATION_ERROR`, `CONCURRENT_MODIFICATION`) are shown at the fields or as a hint.
 - **Cache:** dishes use the query key `meals/dishes/active|archived`; saving invalidates `meals` and `mealPlans`.
+- **Photos** (FOOD-011, `dishImages.ts`, `DishImage.tsx`): „Foto aufnehmen / auswählen“ in the editor (camera or
+  gallery), preview, „Foto entfernen“. The photo is shrunk in the browser (canvas, max. 1200 px, JPEG ~300 KB) and
+  uploaded after the dish is saved: presigned PUT straight to S3 (no Authorization header), then the key is attached.
+  If only the photo fails, the dish stays saved and a message says so. Photos (`/images/…`, lazy) or a placeholder per
+  category appear in the dish list, on the plan cards and in „Heute essen wir“.
 
 ## Shopping List (FOOD-014)
 

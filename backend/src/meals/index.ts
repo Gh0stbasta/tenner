@@ -10,6 +10,8 @@ export * from "./validators.js";
 export * from "./models/dish.js";
 export * from "./services/dish.service.js";
 export * from "./handlers/dishes.js";
+export * from "./images.js";
+export * from "./services/dish-image.service.js";
 export * from "./models/profile.js";
 export * from "./services/profile.service.js";
 export * from "./handlers/profile.js";

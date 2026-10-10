@@ -44,6 +44,8 @@ export interface AppConfig {
   readonly apiUrl: string | undefined;
   /** Meal planning table (MEALS_TABLE, FOOD-001); undefined while the table is not configured. */
   readonly mealsTable: string | undefined;
+  /** Private bucket for dish photos (MEAL_IMAGES_BUCKET, FOOD-011); undefined = photo upload disabled. */
+  readonly mealImagesBucket: string | undefined;
 }
 
 export interface WebPushConfig {
@@ -110,6 +112,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     pushActionSecretParameter: readTrimmed(env.PUSH_ACTION_HMAC_PARAMETER),
     apiUrl: readTrimmed(env.API_URL)?.replace(/\/+$/, ""),
     mealsTable: readTrimmed(env.MEALS_TABLE),
+    mealImagesBucket: readTrimmed(env.MEAL_IMAGES_BUCKET),
   };
 }
 

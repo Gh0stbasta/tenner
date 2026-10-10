@@ -36,6 +36,12 @@ import {
   getDishHandler,
   listDishesHandler,
   restoreDishHandler,
+  dishImageUploadHandler,
+  setDishImageHandler,
+  removeDishImageHandler,
+  createImageStorage,
+  type CreateDishImageUpload,
+  type SetDishImage,
   updateDishHandler,
   type ArchiveDish,
   type CreateDish,
@@ -76,6 +82,7 @@ import { clientOf, householdGroupName, identityFromEvent, principalFromEvent, ty
 import { getCognitoClient } from "./clients/cognito.js";
 import { getDocumentClient, probeTables } from "./clients/dynamodb.js";
 import { getSsmClient } from "./clients/ssm.js";
+import { getS3Client } from "./clients/s3.js";
 import { createSecretLoader } from "./secrets/index.js";
 import { getEventBridgeClient } from "./clients/eventbridge.js";
 import { changesHousehold, createHouseholdChangePublisher, type HouseholdChangePublisher } from "./events/household-events.js";
@@ -233,6 +240,9 @@ export interface Dependencies {
   readonly updateDish: UpdateDish;
   readonly archiveDish: ArchiveDish;
   readonly restoreDish: ArchiveDish;
+  readonly createDishImageUpload: CreateDishImageUpload;
+  readonly setDishImage: SetDishImage;
+  readonly removeDishImage: ArchiveDish;
   readonly getFoodProfile: GetFoodProfile;
   readonly updateFoodProfile: UpdateFoodProfile;
   readonly importMealCatalog: ImportMealCatalog;
@@ -345,6 +355,9 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "PUT /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => updateDishHandler(event, identity, deps.updateDish, logger),
   "DELETE /meals/dishes/{dishId}": ({ event, deps, logger, identity }) => archiveDishHandler(event, identity, deps.archiveDish, logger),
   "POST /meals/dishes/{dishId}/restore": ({ event, deps, logger, identity }) => restoreDishHandler(event, identity, deps.restoreDish, logger),
+  "POST /meals/dishes/{dishId}/image-upload": ({ event, deps, logger, identity }) => dishImageUploadHandler(event, identity, deps.createDishImageUpload, logger),
+  "PUT /meals/dishes/{dishId}/image": ({ event, deps, logger, identity }) => setDishImageHandler(event, identity, deps.setDishImage, logger),
+  "DELETE /meals/dishes/{dishId}/image": ({ event, deps, logger, identity }) => removeDishImageHandler(event, identity, deps.removeDishImage, logger),
   "GET /meals/profile": ({ deps, identity }) => getFoodProfileHandler(identity.tenantId, deps.getFoodProfile),
   "PUT /meals/profile": ({ event, deps, logger, identity }) => updateFoodProfileHandler(event, identity, deps.updateFoodProfile, logger),
   "POST /meals/catalog": ({ event, deps, logger, identity }) => importMealCatalogHandler(event, identity, deps.importMealCatalog, logger),
@@ -470,8 +483,10 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
         settingsOf: (tenantId) => settingsOf(tenantId),
         clock: systemClock,
         ids: uuidGenerator,
+        ...(config.mealImagesBucket === undefined ? {} : { imageStorage: createImageStorage({ client: getS3Client(), bucket: config.mealImagesBucket, logger }) }),
       })
     : undefined;
+  const dishImageService = meals?.images;
   const ingredientService = meals?.ingredients;
   const dishService = meals?.dishes;
   const profileService = meals?.profiles;
@@ -549,6 +564,9 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     updateDish: dishService ? (identity, dishId, request) => dishService.updateDish(identity, dishId, request) : notConfigured,
     archiveDish: dishService ? (identity, dishId) => dishService.archiveDish(identity, dishId) : notConfigured,
     restoreDish: dishService ? (identity, dishId) => dishService.restoreDish(identity, dishId) : notConfigured,
+    createDishImageUpload: dishImageService ? (identity, dishId, request) => dishImageService.createUpload(identity, dishId, request) : notConfigured,
+    setDishImage: dishImageService ? (identity, dishId, request) => dishImageService.setImage(identity, dishId, request) : notConfigured,
+    removeDishImage: dishImageService ? (identity, dishId) => dishImageService.removeImage(identity, dishId) : notConfigured,
     getMealPlan: mealPlanService ? (tenantId, week) => mealPlanService.getPlan(tenantId, week) : notConfigured,
     replaceMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.replaceMeal(identity, week, slotId, request) : notConfigured,
     mealOptions: mealPlanService ? (tenantId, week, slotId) => mealPlanService.mealOptions(tenantId, week, slotId) : notConfigured,
