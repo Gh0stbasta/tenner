@@ -1,8 +1,8 @@
 # ADR 0008: Images for Dishes Without a Photo
 
-- **Status:** Proposed (2026-10-10) — waiting for the owner's decision
+- **Status:** Accepted (2026-10-10)
 - **Ticket:** FOOD-024 (evaluation; follows FOOD-011 dish photos)
-- **Deciders:** repository owner (Stefan)
+- **Deciders:** repository owner (Stefan): „adr 0008 - platzhalter bleiben“
 
 ## Context
 
@@ -29,8 +29,8 @@ cost, nothing leaves AWS. If, after some weeks, many dishes still have no photo,
 
 ## Decision
 
-Open: the owner chooses A, B or C. If B or C: a follow-up ticket „Bild vorschlagen“ (editor action, storage in the
-existing bucket, labelling or attribution, budget cap, tests) is created.
+**A — the category placeholders stay.** No stock or AI images; families add their own photos (FOOD-011). No
+follow-up ticket. B or C need a new ADR if the wish comes back.
 
 ## Consequences
 

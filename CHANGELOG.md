@@ -51,8 +51,8 @@ without AI. Overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md)
 
 ### Known Limitations
 
-- Not decided yet: stock or AI images for dishes without a photo (FOOD-024, ADR 0008 proposed) and AI for meal
-  planning (FOOD-020, ADR 0009 proposed, recheck 2026-12-07).
+- Dishes without a photo keep the category placeholder; no stock or AI images (FOOD-024, ADR 0008). AI for meal
+  planning is not decided yet (FOOD-020, ADR 0009 proposed, recheck 2026-12-07).
 - The API access log records the calendar token in the path (TD-047); unattached photo uploads stay in the bucket
   (TD-045). Full list: [`docs/technical-debt.md`](docs/technical-debt.md).
 

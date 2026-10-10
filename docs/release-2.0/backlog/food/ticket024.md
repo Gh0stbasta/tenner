@@ -69,18 +69,18 @@ Follow-up ticket if go
 
 # Acceptance Criteria
 
-- [ ] Options compared on licence, privacy, cost and effort
-- [ ] Decision documented
-- [ ] If go: follow-up ticket created
+- [x] Options compared on licence, privacy, cost and effort
+- [x] Decision documented
+- [x] If go: follow-up ticket created (not needed: decision A, no go)
 
 ---
 
 # Definition of Done
 
-- [ ] Evaluation completed
-- [ ] Documentation updated
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Evaluation completed
+- [x] Documentation updated
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
@@ -96,12 +96,7 @@ Follow-up ticket if go
 
 ---
 
-# Evaluation Status
+# Implementation Status
 
-Prepared (2026-10-10), **waiting for the owner's decision**.
-
-- Options A (placeholders, built in FOOD-011), B (stock images) and C (AI images via Bedrock) compared on licence,
-  privacy, cost and effort in [ADR 0008](../../../decisions/0008-dish-image-sources.md) (status Proposed).
-- Recommendation: A now; C later if many dishes still have no photo.
-- Remaining: the owner's decision; if B or C, the follow-up ticket. The acceptance criteria „Decision documented“ and
-  „If go: follow-up ticket created“ are open until then.
+Done (2026-10-10). Owner decision: „adr 0008 - platzhalter bleiben“ → [ADR 0008](../../../decisions/0008-dish-image-sources.md)
+accepted with option A. The category placeholders of FOOD-011 stay; no stock or AI images, no follow-up ticket.
