@@ -1469,6 +1469,11 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   (failures are only logged). Keys: `images/meals/<tenantId>/<dishId>/<uuid>.<ext>`, built by the API only. The API
   receives the bucket as `MEAL_IMAGES_BUCKET`; without it the photo routes answer 503. Without a photo the app shows a
   placeholder per category.
+- **Nutrition estimate** (FOOD-012, `backend/src/meals/nutrition.ts`): per adult portion from the ingredients'
+  values per 100 g (quantities converted to grams: EL 15, TL 5, pieces by weight); optional ingredients left out;
+  `nutritionOverride` wins; rounded (kcal to 10, macros to grams); `complete: false` lists ingredients without values.
+  Computed with every dish read (`deriveDish`) and passed into plan summaries; nothing is stored. The app adds day
+  totals and hints at weekday lunches above `lightLunchMaxKcal` (profile, default 600).
 - **Family food profile** (FOOD-004): one `PROFILE` item with eaters and household rules; defaults reproduce the
   owner's rules. `eatersAt(profile, weekday, slot)` is the one place that says who eats a meal (weekday lunch: adults).
 - **Rules** (FOOD-005, `backend/src/meals/planner/rules.ts`): pure functions over a week of `PlannedMeal`s.

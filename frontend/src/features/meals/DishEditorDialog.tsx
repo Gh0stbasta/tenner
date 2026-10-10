@@ -60,10 +60,18 @@ import {
   type ProteinTag,
 } from "./labels";
 import { DishImage } from "./DishImage";
+import { NUTRITION_DISCLAIMER, nutritionLine } from "./format";
 import { PhotoError, resizePhoto, useDishPhoto, type PhotoChange } from "./dishImages";
 import { NewIngredientDialog } from "./NewIngredientDialog";
 
 const NEW_INGREDIENT = "__new__";
+
+const NUTRITION_FIELDS = [
+  ["kcal", "kcal"],
+  ["protein", "Eiweiß (g)"],
+  ["carbs", "Kohlenhydrate (g)"],
+  ["fat", "Fett (g)"],
+] as const;
 
 /** Empty input → NaN, so validation reports it instead of saving 0. */
 const parseNumber = (value: string): number => (value.trim() === "" ? Number.NaN : Number(value));
@@ -83,6 +91,7 @@ function initialDraft(dish: Dish | null): DishInput {
       vegetarianVariant: null,
       familyFriendly: true,
       isBurger: false,
+      nutritionOverride: null,
     };
   }
   return {
@@ -98,6 +107,7 @@ function initialDraft(dish: Dish | null): DishInput {
     vegetarianVariant: dish.vegetarianVariant ?? null,
     familyFriendly: dish.familyFriendly,
     isBurger: dish.isBurger,
+    nutritionOverride: dish.nutritionOverride ?? null,
   };
 }
 
@@ -520,7 +530,60 @@ export function DishEditorDialog({ dish, groups, onClose }: DishEditorDialogProp
                 <Switch checked={draft.isBurger} onChange={(event) => update({ isBurger: event.target.checked })} />
               }
             />
+            <FormControlLabel
+              label="Nährwerte selbst eintragen"
+              control={
+                <Switch
+                  checked={draft.nutritionOverride !== null}
+                  onChange={(event) =>
+                    update({
+                      nutritionOverride: event.target.checked
+                        ? ((dish?.nutrition && {
+                            kcal: dish.nutrition.kcal,
+                            protein: dish.nutrition.protein,
+                            carbs: dish.nutrition.carbs,
+                            fat: dish.nutrition.fat,
+                          }) ?? { kcal: 500, protein: 20, carbs: 60, fat: 15 })
+                        : null,
+                    })
+                  }
+                />
+              }
+            />
           </FormGroup>
+          {draft.nutritionOverride && (
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ flexWrap: "wrap", rowGap: 1 }}
+              role="group"
+              aria-label="Nährwerte pro Erwachsenenportion"
+            >
+              {NUTRITION_FIELDS.map(([field, label]) => (
+                <TextField
+                  key={field}
+                  label={label}
+                  type="number"
+                  size="small"
+                  value={
+                    draft.nutritionOverride && !Number.isNaN(draft.nutritionOverride[field])
+                      ? draft.nutritionOverride[field]
+                      : ""
+                  }
+                  onChange={(event) =>
+                    draft.nutritionOverride &&
+                    update({
+                      nutritionOverride: { ...draft.nutritionOverride, [field]: parseNumber(event.target.value) },
+                    })
+                  }
+                  error={errors[`nutritionOverride.${field}`] !== undefined}
+                  helperText={errors[`nutritionOverride.${field}`]}
+                  slotProps={{ htmlInput: { min: 0, inputMode: "numeric" } }}
+                  sx={{ width: 130 }}
+                />
+              ))}
+            </Stack>
+          )}
 
           <Box
             component="section"
@@ -570,6 +633,15 @@ export function DishEditorDialog({ dish, groups, onClose }: DishEditorDialogProp
                 />
               ))}
             </Stack>
+            {dish?.nutrition && (
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {nutritionLine(dish.nutrition)} pro Erwachsenenportion
+                <Typography component="span" variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  {NUTRITION_DISCLAIMER} Stand beim letzten Speichern
+                  {dish.nutrition.source === "OVERRIDE" ? " (von Hand eingetragen)" : ""}.
+                </Typography>
+              </Typography>
+            )}
             <Stack spacing={1}>
               {hints.map((hint) => (
                 <Alert key={hint.text} severity={hint.severity} variant="outlined" sx={{ py: 0 }}>

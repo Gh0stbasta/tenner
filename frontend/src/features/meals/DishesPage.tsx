@@ -30,6 +30,7 @@ import { useNotify } from "../../components/NotificationProvider";
 import { PageHeader } from "../../components/PageHeader";
 import { DishEditorDialog } from "./DishEditorDialog";
 import { DishImage } from "./DishImage";
+import { NUTRITION_DISCLAIMER, nutritionLine } from "./format";
 import {
   DISH_CATEGORIES,
   DISH_CATEGORY_LABELS,
@@ -74,6 +75,11 @@ function DishCard({
         <Typography variant="body2" color="text.secondary">
           {dishSummaryLine(dish)}
         </Typography>
+        {dish.nutrition && (
+          <Typography variant="body2" color="text.secondary" title={NUTRITION_DISCLAIMER}>
+            {nutritionLine(dish.nutrition)}
+          </Typography>
+        )}
         <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5, mt: 1 }}>
           {(dish.isVegetarian || dish.vegetarianVariant) && (
             <Chip size="small" color="success" label={dish.isVegetarian ? "vegetarisch" : "vegetarische Variante"} />

@@ -25,6 +25,31 @@ describe("MealPlanPage (FOOD-009)", () => {
     expect(screen.getByRole("link", { name: "Einrichten" })).toHaveAttribute("href", "/settings");
   });
 
+  it("shows the day's estimate and hints at a heavy weekday lunch (FOOD-012)", async () => {
+    const plan = mealPlanFixture();
+    const nutrition = (kcal: number) => ({
+      kcal,
+      protein: 20,
+      carbs: 60,
+      fat: 15,
+      estimated: true,
+      source: "INGREDIENTS",
+      complete: true,
+      missingIngredients: [],
+    });
+    const slots = plan.slots.map((slot) =>
+      slot.date === "2026-10-14" && slot.dish
+        ? { ...slot, dish: { ...slot.dish, nutrition: nutrition(slot.slot === "LUNCH" ? 760 : 540) } }
+        : slot,
+    );
+    mockFetch({ "GET /meals/plans/current": ok({ ...plan, slots }) });
+    renderWithProviders(<MealPlanPage />);
+    const wednesday = within(await screen.findByRole("region", { name: /14\. Oktober/ }));
+    expect(wednesday.getByText("ca. 1300 kcal")).toBeInTheDocument();
+    expect(await wednesday.findByText("ca. 760 kcal: für mittags unter der Woche eher schwer")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: /15\. Oktober/ })).queryByText(/kcal/)).not.toBeInTheDocument();
+  });
+
   it("shows the week with today first, details, empty meals and hints", async () => {
     const plan = mealPlanFixture({
       dishes: { "2026-10-16#LUNCH": null },

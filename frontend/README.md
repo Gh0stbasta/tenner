@@ -172,6 +172,11 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   uploaded after the dish is saved: presigned PUT straight to S3 (no Authorization header), then the key is attached.
   If only the photo fails, the dish stays saved and a message says so. Photos (`/images/…`, lazy) or a placeholder per
   category appear in the dish list, on the plan cards and in „Heute essen wir“.
+- **Nutrition** (FOOD-012, `format.ts`): „ca. 520 kcal · 24 g Eiweiß · 60 g KH · 18 g Fett“ on dish cards and in the
+  editor (server estimate as of the last save; „mind.“ when ingredient values are missing), „Nährwerte selbst
+  eintragen“ sends `nutritionOverride`. The plan shows the day total in each day header and a soft hint on weekday
+  lunches above „Leichtes Mittagessen bis (kcal)“ (rules dialog, default 600). Disclaimer: „Grobe Schätzung pro
+  Erwachsenenportion, keine Ernährungsberatung.“
 
 ## Shopping List (FOOD-014)
 

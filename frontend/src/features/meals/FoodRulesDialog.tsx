@@ -190,6 +190,15 @@ export function FoodRulesDialog({ rules, eaters, pending, error, onSave, onClose
               }
               label="Mittags unter der Woche leicht"
             />
+            {draft.lightLunchOnWeekdays && (
+              <NumberField
+                label="Leichtes Mittagessen bis (kcal, Schätzung)"
+                value={draft.lightLunchMaxKcal}
+                min={200}
+                max={2000}
+                onChange={(value) => set("lightLunchMaxKcal", value)}
+              />
+            )}
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
               <TextField
                 label="Mittagessen um"

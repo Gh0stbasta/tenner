@@ -96,30 +96,56 @@ cd frontend && npm run lint && npm run build && npm test
 
 # Acceptance Criteria
 
-- [ ] Calories, protein, carbohydrates and fat shown per dish and per day
-- [ ] Clearly marked as an estimate
-- [ ] Manual override possible
-- [ ] Tests passing
+- [x] Calories, protein, carbohydrates and fat shown per dish and per day
+- [x] Clearly marked as an estimate
+- [x] Manual override possible
+- [x] Tests passing
 
 ---
 
 # Definition of Done
 
-- [ ] Implementation completed
-- [ ] Tests completed
-- [ ] Documentation updated
-- [ ] Technical debt documented
-- [ ] Acceptance criteria verified
-- [ ] Git commit created
+- [x] Implementation completed
+- [x] Tests completed
+- [x] Documentation updated
+- [x] Technical debt documented
+- [x] Acceptance criteria verified
+- [x] Git commit created
 
 ---
 
 # Assumptions
 
 - Values per adult portion; children's portions scale with their portion factor and are not shown separately.
+- The day header shows kcal only (the full line per dish is on the dish cards and in the editor) to keep the plan
+  readable on the phone.
+- The threshold is a profile setting `lightLunchMaxKcal` (rules dialog „Leichtes Mittagessen bis (kcal)“), shown only
+  while „Mittags unter der Woche leicht“ is on. The hint is computed in the app; the planner still uses `lightness`
+  (R9) and does not plan by calories.
+- An override is per adult portion and allows up to 3000 kcal (the per-100 g limit of 1000 does not fit a portion).
+- The editor shows the server's estimate as of the last save, not a live recalculation (no second copy of the
+  calculation in the app, see TD-044).
 
 ---
 
 # Out of Scope
 
 - Vitamins, minerals, allergen labelling beyond the tags, nutrition goals.
+
+---
+
+# Implementation Status
+
+Done (2026-10-10).
+
+- Backend: `src/meals/nutrition.ts` (`estimateNutrition`, `roundNutrition`, `sumNutrition`); `deriveDish` adds
+  `nutrition` to every dish response, `toDishSummary` passes it into plans; profile rule `lightLunchMaxKcal` (default
+  600, older profiles get the default); `nutritionOverride` limits per portion.
+- Frontend: nutrition line on dish cards and in the editor with the disclaimer, „Nährwerte selbst eintragen“ (four
+  fields, validated), day totals in the plan's day headers, soft hint „ca. 750 kcal: für mittags unter der Woche eher
+  schwer“, threshold in the rules dialog.
+- Tests: `backend/tests/meals-nutrition.test.ts` (conversion, optional, override, rounding, partial result, summary,
+  threshold, override limits); frontend `format.test.ts`, plan page, dish list, editor and `dishes.test.ts`.
+- Validation: backend lint, typecheck, 1,106 tests; frontend lint, typecheck, build, 480 tests.
+- Technical debt: none new. The catalog values are rough by design (FOOD-021).
+

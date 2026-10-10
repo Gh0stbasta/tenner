@@ -3,6 +3,7 @@
 import type { Weekday } from "../../models/enums.js";
 import type { Violation } from "../planner/rules.js";
 import type { DishResponse, Lightness, MealSlot, Temperature } from "./dish.js";
+import type { NutritionEstimate } from "../nutrition.js";
 
 export const SLOT_SOURCES = ["AUTO", "MANUAL"] as const;
 export type SlotSource = (typeof SLOT_SOURCES)[number];
@@ -40,6 +41,8 @@ export interface DishSummary {
   readonly isVegetarian: boolean;
   readonly vegetarianVariant?: string;
   readonly imageKey?: string;
+  /** Per adult portion (FOOD-012). */
+  readonly nutrition: NutritionEstimate;
   readonly favorite: boolean;
   readonly archived: boolean;
 }
@@ -76,6 +79,7 @@ export function toDishSummary(dish: DishResponse): DishSummary {
     isVegetarian: dish.isVegetarian,
     ...(dish.vegetarianVariant === undefined ? {} : { vegetarianVariant: dish.vegetarianVariant }),
     ...(dish.imageKey === undefined ? {} : { imageKey: dish.imageKey }),
+    nutrition: dish.nutrition,
     favorite: dish.favorite,
     archived: dish.archived,
   };

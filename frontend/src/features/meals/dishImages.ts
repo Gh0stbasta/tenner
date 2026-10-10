@@ -59,9 +59,7 @@ export class PhotoError extends Error {}
 
 /** Browser APIs used for resizing; tests pass fakes. */
 export interface ImageTools {
-  readonly decode: (
-    file: Blob,
-  ) => Promise<{
+  readonly decode: (file: Blob) => Promise<{
     readonly width: number;
     readonly height: number;
     readonly source: CanvasImageSource;

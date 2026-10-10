@@ -6,7 +6,9 @@ import { fail, mockFetch, ok } from "../../tests/fetchMock";
 import { renderWithProviders } from "../../tests/render";
 import { DishesPage } from "./DishesPage";
 
-const BOLOGNESE = dish();
+const BOLOGNESE = dish({
+  nutrition: { kcal: 640, protein: 31, carbs: 72, fat: 22, source: "INGREDIENTS", complete: true },
+});
 const SALAD = dish({
   dishId: "d-2",
   name: "Griechischer Salat",
@@ -43,6 +45,7 @@ describe("DishesPage (FOOD-010)", () => {
     expect(screen.getByText("2 Gerichte")).toBeInTheDocument();
     expect(list().getByText("Nudeln · Bolognese")).toBeInTheDocument();
     expect(list().getByText("Mittag, Abend · 20 Min. aktiv (40 Min. gesamt)")).toBeInTheDocument();
+    expect(list().getByText("ca. 640 kcal · 31 g Eiweiß · 72 g KH · 22 g Fett")).toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText("Suchen"), "bolo");
     expect(names()).toEqual(["Spaghetti Bolognese"]);

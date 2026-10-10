@@ -32,6 +32,10 @@ const tagsSchema = z
 
 const nutritionValue = z.number().min(0).max(MEAL_LIMITS.nutritionMax);
 const nutritionSchema = z.object({ kcal: nutritionValue, protein: nutritionValue, carbs: nutritionValue, fat: nutritionValue }).strict();
+/** FOOD-012: a dish's own values per adult portion (a portion can exceed 1000 kcal). */
+const portionNutritionSchema = z
+  .object({ kcal: z.number().min(0).max(3000), protein: z.number().min(0).max(500), carbs: z.number().min(0).max(500), fat: z.number().min(0).max(500) })
+  .strict();
 
 /** Fields every member may change on an ingredient (FOOD-021); the unit is fixed once created. */
 const editableIngredientFields = {
@@ -113,7 +117,7 @@ const dishFields = {
   isBurger: z.boolean(),
   proteinSourcesOverride: z.array(z.enum(PROTEIN_TAGS)).max(PROTEIN_TAGS.length).refine(distinct, "Protein sources must be distinct.").nullable(),
   baseTagsOverride: z.array(z.enum(BASE_TAGS)).max(BASE_TAGS.length).refine(distinct, "Base ingredients must be distinct.").nullable(),
-  nutritionOverride: nutritionSchema.nullable(),
+  nutritionOverride: portionNutritionSchema.nullable(),
   costOverride: z.number().min(0).max(MEAL_LIMITS.costMax).nullable(),
   favorite: z.boolean(),
 };
@@ -212,6 +216,7 @@ export const foodProfileSchema = z
         maxActiveMinutes: z.number().int().min(5).max(MEAL_LIMITS.activeMinutesMax),
         attendance: z.object({ weekdayLunch: attendanceList, weekendLunch: attendanceList, dinner: attendanceList }).strict(),
         lightLunchOnWeekdays: z.boolean(),
+        lightLunchMaxKcal: z.number().int().min(200).max(2000).default(600),
         maxSaladLunchesPerWeek: z.number().int().min(0).max(7),
         chicken: z
           .object({

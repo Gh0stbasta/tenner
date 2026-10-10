@@ -57,6 +57,8 @@ const householdRulesSchema = z.object({
   maxActiveMinutes: z.number(),
   attendance: z.object({ weekdayLunch: attendanceList, weekendLunch: attendanceList, dinner: attendanceList }),
   lightLunchOnWeekdays: z.boolean(),
+  /** FOOD-012 (default for profiles saved before). */
+  lightLunchMaxKcal: z.number().default(600),
   maxSaladLunchesPerWeek: z.number(),
   chicken: z.object({ maxPerWeek: z.number(), allowedSlots: z.array(weekSlotSchema) }),
   maxBurgerPerWeek: z.number(),
@@ -137,6 +139,17 @@ export function useImportMealCatalog() {
   });
 }
 
+/** Nutrition estimate per adult portion (FOOD-012). */
+export const nutritionEstimateSchema = z.object({
+  kcal: z.number(),
+  protein: z.number(),
+  carbs: z.number(),
+  fat: z.number(),
+  source: z.enum(["INGREDIENTS", "OVERRIDE"]),
+  complete: z.boolean(),
+});
+export type NutritionEstimate = z.infer<typeof nutritionEstimateSchema>;
+
 // Weekly plans (FOOD-006, FOOD-009)
 
 const dishSummarySchema = z.object({
@@ -150,6 +163,8 @@ const dishSummarySchema = z.object({
   isVegetarian: z.boolean(),
   vegetarianVariant: z.string().optional(),
   imageKey: z.string().optional(),
+  /** Optional: plans cached offline before FOOD-012 have none. */
+  nutrition: nutritionEstimateSchema.optional(),
   favorite: z.boolean(),
   archived: z.boolean(),
 });

@@ -29,16 +29,18 @@ import { useOnline } from "../../hooks/useConnectivity";
 import { formatLongDate, formatShortDate } from "../../utils/format";
 import {
   useChooseMeal,
+  useFoodProfile,
   useMealPlan,
   useRegenerateWeek,
   useReplaceMeal,
   useSwapMeals,
+  type HouseholdFoodRules,
   type MealOption,
   type MealPlan,
   type PlanSlot,
   type WeekChoice,
 } from "./api";
-import { isKept, localToday } from "./format";
+import { dayNutrition, heavyLunchHint, isKept, localToday, NUTRITION_DISCLAIMER } from "./format";
 import { MealActions } from "./MealActions";
 import { MealCard } from "./MealCard";
 import { MealPickerDialog } from "./MealPickerDialog";
@@ -70,8 +72,10 @@ function regenerateMessage(plan: MealPlan, today: string): string {
     .join(" ");
 }
 
-const hintsFor = (plan: MealPlan, slot: PlanSlot) =>
-  plan.violations.filter((violation) => violation.slotIds.includes(slot.slotId));
+const hintsFor = (plan: MealPlan, slot: PlanSlot, rules: HouseholdFoodRules | undefined) => {
+  const heavy = heavyLunchHint(slot, rules);
+  return [...plan.violations.filter((violation) => violation.slotIds.includes(slot.slotId)), ...(heavy ? [heavy] : [])];
+};
 
 function SetupHint({ plan }: { readonly plan: MealPlan }) {
   const missing = [
@@ -98,14 +102,17 @@ function DayCard({
   slots,
   plan,
   today,
+  rules,
   actionsFor,
 }: {
   date: string;
   slots: readonly PlanSlot[];
   plan: MealPlan;
   today: boolean;
+  rules: HouseholdFoodRules | undefined;
   actionsFor: (slot: PlanSlot) => ReactNode;
 }) {
+  const total = dayNutrition(slots);
   return (
     <Card
       component="section"
@@ -113,13 +120,20 @@ function DayCard({
       sx={{ height: "100%", ...(today ? { borderColor: "primary.main", borderWidth: 2, borderStyle: "solid" } : {}) }}
     >
       <CardContent sx={{ pb: "12px !important" }}>
-        <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 700 }}>
-          {today ? `Heute · ${formatShortDate(date)}` : formatShortDate(date)}
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
+          <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 700, flexGrow: 1 }}>
+            {today ? `Heute · ${formatShortDate(date)}` : formatShortDate(date)}
+          </Typography>
+          {total && (
+            <Typography variant="caption" color="text.secondary" title={NUTRITION_DISCLAIMER}>
+              {total.complete ? "ca." : "mind."} {total.kcal} kcal
+            </Typography>
+          )}
+        </Box>
         {slots.map((slot, index) => (
           <Box key={slot.slotId}>
             {index > 0 && <Divider />}
-            <MealCard slot={slot} hints={hintsFor(plan, slot)} actions={actionsFor(slot)} />
+            <MealCard slot={slot} hints={hintsFor(plan, slot, rules)} actions={actionsFor(slot)} />
           </Box>
         ))}
       </CardContent>
@@ -130,6 +144,7 @@ function DayCard({
 export function MealPlanPage() {
   const [week, setWeek] = useState<WeekChoice>("current");
   const plan = useMealPlan(week);
+  const rules = useFoodProfile().data?.household;
   const today = localToday();
   const online = useOnline();
   const notify = useNotify();
@@ -358,6 +373,7 @@ export function MealPlanPage() {
                 slots={data.slots.filter((slot) => slot.date === date)}
                 plan={data}
                 today={date === today}
+                rules={rules}
                 actionsFor={actionsFor}
               />
             </Grid>

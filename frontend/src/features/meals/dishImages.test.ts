@@ -1,7 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch, ok } from "../../tests/fetchMock";
 import { dish } from "../../tests/dishFixtures";
-import { dishImageUrl, fitWithin, PhotoError, placeholderFor, resizePhoto, uploadDishPhoto, type ImageTools } from "./dishImages";
+import {
+  dishImageUrl,
+  fitWithin,
+  PhotoError,
+  placeholderFor,
+  resizePhoto,
+  uploadDishPhoto,
+  type ImageTools,
+} from "./dishImages";
 
 const jpeg = (bytes: number) => new Blob([new Uint8Array(bytes)], { type: "image/jpeg" });
 
@@ -33,7 +41,9 @@ describe("dish photos (FOOD-011)", () => {
   it("keeps a photo between 300 KB and 2 MB after the last step, rejects bigger ones and non-images", async () => {
     expect((await resizePhoto(jpeg(10), tools(100, 100, [400_000, 400_000, 400_000, 400_000]))).size).toBe(400_000);
     await expect(resizePhoto(jpeg(10), tools(100, 100, [3e6, 3e6, 3e6, 3e6]))).rejects.toThrow("Das Foto ist zu groß.");
-    await expect(resizePhoto(new Blob(["x"], { type: "application/pdf" }), tools(1, 1, []))).rejects.toThrow("Bitte ein Foto wählen.");
+    await expect(resizePhoto(new Blob(["x"], { type: "application/pdf" }), tools(1, 1, []))).rejects.toThrow(
+      "Bitte ein Foto wählen.",
+    );
     const broken: ImageTools = { decode: () => Promise.reject(new Error("decode")), encode: vi.fn() };
     await expect(resizePhoto(jpeg(10), broken)).rejects.toBeInstanceOf(PhotoError);
   });
@@ -51,20 +61,32 @@ describe("dish photos (FOOD-011)", () => {
     const put = vi.fn(async () => new Response(null, { status: 200 }));
     const saved = await uploadDishPhoto("d-1", jpeg(1234), put);
     expect(saved.imageKey).toBe("images/meals/default/d-1/k.jpg");
-    expect(fetchMock.calls().find((call) => call.key === "POST /meals/dishes/d-1/image-upload")?.body).toEqual({ contentType: "image/jpeg", size: 1234 });
+    expect(fetchMock.calls().find((call) => call.key === "POST /meals/dishes/d-1/image-upload")?.body).toEqual({
+      contentType: "image/jpeg",
+      size: 1234,
+    });
     expect(put).toHaveBeenCalledWith(expect.stringContaining("https://bucket.s3.test/"), {
       method: "PUT",
       headers: { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable" },
       body: expect.any(Blob),
     });
-    expect(fetchMock.calls().find((call) => call.key === "PUT /meals/dishes/d-1/image")?.body).toEqual({ imageKey: "images/meals/default/d-1/k.jpg" });
+    expect(fetchMock.calls().find((call) => call.key === "PUT /meals/dishes/d-1/image")?.body).toEqual({
+      imageKey: "images/meals/default/d-1/k.jpg",
+    });
   });
 
   it("stops when S3 rejects the upload", async () => {
     const fetchMock = mockFetch({
-      "POST /meals/dishes/d-1/image-upload": ok({ imageKey: "k", uploadUrl: "https://bucket.s3.test/k", headers: {}, expiresInSeconds: 300 }),
+      "POST /meals/dishes/d-1/image-upload": ok({
+        imageKey: "k",
+        uploadUrl: "https://bucket.s3.test/k",
+        headers: {},
+        expiresInSeconds: 300,
+      }),
     });
-    await expect(uploadDishPhoto("d-1", jpeg(1), async () => new Response(null, { status: 403 }))).rejects.toThrow("Das Foto konnte nicht hochgeladen werden.");
+    await expect(uploadDishPhoto("d-1", jpeg(1), async () => new Response(null, { status: 403 }))).rejects.toThrow(
+      "Das Foto konnte nicht hochgeladen werden.",
+    );
     expect(fetchMock.calls().map((call) => call.key)).not.toContain("PUT /meals/dishes/d-1/image");
   });
 
