@@ -388,7 +388,7 @@ export function MealPlanPage() {
       {data.ready && (
         <Grid container spacing={2}>
           {days.map((date) => (
-            <Grid key={date} size={{ xs: 12, sm: 6, lg: 4 }} sx={{ order: date === today ? -1 : 0 }}>
+            <Grid key={date} size={{ xs: 12, sm: 6, lg: 4 }}>
               <DayCard
                 date={date}
                 slots={data.slots.filter((slot) => slot.date === date)}

@@ -8,7 +8,10 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **Meal plan order:** the days always run Monday – Sunday; today stays highlighted in its place instead of moving
+  to the top (MAINT-007).
 
 ## [2.0.0] - 2026-10-10
 

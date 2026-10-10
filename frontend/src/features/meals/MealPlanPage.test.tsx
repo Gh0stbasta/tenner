@@ -95,7 +95,7 @@ describe("MealPlanPage (FOOD-009)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the week with today first, details, empty meals and hints", async () => {
+  it("shows the week Monday to Sunday with today highlighted, details, empty meals and hints", async () => {
     const plan = mealPlanFixture({
       dishes: { "2026-10-16#LUNCH": null },
       violations: [
@@ -112,6 +112,17 @@ describe("MealPlanPage (FOOD-009)", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Essen" })).toBeInTheDocument();
     const days = screen.getAllByRole("region");
     expect(days).toHaveLength(7);
+    // MAINT-007: always Monday – Sunday, today in its place (no CSS reordering).
+    expect(days.map((day) => day.getAttribute("aria-label"))).toEqual([
+      "Montag, 12. Oktober",
+      "Dienstag, 13. Oktober",
+      "Mittwoch, 14. Oktober",
+      "Donnerstag, 15. Oktober",
+      "Freitag, 16. Oktober",
+      "Samstag, 17. Oktober",
+      "Sonntag, 18. Oktober",
+    ]);
+    for (const day of days) expect(getComputedStyle(day.parentElement as HTMLElement).order).not.toBe("-1");
     const today = within(screen.getByRole("region", { name: "Mittwoch, 14. Oktober" }));
     expect(today.getByRole("heading", { name: /^Heute/ })).toBeInTheDocument();
     expect(today.getByRole("group", { name: "Mittag: Linseneintopf" })).toBeInTheDocument();

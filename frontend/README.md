@@ -135,8 +135,8 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 
 - **Page `/essen`** (`src/features/meals/MealPlanPage.tsx`): „Diese Woche“ / „Nächste Woche“ (`GET /meals/plans/current|next`),
   one card per day with lunch and dinner (`MealCard`: dish, active minutes, vegetarian or the vegetarian variant,
-  „Nichts geplant“ with the planner's reason, rule hints as chips). Today's card comes first and is highlighted
-  (device date). Without dishes or eaters a hint links to the settings.
+  „Nichts geplant“ with the planner's reason, rule hints as chips). The days run Monday – Sunday in plan week order;
+  today's card is highlighted in its place (device date, MAINT-007). Without dishes or eaters a hint links to the settings.
 - **Meal menu** (`MealActions`, online and not in the past): „Anderes Gericht“ (FOOD-007) replaces the meal; repeated
   use cycles through alternatives (rejected dishes are sent as `excludeDishIds`); the snackbar offers „Rückgängig“.
   „Selbst wählen“ (FOOD-022, `MealPickerDialog`) lists every dish with search, those that fit all rules first and
