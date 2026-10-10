@@ -51,7 +51,7 @@ import {
   userIdSchema,
   utcTimestampSchema,
 } from "./common.js";
-import { ALEXA_PERSON_ID_PATTERN, ALEXA_USER_ID_PATTERN, DEFAULT_OVERDUE_ALERT_TIME, PUSH_SNOOZE_OPTIONS, USER_CHANNELS, WEEKDAYS as ALL_WEEKDAYS } from "../models/index.js";
+import { ALEXA_PERSON_ID_PATTERN, ALEXA_USER_ID_PATTERN, DEFAULT_MEAL_TODAY, DEFAULT_OVERDUE_ALERT_TIME, PUSH_SNOOZE_OPTIONS, USER_CHANNELS, WEEKDAYS as ALL_WEEKDAYS } from "../models/index.js";
 import { isValidTimeZone } from "../utils/timezone.js";
 import { approximateFrequencyDays, MAX_FREQUENCY_DAYS, type Frequency } from "../utils/schedule.js";
 import { ASSIGNMENT_MODES, SHARED_ASSIGNEE, WEEK_STARTS, WEEKDAYS, type AssignmentMode, type UserId, type Weekday } from "../models/index.js";
@@ -291,6 +291,8 @@ export const notificationPreferencesSchema = z.strictObject({
   quietHours: z.strictObject({ start: quarterHourSchema, end: quarterHourSchema }).nullable(),
   // NOTIFICATION-011; older clients omit it.
   pushSnooze: z.enum(PUSH_SNOOZE_OPTIONS).default("1H"),
+  // FOOD-016; older clients omit it.
+  mealToday: z.strictObject({ enabled: z.boolean(), time: quarterHourSchema, channels: userChannelsSchema }).default(() => ({ ...DEFAULT_MEAL_TODAY, channels: [] })),
 }) satisfies z.ZodType<UpdateNotificationPreferencesRequest>;
 
 /** PUT /household (SCHEDULING-008): an IANA timezone the runtime knows; unknown fields rejected. */

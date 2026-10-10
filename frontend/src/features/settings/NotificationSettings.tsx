@@ -190,6 +190,26 @@ export function NotificationSettings() {
             />
           </Block>
           <Block
+            title="Essensplan am Morgen"
+            enabled={preferences.mealToday.enabled}
+            disabled={disabled}
+            onToggle={(enabled) => save({ mealToday: { ...preferences.mealToday, enabled } })}
+          >
+            <TimeSelect
+              label="Uhrzeit Essensplan"
+              value={preferences.mealToday.time}
+              disabled={disabled}
+              onChange={(time) => save({ mealToday: { ...preferences.mealToday, time } })}
+            />
+            <Channels
+              label="Kanäle für den Essensplan"
+              chosen={preferences.mealToday.channels}
+              connected={connected}
+              disabled={disabled}
+              onChange={(channels) => save({ mealToday: { ...preferences.mealToday, channels } })}
+            />
+          </Block>
+          <Block
             title="Überfällig-Hinweise"
             enabled={preferences.overdueAlerts.enabled}
             disabled={disabled}

@@ -44,6 +44,13 @@ describe("AlexaChannel", () => {
     });
   });
 
+  it("turns today's meals into a reminder (FOOD-016)", async () => {
+    const { channel: alexa, deps } = channel();
+    const meals: NotificationMessage = { type: "MEAL_TODAY", userId: "STEFAN", subject: "🍽️ Heute", textBody: "…", facts: { dinner: "Linseneintopf" } };
+    expect(await alexa.send(meals, RECIPIENT)).toEqual({ status: "SENT" });
+    expect(deps.skillMessaging.send).toHaveBeenCalledWith("token-alexa:skill_messaging", ACCOUNT, { type: "REMINDER", text: "Zentrale: Heute gibt es abends Linseneintopf." });
+  });
+
   it("skips other types and households without an Alexa account", async () => {
     expect(await channel().channel.send({ ...DIGEST, type: "WEEKLY_SUMMARY" }, RECIPIENT)).toEqual({ status: "SKIPPED", errorCode: "UNSUPPORTED_TYPE" });
     expect(await channel({ ok: true }, []).channel.send(OVERDUE, RECIPIENT)).toEqual({ status: "SKIPPED", errorCode: "NO_ALEXA_ACCOUNT" });

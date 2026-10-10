@@ -1,7 +1,8 @@
 /**
  * Alexa as a notification channel (ALEXA-008), for every Alexa account of the household:
  * - OVERDUE_ALERT → Proactive Event AMAZON.MessageAlert.Activated (count only; notification indicator),
- * - DAILY_DIGEST → Alexa reminder via Skill Messaging (spoken at the member's digest time).
+ * - DAILY_DIGEST → Alexa reminder via Skill Messaging (spoken at the member's digest time),
+ * - MEAL_TODAY → Alexa reminder with today's meals (FOOD-016).
  * Other types are skipped. Accounts Amazon rejects are removed; tokens and Amazon IDs are never logged.
  */
 
@@ -29,13 +30,21 @@ export function reminderText(message: NotificationMessage): string {
   return `Zentrale: ${parts.join(", ")}. Sag: Alexa, sag Familien Zentrale, starte meinen Tag, für Details.`;
 }
 
+/** FOOD-016: „Zentrale: Heute gibt es mittags Onigiri und abends Linseneintopf.“ */
+export function mealReminderText(message: NotificationMessage): string {
+  const lunch = message.facts?.lunch;
+  const dinner = message.facts?.dinner;
+  const parts = [...(lunch === undefined ? [] : [`mittags ${lunch}`]), ...(dinner === undefined ? [] : [`abends ${dinner}`])];
+  return `Zentrale: Heute gibt es ${parts.join(" und ")}.`;
+}
+
 export class AlexaChannel implements NotificationChannel {
   readonly type = "ALEXA" as const;
 
   constructor(private readonly deps: AlexaChannelDependencies) {}
 
   async send(message: NotificationMessage, recipient: Recipient): Promise<DeliveryResult> {
-    if (message.type !== "OVERDUE_ALERT" && message.type !== "DAILY_DIGEST") return { status: "SKIPPED", errorCode: "UNSUPPORTED_TYPE" };
+    if (message.type !== "OVERDUE_ALERT" && message.type !== "DAILY_DIGEST" && message.type !== "MEAL_TODAY") return { status: "SKIPPED", errorCode: "UNSUPPORTED_TYPE" };
     const users = await this.deps.alexaUsers(recipient.tenantId);
     if (users.length === 0) return { status: "SKIPPED", errorCode: "NO_ALEXA_ACCOUNT" };
     const overdue = message.type === "OVERDUE_ALERT";
@@ -46,7 +55,7 @@ export class AlexaChannel implements NotificationChannel {
     for (const [index, alexaUserId] of users.entries()) {
       const outcome: AlexaApiOutcome = overdue
         ? await this.deps.proactiveEvents.messageAlert(token, alexaUserId, { referenceId: `${recipient.tenantId}-${recipient.userId}-${now.getTime()}-${index}`, count: Number(message.facts?.overdue ?? 1) }, now)
-        : await this.deps.skillMessaging.send(token, alexaUserId, { type: "REMINDER", text: reminderText(message) });
+        : await this.deps.skillMessaging.send(token, alexaUserId, { type: "REMINDER", text: message.type === "MEAL_TODAY" ? mealReminderText(message) : reminderText(message) });
       if (outcome.ok) delivered += 1;
       else {
         lastStatus = outcome.status;

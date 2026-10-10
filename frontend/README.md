@@ -150,6 +150,8 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   snackbar offers „Rückgängig“, which sends the previous dishes of the changed meals as `restore`.
 - **Navigation:** „Essen“ between Tenner and Auswertung (side and bottom navigation).
 - **Dashboard:** „Heute essen wir“ (`TodayMealsCard`) with today's meals; since UI-001 the largest dashboard card, „Für heute ist noch nichts geplant.“ without a plan.
+- **Morning notification** (FOOD-016): Settings → Benachrichtigungen → „Essensplan am Morgen“ (on/off, time in
+  15-minute steps, channels push/Alexa; default on at 07:30, sent by the notifier).
 - **Offline:** plans use the query root `mealPlans` and are kept in the offline cache; the food profile is not.
 
 ## Dishes (FOOD-010)

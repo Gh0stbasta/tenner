@@ -222,6 +222,9 @@ describe("createNotifierRuntime", () => {
     const deps = runtime.notifier;
     expect(deps.tenantId).toBe("default");
     expect(deps.channels.map((channel) => channel.type)).toEqual(["LOG"]);
-    expect(deps.jobs.map((job) => job.type)).toEqual(["DAILY_DIGEST", "OVERDUE_ALERT"]);
+    expect(deps.jobs.map((job) => job.type)).toEqual(["DAILY_DIGEST", "OVERDUE_ALERT", "MEAL_TODAY"]);
+    // FOOD-016: no meal job without the meals table.
+    const withoutMeals = createNotifierRuntime(testConfig({ notificationsTable: "tenner-notifications", mealsTable: undefined }));
+    expect(withoutMeals.notifier.jobs.map((job) => job.type)).toEqual(["DAILY_DIGEST", "OVERDUE_ALERT"]);
   });
 });

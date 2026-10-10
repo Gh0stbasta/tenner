@@ -37,7 +37,7 @@ export class NotificationPreferencesService {
   async update(identity: Identity, userId: UserId, preferences: NotificationPreferences): Promise<NotificationPreferencesResponse> {
     await this.requireSelf(identity, userId);
     const connected = await this.connectedChannels(identity.tenantId, userId);
-    const chosen = [...preferences.dailyDigest.channels, ...preferences.overdueAlerts.channels, ...preferences.weeklySummary.channels];
+    const chosen = [...preferences.dailyDigest.channels, ...preferences.overdueAlerts.channels, ...preferences.weeklySummary.channels, ...preferences.mealToday.channels];
     const unconnected = [...new Set(chosen.filter((channel) => !connected.includes(channel)))];
     if (unconnected.length > 0) {
       throw new ValidationError("Invalid notification preferences.", [{ field: "channels", message: `Not connected: ${unconnected.join(", ")}.` }]);

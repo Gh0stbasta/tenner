@@ -29,6 +29,7 @@ export async function updateNotificationPreferencesHandler(event: ApiEvent, iden
     dailyDigest: request.dailyDigest.enabled,
     overdueAlerts: request.overdueAlerts.enabled,
     weeklySummary: request.weeklySummary.enabled,
+    mealToday: request.mealToday.enabled,
   });
   return successResponse(200, result);
 }
