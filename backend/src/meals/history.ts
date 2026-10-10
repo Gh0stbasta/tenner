@@ -22,6 +22,8 @@ export interface MealRecord {
   readonly dishId: string;
   readonly status: SlotStatus;
   readonly feedback?: MealFeedback;
+  /** AUTO = as planned, MANUAL = chosen or swapped by hand (FOOD-019 plan adherence). */
+  readonly source?: "AUTO" | "MANUAL";
 }
 
 export function effectiveStatus(record: Pick<MealRecord, "date" | "status">, today: string): SlotStatus {

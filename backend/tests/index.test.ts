@@ -4,7 +4,7 @@ import { ConflictError, NotFoundError, PersistenceError, ValidationError } from 
 import { correlationIdOf, createDependencies, handler, route as routeEvent, type Dependencies } from "../src/index.js";
 import { toTennerResponse } from "../src/dto/index.js";
 import { DEFAULT_NOTIFICATION_PREFERENCES } from "../src/models/index.js";
-import { CATALOG_INGREDIENTS, DEFAULT_HOUSEHOLD_FOOD_RULES, EMPTY_FOOD_PROFILE, type DishResponse, type ResolvedIngredient } from "../src/meals/index.js";
+import { CATALOG_INGREDIENTS, DEFAULT_HOUSEHOLD_FOOD_RULES, EMPTY_FOOD_PROFILE, type DishResponse, type ResolvedIngredient, type FoodAnalytics } from "../src/meals/index.js";
 import { ApplicationError } from "../src/exceptions/index.js";
 import { authenticatedEvent, jwtClaims, mockLogger, tennerFixture, testConfig, TEST_IDENTITY } from "./mocks/index.js";
 
@@ -170,6 +170,7 @@ function deps(overrides: Partial<Dependencies> = {}): Dependencies {
     revokeCalendarToken: vi.fn(async () => undefined),
     calendarFeed: vi.fn(async () => "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"),
     setMealStatus: vi.fn(async () => EMPTY_PLAN),
+    foodAnalytics: vi.fn(async () => ({ period: "4w" }) as unknown as FoodAnalytics),
     dishHistory: vi.fn(async () => [{ dishId: DISH_ID, lastEaten: "2026-10-12", timesLast90Days: 2, feedback: "UP" as const }]),
     getMealsAhead: vi.fn(async () => ({ today: "2026-10-14", days: [{ date: "2026-10-14", meals: [] }] })),
     removeDishImage: vi.fn(async () => DISH),
@@ -545,6 +546,15 @@ describe("dish routes (FOOD-002)", () => {
     expect((await route(withDish("DELETE /meals/dishes/{dishId}"), d)).statusCode).toBe(200);
     expect((await route(withDish("POST /meals/dishes/{dishId}/restore"), d)).statusCode).toBe(200);
     expect(d.restoreDish).toHaveBeenCalledWith(TEST_IDENTITY, DISH_ID);
+  });
+
+  it("returns food analytics for validated periods (FOOD-019)", async () => {
+    const d = deps();
+    expect((await route(event("GET /meals/analytics", {}, undefined, { period: "12w" }), d)).statusCode).toBe(200);
+    expect(d.foodAnalytics).toHaveBeenCalledWith("default", "12w");
+    expect((await route(event("GET /meals/analytics"), d)).statusCode).toBe(200);
+    expect(d.foodAnalytics).toHaveBeenLastCalledWith("default", "4w");
+    expect((await route(event("GET /meals/analytics", {}, undefined, { period: "2y" }), d)).statusCode).toBe(400);
   });
 
   it("marks meals and returns the dish history (FOOD-023)", async () => {

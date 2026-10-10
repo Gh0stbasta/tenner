@@ -153,6 +153,8 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 - **What was eaten** (FOOD-023, `MealStatusControls.tsx`): today's and past meals get „Gekocht“, „Ausgefallen“,
   „Anderes gegessen“ and, when cooked, 👍 / 👎; favorites have a star (dish cards: ⭐ toggles `favorite`, plan cards
   show it); dish cards show „Zuletzt gegessen am … · n× in 3 Monaten“ (`GET /meals/history`).
+- **Food analytics** (FOOD-019, `features/analytics/FoodAnalytics.tsx`): Auswertung → tab „Essen“ (4 Wochen, 12
+  Wochen, 1 Jahr) with tiles, protein and favorites bars, cost per week, plan adherence and rarely eaten dishes.
 - **Calendar** (FOOD-015, `MealCalendarSettings.tsx`): Settings → „Essen: Kalender“ creates a private ICS link (shown
   once, copy button, „In Apple Kalender öffnen“ via `webcal:`), replaces it or revokes it; instructions for Google and
   Apple; calendar apps refresh on their own schedule.

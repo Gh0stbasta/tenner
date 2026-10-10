@@ -10,6 +10,7 @@ import { ApplicationError, ConflictError, NotFoundError } from "../../exceptions
 import type { WeekStart } from "../../models/enums.js";
 import { addDays, toUtcTimestamp, type Clock } from "../../utils/clock.js";
 import { dateInTimeZone } from "../../utils/timezone.js";
+import { computeFoodAnalytics, type FoodAnalytics, type FoodAnalyticsPeriod } from "../analytics.js";
 import { dishHistory, historyContext, type DishHistory, type MealFeedback, type MealRecord } from "../history.js";
 import { itemKey, itemKeyPrefix } from "../keys.js";
 import type { DishResponse } from "../models/dish.js";
@@ -144,7 +145,9 @@ export class MealPlanService {
     const plans = (await this.deps.store.query(tenantId, itemKeyPrefix("PLAN"))).map(toStoredPlan);
     return plans.flatMap((stored) =>
       stored.slots.flatMap((slot): MealRecord[] =>
-        slot.dishId ? [{ slotId: slot.slotId, date: slot.slotId.slice(0, 10), dishId: slot.dishId, status: slot.status, ...(slot.feedback ? { feedback: slot.feedback } : {}) }] : [],
+        slot.dishId
+          ? [{ slotId: slot.slotId, date: slot.slotId.slice(0, 10), dishId: slot.dishId, status: slot.status, source: slot.source, ...(slot.feedback ? { feedback: slot.feedback } : {}) }]
+          : [],
       ),
     );
   }
@@ -152,6 +155,12 @@ export class MealPlanService {
   /** History the planner uses for a week: recent repeats (R12 soft) and 👍/👎 (FOOD-023). */
   async ruleContext(tenantId: string, weekStart: string): Promise<RuleContext> {
     return historyContext(await this.records(tenantId), weekStart);
+  }
+
+  /** FOOD-019: food analytics of the last 4 weeks, 12 weeks or year up to today (household time). */
+  async analytics(tenantId: string, period: FoodAnalyticsPeriod): Promise<FoodAnalytics> {
+    const [records, data, settings, week] = await Promise.all([this.records(tenantId), this.load(tenantId), this.deps.settingsOf(tenantId), this.resolveWeek(tenantId, "current")]);
+    return computeFoodAnalytics({ records, dishes: data.dishes, profile: data.profile, today: week.today, weekStartsOn: settings.weekStartsOn, period });
   }
 
   /** FOOD-023: last eaten, how often in 90 days and the latest feedback per dish. */

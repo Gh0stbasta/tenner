@@ -40,6 +40,8 @@ import {
   mealsTodayHandler,
   setMealStatusHandler,
   dishHistoryHandler,
+  foodAnalyticsHandler,
+  type GetFoodAnalytics,
   type SetMealStatus,
   type GetDishHistory,
   calendarFeedHandler,
@@ -258,6 +260,7 @@ export interface Dependencies {
   readonly getMealsAhead: GetMealsAhead;
   readonly setMealStatus: SetMealStatus;
   readonly dishHistory: GetDishHistory;
+  readonly foodAnalytics: GetFoodAnalytics;
   readonly calendarStatus: CalendarStatus;
   readonly createCalendarToken: CreateCalendarToken;
   readonly revokeCalendarToken: RevokeCalendarToken;
@@ -381,6 +384,7 @@ const ROUTES: Readonly<Record<string, RouteHandler>> = {
   "GET /meals/calendar": ({ deps, identity }) => calendarStatusHandler(identity.tenantId, deps.calendarStatus),
   "POST /meals/calendar": ({ deps, logger, identity }) => createCalendarTokenHandler(identity, deps.createCalendarToken, logger),
   "DELETE /meals/calendar": ({ deps, logger, identity }) => revokeCalendarTokenHandler(identity, deps.revokeCalendarToken, deps.calendarStatus, logger),
+  "GET /meals/analytics": ({ event, deps, identity }) => foodAnalyticsHandler(event, identity.tenantId, deps.foodAnalytics),
   "GET /meals/history": ({ deps, identity }) => dishHistoryHandler(identity.tenantId, deps.dishHistory),
   "PUT /meals/plans/{weekStart}/slots/{slotId}/status": ({ event, deps, logger, identity }) => setMealStatusHandler(event, identity, deps.setMealStatus, logger),
   "GET /meals/today": ({ event, deps, identity }) => mealsTodayHandler(event, identity.tenantId, deps.getMealsAhead),
@@ -602,6 +606,7 @@ export function createDependencies(config: AppConfig = loadConfig()): Dependenci
     revokeCalendarToken: meals ? (identity) => meals.calendar.revoke(identity) : notConfigured,
     calendarFeed: meals ? (token) => meals.calendar.feed(token) : notConfigured,
     setMealStatus: mealPlanService ? (identity, week, slotId, request) => mealPlanService.setMealStatus(identity, week, slotId, request) : notConfigured,
+    foodAnalytics: mealPlanService ? (tenantId, period) => mealPlanService.analytics(tenantId, period) : notConfigured,
     dishHistory: mealPlanService ? (tenantId) => mealPlanService.dishHistory(tenantId) : notConfigured,
     getMealsAhead: mealPlanService ? (tenantId, days) => mealPlanService.mealsAhead(tenantId, days) : notConfigured,
     replaceMeal: mealPlanService ? (identity, week, slotId, request) => mealPlanService.replaceMeal(identity, week, slotId, request) : notConfigured,

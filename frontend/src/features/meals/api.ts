@@ -484,3 +484,41 @@ export function useDishHistory() {
     staleTime: 5 * 60_000,
   });
 }
+
+// Food analytics (FOOD-019)
+
+export const FOOD_PERIODS = ["4w", "12w", "1y"] as const;
+export type FoodPeriod = (typeof FOOD_PERIODS)[number];
+
+const foodAnalyticsSchema = z.object({
+  period: z.enum(FOOD_PERIODS),
+  from: z.string(),
+  to: z.string(),
+  meals: z.number(),
+  protein: z.array(z.object({ tag: z.string(), count: z.number() })),
+  vegetarianShare: z.number().nullable(),
+  favorites: z.array(
+    z.object({ dishId: z.string(), name: z.string(), count: z.number(), feedback: z.enum(["UP", "DOWN"]).nullable() }),
+  ),
+  rarelyEaten: z.array(z.object({ dishId: z.string(), name: z.string() })),
+  cost: z.object({
+    total: z.number(),
+    perMeal: z.number().nullable(),
+    weeks: z.array(z.object({ weekStart: z.string(), total: z.number() })),
+  }),
+  variety: z.object({
+    distinctDishes: z.number(),
+    meals: z.number(),
+    repeats: z.array(z.object({ dishId: z.string(), name: z.string(), count: z.number() })),
+  }),
+  adherence: z.object({ asPlanned: z.number(), replaced: z.number(), skipped: z.number(), other: z.number() }),
+});
+export type FoodAnalytics = z.infer<typeof foodAnalyticsSchema>;
+
+export function useFoodAnalytics(period: FoodPeriod) {
+  return useQuery({
+    queryKey: [...queryKeys.meals, "analytics", period],
+    queryFn: () => apiClient.get("/meals/analytics", { schema: foodAnalyticsSchema, query: { period } }),
+    staleTime: 5 * 60_000,
+  });
+}

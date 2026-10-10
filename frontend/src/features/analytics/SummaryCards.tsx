@@ -31,7 +31,11 @@ export function SummaryCards({ selection }: { readonly selection: PeriodSelectio
             : undefined,
     },
     // REC-001: Tenners no longer stay overdue; missed occurrences of the period are shown instead.
-    { label: "Nicht erledigt", value: data?.missed.toLocaleString("de-DE"), hint: data ? "am Tag verpasst" : undefined },
+    {
+      label: "Nicht erledigt",
+      value: data?.missed.toLocaleString("de-DE"),
+      hint: data ? "am Tag verpasst" : undefined,
+    },
   ];
   return (
     <Grid container spacing={2} component="section" aria-label="Kennzahlen" sx={{ mb: 3 }}>

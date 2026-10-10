@@ -115,6 +115,7 @@ locals {
     "PUT /meals/plans/{weekStart}/slots/{slotId}",          # FOOD-022
     "PUT /meals/plans/{weekStart}/slots/{slotId}/status",   # FOOD-023
     "GET /meals/history",                                   # FOOD-023
+    "GET /meals/analytics",                                 # FOOD-019
     "POST /meals/plans/{weekStart}/swap",                   # FOOD-022
     "POST /meals/plans/{weekStart}/regenerate",             # FOOD-008
     "GET /meals/plans/{weekStart}/shopping-list",           # FOOD-014
