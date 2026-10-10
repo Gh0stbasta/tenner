@@ -7,7 +7,7 @@ resource "aws_s3_bucket" "meal_images" {
   tags = {
     Name        = local.meal_images_bucket_name
     Purpose     = "Dish photo storage."
-    Description = "Private bucket with the household's dish photos, served via CloudFront under /images/*."
+    Description = "Private bucket with the dish photos of the household. Served via CloudFront under /images."
   }
 }
 
