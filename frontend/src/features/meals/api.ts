@@ -227,11 +227,12 @@ export type MealPlan = z.infer<typeof mealPlanSchema>;
 
 export type WeekChoice = "current" | "next";
 
-export function useMealPlan(week: WeekChoice) {
+export function useMealPlan(week: WeekChoice, enabled = true) {
   return useQuery({
     queryKey: queryKeys.mealPlan(week),
     queryFn: () => apiClient.get(`/meals/plans/${week}`, { schema: mealPlanSchema }),
     staleTime: 60_000,
+    enabled,
   });
 }
 

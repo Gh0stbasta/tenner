@@ -8,7 +8,24 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Create a dish with a chat AI:** in the editor for a new dish, „KI-Prompt kopieren“ copies a prompt with the dish
+  format and the ingredient catalog; „JSON übernehmen“ fills the editor from the AI's JSON answer (MAINT-012). The app
+  itself calls no AI.
+
+### Changed
+
+- **Plus button by page:** on „Essen“ the plus button on the phone opens the editor for a new dish; elsewhere it
+  still creates an Aufgabe (MAINT-008). On the shopping list it adds a shopping item (MAINT-010).
+- **Copy the shopping list:** „Kopieren“ next to „Teilen“ puts the list as text on the clipboard, also on phones
+  (MAINT-011).
+- **„Für morgen einkaufen“:** names tomorrow's lunch and dinner in a small text line above the items (MAINT-009).
+
+### Fixed
+
+- **Meal plan order:** the days always run Monday – Sunday; today stays highlighted in its place instead of moving
+  to the top (MAINT-007).
 
 ## [2.0.0] - 2026-10-10
 
@@ -51,8 +68,8 @@ without AI. Overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md)
 
 ### Known Limitations
 
-- Not decided yet: stock or AI images for dishes without a photo (FOOD-024, ADR 0008 proposed) and AI for meal
-  planning (FOOD-020, ADR 0009 proposed, recheck 2026-12-07).
+- Dishes without a photo keep the category placeholder; no stock or AI images (FOOD-024, ADR 0008). AI for meal
+  planning is not decided yet (FOOD-020, ADR 0009 proposed, recheck 2026-12-07).
 - The API access log records the calendar token in the path (TD-047); unattached photo uploads stay in the bucket
   (TD-045). Full list: [`docs/technical-debt.md`](docs/technical-debt.md).
 

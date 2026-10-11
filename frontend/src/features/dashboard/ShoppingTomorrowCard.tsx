@@ -1,14 +1,16 @@
 /**
  * „Für morgen einkaufen“ (UI-001): open shopping list items that tomorrow's meals need (FOOD-014, counts since
- * FOOD-028). Tomorrow can be in next week's list; a week without a plan has nothing to buy.
+ * FOOD-028). Tomorrow can be in next week's list; a week without a plan has nothing to buy. Tomorrow's dishes are named
+ * in small text above the items (MAINT-009).
  */
 
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import { Box, Button, Card, CardContent, List, ListItem, Typography } from "@mui/material";
 import { useId } from "react";
 import { Link as RouterLink } from "react-router";
-import { useShoppingList } from "../meals/api";
+import { useMealPlan, useShoppingList, type MealPlan } from "../meals/api";
 import { localToday } from "../meals/format";
+import { MEAL_SLOT_LABELS } from "../meals/labels";
 import { formatQuantity, itemsFor } from "../meals/shopping";
 
 const addDays = (date: string, days: number): string => {
@@ -16,6 +18,14 @@ const addDays = (date: string, days: number): string => {
   value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
 };
+
+/** „Mittag: … · Abend: …“ for the day; meals without a dish are left out. */
+function dishesLine(plan: MealPlan | undefined, date: string): string {
+  return (plan?.slots ?? [])
+    .filter((slot) => slot.date === date && slot.dish)
+    .map((slot) => `${MEAL_SLOT_LABELS[slot.slot]}: ${slot.dish?.name ?? ""}`)
+    .join(" · ");
+}
 
 export function ShoppingTomorrowCard() {
   const headingId = useId();
@@ -26,6 +36,9 @@ export function ShoppingTomorrowCard() {
   const list = inNextWeek ? next.data : current.data;
   const loading = current.isPending || (inNextWeek && next.isPending);
   const items = list ? itemsFor(list.items, tomorrow) : [];
+  const currentPlan = useMealPlan("current");
+  const nextPlan = useMealPlan("next", inNextWeek);
+  const dishes = dishesLine(inNextWeek ? nextPlan.data : currentPlan.data, tomorrow);
   return (
     <Card component="section" aria-labelledby={headingId} sx={{ mb: 3 }}>
       <CardContent>
@@ -35,6 +48,11 @@ export function ShoppingTomorrowCard() {
             Für morgen einkaufen
           </Typography>
         </Box>
+        {dishes && (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            {dishes}
+          </Typography>
+        )}
         {loading && !current.isError ? (
           <Typography color="text.secondary">Einkaufsliste wird geladen …</Typography>
         ) : items.length === 0 ? (

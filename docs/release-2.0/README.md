@@ -9,7 +9,7 @@ und auf dem Echo Show. Ohne KI, nachvollziehbar und offline-fähig.
 | | |
 |---|---|
 | **Version** | 2.0.0 (2026-10-10) — Changelog: [`CHANGELOG.md`](../../CHANGELOG.md#200---2026-10-10) |
-| **Status** | Fertig: 25 von 28 FOOD-Tickets. Offen: die Bewertungen FOOD-020 (KI) und FOOD-024 (Bilder) als Folgearbeit, das Release-Ticket FOOD-025 bis zum Tag `v2.0.0` |
+| **Status** | Fertig: 26 von 28 FOOD-Tickets. Offen: die Bewertung FOOD-020 (KI) als Folgearbeit, das Release-Ticket FOOD-025 bis zum Tag `v2.0.0` |
 | **Epic** | [EPIC-FOOD-001](metaticket.md): Vision, Haushaltsregeln R1 – R13, Gerichtekatalog, Owner-Entscheidungen |
 | **Architektur** | [ADR 0007](../decisions/0007-meal-planning.md) (eine Tabelle, kein neuer Dienst) · [`docs/architecture.md`](../architecture.md) |
 | **Vorher** | [Tenner 1.0](../release-1.0/README.md) |
@@ -124,7 +124,6 @@ Nach dem Deploy, einmalig:
 
 | Was | Ticket | Nächster Schritt |
 |---|---|---|
-| Bilder für Gerichte ohne Foto | FOOD-024 | Entscheidung zu [ADR 0008](../decisions/0008-dish-image-sources.md) (Empfehlung: Platzhalter behalten) |
 | KI für Variationen, Saison, Reste | FOOD-020 | Daten 8 Wochen sammeln, Prüfung am 2026-12-07 ([ADR 0009](../decisions/0009-meal-ai.md)) |
 
 ---
@@ -167,7 +166,7 @@ Nach dem Deploy, einmalig:
 **Phases:** *2.0 Core* = the plan works every day (incl. shopping list) · *2.0 Extended* = everywhere and more
 comfortable · *Long-Term* = evaluations, not part of 2.0 · *2.0 Release* = version and release notes.
 
-Status: 25 of 28 done. Open: FOOD-020 and FOOD-024 (evaluations, ADR 0009 and ADR 0008 proposed, owner decision),
+Status: 26 of 28 done (FOOD-024 decided: placeholders stay, ADR 0008). Open: FOOD-020 (evaluation, ADR 0009 proposed),
 FOOD-025 (this release; tag after the merge).
 
 ### Recommended Order (as built)

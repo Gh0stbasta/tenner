@@ -76,8 +76,9 @@ Features own their components, hooks and API functions, so `components/` stays s
 - **Routing:** `/` redirects to `/dashboard`. `/tenners`, `/essen` (FOOD-009), `/analytics` and `/settings` exist; unknown paths
   show a not-found page. CloudFront serves `index.html` for unknown paths (SPA fallback).
 - **Layout:** app bar, permanent side navigation from `md` (900 px). Below `md` (MOBILE-005): bottom navigation
-  (Dashboard, Tenner, Auswertung, Einstellungen) and a floating Quick Add button within thumb reach; safe-area insets
-  (`viewport-fit=cover`) keep content clear of notches and the home indicator in the installed app.
+  (Dashboard, Aufgaben, Essen, Einkauf, Auswertung, Einstellungen) and a floating plus button within thumb reach: on
+  `/essen` and `/essen/gerichte` it opens the editor for a new dish (`/essen/gerichte?new=1`, MAINT-008), on the
+  shopping list it focuses „Eigener Eintrag“ (MAINT-010), elsewhere the Quick Add for an Aufgabe; safe-area insets (`viewport-fit=cover`) keep content clear of notches and the home indicator in the installed app.
 - **Errors (UX-005):** a top-level error boundary shows a fallback with a reload button instead of a blank page.
   `src/api/errorMessages.ts` maps API error codes to German messages (e.g. `CONCURRENT_MODIFICATION` → "Jemand anderes
   hat diesen Tenner geändert …", network/5xx → "Tenner ist gerade nicht erreichbar …"); all error alerts and
@@ -89,7 +90,7 @@ Features own their components, hooks and API functions, so `components/` stays s
 
 | Route                       | Feature                                                                                                                                                                                                                                                     | Ticket       |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `/dashboard`                | The family's day (UI-001): „Heute essen wir“ (largest card, lunch and dinner), „Heute erledigen wir“ (completed today shown ticked, open Aufgaben with complete button, swipe, snooze and skip), „Für morgen einkaufen“ (open shopping list items for tomorrow's meals, from next week's list on the last day of a week). No counts, workload, upcoming or Quick Add any more | UI-001 |
+| `/dashboard`                | The family's day (UI-001): „Heute essen wir“ (largest card, lunch and dinner), „Heute erledigen wir“ (completed today shown ticked, open Aufgaben with complete button, swipe, snooze and skip), „Für morgen einkaufen“ (tomorrow's dishes as a small text line, MAINT-009, and the open shopping list items for them, from next week's plan and list on the last day of a week). No counts, workload, upcoming or Quick Add any more | UI-001 |
 | `/tenners`                  | Management: live title search (300 ms debounce), filters (status active/archived/all, person, category), sorting, complete, archive (with confirmation), restore                                                                                            | FRONTEND-003 |
 | `/tenners` → "Neuer Tenner" | Create dialog: shared `TennerForm` (React Hook Form + Zod, limits mirror the backend), rotating assignment ("Abwechselnd zuständig" with member chips, HOUSEHOLD-001; lists show "Abwechselnd, danach …"), frequency as interval + unit (Tage/Wochen/Monate/Jahre) with presets Täglich, Wöchentlich, Alle 2 Wochen, Monatlich, Vierteljährlich, Jährlich (SCHEDULING-001) and weekday chips Mo–So for weekly frequencies (SCHEDULING-002), inline and server-side validation messages, full screen on phones                                                                                 | FRONTEND-004 |
 | `/tenners` → "Bearbeiten"   | Edit dialog: same form plus Active switch and read-only facts, sends only changed fields (`PUT`), asks before discarding unsaved changes                                                                                                                    | FRONTEND-005 |
@@ -135,8 +136,8 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 
 - **Page `/essen`** (`src/features/meals/MealPlanPage.tsx`): „Diese Woche“ / „Nächste Woche“ (`GET /meals/plans/current|next`),
   one card per day with lunch and dinner (`MealCard`: dish, active minutes, vegetarian or the vegetarian variant,
-  „Nichts geplant“ with the planner's reason, rule hints as chips). Today's card comes first and is highlighted
-  (device date). Without dishes or eaters a hint links to the settings.
+  „Nichts geplant“ with the planner's reason, rule hints as chips). The days run Monday – Sunday in plan week order;
+  today's card is highlighted in its place (device date, MAINT-007). Without dishes or eaters a hint links to the settings.
 - **Meal menu** (`MealActions`, online and not in the past): „Anderes Gericht“ (FOOD-007) replaces the meal; repeated
   use cycles through alternatives (rejected dishes are sent as `excludeDishIds`); the snackbar offers „Rückgängig“.
   „Selbst wählen“ (FOOD-022, `MealPickerDialog`) lists every dish with search, those that fit all rules first and
@@ -172,6 +173,13 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   ingredients per adult portion (catalog picker; quantity; g/ml or EL/TL, Stück for counted ingredients; „optional“),
   active and total minutes, vegetarian variant, family-friendly, burger. „Neue Zutat „…“ anlegen“ opens
   `NewIngredientDialog.tsx` (`POST /meals/ingredients`).
+- **Mit KI anlegen** (MAINT-012, `DishAiImport.tsx`, `dishImport.ts`; only for a new dish): „KI-Prompt kopieren“ puts a
+  German prompt on the clipboard (JSON format with every field, allowed values and limits, catalog ingredient names
+  with units; quantities per adult portion like the editor; no household data). The owner pastes it into any chat
+  AI and describes the dish. „JSON übernehmen“ takes the answer (code fences and text around the object are fine),
+  fills the editor and saves nothing. Ingredients are matched by catalog name (case-insensitive) or id; a unit the
+  ingredient does not allow falls back to its base unit; ingredients not in the catalog are listed with „… anlegen“
+  (opens „Neue Zutat“). The app calls no AI (ADR 0009).
 - **„Was das Gericht bedeutet“:** derived live in `dishes.ts` (`deriveDraft`, `ruleHints`, a mirror of the backend's
   `deriveDish` and rules): vegetarian, protein source, base ingredient, tags, and which eaters and household rules
   exclude or limit the dish. Validation follows the backend limits; server errors (`DISH_NAME_TAKEN`,
@@ -196,8 +204,8 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 
 - **Page `/einkaufsliste`** (`src/features/meals/ShoppingListPage.tsx`; own navigation entry „Einkaufsliste“ after
   „Essen“, „Einkauf“ in the bottom navigation, since FOOD-027; `/essen/einkaufsliste` redirects; button on the plan page): the week's items in the household's own order with quantity
-  („2×“, counts only since FOOD-028) and meals („für Mo Abend, Do Mittag“); „Ab heute“ / „Ganze Woche“; „Eigener Eintrag“; „Teilen“ (Web Share
-  API, otherwise copied as text).
+  („2×“, counts only since FOOD-028) and meals („für Mo Abend, Do Mittag“); „Ab heute“ / „Ganze Woche“; „Eigener Eintrag“; „Kopieren“ (always
+  copies the list as text, MAINT-011); „Teilen“ (Web Share API, otherwise copied as text).
 - **Own order:** drag handle per item (`@dnd-kit`: mouse, touch with a short press, keyboard with Space and arrow
   keys); a drop is sent as `{ type: "move", key, afterKey }`.
 - **Ticking off:** a ticked item is struck through and moves to „Erledigt“ at the end; unticking puts it back.

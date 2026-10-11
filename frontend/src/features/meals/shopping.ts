@@ -121,3 +121,11 @@ export function shareText(title: string, items: readonly ShoppingItem[]): string
 export function itemsFor(items: readonly ShoppingItem[], date: string): ShoppingItem[] {
   return items.filter((item) => !item.checked && item.usedFor.some((slotId) => slotId.startsWith(`${date}#`)));
 }
+
+/** Id of the input „Eigener Eintrag“; the plus button focuses it on the shopping list (MAINT-010). */
+export const SHOPPING_ADD_INPUT_ID = "shopping-add-input";
+
+/** True on the shopping list (own entry and the old path under /essen, FOOD-027). */
+export function isShoppingPage(pathname: string): boolean {
+  return /^(\/essen)?\/einkaufsliste\/?$/.test(pathname);
+}

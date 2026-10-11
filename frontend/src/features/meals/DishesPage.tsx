@@ -23,7 +23,7 @@ import {
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { useMemo, useState } from "react";
-import { Link as RouterLink } from "react-router";
+import { Link as RouterLink, useSearchParams } from "react-router";
 import { errorMessage } from "../../api/errorMessages";
 import { isApiError } from "../../api/errors";
 import { ErrorAlert } from "../../components/ErrorAlert";
@@ -46,6 +46,7 @@ import {
   type DishFilter,
 } from "./dishes";
 import { TAG_LABELS, type IngredientTag } from "./labels";
+import { NEW_DISH_PARAM } from "./newDish";
 
 /** Editor state: closed, new dish, or the dish being edited. */
 type Editing = { readonly dish: Dish | null } | null;
@@ -154,6 +155,22 @@ export function DishesPage() {
   const active = useDishes(false);
   const archive = useArchiveDish();
   const [editing, setEditing] = useState<Editing>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // The plus button opens /essen/gerichte?new=1 (MAINT-008): the editor for a new dish is open while the parameter is
+  // there; closing the editor drops it, so „Zurück“ does not open it again.
+  const shownEditing: Editing = editing ?? (searchParams.has(NEW_DISH_PARAM) ? { dish: null } : null);
+  const closeEditor = () => {
+    setEditing(null);
+    if (searchParams.has(NEW_DISH_PARAM)) {
+      setSearchParams(
+        (params) => {
+          params.delete(NEW_DISH_PARAM);
+          return params;
+        },
+        { replace: true },
+      );
+    }
+  };
   const [filter, setFilter] = useState<DishFilter>({ search: "", slot: "ALL", vegetarianOnly: false, category: "ALL" });
 
   const shown = useMemo(() => filterDishes(dishes.data ?? [], filter), [dishes.data, filter]);
@@ -305,12 +322,12 @@ export function DishesPage() {
           ))}
         </Grid>
       )}
-      {editing && (
+      {shownEditing && (
         <DishEditorDialog
-          key={editing.dish?.dishId ?? "new"}
-          dish={editing.dish}
+          key={shownEditing.dish?.dishId ?? "new"}
+          dish={shownEditing.dish}
           groups={groups}
-          onClose={() => setEditing(null)}
+          onClose={closeEditor}
         />
       )}
     </>

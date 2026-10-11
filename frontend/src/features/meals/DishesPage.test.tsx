@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Route, Routes, useLocation } from "react-router";
 import { describe, expect, it } from "vitest";
 import { FAMILY, INGREDIENTS, dish } from "../../tests/dishFixtures";
 import { fail, mockFetch, ok } from "../../tests/fetchMock";
@@ -22,6 +23,11 @@ const SALAD = dish({
   baseTags: [],
 });
 const ARCHIVED = dish({ dishId: "d-3", name: "Linsensuppe", group: undefined, category: "SOUP", archived: true });
+
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location">{location.pathname + location.search}</span>;
+}
 
 const list = () => within(screen.getByRole("list", { name: "Gerichte" }));
 const names = () =>
@@ -102,6 +108,28 @@ describe("DishesPage (FOOD-010)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Spaghetti Bolognese bearbeiten" }));
     const editor = within(await screen.findByRole("dialog", { name: "Gericht bearbeiten" }));
     expect(editor.getByLabelText(/^Name/)).toHaveValue("Spaghetti Bolognese");
+  });
+
+  it("opens the editor for a new dish from the plus button link and drops the parameter on close (MAINT-008)", async () => {
+    setup();
+    renderWithProviders(
+      <Routes>
+        <Route
+          path="/essen/gerichte"
+          element={
+            <>
+              <DishesPage />
+              <LocationProbe />
+            </>
+          }
+        />
+      </Routes>,
+      { route: "/essen/gerichte?new=1" },
+    );
+    expect(await screen.findByRole("dialog", { name: "Gericht anlegen" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByTestId("location")).toHaveTextContent(/^\/essen\/gerichte$/);
   });
 
   it("shows empty states and load errors", async () => {

@@ -58,6 +58,12 @@ and a changelog entry on top of that.
 | [MAINT-004](maintenance/ticket004.md) | Widget system messages counted as skill errors | Done (alarm quiet since the deploy) |
 | [MAINT-005](maintenance/ticket005.md) | Widget tap rejected by Alexa (interaction mode) | Done (device check open) |
 | [MAINT-006](maintenance/ticket006.md) | Alexa skill without Echo Show views (widget only) | Done (device check open) |
+| [MAINT-007](maintenance/ticket007.md) | Meal plan always Monday to Sunday | Done |
+| [MAINT-008](maintenance/ticket008.md) | Plus button creates a task or a dish depending on the page | Done |
+| [MAINT-009](maintenance/ticket009.md) | Tomorrow's dishes on „Für morgen einkaufen“ | Done |
+| [MAINT-010](maintenance/ticket010.md) | Plus button adds a shopping item on the shopping list | Done |
+| [MAINT-011](maintenance/ticket011.md) | Copy the shopping list with a button | Done |
+| [MAINT-012](maintenance/ticket012.md) | Create a dish with a chat AI (prompt and JSON import) | Done |
 
 ### Owner hotfix tickets (`../hotfix/`)
 

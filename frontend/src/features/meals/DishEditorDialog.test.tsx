@@ -302,4 +302,69 @@ describe("DishEditorDialog (FOOD-010)", () => {
       }),
     );
   }, 15_000);
+
+  it("copies the AI prompt and fills the editor from the AI's JSON (MAINT-012)", async () => {
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const { fetchMock } = setup({ "POST /meals/dishes": ok(dish({ dishId: "d-9", name: "Eiernudeln" }), 201) });
+    const ai = within(dialog().getByRole("region", { name: "Mit KI anlegen" }));
+    await waitFor(() => expect(ai.getByRole("button", { name: "KI-Prompt kopieren" })).toBeEnabled());
+    await userEvent.click(ai.getByRole("button", { name: "KI-Prompt kopieren" }));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("- Spaghetti [g, EL, TL]"));
+    expect(await screen.findByText(/Prompt kopiert/)).toBeInTheDocument();
+
+    await userEvent.click(ai.getByRole("button", { name: "JSON übernehmen" }));
+    const importDialog = within(await screen.findByRole("dialog", { name: "JSON von der KI übernehmen" }));
+    await userEvent.click(importDialog.getByLabelText("Antwort der KI"));
+    await userEvent.paste("keine Ahnung");
+    await userEvent.click(importDialog.getByRole("button", { name: "Übernehmen" }));
+    expect(importDialog.getByText(/Kein gültiges JSON gefunden/)).toBeInTheDocument();
+    await userEvent.clear(importDialog.getByLabelText("Antwort der KI"));
+    await userEvent.paste(
+      JSON.stringify({
+        name: "Eiernudeln",
+        category: "PASTA",
+        slots: ["DINNER"],
+        lightness: "LIGHT",
+        temperature: "WARM",
+        activeMinutes: 10,
+        totalMinutes: 15,
+        vegetarianVariant: null,
+        ingredients: [
+          { name: "Spaghetti", quantity: 400, unit: "g" },
+          { name: "Ei", quantity: 3, unit: "Stück" },
+          { name: "Trüffel", quantity: 5, unit: "g" },
+        ],
+      }),
+    );
+    await userEvent.click(importDialog.getByRole("button", { name: "Übernehmen" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "JSON von der KI übernehmen" })).not.toBeInTheDocument(),
+    );
+    expect(dialog().getByLabelText(/^Name/)).toHaveValue("Eiernudeln");
+    expect(dialog().getByLabelText("Menge Spaghetti")).toHaveValue(400);
+    expect(dialog().getByRole("checkbox", { name: "Mittag" })).not.toBeChecked();
+    expect(dialog().getByText(/Nicht im Zutatenkatalog/)).toBeInTheDocument();
+    expect(dialog().getByRole("button", { name: "Trüffel anlegen" })).toBeInTheDocument();
+
+    await userEvent.click(dialog().getByRole("button", { name: "Gericht anlegen" }));
+    await waitFor(() => expect(bodies(fetchMock, "POST /meals/dishes")).toHaveLength(1));
+    expect(bodies(fetchMock, "POST /meals/dishes")[0]).toMatchObject({
+      name: "Eiernudeln",
+      slots: ["DINNER"],
+      lightness: "LIGHT",
+      activeMinutes: 10,
+      totalMinutes: 15,
+      ingredients: [
+        { ingredientId: "i-pasta", quantity: 400, unit: "g", optional: false },
+        { ingredientId: "i-egg", quantity: 3, unit: "Stück", optional: false },
+      ],
+    });
+  }, 15_000);
+
+  it("offers the AI buttons only for a new dish (MAINT-012)", async () => {
+    setup({}, true);
+    await screen.findByRole("dialog", { name: "Gericht bearbeiten" });
+    expect(screen.queryByRole("button", { name: "KI-Prompt kopieren" })).not.toBeInTheDocument();
+  });
 });

@@ -29,6 +29,8 @@ import type { ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { ConnectivityBanner } from "../components/ConnectivityBanner";
 import { PendingSyncIndicator } from "../features/offline/PendingSyncIndicator";
+import { isDishPage, NEW_DISH_PATH } from "../features/meals/newDish";
+import { isShoppingPage, SHOPPING_ADD_INPUT_ID } from "../features/meals/shopping";
 import { QUICK_ADD_INPUT_ID } from "../features/tenners/quickAdd";
 import { NAVIGATION_ITEMS } from "./navigation";
 
@@ -102,22 +104,38 @@ function BottomNavigationBar() {
   );
 }
 
-/** Quick Add within thumb reach: focuses the Quick Add input, or opens „Aufgaben“ with it focused (UI-001). */
+/** Focuses an input of the page and scrolls it into view; false without the input. */
+function focusInput(id: string): boolean {
+  const input = document.getElementById(id);
+  if (!input) return false;
+  input.focus();
+  input.scrollIntoView({ block: "center", behavior: "smooth" });
+  return true;
+}
+
+/**
+ * Quick Add within thumb reach, by page: on the meal pages it opens the editor for a new dish (MAINT-008), on the
+ * shopping list it focuses „Eigener Eintrag“ (MAINT-010); elsewhere it focuses the Quick Add input, or opens
+ * „Aufgaben“ with it focused (UI-001).
+ */
 function QuickAddFab() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const target = isDishPage(pathname) ? "dish" : isShoppingPage(pathname) ? "shopping" : "task";
+  const label = {
+    dish: "Gericht anlegen",
+    shopping: "Einkaufsartikel hinzufügen",
+    task: "Aufgabe schnell anlegen",
+  }[target];
   const onClick = () => {
-    const input = document.getElementById(QUICK_ADD_INPUT_ID);
-    if (input) {
-      input.focus();
-      input.scrollIntoView({ block: "center", behavior: "smooth" });
-    } else {
-      void navigate("/tenners?quickAdd=1");
-    }
+    if (target === "dish") void navigate(NEW_DISH_PATH);
+    else if (target === "shopping") focusInput(SHOPPING_ADD_INPUT_ID);
+    else if (!focusInput(QUICK_ADD_INPUT_ID)) void navigate("/tenners?quickAdd=1");
   };
   return (
     <Fab
       color="primary"
-      aria-label="Aufgabe schnell anlegen"
+      aria-label={label}
       onClick={onClick}
       sx={{
         display: { xs: "flex", md: "none" },

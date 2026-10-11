@@ -24,6 +24,7 @@ import { CSS } from "@dnd-kit/utilities";
 import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import {
   Accordion,
@@ -55,7 +56,14 @@ import { PageHeader } from "../../components/PageHeader";
 import { useOnline } from "../../hooks/useConnectivity";
 import { formatShortDate } from "../../utils/format";
 import { useRefreshShoppingList, useShoppingList, type ShoppingItem, type ShoppingRange, type WeekChoice } from "./api";
-import { formatQuantity, groupShoppingItems, moveOperation, shareText, usedForLabel } from "./shopping";
+import {
+  formatQuantity,
+  groupShoppingItems,
+  moveOperation,
+  shareText,
+  SHOPPING_ADD_INPUT_ID,
+  usedForLabel,
+} from "./shopping";
 import { useShoppingChanges } from "./useShoppingChanges";
 
 interface RowProps {
@@ -161,15 +169,21 @@ export function ShoppingListPage() {
   };
   const refreshList = (range?: ShoppingRange) =>
     refresh.mutate(range, { onError: (error) => notify({ message: errorMessage(error), severity: "error" }) });
-  const share = async () => {
-    const text = shareText(title, items);
+  const copy = async () => {
     try {
-      if (typeof navigator.share === "function") {
-        await navigator.share({ title, text });
-        return;
-      }
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(shareText(title, items));
       notify({ message: "Einkaufsliste kopiert." });
+    } catch {
+      notify({ message: "Kopieren hat nicht geklappt.", severity: "error" });
+    }
+  };
+  const share = async () => {
+    if (typeof navigator.share !== "function") {
+      await copy();
+      return;
+    }
+    try {
+      await navigator.share({ title, text: shareText(title, items) });
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       notify({ message: "Teilen hat nicht geklappt.", severity: "error" });
@@ -183,9 +197,19 @@ export function ShoppingListPage() {
       actions={
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>
           {list.data && (
-            <Button variant="outlined" size="small" startIcon={<ShareOutlinedIcon />} onClick={() => void share()}>
-              Teilen
-            </Button>
+            <>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<ContentCopyOutlinedIcon />}
+                onClick={() => void copy()}
+              >
+                Kopieren
+              </Button>
+              <Button variant="outlined" size="small" startIcon={<ShareOutlinedIcon />} onClick={() => void share()}>
+                Teilen
+              </Button>
+            </>
           )}
           <ToggleButtonGroup
             exclusive
@@ -273,6 +297,7 @@ export function ShoppingListPage() {
         </Stack>
         <Box component="form" onSubmit={addItem} sx={{ display: "flex", gap: 1 }}>
           <TextField
+            id={SHOPPING_ADD_INPUT_ID}
             label="Eigener Eintrag"
             value={newItem}
             onChange={(event) => setNewItem(event.target.value)}
