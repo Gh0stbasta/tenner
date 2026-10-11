@@ -59,6 +59,7 @@ import {
   type MealSlot,
   type ProteinTag,
 } from "./labels";
+import { DishAiImport } from "./DishAiImport";
 import { DishImage } from "./DishImage";
 import { NUTRITION_DISCLAIMER, nutritionLine } from "./format";
 import { PhotoError, resizePhoto, useDishPhoto, type PhotoChange } from "./dishImages";
@@ -144,6 +145,7 @@ export function DishEditorDialog({ dish, groups, onClose }: DishEditorDialogProp
   const [photoChange, setPhotoChange] = useState<PhotoChange | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [preparingPhoto, setPreparingPhoto] = useState(false);
+  const [missingIngredients, setMissingIngredients] = useState<readonly string[]>([]);
   const previewUrl = useMemo(
     () => (photoChange?.kind === "new" ? URL.createObjectURL(photoChange.photo) : undefined),
     [photoChange],
@@ -253,6 +255,36 @@ export function DishEditorDialog({ dish, groups, onClose }: DishEditorDialogProp
       <DialogContent>
         <Stack spacing={2.5} sx={{ mt: 1 }}>
           {failure && <Alert severity="error">{failure}</Alert>}
+          {!dish && (
+            <DishAiImport
+              catalog={ingredients}
+              disabled={busy}
+              onImport={(imported, unknown) => {
+                setDraft(imported);
+                setErrors({});
+                setMissingIngredients(unknown);
+                notify({ message: `„${imported.name}“ übernommen. Bitte prüfen und anlegen.` });
+              }}
+            />
+          )}
+          {missingIngredients.length > 0 && (
+            <Alert severity="warning" onClose={() => setMissingIngredients([])}>
+              Nicht im Zutatenkatalog, daher nicht übernommen:
+              <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", rowGap: 1, mt: 1 }}>
+                {missingIngredients.map((name) => (
+                  <Chip
+                    key={name}
+                    label={`${name} anlegen`}
+                    size="small"
+                    onClick={() => {
+                      setMissingIngredients((current) => current.filter((entry) => entry !== name));
+                      setNewIngredient(name);
+                    }}
+                  />
+                ))}
+              </Stack>
+            </Alert>
+          )}
           <Box
             component="section"
             aria-label="Foto"

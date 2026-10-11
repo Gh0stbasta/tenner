@@ -8,6 +8,12 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ## [Unreleased]
 
+### Added
+
+- **Create a dish with a chat AI:** in the editor for a new dish, „KI-Prompt kopieren“ copies a prompt with the dish
+  format and the ingredient catalog; „JSON übernehmen“ fills the editor from the AI's JSON answer (MAINT-012). The app
+  itself calls no AI.
+
 ### Changed
 
 - **Plus button by page:** on „Essen“ the plus button on the phone opens the editor for a new dish; elsewhere it

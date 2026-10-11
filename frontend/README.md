@@ -173,6 +173,13 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
   ingredients per adult portion (catalog picker; quantity; g/ml or EL/TL, Stück for counted ingredients; „optional“),
   active and total minutes, vegetarian variant, family-friendly, burger. „Neue Zutat „…“ anlegen“ opens
   `NewIngredientDialog.tsx` (`POST /meals/ingredients`).
+- **Mit KI anlegen** (MAINT-012, `DishAiImport.tsx`, `dishImport.ts`; only for a new dish): „KI-Prompt kopieren“ puts a
+  German prompt on the clipboard (JSON format with every field, allowed values and limits, catalog ingredient names
+  with units; quantities per adult portion like the editor; no household data). The owner pastes it into any chat
+  AI and describes the dish. „JSON übernehmen“ takes the answer (code fences and text around the object are fine),
+  fills the editor and saves nothing. Ingredients are matched by catalog name (case-insensitive) or id; a unit the
+  ingredient does not allow falls back to its base unit; ingredients not in the catalog are listed with „… anlegen“
+  (opens „Neue Zutat“). The app calls no AI (ADR 0009).
 - **„Was das Gericht bedeutet“:** derived live in `dishes.ts` (`deriveDraft`, `ruleHints`, a mirror of the backend's
   `deriveDish` and rules): vegetarian, protein source, base ingredient, tags, and which eaters and household rules
   exclude or limit the dish. Validation follows the backend limits; server errors (`DISH_NAME_TAKEN`,
