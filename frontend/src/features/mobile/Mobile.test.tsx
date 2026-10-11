@@ -142,7 +142,7 @@ describe("mobile navigation", () => {
           <Route path="settings" element={<h1>Einstellungen</h1>} />
           <Route path="essen" element={<h1>Essensplan</h1>} />
           <Route path="essen/gerichte" element={<SearchProbe />} />
-          <Route path="einkaufsliste" element={<h1>Einkaufsliste</h1>} />
+          <Route path="einkaufsliste" element={<input id="shopping-add-input" aria-label="Eigener Eintrag" />} />
         </Route>
       </Routes>,
       { route },
@@ -184,11 +184,13 @@ describe("mobile navigation", () => {
     expect(await screen.findByTestId("search")).toHaveTextContent("?new=1");
   });
 
-  it("keeps the Aufgabe on the shopping list (MAINT-008)", async () => {
+  it("focuses „Eigener Eintrag“ on the shopping list (MAINT-010)", async () => {
     mockFetch({});
     renderLayout("/einkaufsliste");
-    await userEvent.click(screen.getByRole("button", { name: "Aufgabe schnell anlegen" }));
-    expect(await screen.findByRole("textbox", { name: "Quick Add" })).toBeInTheDocument();
+    Element.prototype.scrollIntoView = vi.fn();
+    expect(screen.queryByRole("button", { name: "Aufgabe schnell anlegen" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Einkaufsartikel hinzufügen" }));
+    expect(screen.getByRole("textbox", { name: "Eigener Eintrag" })).toHaveFocus();
   });
 
   it("covers the notch with viewport-fit=cover", () => {

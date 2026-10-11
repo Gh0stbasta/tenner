@@ -77,8 +77,8 @@ Features own their components, hooks and API functions, so `components/` stays s
   show a not-found page. CloudFront serves `index.html` for unknown paths (SPA fallback).
 - **Layout:** app bar, permanent side navigation from `md` (900 px). Below `md` (MOBILE-005): bottom navigation
   (Dashboard, Aufgaben, Essen, Einkauf, Auswertung, Einstellungen) and a floating plus button within thumb reach: on
-  `/essen` and `/essen/gerichte` it opens the editor for a new dish (`/essen/gerichte?new=1`, MAINT-008), elsewhere the
-  Quick Add for an Aufgabe; safe-area insets (`viewport-fit=cover`) keep content clear of notches and the home indicator in the installed app.
+  `/essen` and `/essen/gerichte` it opens the editor for a new dish (`/essen/gerichte?new=1`, MAINT-008), on the
+  shopping list it focuses „Eigener Eintrag“ (MAINT-010), elsewhere the Quick Add for an Aufgabe; safe-area insets (`viewport-fit=cover`) keep content clear of notches and the home indicator in the installed app.
 - **Errors (UX-005):** a top-level error boundary shows a fallback with a reload button instead of a blank page.
   `src/api/errorMessages.ts` maps API error codes to German messages (e.g. `CONCURRENT_MODIFICATION` → "Jemand anderes
   hat diesen Tenner geändert …", network/5xx → "Tenner ist gerade nicht erreichbar …"); all error alerts and

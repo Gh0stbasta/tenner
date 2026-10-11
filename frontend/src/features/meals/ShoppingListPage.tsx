@@ -55,7 +55,14 @@ import { PageHeader } from "../../components/PageHeader";
 import { useOnline } from "../../hooks/useConnectivity";
 import { formatShortDate } from "../../utils/format";
 import { useRefreshShoppingList, useShoppingList, type ShoppingItem, type ShoppingRange, type WeekChoice } from "./api";
-import { formatQuantity, groupShoppingItems, moveOperation, shareText, usedForLabel } from "./shopping";
+import {
+  formatQuantity,
+  groupShoppingItems,
+  moveOperation,
+  shareText,
+  SHOPPING_ADD_INPUT_ID,
+  usedForLabel,
+} from "./shopping";
 import { useShoppingChanges } from "./useShoppingChanges";
 
 interface RowProps {
@@ -273,6 +280,7 @@ export function ShoppingListPage() {
         </Stack>
         <Box component="form" onSubmit={addItem} sx={{ display: "flex", gap: 1 }}>
           <TextField
+            id={SHOPPING_ADD_INPUT_ID}
             label="Eigener Eintrag"
             value={newItem}
             onChange={(event) => setNewItem(event.target.value)}

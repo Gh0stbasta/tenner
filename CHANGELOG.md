@@ -11,7 +11,7 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 ### Changed
 
 - **Plus button by page:** on „Essen“ the plus button on the phone opens the editor for a new dish; elsewhere it
-  still creates an Aufgabe (MAINT-008).
+  still creates an Aufgabe (MAINT-008). On the shopping list it adds a shopping item (MAINT-010).
 - **„Für morgen einkaufen“:** names tomorrow's lunch and dinner in a small text line above the items (MAINT-009).
 
 ### Fixed

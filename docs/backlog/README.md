@@ -61,6 +61,7 @@ and a changelog entry on top of that.
 | [MAINT-007](maintenance/ticket007.md) | Meal plan always Monday to Sunday | Done |
 | [MAINT-008](maintenance/ticket008.md) | Plus button creates a task or a dish depending on the page | Done |
 | [MAINT-009](maintenance/ticket009.md) | Tomorrow's dishes on „Für morgen einkaufen“ | Done |
+| [MAINT-010](maintenance/ticket010.md) | Plus button adds a shopping item on the shopping list | Done |
 
 ### Owner hotfix tickets (`../hotfix/`)
 
