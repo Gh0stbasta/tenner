@@ -181,6 +181,33 @@ describe("ShoppingListPage (FOOD-014)", () => {
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining("- 2× Nudeln\n- 3× Karotten\n- 1× Milch"));
   });
 
+  it("copies the list with „Kopieren“ also where the device can share (MAINT-011)", async () => {
+    server();
+    const writeText = vi.fn(async () => undefined);
+    const shareFn = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    Object.defineProperty(navigator, "share", { value: shareFn, configurable: true });
+    try {
+      renderWithProviders(<ShoppingListPage />);
+      await openList();
+      await userEvent.click(screen.getByRole("button", { name: "Kopieren" }));
+      expect(await screen.findByText("Einkaufsliste kopiert.")).toBeInTheDocument();
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("- 2× Nudeln\n- 3× Karotten\n- 1× Milch"));
+      expect(shareFn).not.toHaveBeenCalled();
+    } finally {
+      Reflect.deleteProperty(navigator, "share");
+    }
+  });
+
+  it("reports when the clipboard is not available (MAINT-011)", async () => {
+    server();
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    renderWithProviders(<ShoppingListPage />);
+    await openList();
+    await userEvent.click(screen.getByRole("button", { name: "Kopieren" }));
+    expect(await screen.findByText("Kopieren hat nicht geklappt.")).toBeInTheDocument();
+  });
+
   it("points to the meal plan while the week has none", async () => {
     mockFetch({ "GET /meals/plans/current/shopping-list": fail(404, "NOT_FOUND") });
     renderWithProviders(<ShoppingListPage />);

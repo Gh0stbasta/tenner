@@ -197,8 +197,8 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 
 - **Page `/einkaufsliste`** (`src/features/meals/ShoppingListPage.tsx`; own navigation entry „Einkaufsliste“ after
   „Essen“, „Einkauf“ in the bottom navigation, since FOOD-027; `/essen/einkaufsliste` redirects; button on the plan page): the week's items in the household's own order with quantity
-  („2×“, counts only since FOOD-028) and meals („für Mo Abend, Do Mittag“); „Ab heute“ / „Ganze Woche“; „Eigener Eintrag“; „Teilen“ (Web Share
-  API, otherwise copied as text).
+  („2×“, counts only since FOOD-028) and meals („für Mo Abend, Do Mittag“); „Ab heute“ / „Ganze Woche“; „Eigener Eintrag“; „Kopieren“ (always
+  copies the list as text, MAINT-011); „Teilen“ (Web Share API, otherwise copied as text).
 - **Own order:** drag handle per item (`@dnd-kit`: mouse, touch with a short press, keyboard with Space and arrow
   keys); a drop is sent as `{ type: "move", key, afterKey }`.
 - **Ticking off:** a ticked item is struck through and moves to „Erledigt“ at the end; unticking puts it back.
