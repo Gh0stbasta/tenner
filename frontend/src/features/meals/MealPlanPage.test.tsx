@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fail, mockFetch, NOT_READY_PLAN, ok } from "../../tests/fetchMock";
 import { mealPlanFixture } from "../../tests/fixtures";
 import { renderWithProviders } from "../../tests/render";
+import { dish } from "../../tests/dishFixtures";
 import { MealPlanPage } from "./MealPlanPage";
 import { TodayMealsCard } from "./TodayMealsCard";
 
@@ -373,6 +374,77 @@ describe("TodayMealsCard (FOOD-009)", () => {
     expect(card.getByText("Käsespätzle mit Röstzwiebeln")).toBeInTheDocument();
     expect(card.getByText("Abend")).toBeInTheDocument();
     expect(card.getByRole("link", { name: "Zum Essensplan" })).toHaveAttribute("href", "/essen");
+  });
+
+  function stubPhotoTools() {
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => ({ width: 3000, height: 2000, close: vi.fn() })),
+    );
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ drawImage: vi.fn() } as never);
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation((callback) =>
+      callback(new Blob([new Uint8Array(5000)], { type: "image/jpeg" })),
+    );
+  }
+  const UPLOAD = {
+    imageKey: "images/meals/default/dish-4/k.jpg",
+    uploadUrl: "https://bucket.s3.test/upload",
+    headers: { "Content-Type": "image/jpeg" },
+    expiresInSeconds: 300,
+  };
+
+  it("changes a dish photo by tapping the picture, from camera or gallery (MAINT-013)", async () => {
+    stubPhotoTools();
+    try {
+      const fetchMock = mockFetch({
+        "GET /meals/plans/current": ok(mealPlanFixture()),
+        "POST /meals/dishes/dish-4/image-upload": ok(UPLOAD),
+        "PUT /upload": { status: 200 },
+        "PUT /meals/dishes/dish-4/image": ok(
+          dish({ dishId: "dish-4", name: "Linseneintopf", imageKey: UPLOAD.imageKey }),
+        ),
+      });
+      renderWithProviders(<TodayMealsCard />);
+      const card = within(await screen.findByRole("region", { name: "Heute essen wir" }));
+      expect(await card.findByRole("button", { name: "Foto ändern: Linseneintopf" })).toBeInTheDocument();
+      const input = card.getByLabelText("Foto aufnehmen oder auswählen: Linseneintopf");
+      expect(input).toHaveAttribute("accept", "image/*");
+      expect(input).not.toHaveAttribute("capture");
+      await userEvent.upload(input, new File(["photo"], "essen.jpg", { type: "image/jpeg" }));
+      expect(await screen.findByText("📷 Foto für „Linseneintopf“ gespeichert.")).toBeInTheDocument();
+      expect(
+        fetchMock
+          .calls()
+          .map((call) => call.key)
+          .filter((key) => !key.startsWith("GET")),
+      ).toEqual(["POST /meals/dishes/dish-4/image-upload", "PUT /upload", "PUT /meals/dishes/dish-4/image"]);
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("reports a failed photo upload (MAINT-013)", async () => {
+    stubPhotoTools();
+    try {
+      mockFetch({
+        "GET /meals/plans/current": ok(mealPlanFixture()),
+        "POST /meals/dishes/dish-4/image-upload": ok(UPLOAD),
+        "PUT /upload": { status: 500 },
+      });
+      renderWithProviders(<TodayMealsCard />);
+      const card = within(await screen.findByRole("region", { name: "Heute essen wir" }));
+      await userEvent.upload(
+        await card.findByLabelText("Foto aufnehmen oder auswählen: Linseneintopf"),
+        new File(["photo"], "essen.jpg", { type: "image/jpeg" }),
+      );
+      expect(
+        await screen.findByText(/Foto nicht gespeichert\. Das Foto konnte nicht hochgeladen werden/),
+      ).toBeInTheDocument();
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    }
   });
 
   it("says so while there is no plan (UI-001: the card is always the dashboard's main element)", async () => {

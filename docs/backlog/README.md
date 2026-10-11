@@ -64,6 +64,7 @@ and a changelog entry on top of that.
 | [MAINT-010](maintenance/ticket010.md) | Plus button adds a shopping item on the shopping list | Done |
 | [MAINT-011](maintenance/ticket011.md) | Copy the shopping list with a button | Done |
 | [MAINT-012](maintenance/ticket012.md) | Create a dish with a chat AI (prompt and JSON import) | Done |
+| [MAINT-013](maintenance/ticket013.md) | Change a dish photo from „Heute essen wir“ | Done |
 
 ### Owner hotfix tickets (`../hotfix/`)
 

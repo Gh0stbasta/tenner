@@ -1353,3 +1353,29 @@ not record; then revoke and recreate the calendar link once.
 
 FOOD-015; `terraform/api.tf`, `docs/security.md` (residual risks).
 
+## TD-048: The editor's photo button may open only the camera on phones
+
+### Description
+
+The photo input in the dish editor (`DishEditorDialog.tsx`, FOOD-011) sets `capture="environment"`. Many phone
+browsers (Android Chrome, iOS Safari) then open the camera directly and offer no gallery, although the button says
+„Foto aufnehmen / auswählen“.
+
+### Reason
+
+Found while building MAINT-013, which uses an input without `capture` so the system chooser offers camera and gallery.
+Changing the editor was out of scope for that ticket.
+
+### Impact
+
+Photos already on the phone can only be added from the dashboard card „Heute essen wir“ (MAINT-013), not in the
+editor. No security or cost impact.
+
+### Suggested Improvement
+
+Drop `capture="environment"` from the editor's input (one attribute and its test); check on one Android and one iOS
+device.
+
+### Related Work
+
+FOOD-011, MAINT-013; `frontend/src/features/meals/DishEditorDialog.tsx`, `DishPhotoButton.tsx`.
