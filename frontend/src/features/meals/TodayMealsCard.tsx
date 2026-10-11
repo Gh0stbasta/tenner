@@ -1,6 +1,7 @@
 /**
  * Dashboard card „Heute essen wir“ (FOOD-009, UI-001): today's lunch and dinner, the most prominent card of the
- * dashboard (at least twice the height of the other cards), linking to the meal plan.
+ * dashboard (at least twice the height of the other cards), linking to the meal plan. Tapping a dish picture changes
+ * its photo (MAINT-013).
  */
 
 import RestaurantOutlinedIcon from "@mui/icons-material/RestaurantOutlined";
@@ -10,7 +11,7 @@ import { Link as RouterLink } from "react-router";
 import { useMealPlan } from "./api";
 import { MEAL_SLOT_LABELS } from "./labels";
 import { localToday } from "./format";
-import { DishImage } from "./DishImage";
+import { DishPhotoButton } from "./DishPhotoButton";
 
 export function TodayMealsCard() {
   const plan = useMealPlan("current");
@@ -34,15 +35,7 @@ export function TodayMealsCard() {
           <Stack direction={{ xs: "column", sm: "row" }} spacing={{ xs: 2, sm: 4 }}>
             {slots.map((slot) => (
               <Box key={slot.slotId} sx={{ flex: 1 }}>
-                {slot.dish && (
-                  <DishImage
-                    name={slot.dish.name}
-                    category={slot.dish.category}
-                    imageKey={slot.dish.imageKey}
-                    height={140}
-                    sx={{ mb: 1 }}
-                  />
-                )}
+                {slot.dish && <DishPhotoButton dish={slot.dish} height={140} />}
                 <Typography variant="overline" color="text.secondary" component="p">
                   {MEAL_SLOT_LABELS[slot.slot]}
                 </Typography>

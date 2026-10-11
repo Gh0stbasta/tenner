@@ -10,6 +10,8 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Added
 
+- **Photo from the dashboard:** tap a dish picture in „Heute essen wir“ to take or choose a photo for that dish
+  (MAINT-013).
 - **Create a dish with a chat AI:** in the editor for a new dish, „KI-Prompt kopieren“ copies a prompt with the dish
   format and the ingredient catalog; „JSON übernehmen“ fills the editor from the AI's JSON answer (MAINT-012). The app
   itself calls no AI.
