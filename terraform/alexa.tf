@@ -79,6 +79,8 @@ resource "aws_lambda_function" "alexa_skill" {
       LOG_LEVEL           = var.alexa_log_level
       TENNER_API_BASE_URL = aws_apigatewayv2_stage.api.invoke_url
       ALEXA_SKILL_ID      = var.alexa_skill_id
+      # MAINT-023: „Übersicht“ opens <web app>/tafel in the device browser.
+      WEB_APP_URL = "https://${aws_cloudfront_distribution.frontend.domain_name}"
     }
   }
 

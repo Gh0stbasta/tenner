@@ -11,7 +11,8 @@ German (de-DE) Alexa custom skill "Zentrale" ([ADR 0005](../docs/decisions/0005-
 questions (ALEXA-003, see "Supported Phrases"), account linking and speaker recognition (ALEXA-002). „Alexa, öffne Mary Poppins“ greets the recognized
 member by name, asks an unknown voice once „Wer spricht gerade?“ and asks unlinked accounts to link Tenner in the
 Alexa app. Help, stop, cancel, fallback and session end are handled. The skill is voice only: since MAINT-006 it
-shows no APL views on screen devices, only the home-screen widget (owner decision).
+shows no APL views on screen devices, only the home-screen widget (owner decision) — with one exception: „Übersicht“
+renders a minimal document that opens the Tafel in the browser (MAINT-023).
 
 ## Layout
 
@@ -190,6 +191,17 @@ that Alexa assigns to a task or member name is taken as an item.
 
 Alexa routine (owner, optional): Alexa app → Mehr → Routinen → „+“ → „Wenn Folgendes passiert“: Stimme „Einkauf“ →
 Aktion „Benutzerdefiniert“: „sag Mary Poppins Einkauf“. Then „Alexa, Einkauf“ starts the shopping mode.
+
+### Overview / Tafel (MAINT-023)
+
+| Wish | Examples | Answer |
+|---|---|---|
+| Open the Tafel | „Übersicht“, „zeig die Übersicht“, „Tafel“, „zeig die Tafel“ | „Ich öffne die Übersicht.“; the APL command `OpenURL` opens `<web app>/tafel` (MAINT-022) in the browser (Silk) |
+
+One-shot: „Alexa, sag Mary Poppins Übersicht“. The document runs `OpenURL` on mount; when the device does not allow
+it (`environment.allowOpenURL`), it shows „Öffne den Browser und geh auf …“. Voice-only devices get a card with the
+link. The URL comes from Terraform (`WEB_APP_URL` = CloudFront distribution); sign-in happens in the browser. The web
+app's own sign-in session keeps the page usable; how long Silk stays in front is the device's behaviour.
 
 ### Meals (FOOD-017)
 

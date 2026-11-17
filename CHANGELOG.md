@@ -10,6 +10,8 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Added
 
+- **„Alexa, sag Mary Poppins Übersicht“:** opens the Tafel in the Echo Show's browser (APL `OpenURL`); where the
+  device does not allow it, the screen shows the address (MAINT-023).
 - **Tafel:** `/tafel` shows meals (today with large photos, or the week), today's Aufgaben and the shopping list full
   screen for the Echo Show browser; it refreshes itself (MAINT-022).
 - **„Abgehakte Einträge löschen“:** one button removes all ticked entries from the shopping list; they stay

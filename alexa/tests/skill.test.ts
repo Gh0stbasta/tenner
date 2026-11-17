@@ -83,11 +83,16 @@ describe("Tenner skill (ALEXA-001)", () => {
 });
 
 describe("loadConfig", () => {
+  it("reads the web app URL for the overview without trailing slash (MAINT-023)", () => {
+    expect(loadConfig({ WEB_APP_URL: " https://d1.cloudfront.net/ " }).webAppUrl).toBe("https://d1.cloudfront.net");
+  });
+
   it("reads the API base URL without trailing slash and the skill ID", () => {
     expect(loadConfig({ TENNER_API_BASE_URL: "https://api.test/prod/", ALEXA_SKILL_ID: " amzn1.ask.skill.x " })).toEqual({
       tennerApiBaseUrl: "https://api.test/prod",
       skillId: "amzn1.ask.skill.x",
       apiTimeoutMs: DEFAULT_API_TIMEOUT_MS,
+      webAppUrl: "",
     });
   });
 
