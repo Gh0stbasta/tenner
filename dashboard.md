@@ -6,21 +6,21 @@
 
 | | |
 |---|---|
-| **Project health** | 🟢 **Live**; all 1,970 automated tests pass (backend 1,151, frontend 519, alexa 171, Terraform 82, scripts 48) |
+| **Project health** | 🟢 **Live**; all 1,971 automated tests pass (backend 1,151, frontend 519, alexa 172, Terraform 82, scripts 48) |
 | **Current phase** | **Release 2.0.0 — Family Meal Planning, live.** Owner feedback is coming in as maintenance tickets |
-| **Current focus** | This pull request: „Tafel“ — full-screen page `/tafel` for the Echo Show 21 browser (meals with photos, Aufgaben, shopping list) and „Alexa, sag Mary Poppins Übersicht“, which opens it in Silk (MAINT-022, 023) |
-| **Biggest blocker** | None. Open question for the device: does the Echo Show 21 allow the skill to open Silk, and does the page stay in front? |
-| **Recommended next action** | Merge, then on the Echo Show 21: „Alexa, sag Mary Poppins Übersicht“, sign in once, leave it 15 minutes |
+| **Current focus** | This pull request: meal widget wraps long dish names onto up to three lines (MAINT-024). Open: the Echo Show 21 does not find „Mary Poppins“ (Echo Dot does) |
+| **Biggest blocker** | Echo Show 21 answers „konnte Mary Poppins nicht finden“; owner checks Alexa+, voice history and language on that device |
+| **Recommended next action** | Merge; on the Echo Show 21 check Alexa+ and the voice history; open the Tafel via Silk bookmark meanwhile |
 
 ## 📈 Progress
 
 ```text
 Release 1.0  ████████████████████ 100%  104 / 104 tickets done (tag v1.0.0 still to set)
 Release 2.0  ███████████████████░  93%   26 /  28 FOOD tickets (all features; FOOD-025 waits for the tag, FOOD-020 for data)
-Maintenance  23 done (MAINT-001 – 023; device checks open) · REC 2 done (REC-001, 002) · owner hotfixes 2 done (HOTFIX-006, UI-001)
+Maintenance  24 done (MAINT-001 – 024; device checks open) · REC 2 done (REC-001, 002) · owner hotfixes 2 done (HOTFIX-006, UI-001)
 ```
 
-✅ Completed: **158** (104 + EPIC-FOOD-001 + 26 FOOD + 23 MAINT + 2 REC + 2 owner hotfixes) · 🚧 In progress: **1** (FOOD-025, tag) · 📋 Open: **1** (FOOD-020: AI evaluation, recheck 2026-12-07)
+✅ Completed: **159** (104 + EPIC-FOOD-001 + 26 FOOD + 24 MAINT + 2 REC + 2 owner hotfixes) · 🚧 In progress: **1** (FOOD-025, tag) · 📋 Open: **1** (FOOD-020: AI evaluation, recheck 2026-12-07)
 
 ## 🧩 Feature Status
 
@@ -72,7 +72,7 @@ Release 2.0 overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md)
 
 ## 🎯 Recommended Next Actions
 
-1. **Merge** this pull request, then on the Echo Show 21: „Alexa, sag Mary Poppins Übersicht“ → sign in → „Woche“ → leave it 15 minutes. If Silk does not open, the screen shows the address.
+1. **Merge** this pull request; the meal widget updates to package 1.2.0 on the Echo devices. On the Echo Show 21 check whether Alexa+ is active and what the voice history shows for „Mary Poppins“.
 2. **Tag `v2.0.0`** and the GitHub release (FOOD-025; also `v1.0.0` is still open).
 3. **Recheck ADR 0009** on 2026-12-07 with Auswertung → Essen.
 4. **Later:** log the route key instead of the path, then renew the calendar link (TD-047).
@@ -81,6 +81,6 @@ Release 2.0 overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md)
 
 ## ℹ About this dashboard
 
-- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (a ticket counts as done when it has an "Implementation Status" section and its acceptance criteria are checked), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (47 deploy runs; runs 34, 35, 37 – 45 and 47 green, run 46 failed at the Alexa skill upload, run 36 cancelled by the next push).
-- **Counting:** release 2.0: 26 of 28 FOOD tickets done (FOOD-024 closed with ADR 0008); FOOD-025 is prepared (status section) but counts as in progress until the tag exists; FOOD-020 has an evaluation section only. The epic EPIC-FOOD-001 is done. Maintenance: MAINT-001 – 023 done (device checks of MAINT-002, 005 and 006 open); REC-001 and REC-002 done; owner hotfix tickets HOTFIX-006 and UI-001 done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets. Debt levels are an assessment for this dashboard.
+- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (a ticket counts as done when it has an "Implementation Status" section and its acceptance criteria are checked), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (48 deploy runs; runs 34, 35, 37 – 45, 47 and 48 green, run 46 failed at the Alexa skill upload, run 36 cancelled by the next push).
+- **Counting:** release 2.0: 26 of 28 FOOD tickets done (FOOD-024 closed with ADR 0008); FOOD-025 is prepared (status section) but counts as in progress until the tag exists; FOOD-020 has an evaluation section only. The epic EPIC-FOOD-001 is done. Maintenance: MAINT-001 – 024 done (device checks of MAINT-002, 005 and 006 open); REC-001 and REC-002 done; owner hotfix tickets HOTFIX-006 and UI-001 done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets. Debt levels are an assessment for this dashboard.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).

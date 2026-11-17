@@ -75,6 +75,7 @@ and a changelog entry on top of that.
 | [MAINT-021](maintenance/ticket021.md) | Alexa slot names without digits (deploy fix) | Done |
 | [MAINT-022](maintenance/ticket022.md) | „Tafel“ — full-screen overview for the Echo Show browser | Done (device check open) |
 | [MAINT-023](maintenance/ticket023.md) | „Alexa, sag Mary Poppins Übersicht“ opens the Tafel | Done (device check open) |
+| [MAINT-024](maintenance/ticket024.md) | Meal widget shows long dish names on several lines | Done |
 
 ### Owner hotfix tickets (`../hotfix/`)
 

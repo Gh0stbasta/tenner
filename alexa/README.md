@@ -44,7 +44,8 @@ alexa/
 **Zentrale Essen** (`skill-package/dataStorePackages/meal-today/`, FOOD-018) shows lunch and dinner of today, from
 20:00 household time those of tomorrow („Morgen“), „–“ for an empty meal. It is bound to the Data Store object
 `tenner/meals`, which the notifier pushes together with `tenner/status` (same triggers, plus one push at 20:00). No
-tap action; until the first push it shows „Essen“ with „–“. Add it like the status widget („Zentrale Essen“).
+tap action; until the first push it shows „Essen“ with „–“. Long dish names wrap onto up to three lines (30 dp,
+package 1.2.0, MAINT-024). Add it like the status widget („Zentrale Essen“).
 
 **Zentrale Einkaufsliste** (`skill-package/dataStorePackages/shopping-list/`, FOOD-026) shows the open items of this
 week's shopping list in the household's order (counts only, max. 6, then „+ n weitere“), bound to `tenner/shopping`;

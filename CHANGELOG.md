@@ -39,6 +39,7 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Fixed
 
+- **Meal widget:** long dish names wrap onto up to three lines instead of being cut off (MAINT-024).
 - **Deploy:** Alexa slot names without digits (`itemA` – `itemE`); Amazon rejected `item1` – `item5` and the
   deploy of MAINT-017 – 020 failed at the skill upload (MAINT-021).
 - **Ticked items stay bought:** what is ticked off the shopping list in a week no longer comes back when the meal

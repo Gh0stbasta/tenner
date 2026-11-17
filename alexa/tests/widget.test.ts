@@ -72,6 +72,15 @@ describe("meal widget package (FOOD-018)", () => {
     expect(JSON.stringify(document)).not.toContain("SendEvent");
   });
 
+  it("wraps long dish names onto up to three lines and ships a new package version (MAINT-024)", () => {
+    const items = ((document.mainTemplate as { items: { items: { text: string; maxLines?: number; fontSize?: string }[] }[] }).items[0]?.items ?? []);
+    const dishes = items.filter((item) => item.text.includes("meals.lunch") || item.text.includes("meals.dinner"));
+    expect(dishes).toHaveLength(2);
+    for (const dish of dishes) expect(dish).toMatchObject({ maxLines: 3, fontSize: "@dishSize" });
+    expect((document.resources as { dimensions: Record<string, string> }[])[0]?.dimensions.dishSize).toBe("30dp");
+    expect(readMeals("manifest.json")).toMatchObject({ manifest: { version: "1.2.0" } });
+  });
+
   it("uses the same fields as the backend's MealWidget", () => {
     expect(Object.keys(sample.meals).sort()).toEqual(["date", "dinner", "lunch", "title", "updatedAt"]);
     const text = JSON.stringify(document);
