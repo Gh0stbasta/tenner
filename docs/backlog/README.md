@@ -72,7 +72,8 @@ and a changelog entry on top of that.
 | [MAINT-018](maintenance/ticket018.md) | Shorter shopping phrases for Alexa | Done |
 | [MAINT-019](maintenance/ticket019.md) | Ticked shopping items stay „vorhanden“ for the week | Done |
 | [MAINT-020](maintenance/ticket020.md) | Button „Abgehakte Einträge löschen“ | Done |
-| [MAINT-021](maintenance/ticket021.md) | Alexa slot names without digits (deploy fix) | Done (deploy check after merge) |
+| [MAINT-021](maintenance/ticket021.md) | Alexa slot names without digits (deploy fix) | Done |
+| [MAINT-022](maintenance/ticket022.md) | „Tafel“ — full-screen overview for the Echo Show browser | Done (device check open) |
 
 ### Owner hotfix tickets (`../hotfix/`)
 

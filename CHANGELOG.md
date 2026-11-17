@@ -10,6 +10,8 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Added
 
+- **Tafel:** `/tafel` shows meals (today with large photos, or the week), today's Aufgaben and the shopping list full
+  screen for the Echo Show browser; it refreshes itself (MAINT-022).
 - **„Abgehakte Einträge löschen“:** one button removes all ticked entries from the shopping list; they stay
   „vorhanden“ for the week (MAINT-020).
 - **Meal rule R14:** fish at most once a day — the planner, „Anderes Gericht“, the meal picker and swapping never put
