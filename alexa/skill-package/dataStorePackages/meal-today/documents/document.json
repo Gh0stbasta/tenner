@@ -2,7 +2,7 @@
   "type": "APL",
   "version": "2023.2",
   "theme": "dark",
-  "description": "Tenner meal widget (FOOD-018): today's lunch and dinner, tomorrow's from 20:00 household time. Bound to the Data Store object tenner/meals (MealWidget in backend/src/alexa/widget.ts). No tap action (MAINT-006).",
+  "description": "Tenner meal widget (FOOD-018): today's lunch and dinner, tomorrow's from 20:00 household time. Bound to the Data Store object tenner/meals (MealWidget in backend/src/alexa/widget.ts). No tap action (MAINT-006). Dish names wrap onto up to three lines (MAINT-024).",
   "extensions": [
     {
       "name": "DataStore",
@@ -32,7 +32,7 @@
       "dimensions": {
         "titleSize": "28dp",
         "labelSize": "22dp",
-        "dishSize": "34dp",
+        "dishSize": "30dp",
         "pad": "16dp"
       }
     }
@@ -70,7 +70,7 @@
             "text": "${meals.lunch == null ? '–' : meals.lunch}",
             "fontSize": "@dishSize",
             "color": "@text",
-            "maxLines": 1
+            "maxLines": 3
           },
           {
             "type": "Text",
@@ -84,7 +84,7 @@
             "text": "${meals.dinner == null ? '–' : meals.dinner}",
             "fontSize": "@dishSize",
             "color": "@text",
-            "maxLines": 1
+            "maxLines": 3
           }
         ]
       }
