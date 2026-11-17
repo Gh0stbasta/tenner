@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "mary poppins",
+      "invocationName": "zimmer service",
       "intents": [
         {
           "name": "EnableRemindersIntent",
