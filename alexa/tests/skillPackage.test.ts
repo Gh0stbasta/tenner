@@ -5,7 +5,8 @@ const readJson = (path: string): unknown => JSON.parse(readFileSync(new URL(`../
 
 interface LanguageModel {
   invocationName: string;
-  intents: { name: string; samples: string[] }[];
+  intents: { name: string; samples: string[]; slots?: { name: string; type: string }[] }[];
+  types: { name: string; values: { name: { value: string } }[] }[];
 }
 
 describe("skill package", () => {
@@ -31,6 +32,19 @@ describe("skill package", () => {
     for (const sample of samples) {
       expect(sample).toBe(sample.toLowerCase());
     }
+  });
+
+  it("takes the item alone and up to five items for the shopping list (MAINT-018)", () => {
+    const add = model.intents.find((intent) => intent.name === "AddShoppingItemIntent");
+    expect(add?.samples).toEqual(expect.arrayContaining(["{item1}", "{item1} {item2} {item3} {item4} und {item5}", "wir brauchen {item1} und {item2}"]));
+    // A sample with the free-text slot must not contain any other slot (Alexa model rule for AMAZON.SearchQuery).
+    for (const sample of add?.samples ?? []) {
+      if (sample.includes("{item}")) expect(sample.match(/\{/g)).toHaveLength(1);
+    }
+    const products = model.types.find((type) => type.name === "ShoppingProduct")?.values.map((value) => value.name.value) ?? [];
+    expect(products).toEqual(expect.arrayContaining(["milch", "eier", "klopapier"]));
+    expect(new Set(products).size).toBe(products.length);
+    expect(model.intents.map((intent) => intent.name)).toEqual(expect.arrayContaining(["ShoppingModeIntent", "ShoppingDoneIntent"]));
   });
 
   it("targets de-DE and gets the Lambda ARN at deploy time", () => {
@@ -65,7 +79,8 @@ describe("utterance conflicts (ALEXA-009)", () => {
     const conflicts = [...owners].filter(([sample, intents]) => intents.size > 1 && sample !== "{}");
     expect(conflicts).toEqual([]);
     // Slot-only answers: SpeakerIntent ({member}) and CompleteIntent ({tenner}); both handlers accept either (ALEXA-004).
-    expect([...(owners.get("{}") ?? [])].sort()).toEqual(["CompleteIntent", "SpeakerIntent"]);
+    // AddShoppingItemIntent ({item1}, MAINT-018): the slot values decide; in the shopping mode the others count as items.
+    expect([...(owners.get("{}") ?? [])].sort()).toEqual(["AddShoppingItemIntent", "CompleteIntent", "SpeakerIntent"]);
   });
 
   it("declares every slot type it uses", () => {

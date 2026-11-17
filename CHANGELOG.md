@@ -20,6 +20,9 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Changed
 
+- **Alexa shopping phrases:** „Alexa, sag Mary Poppins Milch, Eier und Butter“ adds up to five items at once;
+  „Alexa, sag Mary Poppins Einkauf“ starts a shopping mode that asks „Noch etwas?“ until „nein“ or „fertig“
+  (MAINT-018).
 - **Alexa:** the skill is now called with „Mary Poppins“ („Alexa, sag Mary Poppins, …“) instead of „Familien
   Zentrale“, which Alexa confused with the public skill „Familienkalender“ (MAINT-017).
 - **Plus button by page:** on „Essen“ the plus button on the phone opens the editor for a new dish; elsewhere it

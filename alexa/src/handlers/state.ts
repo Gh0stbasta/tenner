@@ -1,7 +1,7 @@
 import type { HandlerInput } from "ask-sdk-core";
 
 /** Open question of the current session, answered by the next request. */
-export type DialogState = "AWAIT_SPEAKER";
+export type DialogState = "AWAIT_SPEAKER" | "SHOPPING";
 
 const STATE_ATTRIBUTE = "state";
 

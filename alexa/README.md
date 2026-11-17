@@ -175,12 +175,21 @@ wissen?“. Every answer also appears as a card in the Alexa app.
 
 | Wish | Examples | Answer |
 |---|---|---|
-| Add | „setz Milch auf die Einkaufsliste“, „wir brauchen Klopapier“ | „Okay, Milch steht auf der Einkaufsliste.“ (not added twice) |
+| Add | „Milch“, „Milch, Eier und Butter“ (up to five, MAINT-018), „setz Milch auf die Einkaufsliste“, „wir brauchen Klopapier und Spülmittel“ | „Okay, Eier und Butter stehen auf der Einkaufsliste. Milch steht schon auf der Einkaufsliste.“ (not added twice) |
+| Shopping mode | „Einkauf“, „einkaufen“, „Einkaufsmodus“ (MAINT-018) | „Was soll auf die Einkaufsliste?“ → items → „… Noch etwas?“ until „nein“, „fertig“ or „das war's“ |
 | Read | „was steht auf der Einkaufsliste“ | open items in the list's order, max. 10, counts above one („2 mal Nudeln“) |
 | Tick off | „ich habe Milch gekauft“ | „Okay, Milch ist abgehakt.“; close names are named back, nothing is guessed |
 
-One-shot: „Alexa, sag Mary Poppins, setz Milch auf die Einkaufsliste“. „Alexa, setz Milch auf die Einkaufsliste“
-without „Mary Poppins“ goes to Amazon's own list (Amazon offers no way to redirect it).
+One-shot: „Alexa, sag Mary Poppins Milch, Eier und Butter“. Phrases with „schreib … auf“ or „Einkaufsliste“ without
+„sag Mary Poppins“ go to Amazon's own list, even with „mit Mary Poppins“ at the end (owner test 2026-11-17); Amazon
+offers no way to redirect them, and its list cannot be read by skills since 2024-07-01.
+
+Item words are recognized with the slot type `ShoppingProduct` (catalog ingredients and common household items);
+other words work too, but several unknown words in a row may end up as one item. In the shopping mode a single word
+that Alexa assigns to a task or member name is taken as an item.
+
+Alexa routine (owner, optional): Alexa app → Mehr → Routinen → „+“ → „Wenn Folgendes passiert“: Stimme „Einkauf“ →
+Aktion „Benutzerdefiniert“: „sag Mary Poppins Einkauf“. Then „Alexa, Einkauf“ starts the shopping mode.
 
 ### Meals (FOOD-017)
 

@@ -44,7 +44,21 @@ export function itemName(spoken: string): string {
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 
-export const addItem = (api: TennerApi, requestId: string, name: string): Promise<void> => changeList(api, [{ type: "add", key: itemKeyOf(requestId), name }]);
+export const addItem = (api: TennerApi, requestId: string, name: string): Promise<void> => addItems(api, requestId, [name]);
+
+/** Several items in one change (MAINT-018); keys stay stable for Alexa's retries of the same request. */
+export const addItems = (api: TennerApi, requestId: string, names: readonly string[]): Promise<void> =>
+  changeList(api, names.map((name, index) => ({ type: "add" as const, key: index === 0 ? itemKeyOf(requestId) : `${itemKeyOf(requestId)}-${index}`, name })));
+
+/** Split the spoken items of one sentence (MAINT-018): one name per slot, a slot value „milch und eier“ splits at „und“ and commas. */
+export function spokenNames(values: readonly (string | undefined)[]): string[] {
+  const names = values
+    .flatMap((value) => (value ?? "").split(/,|\bund\b|\bsowie\b/i))
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .map(itemName);
+  return names.filter((name, index) => names.findIndex((other) => other.toLocaleLowerCase("de") === name.toLocaleLowerCase("de")) === index);
+}
 export const checkItem = (api: TennerApi, key: string): Promise<void> => changeList(api, [{ type: "check", key, checked: true }]);
 
 /** Open items in the list's order, pantry items included (MAINT-014). */

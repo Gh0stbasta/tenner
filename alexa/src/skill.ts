@@ -10,7 +10,15 @@ import { LaunchRequestHandler } from "./handlers/launch.js";
 import { EnableRemindersIntentHandler, PermissionResponseHandler, messageReceivedHandler } from "./handlers/messaging.js";
 import { NoIntentHandler, OverdueIntentHandler, SuggestIntentHandler, TodayIntentHandler, WorkLeftIntentHandler, YesIntentHandler } from "./handlers/questions.js";
 import { SessionEndedRequestHandler } from "./handlers/sessionEnded.js";
-import { AddShoppingItemIntentHandler, ReadShoppingListIntentHandler, ShoppingItemBoughtIntentHandler } from "./handlers/shopping.js";
+import {
+  AddShoppingItemIntentHandler,
+  ReadShoppingListIntentHandler,
+  ShoppingDoneIntentHandler,
+  ShoppingFallbackHandler,
+  ShoppingItemBoughtIntentHandler,
+  ShoppingModeIntentHandler,
+  ShoppingSlotOnlyHandler,
+} from "./handlers/shopping.js";
 import { MealTodayIntentHandler } from "./handlers/meals.js";
 import { SpeakerIntentHandler } from "./handlers/speaker.js";
 import { StopIntentHandler } from "./handlers/stop.js";
@@ -39,6 +47,10 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
       SystemExceptionHandler,
       // Other system messages before the intent handlers, which read the session (MAINT-004).
       UnknownSystemRequestHandler,
+      // MAINT-018: in the shopping mode „nein“, „fertig“, single words and unclear phrases belong to the mode.
+      ShoppingDoneIntentHandler,
+      ShoppingSlotOnlyHandler,
+      ShoppingFallbackHandler,
       // Answers to open completion questions come before the general handlers of the same intents.
       CompletedByAnswerHandler,
       ConfirmYesHandler,
@@ -47,6 +59,7 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
       UndoIntentHandler,
       SpeakerIntentHandler,
       // FOOD-026: shopping list by voice.
+      ShoppingModeIntentHandler,
       AddShoppingItemIntentHandler,
       ReadShoppingListIntentHandler,
       ShoppingItemBoughtIntentHandler,
