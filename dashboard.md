@@ -8,7 +8,7 @@
 |---|---|
 | **Project health** | 🟢 **Live**; all 1,949 automated tests pass (backend 1,147, frontend 512, alexa 160, Terraform 82, scripts 48) |
 | **Current phase** | **Release 2.0.0 — Family Meal Planning, live.** Owner feedback is coming in as maintenance tickets |
-| **Current focus** | This pull request: pantry items as normal shopping list entries (MAINT-014) and meal rule R14, fish at most once a day (MAINT-015) |
+| **Current focus** | This pull request: pantry items as normal shopping list entries (MAINT-014) and meal rule R14, fish at most once a day (MAINT-015); zod security update so CI is green again (MAINT-016) |
 | **Biggest blocker** | None. Frontend-only changes, no infrastructure |
 | **Recommended next action** | Merge, refresh the shopping list once, then set tag `v2.0.0` |
 
@@ -17,10 +17,10 @@
 ```text
 Release 1.0  ████████████████████ 100%  104 / 104 tickets done (tag v1.0.0 still to set)
 Release 2.0  ███████████████████░  93%   26 /  28 FOOD tickets (all features; FOOD-025 waits for the tag, FOOD-020 for data)
-Maintenance  15 done (MAINT-001 – 015; device checks open) · REC 2 done (REC-001, 002) · owner hotfixes 2 done (HOTFIX-006, UI-001)
+Maintenance  16 done (MAINT-001 – 016; device checks open) · REC 2 done (REC-001, 002) · owner hotfixes 2 done (HOTFIX-006, UI-001)
 ```
 
-✅ Completed: **150** (104 + EPIC-FOOD-001 + 26 FOOD + 15 MAINT + 2 REC + 2 owner hotfixes) · 🚧 In progress: **1** (FOOD-025, tag) · 📋 Open: **1** (FOOD-020: AI evaluation, recheck 2026-12-07)
+✅ Completed: **151** (104 + EPIC-FOOD-001 + 26 FOOD + 16 MAINT + 2 REC + 2 owner hotfixes) · 🚧 In progress: **1** (FOOD-025, tag) · 📋 Open: **1** (FOOD-020: AI evaluation, recheck 2026-12-07)
 
 ## 🧩 Feature Status
 
@@ -58,7 +58,7 @@ Release 2.0 overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md)
 
 ## 🔐 Security
 
-🟢 **No critical findings.** New in this PR: the dish prompt you paste into a chat AI contains only ingredient names (no people, allergies or plans); the AI answer only fills the editor. Photos in a private bucket behind CloudFront (OAC), uploads limited by signed type, size and household key; the API may only write photos. One new public route: the calendar feed, authorized by a 256-bit token stored as a hash and revocable. Allergies never leave the profile (no logs, notifications, calendar or Alexa). New dependencies: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` (Apache-2.0, pinned, 0 audit findings).
+🟢 **No critical findings.** New in this PR: zod updated to 4.6.7 (high advisory GHSA-mrhx-c7xc-m3w5, MAINT-016). The dish prompt you paste into a chat AI contains only ingredient names (no people, allergies or plans). Photos in a private bucket behind CloudFront (OAC), uploads limited by signed type, size and household key; the API may only write photos. One new public route: the calendar feed, authorized by a 256-bit token stored as a hash and revocable. Allergies never leave the profile (no logs, notifications, calendar or Alexa). New dependencies: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` (Apache-2.0, pinned, 0 audit findings).
 
 ⚠ Worth your attention: calendar link = read access to dish names for whoever has it · open Google sign-up (TD-020) · linked Alexa account has your full rights (TD-035) · manual checks still open ([`docs/security.md`](docs/security.md#manual-verifications)).
 
@@ -82,5 +82,5 @@ Release 2.0 overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md)
 ## ℹ About this dashboard
 
 - **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (a ticket counts as done when it has an "Implementation Status" section and its acceptance criteria are checked), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (44 deploy runs; runs 34, 35 and 37 – 44 green, run 36 cancelled by the next push).
-- **Counting:** release 2.0: 26 of 28 FOOD tickets done (FOOD-024 closed with ADR 0008); FOOD-025 is prepared (status section) but counts as in progress until the tag exists; FOOD-020 has an evaluation section only. The epic EPIC-FOOD-001 is done. Maintenance: MAINT-001 – 015 done (device checks of MAINT-002, 005 and 006 open); REC-001 and REC-002 done; owner hotfix tickets HOTFIX-006 and UI-001 done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets. Debt levels are an assessment for this dashboard.
+- **Counting:** release 2.0: 26 of 28 FOOD tickets done (FOOD-024 closed with ADR 0008); FOOD-025 is prepared (status section) but counts as in progress until the tag exists; FOOD-020 has an evaluation section only. The epic EPIC-FOOD-001 is done. Maintenance: MAINT-001 – 016 done (device checks of MAINT-002, 005 and 006 open); REC-001 and REC-002 done; owner hotfix tickets HOTFIX-006 and UI-001 done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets. Debt levels are an assessment for this dashboard.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).
