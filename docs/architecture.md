@@ -1537,7 +1537,8 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   per ingredient and shown as counts (FOOD-028: pieces rounded up, weighed ingredients once per meal; no grams). Items keep the household's order (drag and drop) and ticks; changes are idempotent
   operations (`check`, `add`, `remove`, `move`) sent as a batch, so an offline queue on the phone can replay them and
   two phones merge by retrying on the newest version. `stale` compares the stored fingerprint with a fresh
-  calculation. Syncing with the Alexa shopping list is not possible (Amazon switched the List Management API off on
+  calculation. MAINT-019: the list stores `bought`, the planned items ticked off or removed this week; a refresh after
+  a plan change does not add them again (unticking takes an item back). Syncing with the Alexa shopping list is not possible (Amazon switched the List Management API off on
   2024-07-01); voice access goes through the Tenner skill (FOOD-026).
 - **Security:** same JWT authorizer and tenant isolation as all routes; allergies in the profile are never logged.
 - **Cost:** within the DynamoDB free tier.

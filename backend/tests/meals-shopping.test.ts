@@ -3,6 +3,8 @@
 import { describe, expect, it } from "vitest";
 import {
   applyOperations,
+  boughtAfter,
+  boughtOf,
   CATALOG_INGREDIENTS_BY_ID,
   createMealServices,
   DEFAULT_HOUSEHOLD_FOOD_RULES,
@@ -174,6 +176,31 @@ async function ready() {
   return { meals, services };
 }
 
+describe("items available this week (MAINT-019)", () => {
+  it("records ticked and removed planned items, forgets unticked ones and ignores own items", () => {
+    const items = [item("milk"), item("eggs"), item("manual-1", { manual: true, ingredientId: null })];
+    const bought = boughtAfter([], items, [
+      { type: "check", key: "milk", checked: true },
+      { type: "remove", key: "eggs" },
+      { type: "check", key: "manual-1", checked: true },
+      { type: "check", key: "unknown", checked: true },
+    ]);
+    expect(bought).toEqual(["eggs", "milk"]);
+    expect(boughtAfter(bought, items, [{ type: "check", key: "milk", checked: false }])).toEqual(["eggs"]);
+    expect(boughtOf(undefined, [item("rice", { checked: true }), item("manual-2", { manual: true, checked: true }), item("salt")])).toEqual(["rice"]);
+    expect(boughtOf(["eggs"], [])).toEqual(["eggs"]);
+  });
+
+  it("does not add available items again on a refresh, but keeps those still on the list", () => {
+    const generated = [item("rice"), item("milk"), item("eggs")];
+    const merged = mergeRefresh([item("rice", { checked: true })], generated, ["rice", "milk"]);
+    expect(merged.map((entry) => [entry.key, entry.checked])).toEqual([
+      ["rice", true],
+      ["eggs", false],
+    ]);
+  });
+});
+
 describe("ShoppingListService (FOOD-014)", () => {
   it("needs a plan, then makes the list once from today on", async () => {
     const { services, meals } = await ready();
@@ -207,6 +234,40 @@ describe("ShoppingListService (FOOD-014)", () => {
     const kept = refreshed.items.find((entry) => entry.key === first.key);
     if (kept) expect(kept.checked).toBe(true);
     expect(refreshed.items.some((entry) => entry.usedFor.some((slotId) => slotId < "2026-10-14"))).toBe(true);
+  });
+
+  it("keeps a ticked item off the list when the plan needs it again (MAINT-019)", async () => {
+    const { services, meals } = await ready();
+    await services.plans.getPlan("default", "current");
+    await services.shopping.getList("default", "current");
+    // Items only needed before today are on the WEEK list but not on the REST list: the plan „changes“ for them.
+    const week = await services.shopping.refreshList(TEST_IDENTITY, "current", "WEEK");
+    const early = week.items.find((entry) => !entry.manual && entry.usedFor.every((slotId) => slotId < "2026-10-14")) as ShoppingItem;
+    expect(early).toBeDefined();
+    await services.shopping.changeList(TEST_IDENTITY, "current", [{ type: "check", key: early.key, checked: true }]);
+    const rest = await services.shopping.refreshList(TEST_IDENTITY, "current", "REST");
+    expect(rest.items.some((entry) => entry.key === early.key)).toBe(false);
+    const back = await services.shopping.refreshList(TEST_IDENTITY, "current", "WEEK");
+    expect(back.items.some((entry) => entry.key === early.key)).toBe(false);
+    expect((meals.items.get("default|LIST#2026-10-12") as { bought: string[] }).bought).toContain(early.key);
+
+    // A list stored before MAINT-019 has no „bought“: only ticks still on the list count, so this item comes back.
+    const stored = meals.items.get("default|LIST#2026-10-12") as { bought?: string[] };
+    delete stored.bought;
+    const again = await services.shopping.refreshList(TEST_IDENTITY, "current", "WEEK");
+    expect(again.items.some((entry) => entry.key === early.key)).toBe(true);
+  });
+
+  it("brings an unticked item back on the next refresh (MAINT-019)", async () => {
+    const { services } = await ready();
+    await services.plans.getPlan("default", "current");
+    const week = await services.shopping.refreshList(TEST_IDENTITY, "current", "WEEK");
+    const early = week.items.find((entry) => !entry.manual && entry.usedFor.every((slotId) => slotId < "2026-10-14")) as ShoppingItem;
+    await services.shopping.changeList(TEST_IDENTITY, "current", [{ type: "check", key: early.key, checked: true }]);
+    await services.shopping.changeList(TEST_IDENTITY, "current", [{ type: "check", key: early.key, checked: false }]);
+    await services.shopping.refreshList(TEST_IDENTITY, "current", "REST");
+    const back = await services.shopping.refreshList(TEST_IDENTITY, "current", "WEEK");
+    expect(back.items.find((entry) => entry.key === early.key)).toMatchObject({ checked: false });
   });
 
   it("shows a list stored with grams as counts without marking it outdated (FOOD-028)", async () => {

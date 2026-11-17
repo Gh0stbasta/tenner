@@ -39,6 +39,8 @@ export interface StoredShoppingList {
   readonly signature: string;
   /** In the household's order (drag and drop); ticked items are shown at the end by the clients. */
   readonly items: readonly ShoppingItem[];
+  /** MAINT-019: keys of planned items ticked off or removed this week; a refresh does not add them again. */
+  readonly bought: readonly string[];
 }
 
 /** Changes from the clients; each is idempotent, so a replayed offline queue does no harm. */
@@ -136,8 +138,9 @@ export function signatureOf(items: readonly ShoppingItem[]): string {
 /**
  * Refresh after plan changes: own items, ticks and the own order stay; planned items get new quantities; items no
  * longer needed go; new items are placed after the last item of their section (or where the section belongs).
+ * MAINT-019: planned items in `bought` (ticked or removed this week) are not added again.
  */
-export function mergeRefresh(current: readonly ShoppingItem[], generated: readonly ShoppingItem[]): ShoppingItem[] {
+export function mergeRefresh(current: readonly ShoppingItem[], generated: readonly ShoppingItem[], bought: readonly string[] = []): ShoppingItem[] {
   const fresh = new Map(generated.map((item) => [item.key, item]));
   const result: ShoppingItem[] = [];
   for (const item of current) {
@@ -148,7 +151,7 @@ export function mergeRefresh(current: readonly ShoppingItem[], generated: readon
     const update = fresh.get(item.key);
     if (update) result.push({ ...update, checked: item.checked });
   }
-  const known = new Set(result.map((item) => item.key));
+  const known = new Set([...result.map((item) => item.key), ...bought]);
   for (const item of generated) {
     if (known.has(item.key)) continue;
     result.splice(insertionIndex(result, item), 0, item);
@@ -166,6 +169,28 @@ function insertionIndex(items: readonly ShoppingItem[], item: ShoppingItem): num
     if (compareItems(other, item) <= 0) before = position;
   });
   return (sameSection >= 0 ? sameSection : before) + 1;
+}
+
+/**
+ * MAINT-019: the week's available planned items after the changes. Ticking or removing a planned item marks it
+ * available; unticking it takes it back. Own items are not tracked.
+ */
+export function boughtAfter(bought: readonly string[], items: readonly ShoppingItem[], operations: readonly ShoppingOperation[]): string[] {
+  const planned = new Set(items.filter((item) => !item.manual).map((item) => item.key));
+  const result = new Set(bought);
+  for (const operation of operations) {
+    if (!planned.has(operation.key)) continue;
+    if (operation.type === "check") {
+      if (operation.checked) result.add(operation.key);
+      else result.delete(operation.key);
+    } else if (operation.type === "remove") result.add(operation.key);
+  }
+  return [...result].sort();
+}
+
+/** Lists stored before MAINT-019 have no `bought`: their ticked planned items count. */
+export function boughtOf(stored: readonly string[] | undefined, items: readonly ShoppingItem[]): string[] {
+  return [...new Set([...(stored ?? []), ...items.filter((item) => item.checked && !item.manual).map((item) => item.key)])].sort();
 }
 
 /** Apply changes in order; unknown keys are ignored (the item may have gone with a refresh). */

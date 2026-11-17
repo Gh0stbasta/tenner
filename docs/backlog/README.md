@@ -70,6 +70,7 @@ and a changelog entry on top of that.
 | [MAINT-016](maintenance/ticket016.md) | Update zod for GHSA-mrhx-c7xc-m3w5 | Done |
 | [MAINT-017](maintenance/ticket017.md) | Alexa invocation name „Mary Poppins“ | Done |
 | [MAINT-018](maintenance/ticket018.md) | Shorter shopping phrases for Alexa | Done |
+| [MAINT-019](maintenance/ticket019.md) | Ticked shopping items stay „vorhanden“ for the week | Done |
 
 ### Owner hotfix tickets (`../hotfix/`)
 
