@@ -97,7 +97,7 @@ describe("shorter phrases and shopping mode (MAINT-018)", () => {
 
   it("adds several items in one change and names the ones already on the list", async () => {
     const { skill, changes } = setup();
-    const response = await skill.invoke(intentRequest("AddShoppingItemIntent", { item1: { value: "eier" }, item2: { value: "milch" }, item3: { value: "butter" } }));
+    const response = await skill.invoke(intentRequest("AddShoppingItemIntent", { itemA: { value: "eier" }, itemB: { value: "milch" }, itemC: { value: "butter" } }));
     expect(ssml(response)).toBe("<speak>Okay, Eier und Butter stehen auf der Einkaufsliste. Milch steht schon auf der Einkaufsliste.</speak>");
     expect(changes).toEqual([
       {
@@ -115,7 +115,7 @@ describe("shorter phrases and shopping mode (MAINT-018)", () => {
     const start = await skill.invoke(intentRequest("ShoppingModeIntent"));
     expect(ssml(start)).toBe("<speak>Was soll auf die Einkaufsliste?</speak>");
     expect(ends(start)).toBeFalsy();
-    const first = await skill.invoke(followUp(intentRequest("AddShoppingItemIntent", { item1: { value: "äpfel" } }), start));
+    const first = await skill.invoke(followUp(intentRequest("AddShoppingItemIntent", { itemA: { value: "äpfel" } }), start));
     expect(ssml(first)).toBe("<speak>Okay, Äpfel steht auf der Einkaufsliste. Noch etwas?</speak>");
     expect(ends(first)).toBeFalsy();
     const unclear = await skill.invoke(followUp(intentRequest("AMAZON.FallbackIntent"), first));

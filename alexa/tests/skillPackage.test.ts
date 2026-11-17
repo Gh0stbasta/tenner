@@ -30,13 +30,15 @@ describe("skill package", () => {
     const samples = model.intents.flatMap((intent) => intent.samples);
     expect(new Set(samples).size).toBe(samples.length);
     for (const sample of samples) {
-      expect(sample).toBe(sample.toLowerCase());
+      // Slot names in braces may use capitals (itemA, MAINT-021); the spoken words are lowercase.
+      const words = sample.replace(/\{[^}]+\}/g, "{}");
+      expect(words).toBe(words.toLowerCase());
     }
   });
 
   it("takes the item alone and up to five items for the shopping list (MAINT-018)", () => {
     const add = model.intents.find((intent) => intent.name === "AddShoppingItemIntent");
-    expect(add?.samples).toEqual(expect.arrayContaining(["{item1}", "{item1} {item2} {item3} {item4} und {item5}", "wir brauchen {item1} und {item2}"]));
+    expect(add?.samples).toEqual(expect.arrayContaining(["{itemA}", "{itemA} {itemB} {itemC} {itemD} und {itemE}", "wir brauchen {itemA} und {itemB}"]));
     // A sample with the free-text slot must not contain any other slot (Alexa model rule for AMAZON.SearchQuery).
     for (const sample of add?.samples ?? []) {
       if (sample.includes("{item}")) expect(sample.match(/\{/g)).toHaveLength(1);
@@ -79,8 +81,18 @@ describe("utterance conflicts (ALEXA-009)", () => {
     const conflicts = [...owners].filter(([sample, intents]) => intents.size > 1 && sample !== "{}");
     expect(conflicts).toEqual([]);
     // Slot-only answers: SpeakerIntent ({member}) and CompleteIntent ({tenner}); both handlers accept either (ALEXA-004).
-    // AddShoppingItemIntent ({item1}, MAINT-018): the slot values decide; in the shopping mode the others count as items.
+    // AddShoppingItemIntent ({itemA}, MAINT-018): the slot values decide; in the shopping mode the others count as items.
     expect([...(owners.get("{}") ?? [])].sort()).toEqual(["AddShoppingItemIntent", "CompleteIntent", "SpeakerIntent"]);
+  });
+
+  it("uses slot names Amazon accepts: a letter first, then letters, periods, underscores (MAINT-021)", () => {
+    const names = model.intents.flatMap((intent) => ((intent as unknown as { slots?: { name: string }[] }).slots ?? []).map((slot) => slot.name));
+    expect(names.length).toBeGreaterThan(0);
+    for (const name of names) expect(name).toMatch(/^[A-Za-z][A-Za-z._]*$/);
+    for (const intent of model.intents) {
+      const declared = new Set(((intent as unknown as { slots?: { name: string }[] }).slots ?? []).map((slot) => slot.name));
+      for (const sample of intent.samples) for (const [, slot] of sample.matchAll(/\{([^}]+)\}/g)) expect(declared.has(slot ?? ""), `${intent.name}: ${sample}`).toBe(true);
+    }
   });
 
   it("declares every slot type it uses", () => {

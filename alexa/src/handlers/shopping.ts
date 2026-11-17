@@ -49,7 +49,7 @@ async function withList(input: HandlerInput, action: (items: readonly ShoppingIt
   return action(items);
 }
 
-const SLOT_NAMES = ["item", "item1", "item2", "item3", "item4", "item5"] as const;
+const SLOT_NAMES = ["item", "itemA", "itemB", "itemC", "itemD", "itemE"] as const;
 
 /** All spoken items of the request (MAINT-018: up to five slots plus the free-text slot). */
 const spokenItems = (input: HandlerInput): string[] => {
