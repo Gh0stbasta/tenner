@@ -22,7 +22,7 @@ export function envelope(request: Record<string, unknown>, options: EnvelopeOpti
   return {
     version: "1.0",
     session: {
-      // One-shot requests („Alexa, frag Mary Poppins, …“) start a new session too; tests set false for follow-ups.
+      // One-shot requests („Alexa, frag Zimmer Service, …“) start a new session too; tests set false for follow-ups.
       new: true,
       sessionId: "amzn1.echo-api.session.test",
       application: { applicationId },

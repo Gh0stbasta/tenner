@@ -10,7 +10,7 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Added
 
-- **„Alexa, sag Mary Poppins Übersicht“:** opens the Tafel in the Echo Show's browser (APL `OpenURL`); where the
+- **„Alexa, sag Zimmer Service Übersicht“:** opens the Tafel in the Echo Show's browser (APL `OpenURL`); where the
   device does not allow it, the screen shows the address (MAINT-023).
 - **Tafel:** `/tafel` shows meals (today with large photos, or the week), today's Aufgaben and the shopping list full
   screen for the Echo Show browser; it refreshes itself (MAINT-022).
@@ -26,11 +26,12 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Changed
 
-- **Alexa shopping phrases:** „Alexa, sag Mary Poppins Milch, Eier und Butter“ adds up to five items at once;
-  „Alexa, sag Mary Poppins Einkauf“ starts a shopping mode that asks „Noch etwas?“ until „nein“ or „fertig“
+- **Alexa shopping phrases:** „Alexa, sag Zimmer Service Milch, Eier und Butter“ adds up to five items at once;
+  „Alexa, sag Zimmer Service Einkauf“ starts a shopping mode that asks „Noch etwas?“ until „nein“ or „fertig“
   (MAINT-018).
-- **Alexa:** the skill is now called with „Mary Poppins“ („Alexa, sag Mary Poppins, …“) instead of „Familien
-  Zentrale“, which Alexa confused with the public skill „Familienkalender“ (MAINT-017).
+- **Alexa:** the skill is now called with „Zimmer Service“ („Alexa, sag Zimmer Service, …“). „Familien Zentrale“
+  was confused with the public skill „Familienkalender“ (MAINT-017); „Mary Poppins“ was not found by Alexa+ on the Echo
+  Show 21 (MAINT-025).
 - **Plus button by page:** on „Essen“ the plus button on the phone opens the editor for a new dish; elsewhere it
   still creates an Aufgabe (MAINT-008). On the shopping list it adds a shopping item (MAINT-010).
 - **Copy the shopping list:** „Kopieren“ next to „Teilen“ puts the list as text on the clipboard, also on phones

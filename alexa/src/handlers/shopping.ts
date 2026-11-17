@@ -2,8 +2,8 @@
  * Shopping list by voice (FOOD-026): „setz Milch auf die Einkaufsliste“, „was steht auf der Einkaufsliste“,
  * „ich habe Milch gekauft“. The list is the household's list in the app (FOOD-014). An ambiguous name is answered
  * with the options, without guessing; the user repeats the phrase with the right name.
- * MAINT-018: the item alone („sag Mary Poppins Milch“), up to five items in one sentence, and a shopping mode
- * („sag Mary Poppins Einkauf“) that asks „Noch etwas?“ until „nein“ / „fertig“.
+ * MAINT-018: the item alone („sag Zimmer Service Milch“), up to five items in one sentence, and a shopping mode
+ * („sag Zimmer Service Einkauf“) that asks „Noch etwas?“ until „nein“ / „fertig“.
  */
 
 import type { HandlerInput, RequestHandler } from "ask-sdk-core";
@@ -81,7 +81,7 @@ export const AddShoppingItemIntentHandler: RequestHandler = {
   },
 };
 
-/** „sag Mary Poppins Einkauf“ (MAINT-018): keeps listening for items until „nein“ / „fertig“. */
+/** „sag Zimmer Service Einkauf“ (MAINT-018): keeps listening for items until „nein“ / „fertig“. */
 export const ShoppingModeIntentHandler: RequestHandler = {
   canHandle: (input) => isIntent(input, "ShoppingModeIntent"),
   handle(input: HandlerInput): Response {

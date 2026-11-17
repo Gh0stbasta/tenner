@@ -27,7 +27,7 @@ export function reminderText(message: NotificationMessage): string {
   const minutes = Number(message.facts?.minutes ?? 0);
   const overdue = Number(message.facts?.overdue ?? 0);
   const parts = [`Heute ${tenners(due)}, ${minutes} Minuten`, ...(overdue > 0 ? [`${overdue} überfällig`] : [])];
-  return `Zentrale: ${parts.join(", ")}. Sag: Alexa, sag Mary Poppins, starte meinen Tag, für Details.`;
+  return `Zentrale: ${parts.join(", ")}. Sag: Alexa, sag Zimmer Service, starte meinen Tag, für Details.`;
 }
 
 /** FOOD-016: „Zentrale: Heute gibt es mittags Onigiri und abends Linseneintopf.“ */
