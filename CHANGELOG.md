@@ -10,6 +10,8 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Added
 
+- **„Abgehakte Einträge löschen“:** one button removes all ticked entries from the shopping list; they stay
+  „vorhanden“ for the week (MAINT-020).
 - **Meal rule R14:** fish at most once a day — the planner, „Anderes Gericht“, the meal picker and swapping never put
   fish at lunch and dinner of the same day (MAINT-015).
 - **Photo from the dashboard:** tap a dish picture in „Heute essen wir“ to take or choose a photo for that dish

@@ -213,6 +213,7 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 - **Own order:** drag handle per item (`@dnd-kit`: mouse, touch with a short press, keyboard with Space and arrow
   keys); a drop is sent as `{ type: "move", key, afterKey }`.
 - **Ticking off:** a ticked item is struck through and moves to „Erledigt“ at the end; unticking puts it back.
+  „Abgehakte Einträge löschen“ in „Erledigt“ removes all ticked entries in one change (MAINT-020).
   Pantry items (salt, oil …) are normal entries of the list (MAINT-014; before, a collapsed „Vorrat prüfen“).
 - **„Liste aktualisieren“** appears when the plan changed since the list was made (`stale`). What was ticked off this
   week stays „vorhanden“ and does not come back with a refresh (MAINT-019, server side).

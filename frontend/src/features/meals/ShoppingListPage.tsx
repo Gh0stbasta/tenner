@@ -24,6 +24,7 @@ import { CSS } from "@dnd-kit/utilities";
 import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
+import DeleteSweepOutlinedIcon from "@mui/icons-material/DeleteSweepOutlined";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import {
   Alert,
@@ -151,6 +152,11 @@ export function ShoppingListPage() {
 
   const onCheck = (item: ShoppingItem, checked: boolean) => change([{ type: "check", key: item.key, checked }]);
   const onRemove = (item: ShoppingItem) => change([{ type: "remove", key: item.key }]);
+  // MAINT-020: one change for all ticked entries; planned ones stay „vorhanden“ for the week (MAINT-019).
+  const removeDone = () => {
+    change(done.map((item) => ({ type: "remove" as const, key: item.key })));
+    notify({ message: done.length === 1 ? "1 Eintrag gelöscht." : `${done.length} Einträge gelöscht.` });
+  };
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over) return;
     const operation = moveOperation(open, String(active.id), String(over.id));
@@ -324,9 +330,16 @@ export function ShoppingListPage() {
         </Card>
         {done.length > 0 && (
           <Card sx={{ px: 1 }}>
-            <Typography variant="overline" color="text.secondary" sx={{ px: 1 }}>
-              Erledigt ({done.length})
-            </Typography>
+            <Box
+              sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, px: 1, pt: 0.5 }}
+            >
+              <Typography variant="overline" color="text.secondary">
+                Erledigt ({done.length})
+              </Typography>
+              <Button size="small" startIcon={<DeleteSweepOutlinedIcon />} onClick={removeDone}>
+                Abgehakte Einträge löschen
+              </Button>
+            </Box>
             <List aria-label="Erledigt" dense>
               {done.map((item) => (
                 <PlainRow key={item.key} item={item} onCheck={onCheck} onRemove={onRemove} />
