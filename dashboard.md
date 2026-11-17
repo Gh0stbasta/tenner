@@ -6,10 +6,10 @@
 
 | | |
 |---|---|
-| **Project health** | 🟢 **Live**; all 1,957 automated tests pass (backend 1,151, frontend 513, alexa 165, Terraform 82, scripts 48) |
+| **Project health** | 🟢 **Live**; all 1,958 automated tests pass (backend 1,151, frontend 513, alexa 166, Terraform 82, scripts 48) |
 | **Current phase** | **Release 2.0.0 — Family Meal Planning, live.** Owner feedback is coming in as maintenance tickets |
-| **Current focus** | This pull request: Alexa skill renamed „Mary Poppins“ (Echo confused „Familien Zentrale“ with „Familienkalender“), short shopping phrases and shopping mode, ticked items stay „vorhanden“ for the week, „Abgehakte Einträge löschen“ (MAINT-017 – 020). Amazon's own shopping list stays closed to apps (confirmed 2026-11-17) |
-| **Biggest blocker** | None. Frontend-only changes, no infrastructure |
+| **Current focus** | This pull request: fix the failed deploy — Alexa slot names without digits (MAINT-021), so MAINT-017 – 020 („Mary Poppins“, short shopping phrases) reach the Echo |
+| **Biggest blocker** | 🚨 Deploy run 46 failed at the Alexa skill upload (slot names with digits); this pull request fixes it (MAINT-021) |
 | **Recommended next action** | Merge, then test on the Echo: „Alexa, sag Mary Poppins Milch und Eier“ and „Alexa, sag Mary Poppins Einkauf“ |
 
 ## 📈 Progress
@@ -17,10 +17,10 @@
 ```text
 Release 1.0  ████████████████████ 100%  104 / 104 tickets done (tag v1.0.0 still to set)
 Release 2.0  ███████████████████░  93%   26 /  28 FOOD tickets (all features; FOOD-025 waits for the tag, FOOD-020 for data)
-Maintenance  20 done (MAINT-001 – 020; device checks open) · REC 2 done (REC-001, 002) · owner hotfixes 2 done (HOTFIX-006, UI-001)
+Maintenance  21 done (MAINT-001 – 021; device checks open) · REC 2 done (REC-001, 002) · owner hotfixes 2 done (HOTFIX-006, UI-001)
 ```
 
-✅ Completed: **155** (104 + EPIC-FOOD-001 + 26 FOOD + 20 MAINT + 2 REC + 2 owner hotfixes) · 🚧 In progress: **1** (FOOD-025, tag) · 📋 Open: **1** (FOOD-020: AI evaluation, recheck 2026-12-07)
+✅ Completed: **156** (104 + EPIC-FOOD-001 + 26 FOOD + 21 MAINT + 2 REC + 2 owner hotfixes) · 🚧 In progress: **1** (FOOD-025, tag) · 📋 Open: **1** (FOOD-020: AI evaluation, recheck 2026-12-07)
 
 ## 🧩 Feature Status
 
@@ -81,6 +81,6 @@ Release 2.0 overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md)
 
 ## ℹ About this dashboard
 
-- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (a ticket counts as done when it has an "Implementation Status" section and its acceptance criteria are checked), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (45 deploy runs; runs 34, 35 and 37 – 45 green, run 36 cancelled by the next push).
-- **Counting:** release 2.0: 26 of 28 FOOD tickets done (FOOD-024 closed with ADR 0008); FOOD-025 is prepared (status section) but counts as in progress until the tag exists; FOOD-020 has an evaluation section only. The epic EPIC-FOOD-001 is done. Maintenance: MAINT-001 – 020 done (device checks of MAINT-002, 005 and 006 open); REC-001 and REC-002 done; owner hotfix tickets HOTFIX-006 and UI-001 done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets. Debt levels are an assessment for this dashboard.
+- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (a ticket counts as done when it has an "Implementation Status" section and its acceptance criteria are checked), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (46 deploy runs; runs 34, 35 and 37 – 45 green, run 46 failed at the Alexa skill upload, run 36 cancelled by the next push).
+- **Counting:** release 2.0: 26 of 28 FOOD tickets done (FOOD-024 closed with ADR 0008); FOOD-025 is prepared (status section) but counts as in progress until the tag exists; FOOD-020 has an evaluation section only. The epic EPIC-FOOD-001 is done. Maintenance: MAINT-001 – 021 done (device checks of MAINT-002, 005 and 006 open); REC-001 and REC-002 done; owner hotfix tickets HOTFIX-006 and UI-001 done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets. Debt levels are an assessment for this dashboard.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).
