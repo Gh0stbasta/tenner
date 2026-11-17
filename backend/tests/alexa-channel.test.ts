@@ -40,7 +40,7 @@ describe("AlexaChannel", () => {
     expect(await alexa.send(DIGEST, RECIPIENT)).toEqual({ status: "SENT" });
     expect(deps.skillMessaging.send).toHaveBeenCalledWith("token-alexa:skill_messaging", ACCOUNT, {
       type: "REMINDER",
-      text: "Zentrale: Heute 4 Aufgaben, 40 Minuten, 1 überfällig. Sag: Alexa, sag Familien Zentrale, starte meinen Tag, für Details.",
+      text: "Zentrale: Heute 4 Aufgaben, 40 Minuten, 1 überfällig. Sag: Alexa, sag Mary Poppins, starte meinen Tag, für Details.",
     });
   });
 
@@ -65,7 +65,7 @@ describe("AlexaChannel", () => {
   });
 
   it("words the reminder without overdue part when there is none", () => {
-    expect(reminderText({ ...DIGEST, facts: { dueToday: 2, overdue: 0, minutes: 15 } })).toBe("Zentrale: Heute 2 Aufgaben, 15 Minuten. Sag: Alexa, sag Familien Zentrale, starte meinen Tag, für Details.");
+    expect(reminderText({ ...DIGEST, facts: { dueToday: 2, overdue: 0, minutes: 15 } })).toBe("Zentrale: Heute 2 Aufgaben, 15 Minuten. Sag: Alexa, sag Mary Poppins, starte meinen Tag, für Details.");
   });
 });
 

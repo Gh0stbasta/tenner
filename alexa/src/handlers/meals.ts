@@ -1,5 +1,5 @@
 /**
- * „Alexa, frag Familien Zentrale, was es heute gibt“ (FOOD-017): today's or tomorrow's lunch and dinner, optionally only one
+ * „Alexa, frag Mary Poppins, was es heute gibt“ (FOOD-017): today's or tomorrow's lunch and dinner, optionally only one
  * meal („was essen wir heute abend“). API errors go to the error handler (friendly fallback speech).
  */
 

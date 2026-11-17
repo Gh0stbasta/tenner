@@ -20,6 +20,8 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Changed
 
+- **Alexa:** the skill is now called with „Mary Poppins“ („Alexa, sag Mary Poppins, …“) instead of „Familien
+  Zentrale“, which Alexa confused with the public skill „Familienkalender“ (MAINT-017).
 - **Plus button by page:** on „Essen“ the plus button on the phone opens the editor for a new dish; elsewhere it
   still creates an Aufgabe (MAINT-008). On the shopping list it adds a shopping item (MAINT-010).
 - **Copy the shopping list:** „Kopieren“ next to „Teilen“ puts the list as text on the clipboard, also on phones

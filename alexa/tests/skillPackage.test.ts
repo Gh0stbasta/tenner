@@ -12,8 +12,8 @@ describe("skill package", () => {
   const model = (readJson("interactionModels/custom/de-DE.json") as { interactionModel: { languageModel: LanguageModel } })
     .interactionModel.languageModel;
 
-  it("uses the invocation name familien zentrale (ALEXA-010, REC-002)", () => {
-    expect(model.invocationName).toBe("familien zentrale");
+  it("uses the invocation name mary poppins (ALEXA-010, REC-002, MAINT-017)", () => {
+    expect(model.invocationName).toBe("mary poppins");
   });
 
   it("declares the required built-in intents", () => {
