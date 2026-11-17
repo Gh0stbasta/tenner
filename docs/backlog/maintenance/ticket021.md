@@ -22,7 +22,7 @@ name rule.
 
 - [x] No slot name with digits or other invalid characters (test)
 - [x] Alexa tests passing
-- [ ] Deploy green after the merge (checked after the merge)
+- [x] Deploy green after the merge (run 47: skill package imported, model built; the simulator check only warned, see TD-049)
 
 ## Definition of Done
 
@@ -30,7 +30,7 @@ name rule.
 - [x] Tests completed
 - [x] Documentation updated
 - [x] Technical debt documented
-- [ ] Acceptance criteria verified
+- [x] Acceptance criteria verified
 - [x] Git commit created
 
 ## Implementation Status

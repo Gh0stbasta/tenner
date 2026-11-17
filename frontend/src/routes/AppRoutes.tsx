@@ -14,6 +14,7 @@ import { MealPlanPage } from "../features/meals/MealPlanPage";
 import { ShoppingListPage } from "../features/meals/ShoppingListPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { DishesPage } from "../features/meals/DishesPage";
+import { TafelPage } from "../features/tafel/TafelPage";
 
 export interface AppRoutesProps {
   /** Ends the session (SECURITY-003). */
@@ -24,6 +25,15 @@ export function AppRoutes({ onLogout }: AppRoutesProps) {
   return (
     <Routes>
       <Route path="auth/callback" element={<AuthCallbackPage />} />
+      {/* MAINT-022: full-screen overview for the Echo Show browser, without the app bar and navigation. */}
+      <Route
+        path="tafel"
+        element={
+          <AuthGate onLogout={onLogout}>
+            <TafelPage />
+          </AuthGate>
+        }
+      />
       <Route
         element={
           <AuthGate onLogout={onLogout}>

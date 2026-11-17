@@ -95,6 +95,10 @@ describe("utterance conflicts (ALEXA-009)", () => {
     }
   });
 
+  it("opens the overview with short phrases (MAINT-023)", () => {
+    expect(model.intents.find((intent) => intent.name === "OverviewIntent")?.samples).toEqual(expect.arrayContaining(["übersicht", "zeig die tafel"]));
+  });
+
   it("declares every slot type it uses", () => {
     const declared = new Set((model as unknown as { types: { name: string }[] }).types.map((type) => type.name));
     const used = model.intents.flatMap((intent) => ((intent as unknown as { slots?: { type: string }[] }).slots ?? []).map((slot) => slot.type)).filter((type) => !type.startsWith("AMAZON."));

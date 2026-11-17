@@ -1564,6 +1564,12 @@ eu-west-1 (Alexa Skills Kit trigger region), may only be invoked by the Tenner s
 From ALEXA-002 on it calls the Tenner API in eu-central-1 with the linked user's Cognito token; it never accesses
 DynamoDB. Terraform creates it only when `alexa_skill_id` is set. Status and setup: `alexa/README.md`.
 
+Screens (MAINT-006, MAINT-022/023): the skill answers by voice and shows Tenner on the Echo Show through the
+home-screen widget; skill widgets exist only in Amazon's medium size (`WIDGET_M`). The one skill view is „Übersicht“:
+a minimal APL document whose `OpenURL` command opens the web app's full-screen page `/tafel` in the device browser
+(Silk); the Lambda gets that URL as `WEB_APP_URL` from the CloudFront distribution. The page signs in like any
+browser and reads the normal API; the skill passes no token to it.
+
 ## Mobile App
 
 Potential React Native client.

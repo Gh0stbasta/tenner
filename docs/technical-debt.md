@@ -1379,3 +1379,34 @@ device.
 ### Related Work
 
 FOOD-011, MAINT-013; `frontend/src/features/meals/DishEditorDialog.tsx`, `DishPhotoButton.tsx`.
+
+## TD-049: Several items by voice only work for two
+
+### Description
+
+Owner test on the Echo (2026-11-17, after MAINT-017/018/021): „Alexa, sag Mary Poppins Milch und Eier“ adds both
+items, but sentences with more than two items add fewer, and „Alexa, sag Mary Poppins, wir brauchen Brot und Äpfel“
+did not work. „Alexa, öffne Mary Poppins“ works on the device, although Amazon's simulator did not resolve it in the
+post-deploy health check (run 47: „This utterance did not resolve to any intent in your skill“, reported as a warning).
+
+### Reason
+
+Alexa splits several items only with the help of the slot values (`ShoppingProduct`); which intent and which slots the
+device chose is not visible without the skill's request log. The owner accepted the current state (two items at a
+time) for now.
+
+### Impact
+
+More words for longer shopping lists by voice; the health check cannot detect a broken launch phrase. No security or
+cost impact.
+
+### Suggested Improvement
+
+Read the skill's CloudWatch request logs for the failed sentences (intent and slot values), then adjust the samples
+(e.g. carrier phrases with three items, „wir brauchen …“ with the custom slots first) or fall back to splitting a single
+free-text value; make the health check treat „did not resolve to any intent“ as a failure or simulate a one-shot
+phrase instead of the launch phrase.
+
+### Related Work
+
+MAINT-018, MAINT-021; `alexa/skill-package/interactionModels/custom/de-DE.json`, `scripts/alexa-health-check.sh`.

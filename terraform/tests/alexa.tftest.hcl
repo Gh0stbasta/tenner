@@ -92,6 +92,11 @@ run "skill_lambda_matches_requirements" {
   }
 
   assert {
+    condition     = contains(keys(aws_lambda_function.alexa_skill[0].environment[0].variables), "WEB_APP_URL")
+    error_message = "Skill Lambda must get the web app URL for the Tafel (MAINT-023)."
+  }
+
+  assert {
     condition     = aws_cloudwatch_log_group.alexa_skill[0].name == "/tenner/alexa-skill" && aws_cloudwatch_log_group.alexa_skill[0].retention_in_days == 30
     error_message = "Skill logs must go to /tenner/alexa-skill with 30 days retention."
   }

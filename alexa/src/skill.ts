@@ -20,6 +20,7 @@ import {
   ShoppingSlotOnlyHandler,
 } from "./handlers/shopping.js";
 import { MealTodayIntentHandler } from "./handlers/meals.js";
+import { overviewIntentHandler } from "./handlers/overview.js";
 import { SpeakerIntentHandler } from "./handlers/speaker.js";
 import { StopIntentHandler } from "./handlers/stop.js";
 import { AplRuntimeErrorHandler, DataStoreErrorHandler, SystemExceptionHandler, UnknownSystemRequestHandler, touchSessionInterceptor } from "./handlers/system.js";
@@ -64,6 +65,8 @@ export function createSkill(config: SkillConfig, fetchImpl: typeof fetch = globa
       ReadShoppingListIntentHandler,
       ShoppingItemBoughtIntentHandler,
       MealTodayIntentHandler,
+      // MAINT-023: „Übersicht“ opens the Tafel in the device browser.
+      overviewIntentHandler(config.webAppUrl),
       BriefingIntentHandler,
       BriefingYesHandler,
       BriefingNoHandler,

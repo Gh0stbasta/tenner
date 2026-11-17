@@ -279,6 +279,18 @@
           ]
         },
         {
+          "name": "OverviewIntent",
+          "samples": [
+            "übersicht",
+            "zeig die übersicht",
+            "zeig mir die übersicht",
+            "öffne die übersicht",
+            "tafel",
+            "zeig die tafel",
+            "öffne die tafel"
+          ]
+        },
+        {
           "name": "ShoppingItemBoughtIntent",
           "slots": [
             {

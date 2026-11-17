@@ -11,6 +11,8 @@ export interface SkillConfig {
   readonly apiTimeoutMs: number;
   /** Time budget per skill request for all API calls together; default RESPONSE_BUDGET_MS. */
   readonly responseBudgetMs?: number;
+  /** Web app origin (CloudFront) for „Übersicht“ (MAINT-023); empty: the overview is not set up. */
+  readonly webAppUrl?: string;
 }
 
 /** One attempt may take this long: enough for a cold start (MAINT-001), short enough to leave time for a retry. */
@@ -26,5 +28,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SkillConfig {
     tennerApiBaseUrl: (env.TENNER_API_BASE_URL ?? "").replace(/\/+$/, ""),
     skillId: skillId ? skillId : undefined,
     apiTimeoutMs: DEFAULT_API_TIMEOUT_MS,
+    webAppUrl: (env.WEB_APP_URL ?? "").trim().replace(/\/+$/, ""),
   };
 }

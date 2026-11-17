@@ -32,6 +32,12 @@ describe("AppRoutes", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Heute" })).toBeInTheDocument();
   });
 
+  it("renders the Tafel full screen without the app's navigation (MAINT-022)", () => {
+    renderRoutes("/tafel");
+    expect(screen.getByRole("main", { name: "Tafel" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Hauptnavigation" })).not.toBeInTheDocument();
+  });
+
   it.each([
     ["/analytics", "Auswertung"],
     ["/settings", "Einstellungen"],
