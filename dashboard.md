@@ -6,21 +6,21 @@
 
 | | |
 |---|---|
-| **Project health** | 🟢 **Live**; all 1,949 automated tests pass (backend 1,147, frontend 512, alexa 160, Terraform 82, scripts 48) |
+| **Project health** | 🟢 **Live**; all 1,957 automated tests pass (backend 1,151, frontend 513, alexa 165, Terraform 82, scripts 48) |
 | **Current phase** | **Release 2.0.0 — Family Meal Planning, live.** Owner feedback is coming in as maintenance tickets |
-| **Current focus** | This pull request: pantry items as normal shopping list entries (MAINT-014) and meal rule R14, fish at most once a day (MAINT-015); zod security update so CI is green again (MAINT-016) |
+| **Current focus** | This pull request: Alexa skill renamed „Mary Poppins“ (Echo confused „Familien Zentrale“ with „Familienkalender“), short shopping phrases and shopping mode, ticked items stay „vorhanden“ for the week, „Abgehakte Einträge löschen“ (MAINT-017 – 020). Amazon's own shopping list stays closed to apps (confirmed 2026-11-17) |
 | **Biggest blocker** | None. Frontend-only changes, no infrastructure |
-| **Recommended next action** | Merge, refresh the shopping list once, then set tag `v2.0.0` |
+| **Recommended next action** | Merge, then test on the Echo: „Alexa, sag Mary Poppins Milch und Eier“ and „Alexa, sag Mary Poppins Einkauf“ |
 
 ## 📈 Progress
 
 ```text
 Release 1.0  ████████████████████ 100%  104 / 104 tickets done (tag v1.0.0 still to set)
 Release 2.0  ███████████████████░  93%   26 /  28 FOOD tickets (all features; FOOD-025 waits for the tag, FOOD-020 for data)
-Maintenance  16 done (MAINT-001 – 016; device checks open) · REC 2 done (REC-001, 002) · owner hotfixes 2 done (HOTFIX-006, UI-001)
+Maintenance  20 done (MAINT-001 – 020; device checks open) · REC 2 done (REC-001, 002) · owner hotfixes 2 done (HOTFIX-006, UI-001)
 ```
 
-✅ Completed: **151** (104 + EPIC-FOOD-001 + 26 FOOD + 16 MAINT + 2 REC + 2 owner hotfixes) · 🚧 In progress: **1** (FOOD-025, tag) · 📋 Open: **1** (FOOD-020: AI evaluation, recheck 2026-12-07)
+✅ Completed: **155** (104 + EPIC-FOOD-001 + 26 FOOD + 20 MAINT + 2 REC + 2 owner hotfixes) · 🚧 In progress: **1** (FOOD-025, tag) · 📋 Open: **1** (FOOD-020: AI evaluation, recheck 2026-12-07)
 
 ## 🧩 Feature Status
 
@@ -28,9 +28,9 @@ Maintenance  16 done (MAINT-001 – 016; device checks open) · REC 2 done (REC-
 |---|---|
 | ✅ Google login, one household, private data | ✅ Dishes and ingredients: 105 ingredients, 61-dish catalog, editor with photos, nutrition and cost; 🆕 create a dish via chat-AI prompt and JSON (FOOD-001 – 004, 010 – 013, 021, MAINT-012) |
 | ✅ Aufgaben (formerly Tenner), scheduling, household, task catalog, analytics; missed ones count as „Nicht erledigt“ (REC-001), start date (HOTFIX-006), dashboard shows the day (UI-001) | ✅ Weekly plan with rules R1 – R14 (🆕 R14: fish at most once a day), always Monday – Sunday; replace, choose, swap, lock, regenerate; cooked / skipped, 👍 / 👎, favorites (FOOD-005 – 009, 022, 023, MAINT-007, 015) |
-| ✅ Phone app with offline use; 🆕 plus button creates Aufgabe, dish or shopping item by page (MAINT-008, 010) | ✅ Shopping list: own order, counts, offline, by voice, Echo Show widget, „Kopieren“, plus button adds items; 🆕 pantry items in the list (FOOD-014, 026 – 028, MAINT-010, 011, 014) |
-| ✅ Push per Aufgabe with „Erledigt“/„Später“ | ✅ Meal widget (FOOD-018) · 🆕 „Essensplan am Morgen“, „Alexa, frag Familien Zentrale, was es heute gibt“, calendar feed (FOOD-016, 017, 015) |
-| ✅ Alexa by voice, widgets on the Echo Show (MAINT-006) | ✅ Auswertung „Essen“ (FOOD-019) · 🆕 dashboard names tomorrow's dishes, photo by tapping the dish picture (MAINT-009, 013) · 🔲 decision: AI in the planner (FOOD-020) |
+| ✅ Phone app with offline use; 🆕 plus button creates Aufgabe, dish or shopping item by page (MAINT-008, 010) | ✅ Shopping list: own order, counts, offline, by voice, Echo Show widget, „Kopieren“, plus button adds items, pantry items in the list; 🆕 ticked items stay „vorhanden“ for the week, „Abgehakte Einträge löschen“ (FOOD-014, 026 – 028, MAINT-010, 011, 014, 019, 020) |
+| ✅ Push per Aufgabe with „Erledigt“/„Später“ | ✅ Meal widget (FOOD-018) · 🆕 „Essensplan am Morgen“, „Alexa, frag Mary Poppins, was es heute gibt“, calendar feed (FOOD-016, 017, 015) |
+| ✅ Alexa by voice („Mary Poppins“), widgets on the Echo Show; 🆕 „sag Mary Poppins Milch, Eier und Butter“, shopping mode (MAINT-006, 017, 018) | ✅ Auswertung „Essen“ (FOOD-019) · 🆕 dashboard names tomorrow's dishes, photo by tapping the dish picture (MAINT-009, 013) · 🔲 decision: AI in the planner (FOOD-020) |
 
 Release 2.0 overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md) · Changelog: [`CHANGELOG.md`](CHANGELOG.md) · The app calls no AI; dish creation uses a chat AI of your choice by copy and paste.
 
@@ -72,7 +72,7 @@ Release 2.0 overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md)
 
 ## 🎯 Recommended Next Actions
 
-1. **Merge** this pull request, then tap „Liste aktualisieren“ (or switch the range) once so the pantry items are sorted into the list.
+1. **Merge** this pull request, then test on the Echo: „Alexa, sag Mary Poppins Milch und Eier“, „Alexa, sag Mary Poppins Einkauf“ → „Butter“ → „fertig“. Optional routine „Alexa, Einkauf“ (alexa README).
 2. **Tag `v2.0.0`** and the GitHub release (FOOD-025; also `v1.0.0` is still open).
 3. **Recheck ADR 0009** on 2026-12-07 with Auswertung → Essen.
 4. **Later:** log the route key instead of the path, then renew the calendar link (TD-047).
@@ -81,6 +81,6 @@ Release 2.0 overview: [`docs/release-2.0/README.md`](docs/release-2.0/README.md)
 
 ## ℹ About this dashboard
 
-- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (a ticket counts as done when it has an "Implementation Status" section and its acceptance criteria are checked), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (44 deploy runs; runs 34, 35 and 37 – 44 green, run 36 cancelled by the next push).
-- **Counting:** release 2.0: 26 of 28 FOOD tickets done (FOOD-024 closed with ADR 0008); FOOD-025 is prepared (status section) but counts as in progress until the tag exists; FOOD-020 has an evaluation section only. The epic EPIC-FOOD-001 is done. Maintenance: MAINT-001 – 016 done (device checks of MAINT-002, 005 and 006 open); REC-001 and REC-002 done; owner hotfix tickets HOTFIX-006 and UI-001 done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets. Debt levels are an assessment for this dashboard.
+- **Sources:** the ticket files in `docs/release-1.0/` (frozen), `docs/release-2.0/` and `docs/backlog/` (a ticket counts as done when it has an "Implementation Status" section and its acceptance criteria are checked), [`CHANGELOG.md`](CHANGELOG.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/technical-debt.md`](docs/technical-debt.md), [`docs/security.md`](docs/security.md), [`docs/decisions/`](docs/decisions/) and GitHub Actions (45 deploy runs; runs 34, 35 and 37 – 45 green, run 36 cancelled by the next push).
+- **Counting:** release 2.0: 26 of 28 FOOD tickets done (FOOD-024 closed with ADR 0008); FOOD-025 is prepared (status section) but counts as in progress until the tag exists; FOOD-020 has an evaluation section only. The epic EPIC-FOOD-001 is done. Maintenance: MAINT-001 – 020 done (device checks of MAINT-002, 005 and 006 open); REC-001 and REC-002 done; owner hotfix tickets HOTFIX-006 and UI-001 done. Release 1.0: 104 done = 91 product tickets + 6 hotfixes + 7 housekeeping tickets. Debt levels are an assessment for this dashboard.
 - **Updates:** every pull request refreshes the dashboard (rule in `CLAUDE.md`). Between pull requests it can lag behind the branch (TD-032).
