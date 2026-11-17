@@ -1,6 +1,7 @@
 /** FOOD-026: shopping list by voice — add, read, tick off; same list as the app. */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { itemKeyOf, itemName, matchItem, readAnswer, spokenItem, type ShoppingItem } from "../src/shopping.js";
+import { itemKeyOf, itemName, matchItem, readAnswer, spokenItem, spokenNames, type ShoppingItem } from "../src/shopping.js";
+import type { RequestEnvelope, Response } from "ask-sdk-model";
 import { createSkill } from "../src/skill.js";
 import { SKILL_ID, intentRequest } from "./envelopes.js";
 import { API_BASE, fakeApi, type FakeRoute } from "./fakeApi.js";
@@ -78,6 +79,65 @@ describe("AddShoppingItemIntent", () => {
     expect(ssml(await noPlan.skill.invoke(intentRequest("AddShoppingItemIntent", { item: { value: "milch" } })))).toContain("noch keine Einkaufsliste");
     const { skill } = setup();
     expect(ssml(await skill.invoke(intentRequest("AddShoppingItemIntent")))).toContain("Setz Milch auf die Einkaufsliste");
+  });
+});
+
+describe("shorter phrases and shopping mode (MAINT-018)", () => {
+  /** A follow-up in an open session with the attributes of the previous answer. */
+  const followUp = (request: RequestEnvelope, previous: { sessionAttributes?: Record<string, unknown> }): RequestEnvelope => ({
+    ...request,
+    session: { ...(request.session as NonNullable<RequestEnvelope["session"]>), new: false, attributes: previous.sessionAttributes ?? {} },
+  });
+  const ends = (response: { response: Response }) => response.response.shouldEndSession;
+
+  it("splits the spoken items, drops empty parts and duplicates", () => {
+    expect(spokenNames(["milch und eier", undefined, "butter", "Milch", " , "])).toEqual(["Milch", "Eier", "Butter"]);
+    expect(spokenNames(["brot, käse sowie wurst"])).toEqual(["Brot", "Käse", "Wurst"]);
+  });
+
+  it("adds several items in one change and names the ones already on the list", async () => {
+    const { skill, changes } = setup();
+    const response = await skill.invoke(intentRequest("AddShoppingItemIntent", { item1: { value: "eier" }, item2: { value: "milch" }, item3: { value: "butter" } }));
+    expect(ssml(response)).toBe("<speak>Okay, Eier und Butter stehen auf der Einkaufsliste. Milch steht schon auf der Einkaufsliste.</speak>");
+    expect(changes).toEqual([
+      {
+        operations: [
+          { type: "add", key: expect.stringMatching(/^manual-alexa-[A-Za-z0-9]+$/), name: "Eier" },
+          { type: "add", key: expect.stringMatching(/^manual-alexa-[A-Za-z0-9]+-1$/), name: "Butter" },
+        ],
+      },
+    ]);
+    expect(ends(response)).toBe(true);
+  });
+
+  it("keeps listening in the shopping mode until „fertig“", async () => {
+    const { skill, changes } = setup();
+    const start = await skill.invoke(intentRequest("ShoppingModeIntent"));
+    expect(ssml(start)).toBe("<speak>Was soll auf die Einkaufsliste?</speak>");
+    expect(ends(start)).toBeFalsy();
+    const first = await skill.invoke(followUp(intentRequest("AddShoppingItemIntent", { item1: { value: "äpfel" } }), start));
+    expect(ssml(first)).toBe("<speak>Okay, Äpfel steht auf der Einkaufsliste. Noch etwas?</speak>");
+    expect(ends(first)).toBeFalsy();
+    const unclear = await skill.invoke(followUp(intentRequest("AMAZON.FallbackIntent"), first));
+    expect(ssml(unclear)).toContain("Das habe ich nicht verstanden.");
+    expect(ends(unclear)).toBeFalsy();
+    const done = await skill.invoke(followUp(intentRequest("AMAZON.NoIntent"), unclear));
+    expect(ssml(done)).toBe("<speak>Alles klar, die Einkaufsliste ist aktuell.</speak>");
+    expect(ends(done)).toBe(true);
+    expect(changes).toHaveLength(1);
+    const fertig = await skill.invoke(followUp(intentRequest("ShoppingDoneIntent"), start));
+    expect(ends(fertig)).toBe(true);
+  });
+
+  it("takes single words that land on other slot-only samples as items, and „fertig“ ends the mode", async () => {
+    const { skill, changes } = setup();
+    const start = await skill.invoke(intentRequest("ShoppingModeIntent"));
+    const asTask = await skill.invoke(followUp(intentRequest("CompleteIntent", { tenner: { value: "zahnpasta" } }), start));
+    expect(ssml(asTask)).toBe("<speak>Okay, Zahnpasta steht auf der Einkaufsliste. Noch etwas?</speak>");
+    expect(changes).toEqual([{ operations: [{ type: "add", key: expect.stringMatching(/^manual-alexa-/), name: "Zahnpasta" }] }]);
+    const fertig = await skill.invoke(followUp(intentRequest("CompleteIntent"), asTask));
+    expect(ssml(fertig)).toBe("<speak>Alles klar, die Einkaufsliste ist aktuell.</speak>");
+    expect(ends(fertig)).toBe(true);
   });
 });
 

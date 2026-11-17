@@ -10,6 +10,8 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Added
 
+- **„Abgehakte Einträge löschen“:** one button removes all ticked entries from the shopping list; they stay
+  „vorhanden“ for the week (MAINT-020).
 - **Meal rule R14:** fish at most once a day — the planner, „Anderes Gericht“, the meal picker and swapping never put
   fish at lunch and dinner of the same day (MAINT-015).
 - **Photo from the dashboard:** tap a dish picture in „Heute essen wir“ to take or choose a photo for that dish
@@ -20,6 +22,11 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Changed
 
+- **Alexa shopping phrases:** „Alexa, sag Mary Poppins Milch, Eier und Butter“ adds up to five items at once;
+  „Alexa, sag Mary Poppins Einkauf“ starts a shopping mode that asks „Noch etwas?“ until „nein“ or „fertig“
+  (MAINT-018).
+- **Alexa:** the skill is now called with „Mary Poppins“ („Alexa, sag Mary Poppins, …“) instead of „Familien
+  Zentrale“, which Alexa confused with the public skill „Familienkalender“ (MAINT-017).
 - **Plus button by page:** on „Essen“ the plus button on the phone opens the editor for a new dish; elsewhere it
   still creates an Aufgabe (MAINT-008). On the shopping list it adds a shopping item (MAINT-010).
 - **Copy the shopping list:** „Kopieren“ next to „Teilen“ puts the list as text on the clipboard, also on phones
@@ -28,6 +35,8 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Fixed
 
+- **Ticked items stay bought:** what is ticked off the shopping list in a week no longer comes back when the meal
+  plan changes and the list is refreshed (MAINT-019).
 - **Security:** zod updated to 4.6.7 in backend and frontend (GHSA-mrhx-c7xc-m3w5, high) (MAINT-016).
 - **Pantry items in the shopping list:** salt, oil and other pantry items are normal entries of the generated list
   (sorted by section, in „Teilen“ / „Kopieren“, on the Echo Show widget, read out by Alexa and in the morning count)

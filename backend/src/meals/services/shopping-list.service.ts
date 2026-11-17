@@ -1,6 +1,7 @@
 /**
  * Shopping list per week (FOOD-014), stored as LIST#<weekStart>. Created on first read from the week's plan; a refresh
- * recalculates it and keeps ticks, own items and the own order; changes from several phones are merged by retrying
+ * recalculates it and keeps ticks, own items and the own order, and leaves out what was ticked off this week
+ * (MAINT-019); changes from several phones are merged by retrying
  * against the newest version (the operations are idempotent).
  */
 
@@ -10,7 +11,19 @@ import { toUtcTimestamp, type Clock } from "../../utils/clock.js";
 import { itemKey } from "../keys.js";
 import type { ResolvedIngredient } from "../models/ingredient.js";
 import type { MealsStore } from "../repositories/meals-store.js";
-import { applyOperations, generateItems, mergeRefresh, normalizeItem, signatureOf, type ShoppingItem, type ShoppingOperation, type ShoppingRange, type StoredShoppingList } from "../shopping/shopping-list.js";
+import {
+  applyOperations,
+  boughtAfter,
+  boughtOf,
+  generateItems,
+  mergeRefresh,
+  normalizeItem,
+  signatureOf,
+  type ShoppingItem,
+  type ShoppingOperation,
+  type ShoppingRange,
+  type StoredShoppingList,
+} from "../shopping/shopping-list.js";
 import type { MealPlanService, PlanWeek, WeekReference } from "./meal-plan.service.js";
 
 /** Parallel changes from two phones: retries against the newest version before giving up with 409. */
@@ -61,7 +74,8 @@ export class ShoppingListService {
     return this.change(resolved, async (current) => {
       const nextRange = range ?? current?.range ?? "REST";
       const generated = await this.generate(resolved, nextRange);
-      return { ...this.newList(resolved.weekStart, nextRange, generated), items: mergeRefresh(current?.items ?? [], generated) };
+      const bought = current?.bought ?? [];
+      return { ...this.newList(resolved.weekStart, nextRange, generated), items: mergeRefresh(current?.items ?? [], generated, bought), bought };
     });
   }
 
@@ -70,7 +84,7 @@ export class ShoppingListService {
     const resolved = await this.deps.plans.resolveWeek(identity.tenantId, week);
     return this.change(resolved, async (current) => {
       const list = current ?? this.newList(resolved.weekStart, "REST", await this.generate(resolved, "REST"));
-      return { ...list, items: applyOperations(list.items, operations) };
+      return { ...list, items: applyOperations(list.items, operations), bought: boughtAfter(list.bought, list.items, operations) };
     });
   }
 
@@ -102,7 +116,7 @@ export class ShoppingListService {
   }
 
   private newList(weekStart: string, range: ShoppingRange, items: readonly ShoppingItem[]): StoredShoppingList {
-    return { weekStart, range, generatedAt: toUtcTimestamp(this.deps.clock()), signature: signatureOf(items), items };
+    return { weekStart, range, generatedAt: toUtcTimestamp(this.deps.clock()), signature: signatureOf(items), items, bought: [] };
   }
 
   private itemData(list: StoredShoppingList): Record<string, unknown> {
@@ -131,5 +145,6 @@ function toStoredList(data: Record<string, unknown>): StoredShoppingList {
     generatedAt: String(data.generatedAt),
     signature: converted ? signatureOf(items) : String(data.signature),
     items,
+    bought: boughtOf(Array.isArray(data.bought) ? data.bought.filter((key): key is string => typeof key === "string") : undefined, items),
   };
 }

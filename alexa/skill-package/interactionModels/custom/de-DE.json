@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "familien zentrale",
+      "invocationName": "mary poppins",
       "intents": [
         {
           "name": "EnableRemindersIntent",
@@ -141,6 +141,26 @@
             {
               "name": "item",
               "type": "AMAZON.SearchQuery"
+            },
+            {
+              "name": "item1",
+              "type": "ShoppingProduct"
+            },
+            {
+              "name": "item2",
+              "type": "ShoppingProduct"
+            },
+            {
+              "name": "item3",
+              "type": "ShoppingProduct"
+            },
+            {
+              "name": "item4",
+              "type": "ShoppingProduct"
+            },
+            {
+              "name": "item5",
+              "type": "ShoppingProduct"
             }
           ],
           "samples": [
@@ -152,7 +172,37 @@
             "pack {item} auf die einkaufsliste",
             "{item} auf die einkaufsliste",
             "wir brauchen {item}",
-            "ich brauche {item}"
+            "ich brauche {item}",
+            "{item1}",
+            "{item1} und {item2}",
+            "{item1} {item2} und {item3}",
+            "{item1} {item2} {item3} und {item4}",
+            "{item1} {item2} {item3} {item4} und {item5}",
+            "wir brauchen {item1} und {item2}",
+            "wir brauchen {item1} {item2} und {item3}",
+            "wir brauchen {item1} {item2} {item3} und {item4}",
+            "wir brauchen {item1} {item2} {item3} {item4} und {item5}",
+            "ich brauche {item1} und {item2}",
+            "ich brauche {item1} {item2} und {item3}",
+            "ich brauche {item1} {item2} {item3} und {item4}",
+            "ich brauche {item1} {item2} {item3} {item4} und {item5}",
+            "setz {item1} und {item2} auf die einkaufsliste",
+            "setz {item1} {item2} und {item3} auf die einkaufsliste",
+            "setz {item1} {item2} {item3} und {item4} auf die einkaufsliste",
+            "setz {item1} {item2} {item3} {item4} und {item5} auf die einkaufsliste",
+            "schreib {item1} und {item2} auf die einkaufsliste",
+            "schreib {item1} {item2} und {item3} auf die einkaufsliste",
+            "schreib {item1} {item2} {item3} und {item4} auf die einkaufsliste",
+            "schreib {item1} {item2} {item3} {item4} und {item5} auf die einkaufsliste",
+            "{item1} und {item2} auf die einkaufsliste",
+            "{item1} {item2} und {item3} auf die einkaufsliste",
+            "{item1} {item2} {item3} und {item4} auf die einkaufsliste",
+            "{item1} {item2} {item3} {item4} und {item5} auf die einkaufsliste",
+            "noch {item1} und {item2}",
+            "noch {item1} {item2} und {item3}",
+            "noch {item1} {item2} {item3} und {item4}",
+            "noch {item1} {item2} {item3} {item4} und {item5}",
+            "noch {item1}"
           ]
         },
         {
@@ -166,6 +216,32 @@
             "was muss ich einkaufen",
             "was müssen wir einkaufen",
             "einkaufsliste"
+          ]
+        },
+        {
+          "name": "ShoppingModeIntent",
+          "samples": [
+            "einkauf",
+            "einkaufen",
+            "einkaufsmodus",
+            "ich will einkaufen",
+            "ich möchte einkaufen",
+            "einkaufsliste ergänzen",
+            "einkaufsliste schreiben",
+            "ich will was auf die einkaufsliste setzen",
+            "ich möchte etwas auf die einkaufsliste setzen"
+          ]
+        },
+        {
+          "name": "ShoppingDoneIntent",
+          "samples": [
+            "das wars",
+            "das war's",
+            "das war alles",
+            "das ist alles",
+            "nichts mehr",
+            "sonst nichts",
+            "mehr nicht"
           ]
         },
         {
@@ -320,6 +396,836 @@
                   "zu abend",
                   "abendbrot"
                 ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ShoppingProduct",
+          "values": [
+            {
+              "name": {
+                "value": "alufolie"
+              }
+            },
+            {
+              "name": {
+                "value": "ananas"
+              }
+            },
+            {
+              "name": {
+                "value": "apfelmus"
+              }
+            },
+            {
+              "name": {
+                "value": "apfelsaft"
+              }
+            },
+            {
+              "name": {
+                "value": "aufback-baguette"
+              }
+            },
+            {
+              "name": {
+                "value": "aufschnitt"
+              }
+            },
+            {
+              "name": {
+                "value": "avocado"
+              }
+            },
+            {
+              "name": {
+                "value": "babynahrung"
+              }
+            },
+            {
+              "name": {
+                "value": "backpapier"
+              }
+            },
+            {
+              "name": {
+                "value": "backpulver"
+              }
+            },
+            {
+              "name": {
+                "value": "bananen"
+              }
+            },
+            {
+              "name": {
+                "value": "batterien"
+              }
+            },
+            {
+              "name": {
+                "value": "bier"
+              }
+            },
+            {
+              "name": {
+                "value": "brokkoli"
+              }
+            },
+            {
+              "name": {
+                "value": "brot"
+              }
+            },
+            {
+              "name": {
+                "value": "brötchen"
+              }
+            },
+            {
+              "name": {
+                "value": "burger-patties"
+              }
+            },
+            {
+              "name": {
+                "value": "burgerbrötchen"
+              }
+            },
+            {
+              "name": {
+                "value": "butter"
+              }
+            },
+            {
+              "name": {
+                "value": "camembert"
+              }
+            },
+            {
+              "name": {
+                "value": "champignons"
+              }
+            },
+            {
+              "name": {
+                "value": "cherrytomaten"
+              }
+            },
+            {
+              "name": {
+                "value": "chicken nuggets"
+              }
+            },
+            {
+              "name": {
+                "value": "chips"
+              }
+            },
+            {
+              "name": {
+                "value": "cola"
+              }
+            },
+            {
+              "name": {
+                "value": "cornflakes"
+              }
+            },
+            {
+              "name": {
+                "value": "crème fraîche"
+              }
+            },
+            {
+              "name": {
+                "value": "currypulver"
+              }
+            },
+            {
+              "name": {
+                "value": "deo"
+              }
+            },
+            {
+              "name": {
+                "value": "duschgel"
+              }
+            },
+            {
+              "name": {
+                "value": "eier"
+              }
+            },
+            {
+              "name": {
+                "value": "eis"
+              }
+            },
+            {
+              "name": {
+                "value": "erbsen"
+              }
+            },
+            {
+              "name": {
+                "value": "erdbeeren"
+              }
+            },
+            {
+              "name": {
+                "value": "essig"
+              }
+            },
+            {
+              "name": {
+                "value": "feta"
+              }
+            },
+            {
+              "name": {
+                "value": "feuchttücher"
+              }
+            },
+            {
+              "name": {
+                "value": "fischstäbchen"
+              }
+            },
+            {
+              "name": {
+                "value": "flammkuchenteig"
+              }
+            },
+            {
+              "name": {
+                "value": "frische kräuter"
+              }
+            },
+            {
+              "name": {
+                "value": "frischhaltefolie"
+              }
+            },
+            {
+              "name": {
+                "value": "frischkäse"
+              }
+            },
+            {
+              "name": {
+                "value": "frühlingszwiebeln"
+              }
+            },
+            {
+              "name": {
+                "value": "gehackte tomaten"
+              }
+            },
+            {
+              "name": {
+                "value": "gemischtes hackfleisch"
+              }
+            },
+            {
+              "name": {
+                "value": "gemüse-patties"
+              }
+            },
+            {
+              "name": {
+                "value": "gemüsebrühe"
+              }
+            },
+            {
+              "name": {
+                "value": "gemüsemischung"
+              }
+            },
+            {
+              "name": {
+                "value": "gnocchi"
+              }
+            },
+            {
+              "name": {
+                "value": "grieß"
+              }
+            },
+            {
+              "name": {
+                "value": "grüne bohnen"
+              }
+            },
+            {
+              "name": {
+                "value": "gummibärchen"
+              }
+            },
+            {
+              "name": {
+                "value": "gurke"
+              }
+            },
+            {
+              "name": {
+                "value": "hackfleisch"
+              }
+            },
+            {
+              "name": {
+                "value": "haferflocken"
+              }
+            },
+            {
+              "name": {
+                "value": "halloumi"
+              }
+            },
+            {
+              "name": {
+                "value": "hefe"
+              }
+            },
+            {
+              "name": {
+                "value": "honig"
+              }
+            },
+            {
+              "name": {
+                "value": "hot-dog-brötchen"
+              }
+            },
+            {
+              "name": {
+                "value": "hundefutter"
+              }
+            },
+            {
+              "name": {
+                "value": "hähnchenbrust"
+              }
+            },
+            {
+              "name": {
+                "value": "italienische kräuter"
+              }
+            },
+            {
+              "name": {
+                "value": "joghurt"
+              }
+            },
+            {
+              "name": {
+                "value": "kaffee"
+              }
+            },
+            {
+              "name": {
+                "value": "karotten"
+              }
+            },
+            {
+              "name": {
+                "value": "kartoffeln"
+              }
+            },
+            {
+              "name": {
+                "value": "kartoffelpuffer"
+              }
+            },
+            {
+              "name": {
+                "value": "kartoffelpüree"
+              }
+            },
+            {
+              "name": {
+                "value": "katzenfutter"
+              }
+            },
+            {
+              "name": {
+                "value": "kekse"
+              }
+            },
+            {
+              "name": {
+                "value": "ketchup"
+              }
+            },
+            {
+              "name": {
+                "value": "kidneybohnen"
+              }
+            },
+            {
+              "name": {
+                "value": "klopapier"
+              }
+            },
+            {
+              "name": {
+                "value": "knoblauch"
+              }
+            },
+            {
+              "name": {
+                "value": "kochsahne"
+              }
+            },
+            {
+              "name": {
+                "value": "kochschinken"
+              }
+            },
+            {
+              "name": {
+                "value": "kokosmilch"
+              }
+            },
+            {
+              "name": {
+                "value": "kräuterquark"
+              }
+            },
+            {
+              "name": {
+                "value": "käse"
+              }
+            },
+            {
+              "name": {
+                "value": "käsescheiben"
+              }
+            },
+            {
+              "name": {
+                "value": "köttbullar"
+              }
+            },
+            {
+              "name": {
+                "value": "küchenrolle"
+              }
+            },
+            {
+              "name": {
+                "value": "lachs"
+              }
+            },
+            {
+              "name": {
+                "value": "lasagneplatten"
+              }
+            },
+            {
+              "name": {
+                "value": "magerquark"
+              }
+            },
+            {
+              "name": {
+                "value": "mais"
+              }
+            },
+            {
+              "name": {
+                "value": "marmelade"
+              }
+            },
+            {
+              "name": {
+                "value": "mayonnaise"
+              }
+            },
+            {
+              "name": {
+                "value": "mehl"
+              }
+            },
+            {
+              "name": {
+                "value": "milch"
+              }
+            },
+            {
+              "name": {
+                "value": "mineralwasser"
+              }
+            },
+            {
+              "name": {
+                "value": "mozzarella"
+              }
+            },
+            {
+              "name": {
+                "value": "müllbeutel"
+              }
+            },
+            {
+              "name": {
+                "value": "müsli"
+              }
+            },
+            {
+              "name": {
+                "value": "nori"
+              }
+            },
+            {
+              "name": {
+                "value": "nudeln"
+              }
+            },
+            {
+              "name": {
+                "value": "nutella"
+              }
+            },
+            {
+              "name": {
+                "value": "olivenöl"
+              }
+            },
+            {
+              "name": {
+                "value": "orangen"
+              }
+            },
+            {
+              "name": {
+                "value": "orangensaft"
+              }
+            },
+            {
+              "name": {
+                "value": "paniermehl"
+              }
+            },
+            {
+              "name": {
+                "value": "paprika"
+              }
+            },
+            {
+              "name": {
+                "value": "paprikapulver"
+              }
+            },
+            {
+              "name": {
+                "value": "parmesan"
+              }
+            },
+            {
+              "name": {
+                "value": "passierte tomaten"
+              }
+            },
+            {
+              "name": {
+                "value": "pfeffer"
+              }
+            },
+            {
+              "name": {
+                "value": "pizza"
+              }
+            },
+            {
+              "name": {
+                "value": "pommes"
+              }
+            },
+            {
+              "name": {
+                "value": "puderzucker"
+              }
+            },
+            {
+              "name": {
+                "value": "quark"
+              }
+            },
+            {
+              "name": {
+                "value": "ramen-nudeln"
+              }
+            },
+            {
+              "name": {
+                "value": "ravioli"
+              }
+            },
+            {
+              "name": {
+                "value": "reibekäse"
+              }
+            },
+            {
+              "name": {
+                "value": "reis"
+              }
+            },
+            {
+              "name": {
+                "value": "rinderhackfleisch"
+              }
+            },
+            {
+              "name": {
+                "value": "risottoreis"
+              }
+            },
+            {
+              "name": {
+                "value": "rosinen"
+              }
+            },
+            {
+              "name": {
+                "value": "rote linsen"
+              }
+            },
+            {
+              "name": {
+                "value": "rösti"
+              }
+            },
+            {
+              "name": {
+                "value": "röstzwiebeln"
+              }
+            },
+            {
+              "name": {
+                "value": "saft"
+              }
+            },
+            {
+              "name": {
+                "value": "sahne"
+              }
+            },
+            {
+              "name": {
+                "value": "salat"
+              }
+            },
+            {
+              "name": {
+                "value": "salatdressing"
+              }
+            },
+            {
+              "name": {
+                "value": "salz"
+              }
+            },
+            {
+              "name": {
+                "value": "schinkenwürfel"
+              }
+            },
+            {
+              "name": {
+                "value": "schmand"
+              }
+            },
+            {
+              "name": {
+                "value": "schokolade"
+              }
+            },
+            {
+              "name": {
+                "value": "schupfnudeln"
+              }
+            },
+            {
+              "name": {
+                "value": "seife"
+              }
+            },
+            {
+              "name": {
+                "value": "senf"
+              }
+            },
+            {
+              "name": {
+                "value": "sesam"
+              }
+            },
+            {
+              "name": {
+                "value": "shampoo"
+              }
+            },
+            {
+              "name": {
+                "value": "sojasauce"
+              }
+            },
+            {
+              "name": {
+                "value": "spinat"
+              }
+            },
+            {
+              "name": {
+                "value": "spätzle"
+              }
+            },
+            {
+              "name": {
+                "value": "spülmaschinentabs"
+              }
+            },
+            {
+              "name": {
+                "value": "spülmittel"
+              }
+            },
+            {
+              "name": {
+                "value": "sushireis"
+              }
+            },
+            {
+              "name": {
+                "value": "taschentücher"
+              }
+            },
+            {
+              "name": {
+                "value": "tee"
+              }
+            },
+            {
+              "name": {
+                "value": "toastbrot"
+              }
+            },
+            {
+              "name": {
+                "value": "toilettenpapier"
+              }
+            },
+            {
+              "name": {
+                "value": "tomaten"
+              }
+            },
+            {
+              "name": {
+                "value": "tomatenmark"
+              }
+            },
+            {
+              "name": {
+                "value": "tortellini"
+              }
+            },
+            {
+              "name": {
+                "value": "trauben"
+              }
+            },
+            {
+              "name": {
+                "value": "vanillezucker"
+              }
+            },
+            {
+              "name": {
+                "value": "waschmittel"
+              }
+            },
+            {
+              "name": {
+                "value": "wasser"
+              }
+            },
+            {
+              "name": {
+                "value": "weichspüler"
+              }
+            },
+            {
+              "name": {
+                "value": "wein"
+              }
+            },
+            {
+              "name": {
+                "value": "wiener würstchen"
+              }
+            },
+            {
+              "name": {
+                "value": "windeln"
+              }
+            },
+            {
+              "name": {
+                "value": "wraps"
+              }
+            },
+            {
+              "name": {
+                "value": "wurst"
+              }
+            },
+            {
+              "name": {
+                "value": "zahnbürste"
+              }
+            },
+            {
+              "name": {
+                "value": "zahnpasta"
+              }
+            },
+            {
+              "name": {
+                "value": "zimtzucker"
+              }
+            },
+            {
+              "name": {
+                "value": "zitrone"
+              }
+            },
+            {
+              "name": {
+                "value": "zucchini"
+              }
+            },
+            {
+              "name": {
+                "value": "zucker"
+              }
+            },
+            {
+              "name": {
+                "value": "zwiebeln"
+              }
+            },
+            {
+              "name": {
+                "value": "äpfel"
+              }
+            },
+            {
+              "name": {
+                "value": "öl"
               }
             }
           ]

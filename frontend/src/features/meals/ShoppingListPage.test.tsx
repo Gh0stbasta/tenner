@@ -100,6 +100,30 @@ describe("ShoppingListPage (FOOD-014)", () => {
     expect(await within(await openList()).findByText("2× Nudeln")).toBeInTheDocument();
   });
 
+  it("deletes all ticked entries at once (MAINT-020)", async () => {
+    const { changes } = server();
+    renderWithProviders(<ShoppingListPage />);
+    const open = within(await openList());
+    await userEvent.click(open.getByRole("checkbox", { name: "Nudeln" }));
+    await userEvent.click(open.getByRole("checkbox", { name: "Milch" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Abgehakte Einträge löschen" }));
+    expect(await screen.findByText("2 Einträge gelöscht.")).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Erledigt" })).not.toBeInTheDocument();
+    expect(
+      within(await openList())
+        .getAllByRole("checkbox")
+        .map((box) => box.getAttribute("aria-label")),
+    ).toEqual(["Karotten", "Salz"]);
+    await vi.waitFor(() =>
+      expect(changes().at(-1)).toEqual({
+        operations: [
+          { type: "remove", key: "pasta" },
+          { type: "remove", key: "milk" },
+        ],
+      }),
+    );
+  });
+
   it("adds and removes own items", async () => {
     const { changes } = server();
     renderWithProviders(<ShoppingListPage />);
