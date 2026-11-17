@@ -1515,6 +1515,7 @@ Alexa skill (FOOD-017) ──► tenner-api with the linked user's token
   | R11 | salad lunches: soft above the limit, hard above twice the limit |
   | R12 | no dish or group twice a week (hard); last week's dishes (soft) |
   | R13 | family-friendly only |
+  | R14 | fish (allergen tag `FISH` of a required ingredient) at most once a day (MAINT-015) |
 
 - **Planner** (FOOD-006, `backend/src/meals/planner/planner.ts`): deterministic for a stored seed (Mulberry32);
   candidates per meal from the dish rules, depth-first search with backtracking (most constrained meal first, at most

@@ -1,5 +1,5 @@
 /**
- * Meal planning rules (FOOD-005): the household's rules R1 – R13 (EPIC-FOOD-001) as pure functions. The planner
+ * Meal planning rules (FOOD-005): the household's rules R1 – R13 (EPIC-FOOD-001) and R14 (MAINT-015) as pure functions. The planner
  * (FOOD-006), replace (FOOD-007), manual choice (FOOD-022) and the plan page all use them; parameters come from the
  * family food profile (FOOD-004), never from constants here.
  */
@@ -10,7 +10,7 @@ import type { ProteinTag } from "../models/ingredient.js";
 import { eatersAt, type Eater, type FoodProfile } from "../models/profile.js";
 import { daysBetween, RECENT_DAYS, VERY_RECENT_DAYS } from "../history.js";
 
-export const RULE_IDS = ["SLOT", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13"] as const;
+export const RULE_IDS = ["SLOT", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14"] as const;
 export type RuleId = (typeof RULE_IDS)[number];
 
 export type Severity = "HARD" | "SOFT";
@@ -73,6 +73,9 @@ function containsAny(dish: DishResponse, tags: readonly string[], ingredientIds:
   return dish.tags.some((tag) => tags.includes(tag)) || dish.ingredients.some((entry) => !entry.optional && ingredientIds.includes(entry.ingredientId));
 }
 
+/** Fish in a required ingredient (allergen tag FISH; `tags` leaves optional ingredients out) — R14 (MAINT-015). */
+const containsFish = (dish: DishResponse): boolean => dish.tags.includes("FISH");
+
 /**
  * Rules that concern one dish at one meal, independent of the rest of the week:
  * slot, R1 – R4, R5 (allowed meals), R9, R13.
@@ -101,7 +104,7 @@ export function dishViolations(dish: DishResponse, meal: Pick<PlannedMeal, "slot
   return violations;
 }
 
-/** Rules across the week: R5 (count), R6, R7, R8, R10, R11, R12. */
+/** Rules across the week: R5 (count), R6, R7, R8, R10, R11, R12, R14. */
 export function weekViolations(meals: readonly PlannedMeal[], profile: Pick<FoodProfile, "household">, context: RuleContext = {}): Violation[] {
   const rules = profile.household;
   const planned = meals.filter((meal): meal is PlannedMeal & { dish: DishResponse } => meal.dish !== null);
@@ -126,6 +129,8 @@ export function weekViolations(meals: readonly PlannedMeal[], profile: Pick<Food
     if (!first || !second) continue;
     const shared = first.dish.baseTags.filter((tag) => second.dish.baseTags.includes(tag));
     if (shared.length > 0) violations.push(hard("R8", ids(sameDay), `${WEEKDAY_NAMES[first.weekday]}: zweimal dieselbe Grundzutat.`));
+    const fish = sameDay.filter((meal) => containsFish(meal.dish));
+    if (fish.length > 1) violations.push(hard("R14", ids(fish), `${WEEKDAY_NAMES[first.weekday]}: zweimal Fisch an einem Tag.`));
   }
 
   const byDish = new Map<string, (PlannedMeal & { dish: DishResponse })[]>();

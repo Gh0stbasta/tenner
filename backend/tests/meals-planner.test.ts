@@ -53,6 +53,14 @@ describe("plan", () => {
     }
   });
 
+  it("never plans fish twice a day, also without the weekly protein limit (MAINT-015)", () => {
+    const noLimits = familyProfile({ limitedProteinTags: [] });
+    for (let seed = 1; seed <= 100; seed += 1) {
+      const result = plan({ weekStart: WEEK, dishes: DISHES, profile: noLimits, seed });
+      expect(checkWeek(toMeals(result), noLimits).filter((violation) => violation.rule === "R14"), `seed ${seed}`).toEqual([]);
+    }
+  });
+
   it("is reproducible with the same seed and varies with another", () => {
     const first = plan({ weekStart: WEEK, dishes: DISHES, profile: PROFILE, seed: 7 });
     expect(plan({ weekStart: WEEK, dishes: DISHES, profile: PROFILE, seed: 7 })).toEqual(first);

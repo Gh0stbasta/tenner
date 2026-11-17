@@ -62,7 +62,7 @@ flowchart LR
 
 - **Eine Tabelle** `tenner-meals` (Gerichte, Zutaten, Profil, Pläne, Einkaufslisten, Kalender-Token) und **ein Bucket**
   für Fotos; die Routen laufen in der vorhandenen API-Lambda. Kein neuer AWS-Dienst (ADR 0007).
-- Der **Planer** ist deterministisch (gespeicherter Seed) und nutzt Regeln R1 – R13, Verlauf und Bewertungen.
+- Der **Planer** ist deterministisch (gespeicherter Seed) und nutzt Regeln R1 – R13 (seit MAINT-015 auch R14: Fisch höchstens einmal am Tag), Verlauf und Bewertungen.
 - Details: [`docs/architecture.md`](../architecture.md) → „Meal Planning“, Sicherheit: [`docs/security.md`](../security.md),
   Kennzahlen: [`docs/analytics.md`](../analytics.md).
 

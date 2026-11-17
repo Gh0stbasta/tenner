@@ -53,6 +53,7 @@ const RULE_REASONS: Readonly<Record<RuleId, string>> = {
   R11: "Salat-Regel",
   R12: "schon in der Woche",
   R13: "nicht familientauglich",
+  R14: "Fisch schon an dem Tag",
 };
 
 /** Mulberry32: small, fast, seedable PRNG; enough for shuffling. */
