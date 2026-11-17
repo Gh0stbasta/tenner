@@ -97,7 +97,7 @@ export interface ShoppingListEntry {
 }
 
 export interface ShoppingWidget {
-  /** Open items without the pantry (salt, oil). */
+  /** Open items, pantry items included (MAINT-014). */
   readonly open: number;
   /** „2× Nudeln“, „Milch“ in the list's order. */
   readonly items: readonly string[];
@@ -107,7 +107,7 @@ export interface ShoppingWidget {
 
 /** Payload for the shopping list widget: open items in the household's order, counts only (FOOD-028). */
 export function shoppingWidget(entries: readonly ShoppingListEntry[], now: Date): ShoppingWidget {
-  const open = entries.filter((entry) => !entry.checked && !entry.pantry);
+  const open = entries.filter((entry) => !entry.checked);
   const line = (entry: ShoppingListEntry) => (entry.quantity !== null && entry.quantity > 1 && entry.unit === "Stück" ? `${entry.quantity}× ${entry.name}` : entry.name);
   const items = open.slice(0, SHOPPING_WIDGET_ITEMS).map(line);
   return { open: open.length, items, more: open.length - items.length, updatedAt: now.toISOString() };

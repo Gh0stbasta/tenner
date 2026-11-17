@@ -32,6 +32,6 @@
     "@aws-sdk/client-ssm": "3.1145.0",
     "@aws-sdk/lib-dynamodb": "3.1145.0",
     "@aws-sdk/s3-request-presigner": "3.1145.0",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   }
 }

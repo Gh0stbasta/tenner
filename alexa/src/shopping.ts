@@ -47,8 +47,8 @@ export function itemName(spoken: string): string {
 export const addItem = (api: TennerApi, requestId: string, name: string): Promise<void> => changeList(api, [{ type: "add", key: itemKeyOf(requestId), name }]);
 export const checkItem = (api: TennerApi, key: string): Promise<void> => changeList(api, [{ type: "check", key, checked: true }]);
 
-/** Open items in the list's order; pantry items (salt, oil) are left out of the spoken list. */
-export const openItems = (items: readonly ShoppingItem[]): ShoppingItem[] => items.filter((item) => !item.checked && !item.pantry);
+/** Open items in the list's order, pantry items included (MAINT-014). */
+export const openItems = (items: readonly ShoppingItem[]): ShoppingItem[] => items.filter((item) => !item.checked);
 
 /** „2 mal Hackfleisch“ for counts above one (FOOD-028), else the name. */
 export const spokenItem = (item: ShoppingItem): string => (item.quantity !== null && item.quantity > 1 && item.unit === "Stück" ? `${item.quantity} mal ${item.name}` : item.name);

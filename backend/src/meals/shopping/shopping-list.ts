@@ -78,9 +78,9 @@ export function normalizeItem(item: ShoppingItem): ShoppingItem {
 
 const sectionIndex = (section: ShoppingSection): number => SHOPPING_SECTIONS.indexOf(section);
 
-/** Section order, pantry items last, then by name. */
+/** Section order, then by name; pantry items are normal items since MAINT-014. */
 function compareItems(a: ShoppingItem, b: ShoppingItem): number {
-  return Number(a.pantry) - Number(b.pantry) || sectionIndex(a.section) - sectionIndex(b.section) || a.name.localeCompare(b.name, "de");
+  return sectionIndex(a.section) - sectionIndex(b.section) || a.name.localeCompare(b.name, "de");
 }
 
 /**
@@ -162,7 +162,7 @@ function insertionIndex(items: readonly ShoppingItem[], item: ShoppingItem): num
   let before = -1;
   items.forEach((other, position) => {
     if (other.manual) return;
-    if (other.section === item.section && other.pantry === item.pantry) sameSection = position;
+    if (other.section === item.section) sameSection = position;
     if (compareItems(other, item) <= 0) before = position;
   });
   return (sameSection >= 0 ? sameSection : before) + 1;

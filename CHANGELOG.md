@@ -10,6 +10,8 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Added
 
+- **Meal rule R14:** fish at most once a day — the planner, „Anderes Gericht“, the meal picker and swapping never put
+  fish at lunch and dinner of the same day (MAINT-015).
 - **Photo from the dashboard:** tap a dish picture in „Heute essen wir“ to take or choose a photo for that dish
   (MAINT-013).
 - **Create a dish with a chat AI:** in the editor for a new dish, „KI-Prompt kopieren“ copies a prompt with the dish
@@ -26,6 +28,10 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Fixed
 
+- **Security:** zod updated to 4.6.7 in backend and frontend (GHSA-mrhx-c7xc-m3w5, high) (MAINT-016).
+- **Pantry items in the shopping list:** salt, oil and other pantry items are normal entries of the generated list
+  (sorted by section, in „Teilen“ / „Kopieren“, on the Echo Show widget, read out by Alexa and in the morning count)
+  instead of a separate „Vorrat prüfen“ section (MAINT-014).
 - **Meal plan order:** the days always run Monday – Sunday; today stays highlighted in its place instead of moving
   to the top (MAINT-007).
 

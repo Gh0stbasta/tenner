@@ -259,11 +259,11 @@ describe("meal widget (FOOD-018)", () => {
 describe("shopping list widget (FOOD-026)", () => {
   const entry = (name: string, extra: Partial<ShoppingListEntry> = {}): ShoppingListEntry => ({ name, quantity: 1, unit: "Stück", checked: false, pantry: false, ...extra });
 
-  it("shows open items in order with counts, without pantry and ticked items", () => {
+  it("shows open items in order with counts, pantry items included (MAINT-014), without ticked items", () => {
     const now = new Date("2026-10-06T07:00:00Z");
     expect(shoppingWidget([entry("Nudeln", { quantity: 2 }), entry("Salz", { pantry: true }), entry("Eier", { checked: true }), entry("Klopapier", { quantity: null, unit: null })], now)).toEqual({
-      open: 2,
-      items: ["2× Nudeln", "Klopapier"],
+      open: 3,
+      items: ["2× Nudeln", "Salz", "Klopapier"],
       more: 0,
       updatedAt: "2026-10-06T07:00:00.000Z",
     });

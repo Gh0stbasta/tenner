@@ -213,7 +213,7 @@ Success messages use the global snackbar (`components/NotificationProvider.tsx`,
 - **Own order:** drag handle per item (`@dnd-kit`: mouse, touch with a short press, keyboard with Space and arrow
   keys); a drop is sent as `{ type: "move", key, afterKey }`.
 - **Ticking off:** a ticked item is struck through and moves to „Erledigt“ at the end; unticking puts it back.
-  Pantry items (salt, oil …) are in a collapsed „Vorrat prüfen“.
+  Pantry items (salt, oil …) are normal entries of the list (MAINT-014; before, a collapsed „Vorrat prüfen“).
 - **„Liste aktualisieren“** appears when the plan changed since the list was made (`stale`).
 - **Offline:** the list uses the query root `shoppingLists` (offline cache). Every change is queued in localStorage
   (`tenner.shoppingQueue`, `shoppingQueue.ts`) and sent when online (`useShoppingChanges`); the page shows the server

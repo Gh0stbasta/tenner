@@ -1,4 +1,4 @@
-/** FOOD-005: the household's planning rules R1 – R13. */
+/** FOOD-005: the household's planning rules R1 – R13; R14 (MAINT-015). */
 
 import { describe, expect, it } from "vitest";
 import { checkSlot, checkWeek, dishViolations, hasHardViolation, score, weekViolations, type DishResponse, type PlannedMeal, type RuleId } from "../src/meals/index.js";
@@ -106,6 +106,19 @@ describe("week rules", () => {
     expect(rulesOf(weekViolations([meal("SAT", "LUNCH", "Nudeln mit Soße"), meal("SAT", "DINNER", "Spätzle")], PROFILE))).toContain("R8");
     expect(rulesOf(weekViolations([meal("SAT", "LUNCH", "Nudeln mit Soße"), meal("SAT", "DINNER", "Chili")], PROFILE))).not.toContain("R8");
     expect(rulesOf(weekViolations([meal("SAT", "LUNCH", "Gnocchi in Tomatensoße"), meal("SAT", "DINNER", "Schupfnudeln")], PROFILE))).not.toContain("R8");
+  });
+
+  it("R14: fish at most once a day, independent of R7; optional fish does not count (MAINT-015)", () => {
+    const noLimits = familyProfile({ limitedProteinTags: [] });
+    const fishDay = [meal("SAT", "LUNCH", "Fischstäbchen mit Erbsenpüree"), meal("SAT", "DINNER", "Salat mit Lachs")];
+    const r14 = weekViolations(fishDay, noLimits).filter((violation) => violation.rule === "R14");
+    expect(r14).toEqual([{ rule: "R14", severity: "HARD", slotIds: ["2026-10-17#LUNCH", "2026-10-17#DINNER"], message: "Samstag: zweimal Fisch an einem Tag." }]);
+    expect(rulesOf(weekViolations(fishDay, PROFILE))).toContain("R14");
+    const twoDays = [meal("SAT", "LUNCH", "Fischstäbchen mit Erbsenpüree"), meal("SUN", "DINNER", "Salat mit Lachs")];
+    expect(rulesOf(weekViolations(twoDays, noLimits))).not.toContain("R14");
+    const optionalFish: DishResponse = { ...dish("Nudeln mit Soße"), tags: [], optionalTags: ["FISH"] };
+    expect(rulesOf(weekViolations([meal("SAT", "LUNCH", "Fischstäbchen mit Erbsenpüree"), meal("SAT", "DINNER", optionalFish)], noLimits))).not.toContain("R14");
+    expect(rulesOf(checkSlot([meal("SAT", "LUNCH", "Fischstäbchen mit Erbsenpüree"), meal("SAT", "DINNER", null)], "2026-10-17#DINNER", dish("Salat mit Lachs"), noLimits))).toContain("R14");
   });
 
   it("R10: warm, filling dinners preferred (soft)", () => {

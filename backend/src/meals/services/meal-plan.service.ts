@@ -465,6 +465,7 @@ const RULE_NAMES: Readonly<Record<RuleId, string>> = {
   R11: "Salat",
   R12: "Abwechslung",
   R13: "familientauglich",
+  R14: "Fisch am Tag",
 };
 
 export interface ReplaceMealRequest {

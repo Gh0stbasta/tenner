@@ -11,6 +11,7 @@ import {
   mergeRefresh,
   countOf,
   normalizeItem,
+  SHOPPING_SECTIONS,
   type DishResponse,
   type ResolvedIngredient,
   type ShoppingItem,
@@ -47,7 +48,7 @@ describe("shopping list generation (FOOD-014)", () => {
   const pasta = dish("pasta", [{ ingredientId: "pasta", quantity: 100, unit: "g", optional: false }]);
   const dishes = new Map([bolognese, pasta].map((entry) => [entry.dishId, entry]));
 
-  it("sums quantities × portion factors of the eaters at each meal, rounds up and sorts by section, pantry last", () => {
+  it("sums quantities × portion factors of the eaters at each meal, rounds up and sorts by section, pantry items included (MAINT-014)", () => {
     const items = generateItems({
       weekStart: "2026-10-12",
       slots: [slot("2026-10-14#LUNCH", "bolo"), slot("2026-10-17#DINNER", "pasta"), slot("2026-10-12#DINNER", "pasta")],
@@ -64,7 +65,8 @@ describe("shopping list generation (FOOD-014)", () => {
     expect(items.some((item) => item.key === "parmesan")).toBe(false);
     const oil = items.find((item) => item.key === "olive-oil");
     expect(oil).toMatchObject({ pantry: true, quantity: 1 });
-    expect(items.at(-1)?.pantry).toBe(true);
+    const sections = items.map((entry) => SHOPPING_SECTIONS.indexOf(entry.section));
+    expect(sections).toEqual([...sections].sort((a, b) => a - b));
   });
 
   it("leaves out cooked or skipped meals, empty meals and meals without eaters", () => {

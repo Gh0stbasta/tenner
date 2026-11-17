@@ -89,7 +89,7 @@ export function IngredientPricesDialog({ onClose }: { readonly onClose: () => vo
       <DialogTitle id={titleId}>Preise</DialogTitle>
       <DialogContent>
         <Alert severity="info" sx={{ mb: 2 }}>
-          Grobe Schätzpreise. Vorrat wie Salz und Öl zählt pauschal und steht nicht in der Liste.
+          Grobe Schätzpreise. Vorrat wie Salz und Öl zählt pauschal.
         </Alert>
         <TextField
           label="Zutat suchen"

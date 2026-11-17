@@ -41,10 +41,9 @@ describe("shopping list helpers (FOOD-014)", () => {
     expect(applyShoppingOperations(result, [{ type: "remove", key: "manual-1" }])).toHaveLength(3);
   });
 
-  it("groups open, pantry and ticked items", () => {
+  it("groups open and ticked items; pantry items are open items (MAINT-014)", () => {
     const groups = groupShoppingItems([item("a", { checked: true }), item("salt", { pantry: true }), item("b")]);
-    expect(groups.open.map((entry) => entry.key)).toEqual(["b"]);
-    expect(groups.pantry.map((entry) => entry.key)).toEqual(["salt"]);
+    expect(groups.open.map((entry) => entry.key)).toEqual(["salt", "b"]);
     expect(groups.done.map((entry) => entry.key)).toEqual(["a"]);
   });
 
@@ -74,7 +73,7 @@ describe("shopping list helpers (FOOD-014)", () => {
         item("x", { name: "Erledigt", checked: true }),
         item("salt", { name: "Salz", pantry: true }),
       ]),
-    ).toBe("Einkaufsliste\n\n- 2× Nudeln\n- Klopapier\n\nVorrat prüfen:\n- 1× Salz");
+    ).toBe("Einkaufsliste\n\n- 2× Nudeln\n- Klopapier\n- 1× Salz");
   });
 });
 
