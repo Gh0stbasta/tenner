@@ -107,7 +107,7 @@ export function createNotifierRuntime(config: AppConfig = loadConfig(), extensio
         mealsOn: (tenantId, date) => mealsOn(mealServices.plans, tenantId, date),
         isVegetarian: async (tenantId, userId) =>
           (await mealServices.profiles.getProfile(tenantId)).eaters.some((eater) => eater.memberId === userId && eater.diet === "VEGETARIAN"),
-        openShoppingItems: async (tenantId) => (await shoppingListOf(mealServices.shopping, tenantId)).filter((item) => !item.checked && !item.pantry).length,
+        openShoppingItems: async (tenantId) => (await shoppingListOf(mealServices.shopping, tenantId)).filter((item) => !item.checked).length,
         appUrl: config.appUrl,
       }),
     );

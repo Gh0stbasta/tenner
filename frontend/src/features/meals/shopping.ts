@@ -56,11 +56,10 @@ export function applyShoppingOperations(
   return result;
 }
 
-/** The list as shown: open items in the own order, pantry items, ticked items at the end. */
+/** The list as shown: open items in the own order (pantry items included, MAINT-014), ticked items at the end. */
 export function groupShoppingItems(items: readonly ShoppingItem[]) {
   return {
-    open: items.filter((item) => !item.checked && !item.pantry),
-    pantry: items.filter((item) => !item.checked && item.pantry),
+    open: items.filter((item) => !item.checked),
     done: items.filter((item) => item.checked),
   };
 }
@@ -106,15 +105,10 @@ export function usedForLabel(slotIds: readonly string[]): string {
 
 const itemLine = (item: ShoppingItem) => `- ${[formatQuantity(item), item.name].filter(Boolean).join(" ")}`;
 
-/** Text for „Teilen“: open items in the own order, then the pantry items to check. */
+/** Text for „Teilen“ and „Kopieren“: open items in the own order. */
 export function shareText(title: string, items: readonly ShoppingItem[]): string {
-  const { open, pantry } = groupShoppingItems(items);
-  return [
-    title,
-    "",
-    ...open.map(itemLine),
-    ...(pantry.length > 0 ? ["", "Vorrat prüfen:", ...pantry.map(itemLine)] : []),
-  ].join("\n");
+  const { open } = groupShoppingItems(items);
+  return [title, "", ...open.map(itemLine)].join("\n");
 }
 
 /** Open items needed for a meal on `date` (UI-001: „Für morgen einkaufen“). */

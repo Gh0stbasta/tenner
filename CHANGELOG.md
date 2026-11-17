@@ -26,6 +26,9 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Fixed
 
+- **Pantry items in the shopping list:** salt, oil and other pantry items are normal entries of the generated list
+  (sorted by section, in „Teilen“ / „Kopieren“, on the Echo Show widget, read out by Alexa and in the morning count)
+  instead of a separate „Vorrat prüfen“ section (MAINT-014).
 - **Meal plan order:** the days always run Monday – Sunday; today stays highlighted in its place instead of moving
   to the top (MAINT-007).
 

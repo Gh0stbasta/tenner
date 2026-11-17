@@ -1,6 +1,6 @@
 /**
  * Shopping list /einkaufsliste (FOOD-014, own navigation entry since FOOD-027): the week's ingredients in the household's own order (drag and drop
- * with mouse, touch or keyboard), ticked items struck through at the end, pantry items collapsed, own items, sharing.
+ * with mouse, touch or keyboard), ticked items struck through at the end, pantry items in the list (MAINT-014), own items, sharing.
  * Readable and usable offline: changes are queued and sent later (useShoppingChanges).
  */
 
@@ -23,13 +23,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Alert,
   Box,
   Button,
@@ -150,7 +146,7 @@ export function ShoppingListPage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const { open, pantry, done } = groupShoppingItems(items);
+  const { open, done } = groupShoppingItems(items);
   const title = list.data ? `Einkaufsliste ${formatShortDate(list.data.weekStart)}` : "Einkaufsliste";
 
   const onCheck = (item: ShoppingItem, checked: boolean) => change([{ type: "check", key: item.key, checked }]);
@@ -326,20 +322,6 @@ export function ShoppingListPage() {
             </DndContext>
           )}
         </Card>
-        {pantry.length > 0 && (
-          <Accordion disableGutters>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography>Vorrat prüfen ({pantry.length})</Typography>
-            </AccordionSummary>
-            <AccordionDetails sx={{ pt: 0 }}>
-              <List aria-label="Vorrat" dense>
-                {pantry.map((item) => (
-                  <PlainRow key={item.key} item={item} onCheck={onCheck} onRemove={onRemove} />
-                ))}
-              </List>
-            </AccordionDetails>
-          </Accordion>
-        )}
         {done.length > 0 && (
           <Card sx={{ px: 1 }}>
             <Typography variant="overline" color="text.secondary" sx={{ px: 1 }}>

@@ -1428,7 +1428,7 @@ EventBridge rule rate(15 minutes) ──► Lambda tenner-notifier (backend/src/
 - **Meals of the day (FOOD-016, `notifications/meal-today.ts`, type `MEAL_TODAY`):** due at the member's
   `mealToday.time` (default 07:30, own or household timezone, not in quiet hours); today's lunch and dinner from the
   current or next week's plan (skipped meals left out; a vegetarian member linked to an eater sees the vegetarian
-  variant), plus „Einkaufsliste: n Dinge offen“ for unchecked non-pantry items; link `/essen`. Empty days send
+  variant), plus „Einkaufsliste: n Dinge offen“ for unchecked items (pantry items included since MAINT-014); link `/essen`. Empty days send
   nothing; deduplication per member, channel and local date as for every job. Push: one notification; Alexa: a
   reminder „Zentrale: Heute gibt es mittags … und abends …“. Registered only when the meals table is configured.
 - **Daily digest (NOTIFICATION-003):** due at the member's time (own timezone or the household's), not in quiet

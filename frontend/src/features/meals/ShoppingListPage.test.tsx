@@ -68,7 +68,7 @@ const openList = () => screen.findByRole("list", { name: "Einkaufen" });
 describe("ShoppingListPage (FOOD-014)", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("shows the items in the list's order with quantities and meals, pantry items collapsed", async () => {
+  it("shows the items in the list's order with quantities and meals, pantry items included (MAINT-014)", async () => {
     server();
     renderWithProviders(<ShoppingListPage />);
     const open = within(await openList());
@@ -76,11 +76,12 @@ describe("ShoppingListPage (FOOD-014)", () => {
       "Nudeln",
       "Karotten",
       "Milch",
+      "Salz",
     ]);
     expect(open.getByText("1× Milch")).toBeInTheDocument();
-    expect(open.getAllByText("für Mi Abend")).toHaveLength(3);
+    expect(open.getAllByText("für Mi Abend")).toHaveLength(4);
     expect(open.getByRole("button", { name: "Verschieben: Nudeln" })).toBeInTheDocument();
-    expect(screen.getByText("Vorrat prüfen (1)")).toBeInTheDocument();
+    expect(screen.queryByText(/Vorrat prüfen/)).not.toBeInTheDocument();
   });
 
   it("strikes ticked items through and moves them to the end; unticking brings them back", async () => {

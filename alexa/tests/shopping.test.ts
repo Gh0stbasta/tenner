@@ -33,8 +33,8 @@ function setup(routes: Record<string, FakeRoute> = {}) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("shopping helpers", () => {
-  it("reads open items in order with counts, leaving out pantry and ticked items", () => {
-    expect(readAnswer(ITEMS)).toBe("Auf der Einkaufsliste stehen 3 Sachen: 2 mal Nudeln, Milch und Klopapier.");
+  it("reads open items in order with counts, pantry items included (MAINT-014), leaving out ticked items", () => {
+    expect(readAnswer(ITEMS)).toBe("Auf der Einkaufsliste stehen 4 Sachen: 2 mal Nudeln, Milch, Klopapier und Salz.");
     expect(readAnswer([item("milk", "Milch")])).toBe("Auf der Einkaufsliste steht: Milch.");
     expect(readAnswer([])).toBe("Die Einkaufsliste ist leer.");
     const many = Array.from({ length: 12 }, (_, index) => item(`i${index}`, `Ding ${index}`));
@@ -84,7 +84,7 @@ describe("AddShoppingItemIntent", () => {
 describe("ReadShoppingListIntent", () => {
   it("reads the open items", async () => {
     const { skill } = setup();
-    expect(ssml(await skill.invoke(intentRequest("ReadShoppingListIntent")))).toBe("<speak>Auf der Einkaufsliste stehen 3 Sachen: 2 mal Nudeln, Milch und Klopapier.</speak>");
+    expect(ssml(await skill.invoke(intentRequest("ReadShoppingListIntent")))).toBe("<speak>Auf der Einkaufsliste stehen 4 Sachen: 2 mal Nudeln, Milch, Klopapier und Salz.</speak>");
   });
 });
 
