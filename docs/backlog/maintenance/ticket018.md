@@ -58,7 +58,8 @@ Done (2026-11-17).
   checks (slot rules for `AMAZON.SearchQuery`, slot type, intents). Validation: alexa 165 tests, lint, typecheck.
 - Risk (documented in the alexa README): „sag Mary Poppins Milch“ outside the mode shares the slot-only sample with
   task completion and the speaker answer; Alexa decides by the slot values. The owner checks on the Echo.
-- No new technical debt.
+- Owner device test (2026-11-17, after the MAINT-021 deploy): two items in one sentence work, more do not, and „wir
+  brauchen Brot und Äpfel“ failed; accepted for now, recorded as TD-049.
 
 ## Assumptions
 
