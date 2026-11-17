@@ -28,6 +28,7 @@ Every merge to `main` deploys to production. A release is a Git tag (`vX.Y.Z`) a
 
 ### Fixed
 
+- **Security:** zod updated to 4.6.7 in backend and frontend (GHSA-mrhx-c7xc-m3w5, high) (MAINT-016).
 - **Pantry items in the shopping list:** salt, oil and other pantry items are normal entries of the generated list
   (sorted by section, in „Teilen“ / „Kopieren“, on the Echo Show widget, read out by Alexa and in the morning count)
   instead of a separate „Vorrat prüfen“ section (MAINT-014).

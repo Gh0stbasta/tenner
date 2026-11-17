@@ -67,6 +67,7 @@ and a changelog entry on top of that.
 | [MAINT-013](maintenance/ticket013.md) | Change a dish photo from „Heute essen wir“ | Done |
 | [MAINT-014](maintenance/ticket014.md) | Pantry items in the normal shopping list | Done |
 | [MAINT-015](maintenance/ticket015.md) | Meal rule — fish at most once a day | Done |
+| [MAINT-016](maintenance/ticket016.md) | Update zod for GHSA-mrhx-c7xc-m3w5 | Done |
 
 ### Owner hotfix tickets (`../hotfix/`)
 
