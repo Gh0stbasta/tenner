@@ -8,9 +8,9 @@
           "summary": "Die kleinen Aufgaben im Haushalt im Blick.",
           "description": "Die Zentrale sagt dir, welche kleinen Haushaltsaufgaben heute fällig sind.",
           "examplePhrases": [
-            "Alexa, öffne Zimmer Service",
-            "Alexa, frag Zimmer Service, was heute fällig ist",
-            "Alexa, sag Zimmer Service, starte meinen Tag"
+            "Alexa, öffne Butler Bruno",
+            "Alexa, frag Butler Bruno, was heute fällig ist",
+            "Alexa, sag Butler Bruno, starte meinen Tag"
           ],
           "keywords": [
             "Haushalt",

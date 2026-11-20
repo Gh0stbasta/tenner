@@ -1,5 +1,5 @@
 /**
- * „Alexa, sag Zimmer Service Übersicht“ (MAINT-023): opens the Tafel (web app `/tafel`, MAINT-022) in the Echo Show's
+ * „Alexa, sag Butler Bruno Übersicht“ (MAINT-023): opens the Tafel (web app `/tafel`, MAINT-022) in the Echo Show's
  * browser with the APL command OpenURL. The only screen view of the skill (MAINT-006: no other views); it exists just to
  * start the browser and shows the address when the device does not allow it. Voice-only devices get a card.
  */

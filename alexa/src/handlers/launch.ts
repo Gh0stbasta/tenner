@@ -9,7 +9,7 @@ import { entitiesDirective } from "./members.js";
 import { setDialogState } from "./state.js";
 
 /**
- * „Alexa, öffne Zimmer Service“: greets the recognized member; a recognized but unmapped voice is asked once
+ * „Alexa, öffne Butler Bruno“: greets the recognized member; a recognized but unmapped voice is asked once
  * „Wer spricht gerade?“ (ALEXA-002). Without a linked account the error handler answers with the link prompt.
  */
 export const LaunchRequestHandler: RequestHandler = {
