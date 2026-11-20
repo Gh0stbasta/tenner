@@ -102,9 +102,20 @@ describe("shopping list widget package (FOOD-026)", () => {
   });
 
   it("uses the same fields as the backend's ShoppingWidget", () => {
-    expect(Object.keys(sample.shopping).sort()).toEqual(["items", "more", "open", "updatedAt"]);
+    expect(Object.keys(sample.shopping).sort()).toEqual(["items", "more", "open", "text", "updatedAt"]);
     const text = JSON.stringify(document);
-    for (const field of ["shopping.open", "shopping.items", "shopping.more"]) expect(text).toContain(field);
+    for (const field of ["shopping.open", "shopping.text"]) expect(text).toContain(field);
+  });
+
+  it("scrolls through all items in one text instead of „+ n weitere“, with a new package version (MAINT-027, MAINT-028)", () => {
+    const text = JSON.stringify(document);
+    // Children inflated from the Data Store binding showed only a bullet and never updated on the device (MAINT-027).
+    expect(text).not.toContain('"data":');
+    expect(text).not.toContain("${data}");
+    expect(text).toContain('"type":"ScrollView"');
+    expect(text).toContain("shopping.text");
+    expect(JSON.stringify((document as { mainTemplate: unknown }).mainTemplate)).not.toContain("weitere");
+    expect(readShopping("manifest.json")).toMatchObject({ manifest: { version: "1.2.0" } });
   });
 });
 

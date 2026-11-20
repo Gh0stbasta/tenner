@@ -2,7 +2,7 @@
   "type": "APL",
   "version": "2023.2",
   "theme": "dark",
-  "description": "Zentrale shopping list widget (FOOD-026): open items in the household's order, counts only (FOOD-028). Bound to the Data Store object tenner/shopping (ShoppingWidget in backend/src/alexa/widget.ts). No tap action (MAINT-006).",
+  "description": "Zentrale shopping list widget (FOOD-026): open items in the household's order, counts only (FOOD-028). Bound to the Data Store object tenner/shopping (ShoppingWidget in backend/src/alexa/widget.ts). No tap action (MAINT-006). MAINT-028: all items as one text (shopping.text, lines joined with <br>) in a ScrollView instead of „+ n weitere“; no data-driven children (MAINT-027).",
   "extensions": [
     {
       "name": "DataStore",
@@ -66,27 +66,20 @@
             "paddingTop": "8dp"
           },
           {
-            "type": "Container",
+            "type": "ScrollView",
+            "grow": 1,
+            "shrink": 1,
             "paddingTop": "8dp",
-            "data": "${shopping.items}",
-            "items": [
-              {
-                "type": "Text",
-                "text": "• ${data}",
-                "fontSize": "@itemSize",
-                "color": "@text",
-                "maxLines": 1
-              }
-            ]
-          },
-          {
-            "type": "Text",
-            "text": "${shopping.more > 0 ? '+ ' + shopping.more + ' weitere' : ''}",
-            "display": "${shopping.more > 0 ? 'normal' : 'none'}",
-            "fontSize": "@itemSize",
-            "color": "@muted"
+            "item": {
+              "type": "Text",
+              "text": "${shopping.text == null ? '' : shopping.text}",
+              "fontSize": "@itemSize",
+              "color": "@text",
+              "lineHeight": 1.3
+            }
           }
-        ]
+        ],
+        "paddingBottom": "@pad"
       }
     ]
   }

@@ -77,7 +77,9 @@ and a changelog entry on top of that.
 | [MAINT-023](maintenance/ticket023.md) | „Alexa, sag Mary Poppins Übersicht“ opens the Tafel | Done (device check open) |
 | [MAINT-024](maintenance/ticket024.md) | Meal widget shows long dish names on several lines | Done |
 | [MAINT-025](maintenance/ticket025.md) | Alexa invocation name „Zimmer Service“ | Done (replaced by MAINT-026) |
-| [MAINT-026](maintenance/ticket026.md) | Alexa invocation name „Butler Bruno“ | Done (device check open) |
+| [MAINT-026](maintenance/ticket026.md) | Alexa invocation name „Butler Bruno“ | Done |
+| [MAINT-027](maintenance/ticket027.md) | Shopping list widget shows only a bullet | Done (device check open) |
+| [MAINT-028](maintenance/ticket028.md) | Scrollable shopping list widget | Done (device check open) |
 
 ### Owner hotfix tickets (`../hotfix/`)
 

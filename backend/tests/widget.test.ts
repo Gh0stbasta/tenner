@@ -1,7 +1,7 @@
 /** ALEXA-007: Echo Show widget — LWA tokens, Data Store push, summary, debounce, day start, routing. */
 
 import { describe, expect, it, vi } from "vitest";
-import { DATASTORE_SCOPE, LWA_TOKEN_URL, LwaError, WidgetPushService, createDataStoreClient, createLwaTokenClient, mealDay, mealWidget, shoppingWidget, widgetSummary, type DataStoreClient, type DayMeal, type ShoppingListEntry } from "../src/alexa/index.js";
+import { DATASTORE_SCOPE, LWA_TOKEN_URL, LwaError, WidgetPushService, createDataStoreClient, createLwaTokenClient, mealDay, mealWidget, shoppingWidget, SHOPPING_WIDGET_ITEMS, widgetSummary, type DataStoreClient, type DayMeal, type ShoppingListEntry } from "../src/alexa/index.js";
 import { loadConfig } from "../src/config.js";
 import type { DashboardResponse } from "../src/dto/index.js";
 import { SEED_MEMBERS } from "../src/models/index.js";
@@ -265,11 +265,22 @@ describe("shopping list widget (FOOD-026)", () => {
       open: 3,
       items: ["2× Nudeln", "Salz", "Klopapier"],
       more: 0,
+      text: "• 2× Nudeln<br>• Salz<br>• Klopapier",
       updatedAt: "2026-10-06T07:00:00.000Z",
     });
-    const many = shoppingWidget(Array.from({ length: 9 }, (_, index) => entry(`Ding ${index}`)), now);
-    expect(many).toMatchObject({ open: 9, more: 3 });
-    expect(many.items).toHaveLength(6);
+  });
+
+  it("sends all items for scrolling, up to the Data Store limit, with markup escaped (MAINT-028)", () => {
+    const now = new Date("2026-10-06T07:00:00Z");
+    const nine = shoppingWidget(Array.from({ length: 9 }, (_, index) => entry(`Ding ${index}`)), now);
+    expect(nine).toMatchObject({ open: 9, more: 0 });
+    expect(nine.items).toHaveLength(9);
+    expect(nine.text.split("<br>")).toHaveLength(9);
+    const many = shoppingWidget(Array.from({ length: SHOPPING_WIDGET_ITEMS + 2 }, (_, index) => entry(`Ding ${index}`)), now);
+    expect(many).toMatchObject({ open: SHOPPING_WIDGET_ITEMS + 2, more: 2 });
+    expect(many.text.endsWith("<br>+ 2 weitere")).toBe(true);
+    expect(shoppingWidget([entry("Salz & Pfeffer <grob>")], now).text).toBe("• Salz &amp; Pfeffer &lt;grob&gt;");
+    expect(shoppingWidget([], now)).toMatchObject({ open: 0, items: [], more: 0, text: "" });
   });
 
   it("pushes the list with the other widgets and isolates failures", async () => {
