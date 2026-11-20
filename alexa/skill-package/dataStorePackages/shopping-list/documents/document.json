@@ -2,7 +2,7 @@
   "type": "APL",
   "version": "2023.2",
   "theme": "dark",
-  "description": "Zentrale shopping list widget (FOOD-026): open items in the household's order, counts only (FOOD-028). Bound to the Data Store object tenner/shopping (ShoppingWidget in backend/src/alexa/widget.ts). No tap action (MAINT-006). MAINT-027: one fixed Text per item slot (SHOPPING_WIDGET_ITEMS = 6) instead of data-driven children; children inflated from the Data Store binding showed only a bullet and never updated.",
+  "description": "Zentrale shopping list widget (FOOD-026): open items in the household's order, counts only (FOOD-028). Bound to the Data Store object tenner/shopping (ShoppingWidget in backend/src/alexa/widget.ts). No tap action (MAINT-006). MAINT-028: all items as one text (shopping.text, lines joined with <br>) in a ScrollView instead of „+ n weitere“; no data-driven children (MAINT-027).",
   "extensions": [
     {
       "name": "DataStore",
@@ -66,67 +66,20 @@
             "paddingTop": "8dp"
           },
           {
-            "type": "Container",
+            "type": "ScrollView",
+            "grow": 1,
+            "shrink": 1,
             "paddingTop": "8dp",
-            "items": [
-              {
-                "type": "Text",
-                "text": "${shopping.items[0] == null ? '' : '• ' + shopping.items[0]}",
-                "display": "${shopping.items[0] == null ? 'none' : 'normal'}",
-                "fontSize": "@itemSize",
-                "color": "@text",
-                "maxLines": 1
-              },
-              {
-                "type": "Text",
-                "text": "${shopping.items[1] == null ? '' : '• ' + shopping.items[1]}",
-                "display": "${shopping.items[1] == null ? 'none' : 'normal'}",
-                "fontSize": "@itemSize",
-                "color": "@text",
-                "maxLines": 1
-              },
-              {
-                "type": "Text",
-                "text": "${shopping.items[2] == null ? '' : '• ' + shopping.items[2]}",
-                "display": "${shopping.items[2] == null ? 'none' : 'normal'}",
-                "fontSize": "@itemSize",
-                "color": "@text",
-                "maxLines": 1
-              },
-              {
-                "type": "Text",
-                "text": "${shopping.items[3] == null ? '' : '• ' + shopping.items[3]}",
-                "display": "${shopping.items[3] == null ? 'none' : 'normal'}",
-                "fontSize": "@itemSize",
-                "color": "@text",
-                "maxLines": 1
-              },
-              {
-                "type": "Text",
-                "text": "${shopping.items[4] == null ? '' : '• ' + shopping.items[4]}",
-                "display": "${shopping.items[4] == null ? 'none' : 'normal'}",
-                "fontSize": "@itemSize",
-                "color": "@text",
-                "maxLines": 1
-              },
-              {
-                "type": "Text",
-                "text": "${shopping.items[5] == null ? '' : '• ' + shopping.items[5]}",
-                "display": "${shopping.items[5] == null ? 'none' : 'normal'}",
-                "fontSize": "@itemSize",
-                "color": "@text",
-                "maxLines": 1
-              }
-            ]
-          },
-          {
-            "type": "Text",
-            "text": "${shopping.more > 0 ? '+ ' + shopping.more + ' weitere' : ''}",
-            "display": "${shopping.more > 0 ? 'normal' : 'none'}",
-            "fontSize": "@itemSize",
-            "color": "@muted"
+            "item": {
+              "type": "Text",
+              "text": "${shopping.text == null ? '' : shopping.text}",
+              "fontSize": "@itemSize",
+              "color": "@text",
+              "lineHeight": 1.3
+            }
           }
-        ]
+        ],
+        "paddingBottom": "@pad"
       }
     ]
   }

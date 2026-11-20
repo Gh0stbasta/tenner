@@ -102,20 +102,20 @@ describe("shopping list widget package (FOOD-026)", () => {
   });
 
   it("uses the same fields as the backend's ShoppingWidget", () => {
-    expect(Object.keys(sample.shopping).sort()).toEqual(["items", "more", "open", "updatedAt"]);
+    expect(Object.keys(sample.shopping).sort()).toEqual(["items", "more", "open", "text", "updatedAt"]);
     const text = JSON.stringify(document);
-    for (const field of ["shopping.open", "shopping.items", "shopping.more"]) expect(text).toContain(field);
+    for (const field of ["shopping.open", "shopping.text"]) expect(text).toContain(field);
   });
 
-  it("shows each item in a fixed slot instead of data-driven children, with a new package version (MAINT-027)", () => {
+  it("scrolls through all items in one text instead of „+ n weitere“, with a new package version (MAINT-027, MAINT-028)", () => {
     const text = JSON.stringify(document);
-    // Children inflated from the Data Store binding showed only a bullet and never updated on the device.
+    // Children inflated from the Data Store binding showed only a bullet and never updated on the device (MAINT-027).
     expect(text).not.toContain('"data":');
     expect(text).not.toContain("${data}");
-    // One slot per item the backend sends (SHOPPING_WIDGET_ITEMS = 6 in backend/src/alexa/widget.ts).
-    for (let slot = 0; slot < 6; slot += 1) expect(text).toContain(`shopping.items[${slot}]`);
-    expect(text).not.toContain("shopping.items[6]");
-    expect(readShopping("manifest.json")).toMatchObject({ manifest: { version: "1.1.0" } });
+    expect(text).toContain('"type":"ScrollView"');
+    expect(text).toContain("shopping.text");
+    expect(JSON.stringify((document as { mainTemplate: unknown }).mainTemplate)).not.toContain("weitere");
+    expect(readShopping("manifest.json")).toMatchObject({ manifest: { version: "1.2.0" } });
   });
 });
 

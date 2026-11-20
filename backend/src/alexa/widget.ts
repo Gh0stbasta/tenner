@@ -84,8 +84,11 @@ const phaseOf = (now: Date, timezone: string): string => {
   return `${local.date}#${local.minutes < MEAL_WIDGET_EVENING_HOUR * 60 ? "DAY" : "EVENING"}`;
 };
 
-/** Shopping list widget (FOOD-026): items shown at once, the rest is counted. */
-export const SHOPPING_WIDGET_ITEMS = 6;
+/**
+ * Shopping list widget (FOOD-026): items sent to the widget. Since MAINT-028 the widget scrolls through all of them;
+ * the limit only keeps the Data Store object small, the rest is counted.
+ */
+export const SHOPPING_WIDGET_ITEMS = 40;
 
 /** What the widget needs of a shopping list item (FOOD-014, counts since FOOD-028). */
 export interface ShoppingListEntry {
@@ -102,15 +105,23 @@ export interface ShoppingWidget {
   /** „2× Nudeln“, „Milch“ in the list's order. */
   readonly items: readonly string[];
   readonly more: number;
+  /** MAINT-028: the items as one APL text („• 2× Nudeln<br>• Milch“), shown in a scrollable area. */
+  readonly text: string;
   readonly updatedAt: string;
 }
+
+/** Escapes the characters APL text markup would read as tags or entities. */
+const aplText = (value: string): string => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /** Payload for the shopping list widget: open items in the household's order, counts only (FOOD-028). */
 export function shoppingWidget(entries: readonly ShoppingListEntry[], now: Date): ShoppingWidget {
   const open = entries.filter((entry) => !entry.checked);
   const line = (entry: ShoppingListEntry) => (entry.quantity !== null && entry.quantity > 1 && entry.unit === "Stück" ? `${entry.quantity}× ${entry.name}` : entry.name);
   const items = open.slice(0, SHOPPING_WIDGET_ITEMS).map(line);
-  return { open: open.length, items, more: open.length - items.length, updatedAt: now.toISOString() };
+  const more = open.length - items.length;
+  const lines = items.map((item) => `• ${aplText(item)}`);
+  if (more > 0) lines.push(`+ ${more} weitere`);
+  return { open: open.length, items, more, text: lines.join("<br>"), updatedAt: now.toISOString() };
 }
 
 export interface WidgetPushDependencies {

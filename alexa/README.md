@@ -48,10 +48,11 @@ tap action; until the first push it shows „Essen“ with „–“. Long dish 
 package 1.2.0, MAINT-024). Add it like the status widget („Zentrale Essen“).
 
 **Zentrale Einkaufsliste** (`skill-package/dataStorePackages/shopping-list/`, FOOD-026) shows the open items of this
-week's shopping list in the household's order (counts only, max. 6, then „+ n weitere“), bound to `tenner/shopping`;
-pushed with the other widgets after every list change. No tap action. Each item has a fixed Text slot
-(`shopping.items[0]` – `[5]`, MAINT-027): children inflated with `data` from the Data Store binding showed only a
-bullet on the Echo and never updated. The status widget's „next“ list still uses `data` (see TD-050).
+week's shopping list in the household's order (counts only), bound to `tenner/shopping`; pushed with the other
+widgets after every list change. No tap action. Since MAINT-028 the backend sends all open items (up to 40) also as
+one APL text (`shopping.text`, lines joined with `<br>`, markup escaped) and the widget shows it in a `ScrollView`
+instead of „+ n weitere“. Children inflated with `data` from the Data Store binding showed only a bullet on the Echo
+and never updated (MAINT-027); the status widget's „next“ list still uses `data` (see TD-050).
 
 **Tenner (status):**
 
