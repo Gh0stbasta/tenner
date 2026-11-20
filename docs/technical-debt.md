@@ -1410,3 +1410,34 @@ phrase instead of the launch phrase.
 ### Related Work
 
 MAINT-018, MAINT-021; `alexa/skill-package/interactionModels/custom/de-DE.json`, `scripts/alexa-health-check.sh`.
+
+## TD-050: Echo Show widgets can lag up to 15 minutes after quick changes; status widget list unverified
+
+### Description
+
+Widget pushes are debounced (ALEXA-007): the first change pushes at once, further changes within a minute are only
+marked and pushed by the next scheduled notifier run, every 15 minutes. While shopping (several items ticked in a row)
+the widgets can therefore show an old state for up to 15 minutes. Second, the status widget (`tenner-status`) still
+builds its „next“ list with data-driven children (`"data": "${status.next}"`), the pattern that showed only a bullet
+in the shopping list widget (MAINT-027).
+
+### Reason
+
+The debounce was a deliberate trade-off of ALEXA-007 (one push per household and minute). The status widget was not
+part of the owner report of 2026-11-20 and its device check (MAINT-002) is still open, so it was not changed blind.
+
+### Impact
+
+Stale widgets for up to 15 minutes after a burst of changes; possibly an empty „next“ list in the status widget. No
+security or cost impact.
+
+### Suggested Improvement
+
+Push the last change of a burst a few seconds later from the same invocation (short debounce window, wait, push only
+when no newer push happened) instead of waiting for the scheduled run. If the owner sees a bare bullet in the status
+widget, give its „next“ list fixed slots like MAINT-027.
+
+### Related Work
+
+ALEXA-007, MAINT-002, MAINT-027; `backend/src/alexa/widget.ts`,
+`alexa/skill-package/dataStorePackages/tenner-status/documents/document.json`.

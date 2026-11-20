@@ -49,7 +49,9 @@ package 1.2.0, MAINT-024). Add it like the status widget („Zentrale Essen“).
 
 **Zentrale Einkaufsliste** (`skill-package/dataStorePackages/shopping-list/`, FOOD-026) shows the open items of this
 week's shopping list in the household's order (counts only, max. 6, then „+ n weitere“), bound to `tenner/shopping`;
-pushed with the other widgets after every list change. No tap action.
+pushed with the other widgets after every list change. No tap action. Each item has a fixed Text slot
+(`shopping.items[0]` – `[5]`, MAINT-027): children inflated with `data` from the Data Store binding showed only a
+bullet on the Echo and never updated. The status widget's „next“ list still uses `data` (see TD-050).
 
 **Tenner (status):**
 

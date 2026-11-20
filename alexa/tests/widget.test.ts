@@ -106,6 +106,17 @@ describe("shopping list widget package (FOOD-026)", () => {
     const text = JSON.stringify(document);
     for (const field of ["shopping.open", "shopping.items", "shopping.more"]) expect(text).toContain(field);
   });
+
+  it("shows each item in a fixed slot instead of data-driven children, with a new package version (MAINT-027)", () => {
+    const text = JSON.stringify(document);
+    // Children inflated from the Data Store binding showed only a bullet and never updated on the device.
+    expect(text).not.toContain('"data":');
+    expect(text).not.toContain("${data}");
+    // One slot per item the backend sends (SHOPPING_WIDGET_ITEMS = 6 in backend/src/alexa/widget.ts).
+    for (let slot = 0; slot < 6; slot += 1) expect(text).toContain(`shopping.items[${slot}]`);
+    expect(text).not.toContain("shopping.items[6]");
+    expect(readShopping("manifest.json")).toMatchObject({ manifest: { version: "1.1.0" } });
+  });
 });
 
 describe("widget install lifecycle (MAINT-002)", () => {
